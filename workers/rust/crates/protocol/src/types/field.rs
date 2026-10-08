@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(try_from = "crate::axial_bar_input::AxialBarInput")]
 pub struct SolveBarRequest {
     pub length: f64,
     pub area: f64,
@@ -11,6 +12,7 @@ pub struct SolveBarRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThermalBar1dNodeInput {
+    #[serde(default)]
     pub id: String,
     pub x: f64,
     pub fix_x: bool,
@@ -21,6 +23,7 @@ pub struct ThermalBar1dNodeInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThermalBar1dElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
@@ -31,12 +34,15 @@ pub struct ThermalBar1dElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveThermalBar1dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<ThermalBar1dNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<ThermalBar1dElementInput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatBar1dNodeInput {
+    #[serde(default)]
     pub id: String,
     pub x: f64,
     pub fix_temperature: bool,
@@ -48,6 +54,7 @@ pub struct HeatBar1dNodeInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatBar1dElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
@@ -57,12 +64,15 @@ pub struct HeatBar1dElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveHeatBar1dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<HeatBar1dNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<HeatBar1dElementInput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TransientHeatBar1dElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
@@ -74,7 +84,9 @@ pub struct TransientHeatBar1dElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveTransientHeatBar1dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<HeatBar1dNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<TransientHeatBar1dElementInput>,
     pub time_step: f64,
     pub steps: usize,
@@ -84,6 +96,7 @@ pub struct SolveTransientHeatBar1dRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ElectrostaticBar1dNodeInput {
+    #[serde(default)]
     pub id: String,
     pub x: f64,
     pub fix_potential: bool,
@@ -95,6 +108,7 @@ pub struct ElectrostaticBar1dNodeInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ElectrostaticBar1dElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
@@ -104,12 +118,15 @@ pub struct ElectrostaticBar1dElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveElectrostaticBar1dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<ElectrostaticBar1dNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<ElectrostaticBar1dElementInput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MagnetostaticBar1dNodeInput {
+    #[serde(default)]
     pub id: String,
     pub x: f64,
     pub fix_magnetic_potential: bool,
@@ -121,6 +138,7 @@ pub struct MagnetostaticBar1dNodeInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MagnetostaticBar1dElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
@@ -130,12 +148,15 @@ pub struct MagnetostaticBar1dElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveMagnetostaticBar1dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<MagnetostaticBar1dNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<MagnetostaticBar1dElementInput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AdvectionDiffusionBar1dNodeInput {
+    #[serde(default)]
     pub id: String,
     pub x: f64,
     pub fix_concentration: bool,
@@ -147,6 +168,7 @@ pub struct AdvectionDiffusionBar1dNodeInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AdvectionDiffusionBar1dElementInput {
+    #[serde(default)]
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
@@ -157,8 +179,29 @@ pub struct AdvectionDiffusionBar1dElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveAdvectionDiffusionBar1dRequest {
+    #[serde(
+        default,
+        skip_serializing_if = "AdvectionDiffusionBar1dScheme::is_galerkin"
+    )]
+    pub scheme: AdvectionDiffusionBar1dScheme,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<AdvectionDiffusionBar1dNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<AdvectionDiffusionBar1dElementInput>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AdvectionDiffusionBar1dScheme {
+    #[default]
+    Galerkin,
+    Upwind,
+}
+
+impl AdvectionDiffusionBar1dScheme {
+    pub fn is_galerkin(&self) -> bool {
+        *self == Self::Galerkin
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -187,7 +230,9 @@ pub struct HeatPlaneTriangleElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveHeatPlaneTriangle2dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<HeatPlaneNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<HeatPlaneTriangleElementInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub contact_interfaces: Vec<crate::HeatPlaneContactInput>,
@@ -219,7 +264,9 @@ pub struct ElectrostaticPlaneTriangleElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveElectrostaticPlaneTriangle2dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<ElectrostaticPlaneNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<ElectrostaticPlaneTriangleElementInput>,
 }
 
@@ -237,7 +284,9 @@ pub struct ElectrostaticPlaneQuadElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveElectrostaticPlaneQuad2dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<ElectrostaticPlaneNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<ElectrostaticPlaneQuadElementInput>,
 }
 
@@ -300,7 +349,9 @@ pub struct HeatPlaneQuadElementInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveHeatPlaneQuad2dRequest {
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_nodes")]
     pub nodes: Vec<HeatPlaneNodeInput>,
+    #[serde(deserialize_with = "crate::graph_entity_input::deserialize_elements")]
     pub elements: Vec<HeatPlaneQuadElementInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub contact_interfaces: Vec<crate::HeatPlaneContactInput>,

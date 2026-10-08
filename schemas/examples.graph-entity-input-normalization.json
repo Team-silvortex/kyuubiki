@@ -1,0 +1,74 @@
+{
+  "schema_version": "kyuubiki.graph-entity-input-normalization-examples/v1",
+  "models": {
+    "solve_thermal_bar_1d": {
+      "nodes": [{"x": 0.0, "fix_x": true, "load_x": 0.0, "temperature_delta": 10.0}, {"x": 1.0, "fix_x": false, "load_x": 100.0, "temperature_delta": 10.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 200000000000.0, "thermal_expansion": 0.00001}]
+    },
+    "solve_heat_bar_1d": {
+      "nodes": [{"x": 0.0, "fix_temperature": true, "temperature": 20.0}, {"x": 0.5, "fix_temperature": false}, {"x": 1.0, "fix_temperature": true, "temperature": 40.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "area": 2.0, "conductivity": 4.0}, {"node_i": 1, "node_j": 2, "area": 2.0, "conductivity": 4.0}]
+    },
+    "solve_transient_heat_bar_1d": {
+      "nodes": [{"x": 0.0, "fix_temperature": true, "temperature": 20.0}, {"x": 0.5, "fix_temperature": false, "temperature": 30.0}, {"x": 1.0, "fix_temperature": true, "temperature": 40.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "area": 2.0, "conductivity": 4.0, "density": 2.0, "specific_heat": 3.0}, {"node_i": 1, "node_j": 2, "area": 2.0, "conductivity": 4.0, "density": 2.0, "specific_heat": 3.0}],
+      "time_step": 0.1, "steps": 3, "history_stride": 1
+    },
+    "solve_electrostatic_bar_1d": {
+      "nodes": [{"x": 0.0, "fix_potential": true, "potential": 0.0}, {"x": 0.5, "fix_potential": false}, {"x": 1.0, "fix_potential": true, "potential": 1.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "area": 1.0, "permittivity": 2.0}, {"node_i": 1, "node_j": 2, "area": 1.0, "permittivity": 2.0}]
+    },
+    "solve_magnetostatic_bar_1d": {
+      "nodes": [{"x": 0.0, "fix_magnetic_potential": true, "magnetic_potential": 0.0}, {"x": 0.5, "fix_magnetic_potential": false}, {"x": 1.0, "fix_magnetic_potential": true, "magnetic_potential": 2.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "area": 1.0, "permeability": 4.0}, {"node_i": 1, "node_j": 2, "area": 1.0, "permeability": 4.0}]
+    },
+    "solve_advection_diffusion_bar_1d": {
+      "nodes": [{"x": 0.0, "fix_concentration": true, "concentration": 2.0}, {"x": 0.5, "fix_concentration": false}, {"x": 1.0, "fix_concentration": true, "concentration": 2.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "area": 1.0, "diffusivity": 1.0, "velocity": 0.5}, {"node_i": 1, "node_j": 2, "area": 1.0, "diffusivity": 1.0, "velocity": 0.5}]
+    },
+    "solve_heat_plane_triangle_2d": {
+      "nodes": [{"x": 0.0, "y": 0.0, "fix_temperature": true, "temperature": 20.0}, {"x": 1.0, "y": 0.0, "fix_temperature": true, "temperature": 40.0}, {"x": 0.0, "y": 1.0, "fix_temperature": true, "temperature": 20.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "node_k": 2, "thickness": 0.5, "conductivity": 4.0}]
+    },
+    "solve_heat_plane_quad_2d": {
+      "nodes": [{"x": 0.0, "y": 0.0, "fix_temperature": true, "temperature": 20.0}, {"x": 1.0, "y": 0.0, "fix_temperature": true, "temperature": 40.0}, {"x": 1.0, "y": 1.0, "fix_temperature": true, "temperature": 40.0}, {"x": 0.0, "y": 1.0, "fix_temperature": true, "temperature": 20.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.5, "conductivity": 4.0}]
+    },
+    "solve_electrostatic_plane_triangle_2d": {
+      "nodes": [{"x": 0.0, "y": 0.0, "fix_potential": true, "potential": 0.0}, {"x": 1.0, "y": 0.0, "fix_potential": true, "potential": 1.0}, {"x": 0.0, "y": 1.0, "fix_potential": true, "potential": 0.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "node_k": 2, "thickness": 0.5, "permittivity": 2.0}]
+    },
+    "solve_electrostatic_plane_quad_2d": {
+      "nodes": [{"x": 0.0, "y": 0.0, "fix_potential": true, "potential": 0.0}, {"x": 1.0, "y": 0.0, "fix_potential": true, "potential": 1.0}, {"x": 1.0, "y": 1.0, "fix_potential": true, "potential": 1.0}, {"x": 0.0, "y": 1.0, "fix_potential": true, "potential": 0.0}],
+      "elements": [{"node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.5, "permittivity": 2.0}]
+    }
+  },
+  "accepted": [
+    {"id": "omitted", "edits": []},
+    {"id": "explicit", "edits": [{"collection": "nodes", "index": 0, "id": "left"}, {"collection": "nodes", "index": 1, "id": "middle"}, {"collection": "elements", "index": 0, "id": "material"}]},
+    {"id": "empty", "edits": [{"collection": "nodes", "index": 0, "id": ""}, {"collection": "elements", "index": 0, "id": ""}]},
+    {"id": "whitespace-is-literal", "edits": [{"collection": "nodes", "index": 0, "id": " "}, {"collection": "elements", "index": 0, "id": "\t"}]},
+    {"id": "unicode-is-literal", "edits": [{"collection": "nodes", "index": 0, "id": "\u7aef"}, {"collection": "elements", "index": 0, "id": "\u6750\u6599"}]},
+    {"id": "separate-namespaces", "edits": [{"collection": "nodes", "index": 0, "id": "shared"}, {"collection": "elements", "index": 0, "id": "shared"}]}
+  ],
+  "rejected": [
+    {"id": "null-node-id", "edits": [{"collection": "nodes", "index": 0, "id": null}]},
+    {"id": "numeric-node-id", "edits": [{"collection": "nodes", "index": 0, "id": 7}]},
+    {"id": "boolean-node-id", "edits": [{"collection": "nodes", "index": 0, "id": false}]},
+    {"id": "array-node-id", "edits": [{"collection": "nodes", "index": 0, "id": []}]},
+    {"id": "object-node-id", "edits": [{"collection": "nodes", "index": 0, "id": {}}]},
+    {"id": "null-element-id", "edits": [{"collection": "elements", "index": 0, "id": null}]},
+    {"id": "numeric-element-id", "edits": [{"collection": "elements", "index": 0, "id": 7}]},
+    {"id": "boolean-element-id", "edits": [{"collection": "elements", "index": 0, "id": true}]},
+    {"id": "array-element-id", "edits": [{"collection": "elements", "index": 0, "id": []}]},
+    {"id": "object-element-id", "edits": [{"collection": "elements", "index": 0, "id": {}}]},
+    {"id": "duplicate-node-id", "edits": [{"collection": "nodes", "index": 0, "id": "same"}, {"collection": "nodes", "index": 1, "id": "same"}]},
+    {"id": "generated-node-collision", "edits": [{"collection": "nodes", "index": 1, "id": "n0"}]},
+    {"id": "duplicate-element-id", "append_element": true, "edits": [{"collection": "elements", "index": 0, "id": "same"}, {"collection": "elements", "index": 1, "id": "same"}]},
+    {"id": "generated-element-collision", "append_element": true, "edits": [{"collection": "elements", "index": 1, "id": "e0"}]},
+    {"id": "nonobject-node", "edits": [{"collection": "nodes", "index": 0, "replacement": null}]},
+    {"id": "nonobject-element", "edits": [{"collection": "elements", "index": 0, "replacement": []}]},
+    {"id": "tuple-node", "edits": [{"collection": "nodes", "index": 0, "replacement": ["tuple", 0.0, true, 0.0, 0.0]}]},
+    {"id": "tuple-element", "edits": [{"collection": "elements", "index": 0, "replacement": ["tuple", 0, 1, 2.0, 4.0]}]}
+  ]
+}

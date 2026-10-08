@@ -129,7 +129,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "result",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["job_id"],
-        output_keys: &["job_id", "result"],
+        output_keys: &["job_id", "result", "result_artifact_readback"],
     },
     HeadlessActionContract {
         id: "direct_mesh_solve",
@@ -150,7 +150,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         engine: HeadlessEngine::Service,
         category: "solve",
         risk: HeadlessRisk::Normal,
-        required_payload_keys: &["model_version_id", "endpoints"],
+        required_payload_keys: &["model_version_id"],
         output_keys: &[
             "job_id",
             "status",
@@ -165,7 +165,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         engine: HeadlessEngine::Service,
         category: "solve",
         risk: HeadlessRisk::Normal,
-        required_payload_keys: &["model_version_id", "endpoints"],
+        required_payload_keys: &["model_version_id"],
         output_keys: &[
             "job_id",
             "status",
@@ -234,6 +234,14 @@ const CONTRACTS: &[HeadlessActionContract] = &[
     },
     HeadlessActionContract {
         id: "solve_magnetostatic_bar_1d",
+        engine: HeadlessEngine::Service,
+        category: "solve",
+        risk: HeadlessRisk::Normal,
+        required_payload_keys: &["model"],
+        output_keys: DIRECT_FEM_OUTPUTS,
+    },
+    HeadlessActionContract {
+        id: "solve_advection_diffusion_bar_1d",
         engine: HeadlessEngine::Service,
         category: "solve",
         risk: HeadlessRisk::Normal,

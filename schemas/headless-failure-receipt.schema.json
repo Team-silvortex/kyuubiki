@@ -40,6 +40,7 @@
         "job_result_unavailable",
         "binding_resolution",
         "result_fetch_failure",
+        "result_artifact_readback_failed",
         "job_cancelled",
         "invalid_solver_params",
         "contract_failure",
@@ -102,7 +103,7 @@
           "category": {
             "enum": ["service_request_outcome_unknown", "operator_task_outcome_unknown",
               "job_receipt_invalid", "job_result_unavailable", "binding_resolution",
-              "service_response_limit_exceeded"]
+              "service_response_limit_exceeded", "result_artifact_readback_failed"]
           }
         }
       },

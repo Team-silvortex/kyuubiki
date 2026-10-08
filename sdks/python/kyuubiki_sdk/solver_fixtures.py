@@ -262,6 +262,17 @@ _FRAME_3D = {
 
 _PAYLOADS = {
     "bar_1d": _BAR_1D,
+    "advection_diffusion_bar_1d": {
+        "nodes": [
+            {"x": 0.0, "fix_concentration": True, "concentration": 2.0, "source": 0.0},
+            {"x": 0.5, "fix_concentration": False, "concentration": 0.0, "source": 0.0},
+            {"x": 1.0, "fix_concentration": True, "concentration": 2.0, "source": 0.0},
+        ],
+        "elements": [
+            {"node_i": 0, "node_j": 1, "area": 1.0, "diffusivity": 1.0, "velocity": 0.5},
+            {"node_i": 1, "node_j": 2, "area": 1.0, "diffusivity": 1.0, "velocity": 0.5},
+        ],
+    },
     "thermal_bar_1d": {
         "nodes": [{"id": "n0", "x": 0.0, "fix_x": True, "load_x": 0.0, "temperature_delta": 0.0}, {"id": "n1", "x": 1.0, "fix_x": True, "load_x": 0.0, "temperature_delta": 35.0}],
         "elements": [{"id": "e0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 210_000_000_000.0, "thermal_expansion": 0.000012}],

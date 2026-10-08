@@ -7,6 +7,10 @@ use std::net::TcpStream;
 const FEM_JOB_PATHS: &[(&str, &str)] = &[
     ("bar_1d", "/api/v1/fem/axial-bar/jobs"),
     ("thermal_bar_1d", "/api/v1/fem/thermal-bar-1d/jobs"),
+    (
+        "advection_diffusion_bar_1d",
+        "/api/v1/fem/advection-diffusion-bar-1d/jobs",
+    ),
     ("heat_bar_1d", "/api/v1/fem/heat-bar-1d/jobs"),
     (
         "transient_heat_bar_1d",

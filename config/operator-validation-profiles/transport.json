@@ -14,7 +14,12 @@
         "scalar_closed_form",
         "peclet_regime_cross_check",
         "zero_velocity_limit",
-        "pure_diffusion_linear_field_refinement"
+        "pure_diffusion_linear_field_refinement",
+        "connectivity_orientation_invariance",
+        "finite_range_and_cancellation_regression",
+        "independent_upwind_discrete_solution",
+        "upwind_continuous_solution_refinement",
+        "conservative_nodal_source_balance"
       ],
       "formal_invariants": [
         "fixed_boundary_concentrations",
@@ -22,7 +27,15 @@
         "advective_flux_matches_average_concentration",
         "total_flux_is_flux_sum",
         "zero_velocity_has_zero_advective_flux",
-        "refinement_preserves_pure_diffusion_flux_and_peclet_zero"
+        "refinement_preserves_pure_diffusion_flux_and_peclet_zero",
+        "global_x_flux_is_connectivity_orientation_invariant",
+        "unrepresentable_coefficients_and_outputs_fail_before_publication",
+        "result_generation_cancellation_does_not_poison_next_call",
+        "default_galerkin_is_not_silently_stabilized",
+        "upwind_source_free_uniform_path_concentration_is_bounded_and_monotone",
+        "upwind_physical_and_numerical_flux_remain_distinct",
+        "upwind_area_weighted_numerical_flux_jump_matches_nodal_source",
+        "upwind_numerical_flux_summary_cancellation_allows_next_call"
       ],
       "evidence_paths": [
         "config/operator-reliability/transport.json",
@@ -31,7 +44,14 @@
         "workers/rust/crates/solver/tests/advection_diffusion_bar_1d_review.rs",
         "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
         "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
-        "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs"
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_output.rs",
+        "workers/rust/crates/cli/tests/support/headless_transport_output.rs",
+        "reports/advection-diffusion-output-reliability-20261008.md",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_upwind.rs",
+        "workers/rust/crates/cli/tests/support/headless_transport_upwind.rs",
+        "docs/advection-diffusion-upwind.md",
+        "reports/advection-diffusion-upwind-20261008.md"
       ],
       "commands": [
         {
@@ -53,6 +73,16 @@
           "id": "advection-diffusion-bar-refinement",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_refinement -- --nocapture"
+        },
+        {
+          "id": "advection-diffusion-bar-output",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_output -- --nocapture"
+        },
+        {
+          "id": "advection-diffusion-bar-upwind",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_upwind -- --nocapture"
         }
       ]
     }

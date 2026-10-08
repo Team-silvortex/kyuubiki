@@ -11,6 +11,7 @@ from .errors import KyuubikiRpcError, KyuubikiTransportError
 _SOLVER_METHODS: dict[str, str] = {
     "bar_1d": "solve_bar_1d",
     "thermal_bar_1d": "solve_thermal_bar_1d",
+    "advection_diffusion_bar_1d": "solve_advection_diffusion_bar_1d",
     "heat_bar_1d": "solve_heat_bar_1d",
     "transient_heat_bar_1d": "solve_transient_heat_bar_1d",
     "electrostatic_bar_1d": "solve_electrostatic_bar_1d",

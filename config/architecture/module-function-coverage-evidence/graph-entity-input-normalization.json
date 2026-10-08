@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Typed graph entity object/ID rules cover ten Rust field requests and ten direct HTTP families with 240 shared model/edit checks on each ingress and actual source macOS Orchestra/two-Agent inline/file physical parity. SDK/CLI stop ambiguous and tuple-shaped input chains, preserve literal IDs, retain results and recover with exactly 31 task admissions and no downstream writes. The original nine-family 29-admission report is historical; the transport service follow-up covers the current extension. Other solver conformance, installed/remote/scale, cross-language numerical acceptance and numerical provenance remain open.",
+  "evidence_claims": [
+    {
+      "id": "field-graph-cross-transport-entity-conformance",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-protocol", "runtime-agent-cli", "sdk-headless", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "schemas/examples.graph-entity-input-normalization.json",
+        "workers/rust/crates/protocol/src/graph_entity_input.rs",
+        "workers/rust/crates/protocol/src/types/field.rs",
+        "workers/rust/crates/protocol/src/tests/graph_entity_input.rs",
+        "workers/rust/crates/cli/src/agent_artifact.rs",
+        "apps/web/lib/kyuubiki_web/graph_entity_input.ex",
+        "apps/web/lib/kyuubiki_web/fem_model_normalizer.ex",
+        "apps/web/test/kyuubiki_web/graph_entity_input_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_graph_entity_normalization.rs",
+        "workers/rust/crates/cli/tests/support/headless_model_artifact.rs",
+        "config/architecture/protocol-validation-qualification.json",
+        "docs/graph-entity-input-normalization.md",
+        "reports/graph-entity-input-normalization-20261008.md",
+        "reports/advection-diffusion-service-chain-20261008.md"
+      ],
+      "required_text": [
+        "Graph Entity Input Normalization",
+        "graph_entity_shared_accepted_inputs_preserve_or_generate_unique_ids",
+        "graph_entity_shared_invalid_ids_fail_without_silent_repair",
+        "graph_entity_reader_normalizes_after_skipping_large_metadata",
+        "graph_entity_defaults_do_not_make_physics_or_graph_arrays_optional",
+        "graph_entity_reader_rejects_duplicate_known_fields",
+        "shared accepted graph inputs preserve or generate unique ids",
+        "shared invalid graph ids fail without silent repair",
+        "real_graph_entity_inline_and_artifact_results_agree_and_stop_ambiguous_id_chains"
+      ]
+    }
+  ]
+}

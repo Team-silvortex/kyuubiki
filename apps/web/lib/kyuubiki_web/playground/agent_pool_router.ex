@@ -341,6 +341,10 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
 
   defp preferred_tags("solve_bar_1d"), do: ["bar"]
   defp preferred_tags("solve_thermal_bar_1d"), do: ["bar", "thermal", "line"]
+
+  defp preferred_tags("solve_advection_diffusion_bar_1d"),
+    do: ["transport", "advection", "diffusion", "bar", "line"]
+
   defp preferred_tags("solve_heat_bar_1d"), do: ["heat", "bar", "line"]
   defp preferred_tags("solve_transient_heat_bar_1d"), do: ["heat", "transient", "bar", "time"]
 

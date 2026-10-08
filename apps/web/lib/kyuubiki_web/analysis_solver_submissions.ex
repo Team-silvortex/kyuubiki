@@ -73,6 +73,14 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         "solve_magnetostatic_bar_1d"
       )
 
+  def submit_advection_diffusion_bar_1d(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_advection_diffusion_bar_1d/1,
+        "solve_advection_diffusion_bar_1d"
+      )
+
   def submit_electrostatic_plane_triangle_2d(params),
     do:
       submit_solver_job(

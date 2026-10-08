@@ -9,6 +9,7 @@ defmodule KyuubikiWeb.FemSubmitRoutes do
     {"/api/v1/fem/transient-heat-bar-1d/jobs", :submit_transient_heat_bar_1d},
     {"/api/v1/fem/electrostatic-bar-1d/jobs", :submit_electrostatic_bar_1d},
     {"/api/v1/fem/magnetostatic-bar-1d/jobs", :submit_magnetostatic_bar_1d},
+    {"/api/v1/fem/advection-diffusion-bar-1d/jobs", :submit_advection_diffusion_bar_1d},
     {"/api/v1/fem/electrostatic-plane-triangle-2d/jobs", :submit_electrostatic_plane_triangle_2d},
     {"/api/v1/fem/electrostatic-plane-quad-2d/jobs", :submit_electrostatic_plane_quad_2d},
     {"/api/v1/fem/electric-conduction-plane-quad-2d/jobs",

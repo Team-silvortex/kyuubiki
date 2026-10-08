@@ -321,6 +321,7 @@ fn handles_advection_diffusion_bar_1d_rpc_requests() {
         id: "rpc-advection-diffusion-bar".to_string(),
         method: RpcMethod::SolveAdvectionDiffusionBar1d,
         params: serde_json::to_value(SolveAdvectionDiffusionBar1dRequest {
+            scheme: Default::default(),
             nodes: vec![
                 AdvectionDiffusionBar1dNodeInput {
                     id: "n0".to_string(),

@@ -1,6 +1,7 @@
 mod advanced_rpc;
 mod agent_lifecycle_rpc;
 mod agent_solver_qualification;
+mod axial_bar_input;
 mod buckling_rpc;
 mod cohesive_mesh_3d_rpc;
 mod composite_rpc;
@@ -8,12 +9,14 @@ mod core;
 mod execution_cancellation_rpc;
 mod field_rpc;
 mod frame_beam_rpc;
+mod graph_entity_input;
 mod operator_task_ir;
 mod operator_task_ir_fuzz;
 mod rpc_fuzz;
 mod solver_execution_capability;
 mod spring_control_rpc;
 mod thermal_plane_rpc;
+mod transport_scheme;
 mod workflow_dataset_contract;
 mod workflows;
 

@@ -6,6 +6,19 @@ use crate::{
 use std::collections::BTreeSet;
 
 #[test]
+fn saved_service_solve_contracts_do_not_require_direct_agent_endpoints() {
+    for action in [
+        "solve_from_model_version",
+        "solve_and_wait_from_model_version",
+    ] {
+        let contract = crate::find_action_contract(action).unwrap();
+        assert_eq!(contract.required_payload_keys, &["model_version_id"]);
+        assert_eq!(contract.engine, HeadlessEngine::Service);
+        assert_eq!(contract.risk, HeadlessRisk::Normal);
+    }
+}
+
+#[test]
 fn every_solver_contract_has_direct_fem_route() {
     let solver_contracts = direct_solver_contract_ids();
     assert!(

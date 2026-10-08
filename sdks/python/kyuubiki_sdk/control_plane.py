@@ -12,6 +12,7 @@ from .errors import KyuubikiHttpError, KyuubikiTransportError
 _FEM_JOB_PATHS: dict[str, str] = {
     "bar_1d": "/api/v1/fem/axial-bar/jobs",
     "thermal_bar_1d": "/api/v1/fem/thermal-bar-1d/jobs",
+    "advection_diffusion_bar_1d": "/api/v1/fem/advection-diffusion-bar-1d/jobs",
     "heat_bar_1d": "/api/v1/fem/heat-bar-1d/jobs",
     "transient_heat_bar_1d": "/api/v1/fem/transient-heat-bar-1d/jobs",
     "electrostatic_bar_1d": "/api/v1/fem/electrostatic-bar-1d/jobs",

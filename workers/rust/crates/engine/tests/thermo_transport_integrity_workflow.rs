@@ -301,3 +301,85 @@ fn real_thermo_and_transport_solvers_feed_checked_quality_and_recover_after_corr
         assert_ready(&run_workflow_graph(request(domain, raw.clone(), false)).unwrap());
     }
 }
+
+#[test]
+fn real_transport_numerical_failure_blocks_dependent_research_but_keeps_independent_work() {
+    let solver = "solve.advection_diffusion_bar_1d";
+    for (concentration, diffusivity, velocity, diagnostic) in [
+        (1e308, 1.0, 2.0, "advective flux"),
+        (1.0, 1e-308, 10.0, "Peclet number"),
+    ] {
+        let mut invalid = transport_model();
+        for node in invalid["nodes"].as_array_mut().unwrap() {
+            node["fix_concentration"] = json!(true);
+            node["concentration"] = json!(concentration);
+        }
+        for element in invalid["elements"].as_array_mut().unwrap() {
+            element["diffusivity"] = json!(diffusivity);
+            element["velocity"] = json!(velocity);
+        }
+        let error = run_workflow_graph(diagnostic_chain::with_solver(
+            request("transport", invalid.clone(), false),
+            solver,
+        ))
+        .unwrap_err();
+        assert!(
+            error.contains("workflow node solve failed") && error.contains(diagnostic),
+            "{error}"
+        );
+
+        let req = diagnostic_chain::with_solver(request("transport", invalid, true), solver);
+        let mut req = serde_json::to_value(req).unwrap();
+        let solve = req["graph"]["nodes"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|node| node["id"] == "solve")
+            .unwrap();
+        solve["config"] = json!({"on_error":"skip"});
+        let run = run_workflow_graph(serde_json::from_value(req).unwrap()).unwrap();
+        assert_eq!(run.failed_nodes, ["solve"]);
+        assert_eq!(run.skipped_nodes.len(), 5);
+        for (node, port) in [
+            ("solve", "payload"),
+            ("raw", "payload"),
+            ("diagnose", "summary"),
+            ("quality", "summary"),
+            ("objective", "summary"),
+            ("decision", "summary"),
+        ] {
+            assert!(!run.artifacts.contains_key(&format!("{node}.{port}")));
+        }
+        assert_eq!(
+            run.artifacts["independent_output.value"],
+            json!({"value":7})
+        );
+
+        let mut healthy = transport_model();
+        for element in healthy["elements"].as_array_mut().unwrap() {
+            let left = element["node_i"].clone();
+            element["node_i"] = element["node_j"].clone();
+            element["node_j"] = left;
+        }
+        let recovered = run_workflow_graph(diagnostic_chain::with_solver(
+            request("transport", healthy, false),
+            solver,
+        ))
+        .unwrap();
+        assert_ready(&recovered);
+        // Independent source-free balance: 4*C_mid = 2.1*1 + 1.9*0.2.
+        let result = &recovered.artifacts["raw.payload"];
+        assert!((result["nodes"][1]["concentration"].as_f64().unwrap() - 0.62).abs() < 1e-12);
+        for element in result["elements"].as_array().unwrap() {
+            assert!((element["total_flux"].as_f64().unwrap() - 0.922).abs() < 1e-12);
+        }
+        assert!(
+            (recovered.artifacts["diagnose.summary"]["transport_total_flux_peak"]
+                .as_f64()
+                .unwrap()
+                - 0.922)
+                .abs()
+                < 1e-12
+        );
+    }
+}

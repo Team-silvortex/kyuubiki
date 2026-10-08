@@ -3,6 +3,7 @@ use crate::service_executor_job_read::{JobReadRequest, prefer_job_result};
 use crate::service_executor_job_receipt::{
     require_completed_job, require_result_object, validate_result_envelope,
 };
+use crate::service_executor_result_artifact::{ResultReadPolicy, resolve_result_artifact};
 use crate::{HeadlessExecutorError, HeadlessExecutorOutcome};
 use serde_json::{Map, Value};
 
@@ -11,6 +12,7 @@ pub(crate) fn execute_result_fetch(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    let policy = ResultReadPolicy::parse(payload)?;
     let read = JobReadRequest::parse(payload)?;
     let job_id = read.job_id;
     let prefer_job_result = prefer_job_result(payload)?;
@@ -29,7 +31,12 @@ pub(crate) fn execute_result_fetch(
         require_result_object(&envelope)?;
         return Ok(HeadlessExecutorOutcome {
             status: "executed".into(),
-            result: normalize_preferred_job_result(job_id, envelope),
+            result: resolve_result_artifact(
+                base_url,
+                api_token,
+                normalize_preferred_job_result(job_id, envelope),
+                policy,
+            )?,
         });
     }
     let result = request_json(
@@ -43,7 +50,12 @@ pub(crate) fn execute_result_fetch(
     read.validate_result_context(&envelope["job"], &result)?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".into(),
-        result: normalize_result_fetch_result(job_id, result),
+        result: resolve_result_artifact(
+            base_url,
+            api_token,
+            normalize_result_fetch_result(job_id, result),
+            policy,
+        )?,
     })
 }
 

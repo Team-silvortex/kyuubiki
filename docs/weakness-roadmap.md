@@ -22,7 +22,7 @@ Use the [early Daji mainline](current-line.md#early-daji-mainline) as the
 acceptance journey. Research agents control work through the official Headless
 SDKs; Rust Agents execute admitted tasks. GUI/PWDT, Headless control, and
 Rust-only operator extensions remain distinct surfaces. No model output may
-grant itself approval or substitute for numerical validation. [Large-model research transport](headless-model-artifact-identity.md#known-unfinished-boundaries) still needs inline/artifact normalization parity and bounded verified SDK result-file readback; upload identity alone does not close that journey.
+grant itself approval or substitute for numerical validation. [Large-model research transport](headless-model-artifact-identity.md#known-unfinished-boundaries) has [axial-bar scalar parity](axial-bar-input-normalization.md), [ten-route field graph parity](graph-entity-input-normalization.md), the [advection-diffusion service chain](advection-diffusion-service-chain.md) and [bounded native result readback](headless-result-artifact-readback.md); remaining solver normalization, parsed-result capacity and remote/cross-language numerical acceptance remain open. Byte identity alone does not qualify that journey.
 
 ## Current Tensor Status
 
@@ -1249,7 +1249,7 @@ Current weak point:
   particle velocity, and wave number, clearing its convergence dimension
 - `advection-diffusion-bar-closed-form` now retains a 1, 2, 4, 8, 16, and 32
   element pure-diffusion refinement regression for concentration, diffusive
-  flux, total flux, and zero Peclet number, clearing its convergence dimension
+  flux, total flux, and zero Peclet number, clearing its convergence dimension; [bounded output hardening](advection-diffusion-service-chain.md#numerical-output-contract) adds orientation/range/cancellation guards; [explicit upwind](advection-diffusion-upwind.md) adds conservative balance and first-order refinement without general CFD qualification
 - `magnetostatic-bar-closed-form` now retains a 1, 2, 4, 8, and 16 element
   magnetic-potential refinement regression for field strength, flux density,
   stored energy, and nodal potential, clearing its convergence dimension

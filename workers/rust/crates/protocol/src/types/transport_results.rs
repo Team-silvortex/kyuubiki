@@ -23,6 +23,15 @@ pub struct AdvectionDiffusionBar1dElementResult {
     pub advective_flux: f64,
     pub total_flux: f64,
     pub peclet_number: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stabilization: Option<AdvectionDiffusionBar1dStabilization>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AdvectionDiffusionBar1dStabilization {
+    pub artificial_diffusivity: f64,
+    pub stabilization_flux: f64,
+    pub numerical_flux: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,4 +42,6 @@ pub struct SolveAdvectionDiffusionBar1dResult {
     pub max_concentration: f64,
     pub max_total_flux: f64,
     pub max_peclet_number: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_numerical_flux: Option<f64>,
 }

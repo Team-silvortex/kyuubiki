@@ -12,15 +12,21 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[path = "support/ack_loss_proxy.rs"]
 mod ack_loss_proxy;
+#[path = "support/headless_advection_diffusion.rs"]
+mod advection_diffusion;
 #[allow(dead_code)]
 #[path = "support/agent_lifecycle.rs"]
 mod agent_support;
+#[path = "support/headless_axial_bar_normalization.rs"]
+mod axial_bar_normalization;
 #[path = "support/headless_binding_gates.rs"]
 mod binding_gates;
 #[path = "support/headless_binding_lifetimes.rs"]
 mod binding_lifetimes;
 #[path = "support/headless_cancellation_ack_loss.rs"]
 mod cancellation_ack_loss;
+#[path = "support/headless_graph_entity_normalization.rs"]
+mod graph_entity_normalization;
 #[path = "support/headless_job_fetch_gates.rs"]
 mod job_fetch_gates;
 #[path = "support/headless_job_read_gates.rs"]
@@ -54,14 +60,22 @@ mod output_paths;
 mod output_publication;
 #[path = "support/headless_response_budgets.rs"]
 mod response_budgets;
+#[path = "support/result_content_proxy.rs"]
+mod result_content_proxy;
 #[path = "support/headless_result_gates.rs"]
 mod result_gates;
+#[path = "support/headless_result_readback.rs"]
+mod result_readback;
 #[path = "support/headless_risk_gates.rs"]
 mod risk_gates;
 #[path = "support/headless_submission_context.rs"]
 mod submission_context;
 #[path = "support/headless_submission_receipts.rs"]
 mod submission_receipts;
+#[path = "support/headless_transport_output.rs"]
+mod transport_output;
+#[path = "support/headless_transport_upwind.rs"]
+mod transport_upwind;
 #[path = "support/headless_write_ack_loss.rs"]
 mod write_ack_loss;
 

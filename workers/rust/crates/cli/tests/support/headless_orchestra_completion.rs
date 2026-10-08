@@ -198,24 +198,21 @@ fn real_orchestra_agent_chain_blocks_fails_and_recovers_without_downstream_side_
     assert_eq!(failed.executed_step_count, 0);
     assert_eq!(failed.steps.len(), 1);
     let failure = &failed.steps[0].result_preview["failure_receipt"];
-    assert_eq!(
-        failure["reason_code"],
-        "operator_task_solver_execution_failed"
-    );
-    assert_eq!(failure["failure_stage"], "dispatch_engine_solver");
+    assert_eq!(failure["reason_code"], "operator_task_solver_input_invalid");
+    assert_eq!(failure["failure_stage"], "decode_solver_input");
     assert_eq!(failure["task_id"], "real-invalid-bar");
     assert_eq!(failure["recovery"]["retryable"], false);
     assert_eq!(failure["recovery"]["safe_to_continue_other_tasks"], true);
     assert_eq!(
         failure["recovery"]["required_action"],
-        "inspect_engine_solver_failure"
+        "fix_solver_input_artifact"
     );
     let recovery = failed
         .execution_summary
         .failure
         .as_ref()
         .expect("missing structured failure summary");
-    assert_eq!(recovery.recommended_action, "inspect_engine_solver_failure");
+    assert_eq!(recovery.recommended_action, "fix_solver_input_artifact");
     assert!(!recovery.retryable);
     assert_eq!(recovery.step_index, 1);
     wait_for_lifecycle(&agent, "accepting", 0)?;
@@ -293,10 +290,7 @@ fn real_orchestra_agent_mixed_batch_checkpoint_retains_only_unfinished_targets()
     let failure = &execution["results"][2]["failure_receipt"];
     assert_eq!(failure["failure_owner"], "agent_runtime");
     assert_eq!(failure["task_id"], "mixed-bad");
-    assert_eq!(
-        failure["reason_code"],
-        "operator_task_solver_execution_failed"
-    );
+    assert_eq!(failure["reason_code"], "operator_task_solver_input_invalid");
     let checkpoint = post(
         server.port,
         "checkpoint-batch",
@@ -316,7 +310,7 @@ fn real_orchestra_agent_mixed_batch_checkpoint_retains_only_unfinished_targets()
         plan["recovery_actions"]
             .as_array()
             .unwrap()
-            .contains(&json!("inspect_engine_solver_failure"))
+            .contains(&json!("fix_solver_input_artifact"))
     );
     assert!(
         plan["recovery_actions"]

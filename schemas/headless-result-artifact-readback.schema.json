@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/headless-result-artifact-readback.schema.json",
+  "title": "Headless Result Artifact Readback Receipt",
+  "description": "A native SDK readback receipt for byte-verified JSON-object results. Not a signature, independent physics qualification, or a replacement for the completed-job association gate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "verified", "solver_method", "max_bytes", "timeout_ms", "artifact"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.headless-result-artifact-readback/v1"},
+    "verified": {"const": true},
+    "solver_method": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9_]+$"},
+    "max_bytes": {"type": "integer", "minimum": 1, "maximum": 536870912},
+    "timeout_ms": {"type": "integer", "minimum": 1, "maximum": 600000},
+    "artifact": {"$ref": "result-artifact-ref.schema.json"}
+  }
+}

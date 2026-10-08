@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
@@ -9,10 +8,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use kyuubiki_protocol::{
-    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, model_artifact_max_bytes,
-};
+use kyuubiki_protocol::model_artifact_max_bytes;
 
 use crate::agent_http::{cluster_auth_headers, get_to_writer, normalize_base_url};
 use crate::config::AgentConfig;
@@ -50,20 +46,16 @@ pub(crate) fn transport_config() -> Result<&'static ArtifactTransportConfig, Str
         .ok_or_else(|| "agent artifact transport requires KYUUBIKI_ORCHESTRATOR_URL".to_string())
 }
 
-pub(crate) fn decode_solver_params<T: DeserializeOwned + 'static>(
-    params: Value,
-) -> Result<T, String> {
+pub(crate) fn decode_solver_params<T: DeserializeOwned>(params: Value) -> Result<T, String> {
     let Some(reference) = params.get("model_artifact_ref") else {
-        let mut request = serde_json::from_value(params)
-            .map_err(|error| format!("failed to decode inline solver parameters: {error}"))?;
-        normalize_compatibility_ids(&mut request);
-        return Ok(request);
+        return serde_json::from_value(params)
+            .map_err(|error| format!("failed to decode inline solver parameters: {error}"));
     };
     let config = transport_config()?;
     decode_artifact_reference(reference, config)
 }
 
-fn decode_artifact_reference<T: DeserializeOwned + 'static>(
+fn decode_artifact_reference<T: DeserializeOwned>(
     reference: &Value,
     config: &ArtifactTransportConfig,
 ) -> Result<T, String> {
@@ -102,7 +94,7 @@ fn decode_artifact_reference<T: DeserializeOwned + 'static>(
     result
 }
 
-fn fetch_verify_and_decode<T: DeserializeOwned + 'static>(
+fn fetch_verify_and_decode<T: DeserializeOwned>(
     _reference: &Value,
     config: &ArtifactTransportConfig,
     artifact_id: &str,
@@ -144,67 +136,9 @@ fn fetch_verify_and_decode<T: DeserializeOwned + 'static>(
 
     let file = File::open(temporary_path)
         .map_err(|error| format!("failed to reopen model artifact: {error}"))?;
-    let mut request = serde_json::from_reader(BufReader::new(file))
-        .map_err(|error| format!("failed to decode model artifact: {error}"))?;
-    normalize_compatibility_ids(&mut request);
-    Ok(request)
+    serde_json::from_reader(BufReader::new(file))
+        .map_err(|error| format!("failed to decode model artifact: {error}"))
 }
-
-fn normalize_compatibility_ids<T: 'static>(request: &mut T) {
-    let request = request as &mut dyn Any;
-    if let Some(model) = request.downcast_mut::<SolveHeatPlaneQuad2dRequest>() {
-        fill_model_ids(&mut model.nodes, &mut model.elements);
-    } else if let Some(model) = request.downcast_mut::<SolveHeatPlaneTriangle2dRequest>() {
-        fill_model_ids(&mut model.nodes, &mut model.elements);
-    } else if let Some(model) = request.downcast_mut::<SolveElectrostaticPlaneQuad2dRequest>() {
-        fill_model_ids(&mut model.nodes, &mut model.elements);
-    } else if let Some(model) = request.downcast_mut::<SolveElectrostaticPlaneTriangle2dRequest>() {
-        fill_model_ids(&mut model.nodes, &mut model.elements);
-    }
-}
-
-fn fill_model_ids<Node, Element>(nodes: &mut [Node], elements: &mut [Element])
-where
-    Node: EntityWithId,
-    Element: EntityWithId,
-{
-    fill_entity_ids(nodes, "n");
-    fill_entity_ids(elements, "e");
-}
-
-fn fill_entity_ids<T: EntityWithId>(entities: &mut [T], prefix: &str) {
-    for (index, entity) in entities.iter_mut().enumerate() {
-        if entity.id().trim().is_empty() {
-            *entity.id_mut() = format!("{prefix}{index}");
-        }
-    }
-}
-
-trait EntityWithId {
-    fn id(&self) -> &str;
-    fn id_mut(&mut self) -> &mut String;
-}
-
-macro_rules! entity_with_id {
-    ($type:ty) => {
-        impl EntityWithId for $type {
-            fn id(&self) -> &str {
-                &self.id
-            }
-
-            fn id_mut(&mut self) -> &mut String {
-                &mut self.id
-            }
-        }
-    };
-}
-
-entity_with_id!(kyuubiki_protocol::HeatPlaneNodeInput);
-entity_with_id!(kyuubiki_protocol::HeatPlaneQuadElementInput);
-entity_with_id!(kyuubiki_protocol::HeatPlaneTriangleElementInput);
-entity_with_id!(kyuubiki_protocol::ElectrostaticPlaneNodeInput);
-entity_with_id!(kyuubiki_protocol::ElectrostaticPlaneQuadElementInput);
-entity_with_id!(kyuubiki_protocol::ElectrostaticPlaneTriangleElementInput);
 
 fn required_digest(reference: &Value, field: &str) -> Result<String, String> {
     let value = reference
@@ -270,7 +204,7 @@ impl<W: Write> Write for DigestWriter<W> {
 
 #[cfg(test)]
 mod tests {
-    use super::{decode_solver_params, normalize_compatibility_ids, required_digest};
+    use super::{decode_solver_params, required_digest};
     use kyuubiki_protocol::{
         SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
         SolveHeatPlaneQuad2dRequest,
@@ -289,7 +223,7 @@ mod tests {
 
     #[test]
     fn restores_graph_ids_for_canonical_heat_artifacts() {
-        let mut request: SolveHeatPlaneQuad2dRequest = serde_json::from_value(json!({
+        let request: SolveHeatPlaneQuad2dRequest = serde_json::from_value(json!({
             "nodes": [
                 {"x": 0.0, "y": 0.0, "fix_temperature": true},
                 {"id": "kept", "x": 1.0, "y": 0.0, "fix_temperature": false}
@@ -300,8 +234,6 @@ mod tests {
             }]
         }))
         .unwrap();
-
-        normalize_compatibility_ids(&mut request);
 
         assert_eq!(request.nodes[0].id, "n0");
         assert_eq!(request.nodes[1].id, "kept");

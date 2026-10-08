@@ -329,8 +329,23 @@ Then branch by intent:
   Saved-snapshot content fingerprints, optional pre-submit pins, retained source
   evidence and limits of fetched-content consistency.
 - `headless-model-artifact-identity.md`
-  Prepared/sent/upload-reply byte identity, retained upload bindings and the open
-  large-model normalization/result-file readback boundaries.
+  Prepared/sent/upload-reply byte identity, retained upload bindings and the
+  remaining large-model normalization/result-file readback boundaries.
+- `axial-bar-input-normalization.md`
+  Shared HTTP/Agent Pa/GPa scalar rules, invalid-input admission stages and
+  verified inline/artifact bar result parity without full-model buffering.
+- `headless-result-artifact-readback.md`
+  Bounded native physical-result downloads, original byte receipts, reference-only
+  mode and explicit same-job recovery without computation replay.
+- `graph-entity-input-normalization.md`
+  Typed entity-object and unique-ID rules for ten field models, ten actual HTTP
+  inline/file physical comparisons and rejection/recovery without later writes.
+- `advection-diffusion-service-chain.md`
+  Transport service and official SDK route/RPC mappings, native source-bound
+  research metrics, analytic flux checks and actual Agent workflow/recovery.
+- `advection-diffusion-upwind.md`
+  Explicit conservative 1D upwind, separate artificial-diffusion diagnostics,
+  independent refinement/balance tests and actual source-Agent execution.
 - `operator-sdk.md`
   Proposed operator descriptor, runtime contract, and validation shape for
   future extensible solver and transform capabilities.

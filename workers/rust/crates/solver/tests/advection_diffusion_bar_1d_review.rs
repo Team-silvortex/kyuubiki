@@ -15,6 +15,7 @@ fn advection_diffusion_bar_1d_review_bundle_checks_boundary_concentrations_fluxe
     let velocity = 0.1;
 
     let result = solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest {
+        scheme: Default::default(),
         nodes: vec![
             node("inlet", 0.0, true, left_concentration),
             node("outlet", length, true, right_concentration),

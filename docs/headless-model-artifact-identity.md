@@ -73,29 +73,32 @@ case authorizes automatic batch replay.
 
 ## Known Unfinished Boundaries
 
-The live test uncovered an inline/artifact normalization gap: the axial-bar HTTP
-path converts `youngs_modulus_gpa` to SI, while artifact references bypass that
-normalizer and are decoded as native solver parameters. A GPa-only large upload
-therefore reaches a failed job with missing `youngs_modulus`. The healthy test
-uses mutually consistent SI and GPa forms; it does not resolve this API gap.
-Do not silently change units or generalize this fixture into format parity.
+The axial-bar scalar mismatch found by the live test is now closed by a
+[shared normalization contract](axial-bar-input-normalization.md). Both inline
+HTTP and Agent artifact decoding accept GPa-only, Pa-only and roundoff-consistent
+dual units; invalid units and fractional counts fail. The upload identity test
+no longer needs an extra SI field. The [graph entity contract](graph-entity-input-normalization.md)
+also closes ID defaults/type/collision and object-shape parity for ten field
+submission routes, including the [transport service chain](advection-diffusion-service-chain.md). Other
+solver schemas and defaults still need inline/artifact conformance; neither
+scoped proof establishes complete format parity.
 
 An Agent configured for artifact transport publishes results as file references.
-Current `result_fetch` retains the result reference rather than automatically
-dereferencing it. This test separately downloads the small actual result file,
-checks its raw digest/length, and compares bar displacement against `FL/(EA)`.
-Its research-evidence metric is result-file byte count, not a falsely claimed
-SDK-extracted physical metric. Both normalization parity and a bounded, verified
-SDK result-file readback remain follow-up acceptance work in the
-[weakness roadmap](weakness-roadmap.md#roadmap-principle).
+Native `result_fetch` now performs [bounded verified readback](headless-result-artifact-readback.md)
+by default, returning physical fields with a separate raw-byte receipt. The
+upload identity regression now extracts actual bar displacement through the
+SDK and retains it as its research metric. The historical upload-only report
+keeps its original test-side readback scope; the newer readback regression
+adds SDK/CLI corruption refusal and explicit same-job read recovery. Other
+solver normalization and large-result capacity qualification remain open in
+the [weakness roadmap](weakness-roadmap.md#roadmap-principle).
 
-Next acceptance must pair an inline baseline with the same physical input forced
-through file transport, using a consistent contract for units, defaults, IDs,
-required fields and contradictory values without full-model control-plane
-buffering. Official SDK code must then extract actual physical metrics from
-bounded, raw-digest-verified result downloads, retain/reload evidence and show no
-replay on readback failure. Download limits, no-redirection/auth policy and
-large-result ownership must remain explicit. Upload-only proof cannot qualify
+Further solver acceptance must pair inline/file inputs using consistent units,
+defaults, IDs, required fields and contradictory values without full-model
+control-plane buffering. Native result readback now extracts physical metrics,
+retains/reloads evidence and blocks replay on read failure within explicit
+download limits and no-redirection/auth policy. Parsed JSON memory expansion,
+other solver content contracts and large-result scale still need qualification. Upload-only proof cannot qualify
 this broader journey at `sdk-headless/sdk_headless` or
 `runtime-agent-cli/solver_execution`.
 

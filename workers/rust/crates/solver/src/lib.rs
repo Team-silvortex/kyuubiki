@@ -141,6 +141,7 @@ mod transient_heat_bar_1d_validation;
 mod transient_history;
 mod transient_spring_1d;
 mod transport_bar_1d;
+mod transport_bar_1d_numerics;
 mod transport_bar_1d_validation;
 mod truss;
 mod truss_numerics;

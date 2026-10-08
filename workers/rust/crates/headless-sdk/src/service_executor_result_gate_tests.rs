@@ -336,7 +336,9 @@ fn complete_inline_and_reference_results_preserve_full_values_without_raw_mirror
         json!({"nodes":(0..256).collect::<Vec<_>>(),"literal":"{{steps.1.result.job_id}}"});
     let reference = json!({"schema_version":"kyuubiki.solver-result-reference/v1",
         "solver_method":"solve_bar_1d", "storage_mode":"orchestra_content_addressed",
-        "result_artifact_ref":{"artifact_id":"owned-artifact","sha256":"a".repeat(64),"size_bytes":12345}});
+        "result_artifact_ref":{"schema_version":"kyuubiki.result-artifact-ref/v1",
+            "artifact_id":"a".repeat(64),"sha256":"a".repeat(64),"size_bytes":12345,
+            "media_type":"application/vnd.kyuubiki.result+json","immutable":true}});
     for result in [inline, reference, json!({})] {
         for mode in 0..3 {
             let first = if mode == 1 { STATUS } else { JOB };
@@ -355,7 +357,7 @@ fn complete_inline_and_reference_results_preserve_full_values_without_raw_mirror
             let server = Server::new(replies);
             let report = server.run(
                 "result_fetch",
-                json!({"job_id":"owned-job","prefer_job_result": mode != 1}),
+                json!({"job_id":"owned-job","prefer_job_result": mode != 1,"resolve_result_artifact":false}),
             );
             assert_eq!(report.status, "ok", "{report:?}");
             assert_eq!(report.executed_step_count, 2);

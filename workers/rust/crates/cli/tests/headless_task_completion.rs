@@ -210,7 +210,7 @@ fn headless_http_receipts_from_a_real_agent_block_fail_and_recover() -> Result<(
         failure.steps[0].result_preview["error"]
             .as_str()
             .unwrap()
-            .contains("operator_task_solver_execution_failed")
+            .contains("operator_task_solver_input_invalid")
     );
     for report in [&first, &replay] {
         assert_eq!(report.status, "ok");

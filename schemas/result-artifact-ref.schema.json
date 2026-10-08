@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/result-artifact-ref.schema.json",
+  "title": "Normalized Result Artifact Reference",
+  "description": "Six protocol fields retained after native result readback. Artifact ID and SHA-256 equality and actual raw-byte digest/length agreement require semantic validation; this is not execution authentication.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_id", "sha256", "size_bytes", "media_type", "immutable"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.result-artifact-ref/v1"},
+    "artifact_id": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "size_bytes": {"type": "integer", "minimum": 1},
+    "media_type": {"const": "application/vnd.kyuubiki.result+json"},
+    "immutable": {"const": true}
+  }
+}

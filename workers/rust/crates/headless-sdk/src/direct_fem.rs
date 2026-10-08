@@ -47,6 +47,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/magnetostatic-bar-1d/jobs",
     },
     DirectFemRoute {
+        action: "solve_advection_diffusion_bar_1d",
+        route: "/api/v1/fem/advection-diffusion-bar-1d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_magnetostatic_plane_triangle_2d",
         route: "/api/v1/fem/magnetostatic-plane-triangle-2d/jobs",
     },
@@ -339,6 +343,10 @@ mod tests {
             Some("/api/v1/fem/cohesive-interface-mesh-3d/jobs")
         );
         assert_eq!(direct_fem_submit_route("solve_unknown"), None);
+        assert_eq!(
+            direct_fem_submit_route("solve_advection_diffusion_bar_1d"),
+            Some("/api/v1/fem/advection-diffusion-bar-1d/jobs")
+        );
     }
 
     #[test]
@@ -353,7 +361,7 @@ mod tests {
             .map(|entry| entry.route)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(routes.len(), 49);
+        assert_eq!(routes.len(), 50);
         assert_eq!(actions.len(), routes.len(), "duplicate direct FEM actions");
         assert_eq!(paths.len(), routes.len(), "duplicate direct FEM routes");
 
@@ -376,6 +384,7 @@ mod tests {
         assert_eq!(manifest.len(), all_direct_fem_routes().len());
         assert_eq!(actions.len(), manifest.len());
         assert!(actions.contains("solve_thermal_frame_3d"));
+        assert!(actions.contains("solve_advection_diffusion_bar_1d"));
         assert!(actions.contains("solve_buckling_beam_1d"));
         assert!(actions.contains("solve_buckling_frame_2d"));
         assert!(actions.contains("solve_frame_2d_p_delta"));

@@ -15,6 +15,7 @@ fn advection_diffusion_bar_1d_matches_single_element_flux_baseline() {
     let velocity = 0.1;
 
     let result = solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest {
+        scheme: Default::default(),
         nodes: vec![
             AdvectionDiffusionBar1dNodeInput {
                 id: "inlet".to_string(),
@@ -178,9 +179,12 @@ fn advection_diffusion_bar_1d_solves_large_numbering_independent_path() {
         })
         .collect::<Vec<_>>();
 
-    let result =
-        solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest { nodes, elements })
-            .expect("large permuted path should use the linear-memory solver");
+    let result = solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest {
+        nodes,
+        elements,
+        scheme: Default::default(),
+    })
+    .expect("large permuted path should use the linear-memory solver");
 
     assert_eq!(result.nodes.len(), node_count);
     assert_eq!(result.nodes[path[0]].concentration, 1.0);
@@ -223,9 +227,12 @@ fn advection_diffusion_bar_1d_bounds_dense_non_path_fallback() {
         velocity: 0.01,
     });
 
-    let error =
-        solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest { nodes, elements })
-            .expect_err("oversized dense fallback should fail before allocating its matrix");
+    let error = solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest {
+        nodes,
+        elements,
+        scheme: Default::default(),
+    })
+    .expect_err("oversized dense fallback should fail before allocating its matrix");
 
     assert!(
         error.contains("dense fallback supports at most 512"),
@@ -235,6 +242,7 @@ fn advection_diffusion_bar_1d_bounds_dense_non_path_fallback() {
 
 fn transport_request() -> SolveAdvectionDiffusionBar1dRequest {
     SolveAdvectionDiffusionBar1dRequest {
+        scheme: Default::default(),
         nodes: vec![
             AdvectionDiffusionBar1dNodeInput {
                 id: "inlet".to_string(),

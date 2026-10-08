@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Axial-bar protocol and HTTP scalar normalization share ten accepted and 26 rejected conformance cases. A real source macOS Orchestra/two-Agent SDK/CLI chain matches complete inline/artifact results and independent closed-form physics, rejects invalid units/counts at the correct admission stage, blocks later writes and recovers without automatic replay. Historical normalization proof used test-side file reads; the current regression requires native SDK physical readback with separate contract evidence. Other solver normalization, installed/remote/scale and authenticated numerical provenance remain open.",
+  "evidence_claims": [
+    {
+      "id": "axial-bar-cross-transport-scalar-conformance",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-protocol", "runtime-agent-cli", "sdk-headless", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "schemas/examples.axial-bar-input-normalization.json",
+        "workers/rust/crates/protocol/src/axial_bar_input.rs",
+        "workers/rust/crates/protocol/src/types/field.rs",
+        "workers/rust/crates/protocol/src/tests/axial_bar_input.rs",
+        "apps/web/lib/kyuubiki_web/axial_bar_input.ex",
+        "apps/web/lib/kyuubiki_web/fem_model_normalizer.ex",
+        "apps/web/test/kyuubiki_web/axial_bar_input_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_axial_bar_normalization.rs",
+        "workers/rust/crates/cli/tests/support/headless_model_artifact.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "config/architecture/headless-workflow-qualification.json",
+        "config/architecture/protocol-validation-qualification.json",
+        "docs/axial-bar-input-normalization.md",
+        "reports/axial-bar-input-normalization-20261008.md"
+      ],
+      "required_text": [
+        "Axial Bar Input Normalization",
+        "axial_bar_shared_accepted_inputs_normalize_to_canonical_si",
+        "axial_bar_shared_invalid_inputs_never_choose_units_or_round_counts_silently",
+        "axial_bar_scalar_rejection_does_not_materialize_nested_field_bodies",
+        "shared accepted inputs normalize to canonical SI",
+        "terminal_decode_failure_keeps_specific_stage_without_retrying_acknowledged_job",
+        "real_axial_bar_inline_and_artifact_normalization_agree_and_reject_without_downstream_writes"
+      ]
+    }
+  ]
+}

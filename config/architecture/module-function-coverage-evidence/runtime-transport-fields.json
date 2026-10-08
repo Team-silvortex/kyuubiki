@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded steady 1D transport now checks global-x orientation, finite coefficients/results, underflow, constraint masking and cancellable result generation. Nine actual source macOS Orchestra/Agent admissions check physical fields, five terminal failures without publication or later writes, and healthy recovery without replay. This is not installed/remote/scale acceptance, stabilized advection, multidimensional CFD or general industrial qualification.",
+  "evidence_claims": [
+    {
+      "id": "transport-finite-fields-orientation-and-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/transport_bar_1d.rs",
+        "workers/rust/crates/solver/src/transport_bar_1d_numerics.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_output.rs",
+        "workers/rust/crates/engine/tests/thermo_transport_integrity_workflow.rs",
+        "config/operator-validation-profiles/transport.json",
+        "docs/advection-diffusion-service-chain.md",
+        "reports/advection-diffusion-output-reliability-20261008.md"
+      ],
+      "required_text": [
+        "fixed_element_flux_uses_global_x_not_connectivity_direction",
+        "binary_scaled_free_equations_preserve_normal_and_subnormal_coefficients",
+        "fixed_dense_boundaries_do_not_hide_assembled_matrix_overflow",
+        "result_generation_cancels_inside_chunks_and_after_summary_scans",
+        "real_transport_numerical_failure_blocks_dependent_research_but_keeps_independent_work",
+        "This is bounded steady 1D transport validation, not general CFD qualification."
+      ]
+    },
+    {
+      "id": "transport-service-numerical-failure-isolation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/tests/support/headless_transport_output.rs",
+        "reports/advection-diffusion-output-reliability-20261008.md"
+      ],
+      "required_text": [
+        "real_transport_output_failures_publish_no_result_and_same_agents_recover",
+        "must-not-follow-invalid-transport-output"
+      ]
+    }
+  ]
+}

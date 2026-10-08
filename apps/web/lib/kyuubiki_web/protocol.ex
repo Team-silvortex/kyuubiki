@@ -100,6 +100,7 @@ defmodule KyuubikiWeb.Protocol do
         "run_operator_task_ir",
         "solve_bar_1d",
         "solve_thermal_bar_1d",
+        "solve_advection_diffusion_bar_1d",
         "solve_heat_bar_1d",
         "solve_transient_heat_bar_1d",
         "solve_electrostatic_bar_1d",

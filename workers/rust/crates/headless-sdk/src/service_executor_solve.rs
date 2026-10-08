@@ -171,6 +171,7 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
     validate_job_wait_options(payload)?;
     prefer_job_result(payload)?;
+    crate::service_executor_result_artifact::ResultReadPolicy::parse(payload)?;
     let solved = execute_solve_from_model_version(base_url, api_token, payload)?;
     let job_id = solved
         .result
@@ -215,6 +216,9 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
             "prefer_job_result",
             "preferJobResult",
             "direct_mesh",
+            "resolve_result_artifact",
+            "result_artifact_max_bytes",
+            "result_artifact_timeout_ms",
         ],
     );
     let fetched = execute_result_fetch(base_url, api_token, &Value::Object(result_payload))?;

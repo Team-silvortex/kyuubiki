@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Explicit upwind for bounded steady 1D advection-diffusion preserves legacy Galerkin defaults and reports artificial diffusion separately from physical flux. Numerical evidence covers uniform-path discrete solutions, first-order refinement and layered conservative nodal balance. Eight actual source macOS Orchestra/Agent admissions verify inline/file/workflow results, retained metrics, terminal failure isolation and recovery; an invalid inline scheme creates no job. This does not qualify installed/remote/scale behavior, general CFD or arbitrary branching materials.",
+  "evidence_claims": [
+    {
+      "id": "transport-explicit-upwind-conservation-and-refinement",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/transport_bar_1d.rs",
+        "workers/rust/crates/solver/src/transport_bar_1d_numerics.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_upwind.rs",
+        "config/operator-validation-profiles/transport.json",
+        "docs/advection-diffusion-upwind.md",
+        "reports/advection-diffusion-upwind-20261008.md"
+      ],
+      "required_text": [
+        "high_peclet_upwind_is_monotone_and_matches_independent_discrete_solution",
+        "central_default_is_preserved_and_does_not_silently_enable_upwind",
+        "layered_coefficients_preserve_conservative_nodal_balance_and_orientation",
+        "upwind_refinement_converges_to_continuous_solution_with_first_order_error",
+        "upwind_result_cancellation_including_numerical_flux_summary_allows_recovery",
+        "First-order upwind adds numerical diffusion; it is not a sharp-layer accuracy guarantee."
+      ]
+    },
+    {
+      "id": "transport-upwind-service-contract-and-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/protocol/src/types/field.rs",
+        "workers/rust/crates/protocol/src/types/transport_results.rs",
+        "workers/rust/crates/protocol/src/tests/transport_scheme.rs",
+        "schemas/examples.advection-diffusion-scheme.json",
+        "apps/web/lib/kyuubiki_web/fem_model_normalizer.ex",
+        "apps/web/test/kyuubiki_web/advection_diffusion_scheme_test.exs",
+        "apps/web/test/kyuubiki_web/api/advection_diffusion_solver_api_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_transport_upwind.rs",
+        "reports/advection-diffusion-upwind-20261008.md"
+      ],
+      "required_text": [
+        "transport_scheme_shared_fixture_accepts_only_explicit_supported_schemes",
+        "legacy_transport_result_decodes_without_new_optional_diagnostics",
+        "real_upwind_service_chain_preserves_scheme_flux_metrics_and_failure_recovery",
+        "invalid choices create no jobs"
+      ]
+    }
+  ]
+}

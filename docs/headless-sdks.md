@@ -559,7 +559,7 @@ submitting work. Its unmodified canonical ID must match the requested object;
 project/model parent IDs must be usable, repeated IDs must agree, and caller
 parent hints must match. Kind must be a usable string and payload an object.
 Version aliases cannot contradict `version_id`. Batch documents still use
-their registered canonical required keys; executor aliases are not an extension
+their registered canonical required keys. Native saved-version solves require only `model_version_id`; Orchestra-routed studies do not require `endpoints`, while an unsupported direct-mesh fallback still does. Executor aliases are not an extension
 of batch preflight contracts.
 
 A saved reference cannot be combined with `input` or `model_payload`, even a
@@ -1800,15 +1800,15 @@ Large service submissions do not expand a complete FEM model into the Elixir
 process or one solver RPC frame. The control plane streams the model into its
 SHA-256 store and sends a `kyuubiki.model-artifact-ref/v1` reference to the
 selected Rust Agent. The Agent verifies the declared byte length and digest
-before decoding it.
+before decoding it; [field graph decoding](graph-entity-input-normalization.md) shares object/ID rules across ten inline/file routes, including the [advection-diffusion service chain](advection-diffusion-service-chain.md) and its [explicit upwind scheme and numerical-flux metrics](advection-diffusion-upwind.md).
 
 When a solve was sourced from a model artifact, its result follows the same
 bounded transport rule. The Agent serializes directly to a temporary file,
 uploads `application/vnd.kyuubiki.result+json`, and returns a compact
-`kyuubiki.solver-result-reference/v1`. Job storage and `result_fetch` retain
-that reference instead of copying a potentially multi-gigabyte result into
-RPC, SQL JSON, or the Headless run report. Consumers can inspect metadata or
-download immutable content through:
+`kyuubiki.solver-result-reference/v1`. Job storage retains that reference;
+native `result_fetch` now returns actual physical JSON through [bounded verified
+readback](headless-result-artifact-readback.md), default 64 MiB with explicit
+reference-only mode for larger results. Metadata/content endpoints remain:
 
 - `POST /api/v1/model-artifacts`
 - `GET /api/v1/model-artifacts/:artifact_id`

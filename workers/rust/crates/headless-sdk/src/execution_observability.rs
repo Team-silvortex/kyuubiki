@@ -133,6 +133,14 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             "none",
             "Inspect the endpoint response size and use a bounded model/result transfer; do not retry an oversized response automatically or replay completed computation.",
         )
+    } else if message.starts_with(crate::service_executor_result_artifact::READBACK_FAILURE) {
+        (
+            "result_artifact_readback_failed",
+            "result_fetch",
+            false,
+            "none",
+            "Keep the completed job_id and inspect its result descriptor, content and read budget; explicitly retry only the read after repair. Do not replay computation or the batch automatically.",
+        )
     } else if message.starts_with(crate::service_executor_artifact::INVALID_UPLOAD_RECEIPT) {
         (
             "contract_failure",
@@ -140,6 +148,18 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             false,
             "none",
             "Inspect the artifact upload receipt and repair its content identity before an explicit continuation; an uploaded object may remain, but the SDK did not submit a solve. Do not replay the batch automatically.",
+        )
+    } else if message.starts_with(crate::service_executor_job_wait::FAILED_JOB)
+        && (normalized.contains("invalid_params")
+            || normalized.contains("failed to decode model artifact"))
+    {
+        // Terminal admission remains non-retryable, but retain its specific cause.
+        (
+            "invalid_solver_params",
+            "agent_decode",
+            false,
+            "none",
+            "Validate the solver model fields and repair the request before explicitly replacing the failed job; do not replay the acknowledged submission automatically.",
         )
     } else if message.starts_with(crate::service_executor_job_wait::FAILED_JOB) {
         (
@@ -473,6 +493,49 @@ mod tests {
                     |categories| categories.contains(&preview["failure_receipt"]["category"])
                 )
         );
+    }
+
+    #[test]
+    fn terminal_decode_failure_keeps_specific_stage_without_retrying_acknowledged_job() {
+        for detail in [
+            "invalid_params: failed to decode model artifact: contradictory units",
+            "invalid_params: timed out waiting while decoding",
+            "invalid_params: agent_queue_timeout after failed to connect",
+            "failed to decode model artifact: missing field area",
+        ] {
+            let preview = failure_preview(
+                2,
+                "job_wait",
+                format!(
+                    "{} service job owned reached terminal status failed: {detail}",
+                    crate::service_executor_job_wait::FAILED_JOB
+                ),
+            );
+            assert_eq!(
+                preview["error_code"],
+                "kyuubiki.headless.invalid_solver_params"
+            );
+            assert_eq!(preview["failure_receipt"]["stage"], "agent_decode");
+            assert_eq!(preview["failure_receipt"]["retryable"], false);
+            assert_eq!(preview["failure_receipt"]["retry_strategy"], "none");
+        }
+        for (prefix, expected) in [
+            (
+                crate::service_executor_response::OUTCOME_UNKNOWN,
+                "service_request_outcome_unknown",
+            ),
+            (
+                crate::service_executor_job_wait::CANCELLED_JOB,
+                "job_cancelled",
+            ),
+        ] {
+            let preview = failure_preview(2, "job_wait", format!("{prefix} invalid_params"));
+            assert_eq!(
+                preview["error_code"],
+                format!("kyuubiki.headless.{expected}")
+            );
+            assert_eq!(preview["failure_receipt"]["retryable"], false);
+        }
     }
 
     #[test]

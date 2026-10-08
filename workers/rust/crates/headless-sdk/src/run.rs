@@ -270,6 +270,7 @@ pub(crate) fn build_result_preview(action: &str, step_index: usize, payload: &Va
             map.insert("progress".to_string(), Value::from(1.0));
         }
         "result_fetch" => {
+            map.insert("result_artifact_readback".into(), Value::Null);
             map.insert(
                 "job_id".to_string(),
                 payload

@@ -89,7 +89,11 @@ pub(crate) fn generate_advection_diffusion_bar_case(
         diffusivity: 1.2e-5,
         velocity: 0.08,
     });
-    SolveAdvectionDiffusionBar1dRequest { nodes, elements }
+    SolveAdvectionDiffusionBar1dRequest {
+        nodes,
+        elements,
+        scheme: Default::default(),
+    }
 }
 
 pub(crate) fn generate_acoustic_bar_case(elements: usize) -> SolveAcousticBar1dRequest {

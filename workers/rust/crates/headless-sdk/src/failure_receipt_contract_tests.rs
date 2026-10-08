@@ -68,6 +68,10 @@ fn official_runtime_failure_categories_and_stages_are_declared_in_the_public_sch
         ("result_fetch", "result unavailable"),
         (
             "result_fetch",
+            "result_artifact_readback_failed: content digest mismatch",
+        ),
+        (
+            "result_fetch",
             "service_response_limit_exceeded: oversized response",
         ),
         ("solve_bar_1d", "model_artifact_limit_exceeded"),

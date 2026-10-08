@@ -63,7 +63,11 @@ fn mesh(element_count: usize) -> SolveAdvectionDiffusionBar1dRequest {
             velocity: 0.0,
         })
         .collect();
-    SolveAdvectionDiffusionBar1dRequest { nodes, elements }
+    SolveAdvectionDiffusionBar1dRequest {
+        nodes,
+        elements,
+        scheme: Default::default(),
+    }
 }
 
 fn assert_close(actual: f64, expected: f64) {

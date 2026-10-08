@@ -128,8 +128,13 @@ mod service_executor_request;
 mod service_executor_response;
 mod service_executor_response_budget;
 mod service_executor_result;
+mod service_executor_result_artifact;
+#[cfg(test)]
+mod service_executor_result_artifact_tests;
+mod service_executor_result_download;
 #[cfg(test)]
 mod service_executor_result_gate_tests;
+mod service_executor_result_stream;
 mod service_executor_solve;
 #[cfg(test)]
 mod service_executor_submission_context_tests;

@@ -1,0 +1,27 @@
+{
+  "model": {
+    "nodes": [
+      {"x": 0.0, "fix_concentration": true, "concentration": 0.0},
+      {"x": 0.5, "fix_concentration": false, "source": 4.0},
+      {"x": 1.0, "fix_concentration": true, "concentration": 1.0}
+    ],
+    "elements": [
+      {"node_i": 0, "node_j": 1, "area": 1.0, "diffusivity": 1.0, "velocity": 20.0},
+      {"node_i": 1, "node_j": 2, "area": 1.0, "diffusivity": 1.0, "velocity": 20.0}
+    ]
+  },
+  "accepted": [
+    {"id": "missing-default", "expected": "galerkin"},
+    {"id": "explicit-galerkin", "scheme": "galerkin", "expected": "galerkin"},
+    {"id": "explicit-upwind", "scheme": "upwind", "expected": "upwind"}
+  ],
+  "rejected": [
+    {"id": "null", "scheme": null},
+    {"id": "unknown", "scheme": "auto"},
+    {"id": "wrong-case", "scheme": "UPWIND"},
+    {"id": "boolean", "scheme": true},
+    {"id": "object", "scheme": {}},
+    {"id": "array", "scheme": []},
+    {"id": "number", "scheme": 1}
+  ]
+}

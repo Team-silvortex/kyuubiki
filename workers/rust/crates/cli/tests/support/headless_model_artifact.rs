@@ -13,21 +13,12 @@ use kyuubiki_headless_sdk::{
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::{
-    error::Error,
-    fs,
-    io::{Read, Write},
-    net::TcpStream,
-    time::Duration,
-};
+use std::{error::Error, fs};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 fn large_model(force: f64) -> Value {
     let mut value = model(force);
-    // File references carry native solver parameters; inline API normalization
-    // is bypassed by that transport. Keep both unit forms consistent here.
-    value["youngs_modulus"] = json!(210e9);
     // Transport-sized fixture, deliberately not a million-node physics benchmark.
     value["transport_padding"] = json!("x".repeat(8_000_000));
     value
@@ -42,7 +33,7 @@ fn step(action: &str, index: usize, payload: Value) -> HeadlessExecutionBatchSte
     }
 }
 
-fn solve_batch(model: Value) -> HeadlessExecutionBatch {
+pub(super) fn solve_batch(model: Value) -> HeadlessExecutionBatch {
     let mut batch = document("solve_bar_1d", json!({"model":model}));
     batch.steps.truncate(1);
     batch.steps.push(step(
@@ -85,36 +76,17 @@ fn assert_rejected(report: &Value) {
     assert!(report["steps"][0]["result_preview"].get("job_id").is_none());
 }
 
-fn tip(port: u16, report: &HeadlessRunReport) -> Result<f64> {
-    let reference = &report.steps[2].result_preview["result"]["result_artifact_ref"];
-    let id = reference["artifact_id"]
-        .as_str()
-        .ok_or("missing result artifact")?;
-    assert_eq!(id.len(), 64);
-    assert!(id.bytes().all(|byte| byte.is_ascii_hexdigit()));
-    let mut stream = TcpStream::connect(("127.0.0.1", port))?;
-    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
-    stream.set_write_timeout(Some(Duration::from_secs(5)))?;
-    write!(
-        stream,
-        "GET /api/v1/result-artifacts/{id}/content HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"
-    )?;
-    let mut bytes = Vec::new();
-    stream.take(1024 * 1024 + 1).read_to_end(&mut bytes)?;
-    assert!(bytes.len() <= 1024 * 1024);
-    let header_end = bytes
-        .windows(4)
-        .position(|part| part == b"\r\n\r\n")
-        .ok_or("missing HTTP header")?
-        + 4;
-    let head = std::str::from_utf8(&bytes[..header_end])?;
-    assert!(head.starts_with("HTTP/1.1 200 "));
-    let body = &bytes[header_end..];
-    assert_eq!(reference["size_bytes"], body.len());
-    assert_eq!(reference["sha256"], format!("{:x}", Sha256::digest(body)));
-    assert_eq!(reference["artifact_id"], reference["sha256"]);
-    let result: Value = serde_json::from_slice(body)?;
-    Ok(result["tip_displacement"]
+pub(super) fn physical_result(report: &HeadlessRunReport) -> Value {
+    let result = &report.steps[2].result_preview["result"];
+    assert!(
+        result.get("result_artifact_ref").is_none(),
+        "SDK must resolve the physical result itself"
+    );
+    result.clone()
+}
+
+fn tip(report: &HeadlessRunReport) -> Result<f64> {
+    Ok(physical_result(report)["tip_displacement"]
         .as_f64()
         .ok_or("missing tip displacement")?)
 }
@@ -136,7 +108,7 @@ fn real_large_upload_identity_blocks_substituted_existing_content_before_calcula
     assert_eq!(baseline.status, "ok", "{baseline:?}\n{}", server.logs());
     let alternative = baseline.steps[0].result_preview["model_artifact_upload"].clone();
     assert_eq!(alternative["immutable"], true);
-    let baseline_tip = tip(server.port, &baseline)?;
+    let baseline_tip = tip(&baseline)?;
     assert!((baseline_tip / (2000.0 / (210e9 * 0.01)) - 1.0).abs() < 1e-12);
     let jobs = http_json(server.port, "/api/v1/jobs", None)?.1;
     let projects = http_json(server.port, "/api/v1/projects", None)?.1;
@@ -221,16 +193,16 @@ fn real_large_upload_identity_blocks_substituted_existing_content_before_calcula
         healthy.steps[3].payload["retained_upload"],
         stored["artifact"]
     );
-    assert!((tip(server.port, &healthy)? / baseline_tip - 0.5).abs() < 1e-12);
+    assert!((tip(&healthy)? / baseline_tip - 0.5).abs() < 1e-12);
     assert_ne!(
         healthy.execution_summary.job_ids,
         baseline.execution_summary.job_ids
     );
     let spec: HeadlessResearchRoundSpec = serde_json::from_value(json!({
         "schema_version":"kyuubiki.headless-research-round-spec/v1","round_id":"uploaded-bar",
-        "workflow_id":healthy_batch.workflow_id,"iteration":1,"primary_metric_ids":["result_file_bytes"],
-        "metrics":[{"metric_id":"result_file_bytes","pointer":"/steps/2/result_preview/result/result_artifact_ref/size_bytes",
-            "unit":"bytes","objective":"observe"}]
+        "workflow_id":healthy_batch.workflow_id,"iteration":1,"primary_metric_ids":["tip_displacement"],
+        "metrics":[{"metric_id":"tip_displacement","pointer":"/steps/2/result_preview/result/tip_displacement",
+            "unit":"m","objective":"observe"}]
     }))?;
     let evidence =
         build_headless_research_round_evidence(&healthy_batch, &healthy, &spec, None, None)?;

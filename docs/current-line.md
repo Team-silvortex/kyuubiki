@@ -202,9 +202,54 @@ checks prepared/sent byte digests and typed server references before solver POST
 retains `model_artifact_upload` and refuses a different existing same-size model's
 reply without extra calculations or downstream writes. The real source macOS
 test checks healthy native-SI bar results by separately reading result files.
-Inline/artifact parameter normalization and automatic SDK result-reference
-readback remain open; this is scoped upload contract evidence, not new numerical
-or installed/remote qualification.
+The [axial-bar normalization follow-up](../reports/axial-bar-input-normalization-20261008.md)
+closes the Pa/GPa scalar mismatch with shared Rust/Elixir conformance. Four actual
+inline/file pairs match complete results and independent closed forms; SDK/CLI
+invalid inputs block later writes, then a healthy task succeeds without replay.
+Other solver schemas remain open; bounded native result readback is now covered below.
+These are scoped source contract checks, not installed/remote qualification.
+
+The [native result readback follow-up](../reports/headless-result-artifact-readback-20261008.md)
+resolves supported immutable files into physical JSON after completed-job gates,
+with explicit byte/deadline limits, raw digest verification and no redirected
+credentials. Reference-only mode remains available. Real SDK/CLI corruption
+refusal blocks later writes; explicit same-job reads recover research metrics
+and retained evidence with one calculation throughout. Temporary files are
+owned and removed on normal/error return. This is not a process RSS bound,
+signed provenance, installed/remote qualification or general solver accuracy.
+
+The [graph entity normalization follow-up](../reports/graph-entity-input-normalization-20261008.md)
+moves ID generation/type/collision checks into ten typed Rust field requests,
+removing the Agent's four-type repair shim. Ten HTTP/SDK routes now share
+conformance and complete inline/file physical parity with analytic checks.
+Tuple-shaped entities reject even when their field count matches. SDK/CLI
+invalid chains stop later writes; healthy tasks recover without replay.
+The [transport service follow-up](../reports/advection-diffusion-service-chain-20261008.md)
+adds direct advection-diffusion submission and discovery, three official SDK
+route/RPC mappings and actual source-Agent workflow execution. Native saved
+version solves no longer require irrelevant explicit Agent endpoints. Nine
+transport tasks check analytic concentration/flux, immutable source-bound
+research evidence, failure-stop behavior and recovery without replay; the
+ten-family graph repeat has 31 admissions. Official SDK mapping tests use mocks,
+not cross-language numerical acceptance. The initial hookup did not change solvers.
+This remains source contract evidence, not installed/remote/scale qualification.
+
+The [transport numerical follow-up](../reports/advection-diffusion-output-reliability-20261008.md)
+separately fixes global-x orientation in assembly and flux recovery, protects
+representable extreme averages/gradients/products, rejects unrepresentable
+outputs and checks dense assembly before fixed boundaries can mask overflow.
+Shared result checkpoints make cancellation observable before publication.
+Nine actual source-Agent admissions retain analytic checks, five terminal
+numerical failures without results or downstream writes, and healthy recovery.
+This does not qualify unstabilized high-Peclet advection or general CFD.
+
+The [explicit upwind follow-up](advection-diffusion-upwind.md) adds opt-in
+conservative transport without changing legacy Galerkin defaults. Physical
+flux, artificial diffusion and numerical flux stay distinct. Independent
+discrete solutions, first-order continuum refinement and layered nodal balance
+extend the current validation profile; eight actual source-Agent admissions
+check inline/file/workflow execution, retained research metrics and failure
+recovery. This does not promote historical qualification or general CFD accuracy.
 
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job

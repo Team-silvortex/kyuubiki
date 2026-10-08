@@ -122,6 +122,7 @@ fn solves_a_small_heat_bar_1d_gradient() {
 #[test]
 fn solves_a_small_advection_diffusion_bar_1d_transport_case() {
     let result = solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest {
+        scheme: Default::default(),
         nodes: vec![
             AdvectionDiffusionBar1dNodeInput {
                 id: "c0".to_string(),

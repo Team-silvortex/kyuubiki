@@ -91,6 +91,9 @@ class _SmokeHandler(BaseHTTPRequestHandler):
         if self.path == "/api/v1/fem/thermal-frame-3d/jobs":
             self._respond(202, {"job": {"job_id": "job-thermal-frame-3d", "status": "queued"}})
             return
+        if self.path == "/api/v1/fem/advection-diffusion-bar-1d/jobs":
+            self._respond(202, {"job": {"job_id": "job-transport", "status": "queued"}})
+            return
         if self.path == "/api/v1/fem/truss-2d/jobs":
             self._respond(202, {"job": {"job_id": "job-smoke", "status": "queued"}})
             return
@@ -335,6 +338,9 @@ class SmokeTest(unittest.TestCase):
         thermal_frame = session.submit_job("thermal_frame_3d", {"nodes": [], "elements": []})
         self.assertEqual(thermal_frame["job"]["job_id"], "job-thermal-frame-3d")
 
+        transport = session.submit_job("advection_diffusion_bar_1d", {"nodes": [], "elements": []})
+        self.assertEqual(transport["job"]["job_id"], "job-transport")
+
     def test_session_supports_direct_rpc_for_advanced_solve_kinds(self) -> None:
         listener = socket.create_server(("127.0.0.1", 0))
         host, port = listener.getsockname()
@@ -345,6 +351,7 @@ class SmokeTest(unittest.TestCase):
             "solve_acoustic_bar_1d",
             "solve_stokes_flow_plane_quad_2d",
             "solve_stokes_flow_plane_triangle_2d",
+            "solve_advection_diffusion_bar_1d",
             "release_operator_package_job",
         ]
 
@@ -389,6 +396,8 @@ class SmokeTest(unittest.TestCase):
             self.assertEqual(acoustic["solver"], "acoustic_bar_1d")
             self.assertEqual(stokes["solver"], "stokes_flow_plane_quad_2d")
             self.assertEqual(stokes_triangle["solver"], "stokes_flow_plane_triangle_2d")
+            transport = session.solve_direct("advection_diffusion_bar_1d", {"nodes": [], "elements": []})
+            self.assertEqual(transport["solver"], "advection_diffusion_bar_1d")
             assert session.solver_rpc is not None
             release = session.solver_rpc.release_operator_package_job("operator-job-42")
             self.assertEqual(release["result"]["input"]["job_id"], "operator-job-42")

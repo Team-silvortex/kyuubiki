@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native Rust Headless reads completed artifact-backed results through fixed control-plane routes with explicit raw-byte/deadline limits, bounded framing, owned temporary files and SHA-256 verification before JSON-object decoding. Both fetch modes and combined saved solves preserve physical fields and a small original-byte receipt. Real macOS source Orchestra/two-Agent SDK/CLI tests reject corrupted content without downstream writes, recover only the same completed job and rebuild retained research metrics with one calculation. Contract-scoped proof, not process RSS, signed provenance, installed/remote/cross-language/scale or general numerical qualification.",
+  "evidence_claims": [
+    {
+      "id": "headless-bounded-verified-physical-result-readback",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["contract"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor_result.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result_artifact.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result_download.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result_stream.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result_artifact_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result_gate_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "workers/rust/crates/headless-sdk/src/failure_receipt_contract_tests.rs",
+        "workers/rust/crates/headless-sdk/src/contracts.rs",
+        "workers/rust/crates/headless-sdk/src/run.rs",
+        "workers/rust/crates/cli/tests/support/headless_result_readback.rs",
+        "workers/rust/crates/cli/tests/support/result_content_proxy.rs",
+        "workers/rust/crates/cli/tests/support/headless_model_artifact.rs",
+        "schemas/result-artifact-ref.schema.json",
+        "schemas/headless-result-artifact-readback.schema.json",
+        "schemas/headless-failure-receipt.schema.json",
+        "config/architecture/headless-workflow-qualification.json",
+        "docs/headless-result-artifact-readback.md",
+        "reports/headless-result-artifact-readback-20261008.md"
+      ],
+      "required_text": [
+        "Headless Result Artifact Readback",
+        "result_artifact_readback_failed",
+        "verified_readback_preserves_physical_values_and_original_byte_identity_in_both_fetch_modes",
+        "invalid_readback_options_stop_before_any_io_including_combined_solve_submission",
+        "hash_mismatch_in_unsampled_bytes_cannot_publish_a_result_or_retry_computation",
+        "trickled_result_bytes_exhaust_one_total_deadline_instead_of_resetting_it",
+        "real_sdk_cli_result_readback_extracts_physics_rejects_corruption_and_recovers_same_job"
+      ]
+    }
+  ]
+}

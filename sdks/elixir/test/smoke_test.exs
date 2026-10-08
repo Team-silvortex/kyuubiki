@@ -172,6 +172,11 @@ defmodule KyuubikiSdk.SmokeTest do
 
     assert axial["job"]["job_id"] == "job-axial"
 
+    {:ok, transport} =
+      Session.submit_job(session, "advection_diffusion_bar_1d", %{"nodes" => [], "elements" => []})
+
+    assert transport["job"]["job_id"] == "job-transport"
+
     {:ok, thermal_frame} =
       Session.submit_job(session, "thermal_frame_3d", %{"nodes" => [], "elements" => []})
 
@@ -193,6 +198,7 @@ defmodule KyuubikiSdk.SmokeTest do
               "solve_acoustic_bar_1d",
               "solve_stokes_flow_plane_quad_2d",
               "solve_stokes_flow_plane_triangle_2d",
+              "solve_advection_diffusion_bar_1d",
               "release_operator_package_job"
             ] do
           {:ok, socket} = :gen_tcp.accept(listener)
@@ -247,6 +253,12 @@ defmodule KyuubikiSdk.SmokeTest do
         "elements" => []
       })
 
+    {:ok, transport} =
+      Session.solve_direct(session, "advection_diffusion_bar_1d", %{
+        "nodes" => [],
+        "elements" => []
+      })
+
     {:ok, release} =
       KyuubikiSdk.SolverRpcClient.release_operator_package_job(
         session.solver_rpc,
@@ -259,6 +271,7 @@ defmodule KyuubikiSdk.SmokeTest do
     assert acoustic["solver"] == "acoustic_bar_1d"
     assert stokes["solver"] == "stokes_flow_plane_quad_2d"
     assert stokes_triangle["solver"] == "stokes_flow_plane_triangle_2d"
+    assert transport["solver"] == "advection_diffusion_bar_1d"
     assert release.result["input"]["job_id"] == "operator-job-42"
   end
 
@@ -281,6 +294,9 @@ defmodule KyuubikiSdk.SmokeTest do
 
         {"POST", "/api/v1/fem/axial-bar/jobs"} ->
           json_response(202, %{"job" => %{"job_id" => "job-axial", "status" => "queued"}})
+
+        {"POST", "/api/v1/fem/advection-diffusion-bar-1d/jobs"} ->
+          json_response(202, %{"job" => %{"job_id" => "job-transport", "status" => "queued"}})
 
         {"POST", "/api/v1/fem/thermal-frame-3d/jobs"} ->
           json_response(202, %{

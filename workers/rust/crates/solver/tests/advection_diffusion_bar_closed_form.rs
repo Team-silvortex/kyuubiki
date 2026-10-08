@@ -263,6 +263,7 @@ struct TransportSourceCase {
 impl TransportSourceCase {
     fn request(self) -> SolveAdvectionDiffusionBar1dRequest {
         SolveAdvectionDiffusionBar1dRequest {
+            scheme: Default::default(),
             nodes: vec![
                 transport_node("inlet", 0.0, true, self.left_concentration, 0.0),
                 transport_node("source", self.half_length, false, 0.0, self.source),
@@ -339,6 +340,7 @@ impl TransportSourceCase {
 impl TransportCase {
     fn request(self) -> SolveAdvectionDiffusionBar1dRequest {
         SolveAdvectionDiffusionBar1dRequest {
+            scheme: Default::default(),
             nodes: vec![
                 node("inlet", 0.0, self.left_concentration),
                 node("outlet", self.length, self.right_concentration),

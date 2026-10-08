@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Steady 1D transport bridges the existing Rust solver/Agent RPC into Orchestra submission/discovery/workflows and native Headless batches. Nine actual source macOS task admissions check signed velocity, zero velocity, nodal source balance, file results, saved source-bound research retention, failure-stop behavior and healthy recovery. Three official SDKs have mock HTTP/RPC mapping coverage. The ten-family normalization repeat has 31 admissions. This is scoped contract evidence, not installed/remote/scale qualification, cross-language numerical acceptance, TaskIR promotion or general CFD correctness.",
+  "evidence_claims": [
+    {
+      "id": "transport-service-headless-workflow-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/fem_model_normalizer.ex",
+        "apps/web/lib/kyuubiki_web/analysis_solver_submissions.ex",
+        "apps/web/lib/kyuubiki_web/fem_submit_routes.ex",
+        "apps/web/lib/kyuubiki_web/workflow_solver_registry.ex",
+        "apps/web/test/kyuubiki_web/api/advection_diffusion_solver_api_test.exs",
+        "workers/rust/crates/headless-sdk/src/contracts.rs",
+        "workers/rust/crates/headless-sdk/src/contract_tests.rs",
+        "workers/rust/crates/headless-sdk/src/direct_fem.rs",
+        "workers/rust/crates/cli/tests/support/headless_advection_diffusion.rs",
+        "workers/rust/crates/cli/tests/support/headless_graph_entity_normalization.rs",
+        "sdks/rust/tests/smoke.rs",
+        "sdks/python/tests/test_smoke.py",
+        "sdks/elixir/test/smoke_test.exs",
+        "docs/advection-diffusion-service-chain.md",
+        "reports/advection-diffusion-service-chain-20261008.md"
+      ],
+      "required_text": [
+        "Advection Diffusion Service Chain",
+        "saved_service_solve_contracts_do_not_require_direct_agent_endpoints",
+        "real_transport_service_chain_preserves_physics_sources_and_failure_recovery",
+        "route normalizes identifiers and dispatches the transport RPC",
+        "invalid graph fails before any job admission",
+        "protocol and workflow catalogs advertise the same executable operator"
+      ]
+    }
+  ]
+}

@@ -12,23 +12,7 @@ defmodule KyuubikiWeb.FemModelNormalizer do
     {"thermal_expansion_feedback", :thermal_expansion_feedback}
   ]
 
-  def normalize_axial_bar(params) when is_map(params) do
-    with {:ok, length} <- fetch_number(params, ["length", :length]),
-         {:ok, area} <- fetch_number(params, ["area", :area]),
-         {:ok, elements} <- fetch_number(params, ["elements", :elements]),
-         {:ok, tip_force} <- fetch_number(params, ["tip_force", :tip_force]),
-         {:ok, youngs_modulus_gpa} <-
-           fetch_number(params, ["youngs_modulus_gpa", :youngs_modulus_gpa]) do
-      {:ok,
-       %{
-         "length" => length,
-         "area" => area,
-         "elements" => round(elements),
-         "tip_force" => tip_force,
-         "youngs_modulus" => youngs_modulus_gpa * 1.0e9
-       }}
-    end
-  end
+  def normalize_axial_bar(params), do: KyuubikiWeb.AxialBarInput.normalize(params)
 
   def normalize_acoustic_bar_1d(params),
     do: normalize_graph_model(params, :invalid_acoustic_model)
@@ -72,6 +56,23 @@ defmodule KyuubikiWeb.FemModelNormalizer do
 
   def normalize_magnetostatic_bar_1d(params),
     do: normalize_graph_model(params, :invalid_magnetostatic_bar_model)
+
+  def normalize_advection_diffusion_bar_1d(params) do
+    with {:ok, model} <- normalize_graph_model(params, :invalid_advection_diffusion_bar_model),
+         scheme <- Map.get(model, "scheme", Map.get(model, :scheme, "galerkin")),
+         true <- scheme in ["galerkin", "upwind"],
+         false <-
+           Map.has_key?(model, "scheme") and Map.has_key?(model, :scheme) and
+             model["scheme"] != model[:scheme] do
+      if Map.has_key?(model, :scheme) do
+        {:ok, model |> Map.delete(:scheme) |> Map.put("scheme", scheme)}
+      else
+        {:ok, model}
+      end
+    else
+      _ -> {:error, :invalid_advection_diffusion_bar_model}
+    end
+  end
 
   def normalize_torsion_1d(params), do: normalize_graph_model(params, :invalid_torsion_model)
   def normalize_spring_1d(params), do: normalize_graph_model(params, :invalid_spring_model)
@@ -383,59 +384,25 @@ defmodule KyuubikiWeb.FemModelNormalizer do
   def normalize_stokes_flow_plane_triangle_2d(params),
     do: normalize_graph_model(params, :invalid_stokes_flow_plane_triangle_model)
 
-  defp normalize_graph_model(%{"nodes" => nodes, "elements" => elements} = params, _error)
+  defp normalize_graph_model(%{"nodes" => nodes, "elements" => elements} = params, error)
        when is_list(nodes) and is_list(elements) do
-    {:ok,
-     params
-     |> Map.put("nodes", ensure_entity_ids(nodes, "n"))
-     |> Map.put("elements", ensure_entity_ids(elements, "e"))}
+    with {:ok, nodes} <- KyuubikiWeb.GraphEntityInput.normalize(nodes, "n"),
+         {:ok, elements} <- KyuubikiWeb.GraphEntityInput.normalize(elements, "e") do
+      {:ok, params |> Map.put("nodes", nodes) |> Map.put("elements", elements)}
+    else
+      _ -> {:error, error}
+    end
   end
 
-  defp normalize_graph_model(%{nodes: nodes, elements: elements} = params, _error)
+  defp normalize_graph_model(%{nodes: nodes, elements: elements} = params, error)
        when is_list(nodes) and is_list(elements) do
-    {:ok,
-     params
-     |> Map.delete(:nodes)
-     |> Map.delete(:elements)
-     |> Map.put("nodes", ensure_entity_ids(nodes, "n"))
-     |> Map.put("elements", ensure_entity_ids(elements, "e"))}
+    params
+    |> Map.delete(:nodes)
+    |> Map.delete(:elements)
+    |> Map.put("nodes", nodes)
+    |> Map.put("elements", elements)
+    |> normalize_graph_model(error)
   end
 
   defp normalize_graph_model(_params, error), do: {:error, error}
-
-  defp ensure_entity_ids(entities, prefix) do
-    entities
-    |> Enum.with_index()
-    |> Enum.map(fn
-      {entity, index} when is_map(entity) ->
-        case Map.get(entity, "id", Map.get(entity, :id)) do
-          id when is_binary(id) and byte_size(id) > 0 -> entity
-          _ -> entity |> Map.delete(:id) |> Map.put("id", "#{prefix}#{index}")
-        end
-
-      {entity, _index} ->
-        entity
-    end)
-  end
-
-  defp fetch_number(params, [key | rest]) do
-    case Map.fetch(params, key) do
-      {:ok, value} -> cast_number(value)
-      :error -> fetch_number(params, rest)
-    end
-  end
-
-  defp fetch_number(_params, []), do: {:error, :missing_parameter}
-
-  defp cast_number(value) when is_integer(value), do: {:ok, value * 1.0}
-  defp cast_number(value) when is_float(value), do: {:ok, value}
-
-  defp cast_number(value) when is_binary(value) do
-    case Float.parse(value) do
-      {parsed, ""} -> {:ok, parsed}
-      _ -> {:error, :invalid_parameter}
-    end
-  end
-
-  defp cast_number(_value), do: {:error, :invalid_parameter}
 end

@@ -340,7 +340,7 @@ fn session_supports_expanded_solve_kinds() {
     let addr = listener.local_addr().expect("listener addr");
 
     let server = thread::spawn(move || {
-        for _ in 0..6 {
+        for _ in 0..7 {
             let (mut stream, _) = listener.accept().expect("accept");
             let request = read_http_request(&mut stream);
             let path = request
@@ -353,6 +353,10 @@ fn session_supports_expanded_solve_kinds() {
                 "/api/v1/fem/axial-bar/jobs" => (
                     202,
                     r#"{"job":{"job_id":"job-axial","status":"queued"}}"#.to_string(),
+                ),
+                "/api/v1/fem/advection-diffusion-bar-1d/jobs" => (
+                    202,
+                    r#"{"job":{"job_id":"job-transport","status":"queued"}}"#.to_string(),
                 ),
                 "/api/v1/fem/thermal-frame-3d/jobs" => (
                     202,
@@ -398,6 +402,14 @@ fn session_supports_expanded_solve_kinds() {
         )
         .expect("axial alias submit");
     assert_eq!(axial["job"]["job_id"].as_str(), Some("job-axial"));
+
+    let transport = session
+        .submit_job(
+            "advection_diffusion_bar_1d",
+            &serde_json::json!({"nodes":[],"elements":[]}),
+        )
+        .expect("transport submit");
+    assert_eq!(transport["job"]["job_id"], "job-transport");
 
     let thermal_frame = session
         .submit_job(
@@ -460,7 +472,7 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
     let addr = listener.local_addr().expect("rpc listener addr");
 
     let server = thread::spawn(move || {
-        for _ in 0..7 {
+        for _ in 0..8 {
             let (mut stream, _) = listener.accept().expect("accept");
             let request = read_rpc_request(&mut stream);
             let method = request["method"].as_str().expect("rpc method");
@@ -478,6 +490,13 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
     });
 
     let session = KyuubikiSession::new(None, None).with_solver_rpc("127.0.0.1", addr.port());
+    let transport = session
+        .solve_direct(
+            "advection_diffusion_bar_1d",
+            serde_json::json!({"nodes":[],"elements":[]}),
+        )
+        .expect("transport direct solve");
+    assert_eq!(transport["solver"], "advection_diffusion_bar_1d");
     let result = session
         .solve_direct(
             "electrostatic_plane_quad_2d",

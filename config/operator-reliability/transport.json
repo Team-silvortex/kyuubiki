@@ -13,7 +13,11 @@
         "tests": [
           "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
           "workers/rust/crates/solver/tests/advection_diffusion_bar_closed_form.rs",
-          "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs"
+          "workers/rust/crates/solver/tests/advection_diffusion_bar_refinement.rs",
+          "workers/rust/crates/solver/tests/advection_diffusion_bar_output.rs",
+          "workers/rust/crates/cli/tests/support/headless_transport_output.rs",
+          "workers/rust/crates/solver/tests/advection_diffusion_bar_upwind.rs",
+          "workers/rust/crates/cli/tests/support/headless_transport_upwind.rs"
         ],
         "reliability_suite": "advection_diffusion_bar_reliability",
         "review": {
