@@ -7,8 +7,7 @@ fn main() -> SdkResult<()> {
         Some(path) => fs::read_to_string(path)?,
         None => include_str!("../fixtures/examples.material-research-bundle.json").to_string(),
     };
-    let bundle: MaterialResearchBundle = serde_json::from_str(&text)?;
-    bundle.validate()?;
+    let bundle = MaterialResearchBundle::from_json_verified(&text)?;
 
     println!("schema={}", bundle.schema_version);
     println!("study={}", bundle.study);

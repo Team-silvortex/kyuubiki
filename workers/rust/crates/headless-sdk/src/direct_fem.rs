@@ -392,6 +392,7 @@ mod tests {
                     "status".to_string(),
                     "progress".to_string(),
                     "job".to_string(),
+                    "model_artifact_upload".to_string(),
                 ]
             );
         }

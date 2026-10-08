@@ -179,6 +179,7 @@
   "$defs": {
     "artifactChecksums": {
       "type": "object",
+      "description": "Each v1 digest is SHA-256 over the original embedded artifact JSON with only JSON whitespace outside strings removed, followed by one LF byte. Preserve key order, numeric tokens and string escapes. This is content consistency, not producer authentication or integrity of all bundle metadata.",
       "additionalProperties": false,
       "required": [
         "initial_exploration_sha256",

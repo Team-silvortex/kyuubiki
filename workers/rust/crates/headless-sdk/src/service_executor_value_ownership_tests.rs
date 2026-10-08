@@ -74,6 +74,26 @@ fn previous_combined(job_id: &str, solved: Value, waited: Value, fetched: Value)
 }
 
 #[test]
+fn combined_saved_solve_retains_the_small_source_descriptor_and_moves_large_results() {
+    let source =
+        json!({"schema_version":"kyuubiki.headless-model-source/v1","sha256":"a".repeat(64)});
+    let upload = json!({"artifact_id":"b".repeat(64),"size_bytes":8_000_001});
+    let solved = json!({"job_id":"owned-job","model_version_id":"owned-version","model_source":source,
+            "model_artifact_upload":upload});
+    let fetched = envelope();
+    let pointer = array_pointer(&fetched["result"]["nodes"]);
+    let combined = combine_solve_and_wait_results("owned-job", solved, job(), fetched);
+    assert_eq!(combined["model_source"], source);
+    assert_eq!(combined["solve"]["model_source"], source);
+    assert_eq!(combined["model_artifact_upload"], upload);
+    assert_eq!(combined["solve"]["model_artifact_upload"], upload);
+    assert_eq!(
+        array_pointer(&combined["result"]["result"]["nodes"]),
+        pointer
+    );
+}
+
+#[test]
 fn job_observation_moves_original_raw_arrays_and_strings_without_changing_shape() {
     let source = envelope();
     let pointer = array_pointer(&source["result"]["nodes"]);

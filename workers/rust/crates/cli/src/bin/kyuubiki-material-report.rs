@@ -1,8 +1,8 @@
 use std::fs;
 
 use kyuubiki_headless_sdk::{
-    MaterialOptimizationProfile, build_material_report_with_optimization, describe_material_study,
-    extract_material_result_payloads, material_study_catalog,
+    MaterialOptimizationProfile, build_material_report_from_input, describe_material_study,
+    material_study_catalog,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -22,13 +22,12 @@ fn run() -> Result<(), String> {
         CommandMode::BuildReport => {}
     }
     let payload = read_json(&flags.input)?;
-    let result_payloads = extract_material_result_payloads(&payload)?;
     let profile = flags
         .profile
         .as_deref()
         .map(read_optimization_profile)
         .transpose()?;
-    let report = build_material_report_with_optimization(&flags.study, &result_payloads, profile)?;
+    let report = build_material_report_from_input(&flags.study, &payload, profile)?;
 
     if let Some(out) = &flags.out {
         write_json(out, &report)?;

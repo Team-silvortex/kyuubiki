@@ -226,8 +226,17 @@ execution plan, rerun, chain, checksums, and reproduction commands under
 [schemas/material-research-bundle.schema.json](../schemas/material-research-bundle.schema.json),
 with a compact fixture at
 [schemas/examples.material-research-bundle.json](../schemas/examples.material-research-bundle.json).
-Rust SDK callers can decode that artifact with `MaterialResearchBundle`, while
-Python and Elixir expose `validate_material_research_bundle` helpers for the
+Rust SDK callers should import the original JSON with
+`MaterialResearchBundle::from_json_verified(&text)` to check structure and the
+four embedded artifact digests. v1 digests retain JSON key order, numeric tokens
+and string escapes, while ignoring formatting whitespace outside strings.
+Re-encoding a parsed object is not an equivalent import. The in-memory Rust
+validator and the Python/Elixir helpers check structure, not file integrity.
+Digest agreement is not authenticated provenance, whole-bundle metadata
+protection or numerical qualification. See the
+[import regression](../reports/material-research-bundle-import-20261008.md).
+Python and Elixir expose
+`validate_material_research_bundle` helpers for the
 same fixture and generated bundle shape before passing retained artifacts to a
 custom review, CI, notebook, or agent harness. All three SDKs reject bundles
 where the top-level summary drifts from the embedded next-round execution plan,

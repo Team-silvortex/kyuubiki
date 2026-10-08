@@ -14,13 +14,13 @@ use std::{error::Error, fs};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-fn model(force: f64) -> Value {
+pub(super) fn model(force: f64) -> Value {
     json!({"model_schema_version":"kyuubiki.model/v1","kind":"axial_bar_1d",
         "name":"reference-bar","material":"steel","length":1.0,"area":0.01,
         "youngs_modulus_gpa":210.0,"elements":4,"tip_force":force})
 }
 
-fn library(executor: &mut ServiceHeadlessExecutor) -> Result<(Value, Value)> {
+pub(super) fn library(executor: &mut ServiceHeadlessExecutor) -> Result<(Value, Value)> {
     let project = executor
         .execute_step("project_create", 1, &json!({"name":"reference-parent"}))
         .map_err(|error| error.message)?

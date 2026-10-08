@@ -97,7 +97,13 @@ fn solver_contracts_keep_service_safe_model_contract() {
         );
         assert_eq!(
             contract.output_keys,
-            &["job_id", "status", "progress", "job"],
+            &[
+                "job_id",
+                "status",
+                "progress",
+                "job",
+                "model_artifact_upload"
+            ],
             "{}",
             contract.id
         );

@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Both Rust Headless SDKs expose strict original-JSON material research bundle import with four embedded artifact SHA-256 checks. v1 lexical tokens and quoted Unicode/whitespace are preserved; stale digests, duplicate known top-level fields and malformed documents are rejected. The published Rust example uses strict import and accepts freshly generated heat-spreader and composite thermo-electric-panel bundles. In-memory and Python/Elixir validators remain structure checks. Scoped macOS source contract verification, not authenticated provenance, whole-bundle metadata integrity, numerical, remote, installed or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "rust-material-research-bundle-original-json-import",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["contract"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_research_bundle.rs",
+        "workers/rust/crates/headless-sdk/src/material_research_bundle_integrity.rs",
+        "workers/rust/crates/headless-sdk/src/material_research_bundle_integrity_tests.rs",
+        "sdks/rust/src/material_research_bundle.rs",
+        "sdks/rust/src/material_research_bundle_integrity.rs",
+        "sdks/rust/tests/material_research_bundle_integrity.rs",
+        "sdks/rust/examples/validate_material_research_bundle.rs",
+        "sdks/rust/tests/model_research_validation.rs",
+        "schemas/material-research-bundle.schema.json",
+        "config/architecture/headless-workflow-qualification.json",
+        "docs/headless-sdks.md",
+        "reports/material-research-bundle-import-20261008.md"
+      ],
+      "required_text": [
+        "Material Research Bundle Import",
+        "Verified material research bundle import",
+        "from_json_verified",
+        "verified_import_rejects_each_stale_artifact_digest",
+        "verified_import_preserves_numeric_tokens_key_order_and_string_escapes",
+        "verified_import_preserves_quoted_whitespace_unicode_and_escape_parity",
+        "verified_import_accepts_correctly_rehashed_changes_without_claiming_authenticity",
+        "verified_import_rejects_duplicate_top_level_fields_and_invalid_json",
+        "standalone_and_native_rust_importers_share_the_exact_v1_digest_contract"
+      ]
+    }
+  ]
+}

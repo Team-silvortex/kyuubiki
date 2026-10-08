@@ -402,7 +402,14 @@ fn artifact_upload_streams_exact_bytes_and_bounds_its_acknowledgement() {
             );
             assert!(error.message.contains(RESPONSE_LIMIT));
         } else {
-            assert_eq!(result.unwrap(), json!({}));
+            let result = result.unwrap();
+            assert_eq!(result.envelope, json!({}));
+            assert_eq!(result.size_bytes, body.len() as u64);
+            use sha2::{Digest, Sha256};
+            assert_eq!(
+                result.sha256,
+                format!("{:x}", Sha256::digest(body.as_bytes()))
+            );
         }
     }
 }

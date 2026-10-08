@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Rust retained material report inputs require complete executed records, matching explicit result receipts and unique owned candidate solve/wait/read chains for all five built-in studies. Typed SDK and standalone native JSON generation share borrowed validation; unknown run states and fallback raw-array downgrades fail closed. Explicit mock previews and caller-owned raw results remain separate. Five actual Orchestra/two-Agent studies regenerate reports from saved runs without computation replay; 25 deliberately corrupted retained records preserve source/output files and job/project/calculation snapshots. Scoped macOS source execution/contract/recovery verification, not authenticated provenance, scientific accuracy, installed, language/platform, durable or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "rust-retained-material-run-ownership-and-reconstruction",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_reports.rs",
+        "workers/rust/crates/headless-sdk/src/material_run_results.rs",
+        "workers/rust/crates/headless-sdk/src/material_run_result_tests.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-material-report.rs",
+        "workers/rust/crates/cli/tests/headless_material_results.rs",
+        "workers/rust/crates/cli/tests/support/headless_material_results.rs",
+        "workers/rust/crates/cli/tests/headless_output_paths.rs",
+        "workers/rust/crates/cli/tests/headless_artifact_generation.rs",
+        "workers/rust/crates/cli/tests/support/health_request.rs",
+        "config/architecture/headless-workflow-qualification.json",
+        "docs/headless-sdks.md",
+        "reports/headless-material-run-results-20261008.md"
+      ],
+      "required_text": [
+        "Headless Material Run Results",
+        "Retained material run results",
+        "build_material_report_from_input",
+        "failed_or_unfinished_runs_cannot_publish_partial_material_results",
+        "only_executed_steps_and_consistent_run_headers_admit_retained_results",
+        "result_receipts_require_matching_job_identity_and_explicit_object_results",
+        "every_fixed_study_rejects_wrong_candidate_or_unowned_retained_results",
+        "run_shaped_json_cannot_downgrade_to_raw_result_arrays",
+        "grouped_receipts_and_study_aliases_preserve_candidate_order",
+        "explicit_returned_material_identity_cannot_contradict_its_candidate_job",
+        "retained_run_rejections_preserve_source_and_existing_material_output",
+        "wrong_study_cannot_reinterpret_a_retained_execution_run",
+        "five_real_material_studies_regenerate_reports_without_replaying_agent_calculations"
+      ]
+    }
+  ]
+}

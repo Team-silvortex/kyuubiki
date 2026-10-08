@@ -188,6 +188,20 @@ fn service_research_runs_emit_a_contiguous_two_round_evidence_chain() {
         "stderr: {}",
         String::from_utf8_lossy(&second.stderr)
     );
+    let first_run: Value = serde_json::from_slice(&first.stdout).expect("first run report");
+    let second_run: Value = serde_json::from_slice(&second.stdout).expect("second run report");
+    assert_eq!(
+        first_run["execution_input"]["schema_version"],
+        "kyuubiki.headless-execution-input/v1"
+    );
+    assert_eq!(
+        first_run["execution_input"]["sha256"]
+            .as_str()
+            .unwrap()
+            .len(),
+        64
+    );
+    assert_ne!(first_run["execution_input"], second_run["execution_input"]);
 
     let first: Value = serde_json::from_slice(&fs::read(&first_evidence).expect("first evidence"))
         .expect("first evidence json");

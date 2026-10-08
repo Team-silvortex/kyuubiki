@@ -3,6 +3,7 @@ use crate::service_executor::MAX_INLINE_JSON_BYTES;
 use crate::service_executor_artifact_http::request_file;
 use kyuubiki_protocol::model_artifact_max_bytes;
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -10,21 +11,31 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 const MODEL_ARTIFACT_ROUTE: &str = "/api/v1/model-artifacts";
 const MODEL_ARTIFACT_MEDIA_TYPE: &str = "application/vnd.kyuubiki.model+json";
+const MODEL_ARTIFACT_SCHEMA: &str = "kyuubiki.model-artifact-ref/v1";
+pub(crate) const INVALID_UPLOAD_RECEIPT: &str = "model_artifact_receipt_invalid:";
 const LARGE_MODEL_ENTITY_PREFLIGHT: usize = 250_000;
 static NEXT_TEMPORARY_ARTIFACT: AtomicU64 = AtomicU64::new(1);
+
+pub(crate) struct PreparedDirectFemModel {
+    pub body: Value,
+    pub upload: Option<Value>,
+}
 
 pub(crate) fn prepare_direct_fem_request_body(
     base_url: &str,
     api_token: Option<&str>,
     model: &Value,
-) -> Result<Value, HeadlessExecutorError> {
+) -> Result<PreparedDirectFemModel, HeadlessExecutorError> {
     let entity_count = model_entity_count(model);
     if entity_count >= LARGE_MODEL_ENTITY_PREFLIGHT {
         reject_known_frontend_proxy(base_url, format!("entity_count={entity_count}"))?;
     }
     let size_bytes = serialized_json_size(model)?;
     if size_bytes <= MAX_INLINE_JSON_BYTES {
-        return Ok(model.clone());
+        return Ok(PreparedDirectFemModel {
+            body: model.clone(),
+            upload: None,
+        });
     }
     let limit_bytes = model_artifact_max_bytes();
     if size_bytes > limit_bytes {
@@ -41,7 +52,19 @@ pub(crate) fn prepare_direct_fem_request_body(
             message: "direct FEM model changed while preparing artifact transport".to_string(),
         });
     }
-    let envelope = request_file(
+    let reference = upload_model_artifact(base_url, api_token, &artifact)?;
+    Ok(PreparedDirectFemModel {
+        body: json!({"model_artifact_ref":reference}),
+        upload: Some(reference),
+    })
+}
+
+fn upload_model_artifact(
+    base_url: &str,
+    api_token: Option<&str>,
+    artifact: &TemporaryModelArtifact,
+) -> Result<Value, HeadlessExecutorError> {
+    let uploaded = request_file(
         base_url,
         api_token,
         "POST",
@@ -49,14 +72,55 @@ pub(crate) fn prepare_direct_fem_request_body(
         MODEL_ARTIFACT_MEDIA_TYPE,
         &artifact.path,
     )?;
+    if uploaded.size_bytes != artifact.size_bytes as u64 || uploaded.sha256 != artifact.sha256 {
+        return Err(invalid_upload(
+            "prepared model differs from transmitted artifact bytes",
+        ));
+    }
+    validate_upload_receipt(&uploaded.envelope, &uploaded.sha256, uploaded.size_bytes)
+}
+
+fn validate_upload_receipt(
+    envelope: &Value,
+    sha256: &str,
+    size_bytes: u64,
+) -> Result<Value, HeadlessExecutorError> {
     let reference = envelope
         .get("artifact")
-        .filter(|value| value.get("artifact_id").and_then(Value::as_str).is_some())
-        .cloned()
-        .ok_or_else(|| HeadlessExecutorError {
-            message: "model artifact upload returned an invalid reference".to_string(),
+        .and_then(Value::as_object)
+        .ok_or_else(|| {
+            invalid_upload("upload acknowledgement requires an explicit artifact object")
         })?;
-    Ok(json!({ "model_artifact_ref": reference }))
+    for (key, expected) in [
+        ("schema_version", MODEL_ARTIFACT_SCHEMA),
+        ("artifact_id", sha256),
+        ("sha256", sha256),
+        ("media_type", MODEL_ARTIFACT_MEDIA_TYPE),
+    ] {
+        if reference.get(key).and_then(Value::as_str) != Some(expected) {
+            return Err(invalid_upload(&format!(
+                "upload acknowledgement contradicts {key}"
+            )));
+        }
+    }
+    if reference.get("size_bytes").and_then(Value::as_u64) != Some(size_bytes)
+        || reference.get("immutable").and_then(Value::as_bool) != Some(true)
+    {
+        return Err(invalid_upload(
+            "upload acknowledgement requires matching size and immutability",
+        ));
+    }
+    // Forward only the verified protocol fields, not unrelated reply extensions.
+    Ok(
+        json!({"schema_version":MODEL_ARTIFACT_SCHEMA,"artifact_id":sha256,"sha256":sha256,
+        "size_bytes":size_bytes,"media_type":MODEL_ARTIFACT_MEDIA_TYPE,"immutable":true}),
+    )
+}
+
+fn invalid_upload(detail: &str) -> HeadlessExecutorError {
+    HeadlessExecutorError {
+        message: format!("{INVALID_UPLOAD_RECEIPT} {detail}"),
+    }
 }
 
 fn serialized_json_size(value: &Value) -> Result<usize, HeadlessExecutorError> {
@@ -89,38 +153,55 @@ impl Write for ByteCounter {
 struct TemporaryModelArtifact {
     path: PathBuf,
     size_bytes: usize,
+    sha256: String,
 }
 
 impl TemporaryModelArtifact {
     fn serialize(value: &Value) -> Result<Self, HeadlessExecutorError> {
         let (path, file) = create_temporary_artifact()?;
         let result = (|| {
-            let mut writer = BufWriter::new(file);
+            let mut writer = BufWriter::new(ArtifactWriter {
+                file,
+                digest: Sha256::new(),
+                size_bytes: 0,
+            });
             serde_json::to_writer(&mut writer, value).map_err(|error| HeadlessExecutorError {
                 message: format!("failed to serialize direct FEM model artifact: {error}"),
             })?;
-            writer.flush().map_err(|error| HeadlessExecutorError {
+            let writer = writer.into_inner().map_err(|error| HeadlessExecutorError {
                 message: format!("failed to flush direct FEM model artifact: {error}"),
-            })?;
-            let size_bytes = usize::try_from(
-                fs::metadata(&path)
-                    .map_err(|error| HeadlessExecutorError {
-                        message: format!("failed to inspect direct FEM model artifact: {error}"),
-                    })?
-                    .len(),
-            )
-            .map_err(|_| HeadlessExecutorError {
-                message: "direct FEM model artifact size exceeds this platform".to_string(),
             })?;
             Ok(Self {
                 path: path.clone(),
-                size_bytes,
+                size_bytes: writer.size_bytes,
+                sha256: format!("{:x}", writer.digest.finalize()),
             })
         })();
         if result.is_err() {
             let _ = fs::remove_file(path);
         }
         result
+    }
+}
+
+struct ArtifactWriter {
+    file: File,
+    digest: Sha256,
+    size_bytes: usize,
+}
+
+impl Write for ArtifactWriter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        let written = self.file.write(bytes)?;
+        self.digest.update(&bytes[..written]);
+        self.size_bytes = self
+            .size_bytes
+            .checked_add(written)
+            .ok_or_else(|| std::io::Error::other("model artifact size overflow"))?;
+        Ok(written)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.file.flush()
     }
 }
 
@@ -138,7 +219,14 @@ fn create_temporary_artifact() -> Result<(PathBuf, File), HeadlessExecutorError>
     for _ in 0..16 {
         let id = NEXT_TEMPORARY_ARTIFACT.fetch_add(1, Ordering::Relaxed);
         let path = directory.join(format!("{}-{id}.json", std::process::id()));
-        match OpenOptions::new().write(true).create_new(true).open(&path) {
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        match options.open(&path) {
             Ok(file) => return Ok((path, file)),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(error) => {
@@ -177,58 +265,5 @@ fn model_entity_count(model: &Value) -> usize {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn keeps_small_models_inline() {
-        let model = json!({"nodes": [], "elements": []});
-        let prepared = prepare_direct_fem_request_body("http://127.0.0.1:3000", None, &model)
-            .expect("small model does not need a live service");
-        assert_eq!(prepared, model);
-    }
-
-    #[test]
-    fn large_artifacts_fail_fast_on_known_local_frontend_proxies() {
-        for base_url in ["http://127.0.0.1:3000", "http://localhost:3000/"] {
-            let error = reject_known_frontend_proxy(base_url, "size_bytes=42000000".to_string())
-                .expect_err("known GUI proxy must not receive large artifacts");
-            assert!(error.message.contains("frontend_proxy_artifact_limit"));
-            assert!(error.message.contains("size_bytes=42000000"));
-            assert!(error.message.contains("127.0.0.1:4000"));
-        }
-        assert!(
-            reject_known_frontend_proxy("http://127.0.0.1:4000", "size_bytes=42000000".to_string())
-                .is_ok()
-        );
-        assert!(
-            reject_known_frontend_proxy(
-                "http://runtime.example:3000",
-                "size_bytes=42000000".to_string()
-            )
-            .is_ok()
-        );
-    }
-
-    #[test]
-    fn counts_large_model_entities_without_serializing_the_model() {
-        let model = json!({"nodes": [1, 2, 3], "elements": [4, 5]});
-        assert_eq!(model_entity_count(&model), 5);
-    }
-
-    #[test]
-    fn streaming_size_matches_canonical_json_serialization() {
-        let model = json!({"nodes": [{"x": 1.0}], "elements": [], "label": "test"});
-        assert_eq!(
-            serialized_json_size(&model).expect("measure model"),
-            serde_json::to_vec(&model).expect("serialize model").len()
-        );
-
-        let artifact = TemporaryModelArtifact::serialize(&model).expect("temporary artifact");
-        let path = artifact.path.clone();
-        assert_eq!(artifact.size_bytes, serialized_json_size(&model).unwrap());
-        assert!(path.is_file());
-        drop(artifact);
-        assert!(!path.exists());
-    }
-}
+#[path = "service_executor_artifact_tests.rs"]
+mod tests;

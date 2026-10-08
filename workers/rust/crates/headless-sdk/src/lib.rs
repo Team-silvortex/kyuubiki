@@ -7,6 +7,7 @@ mod coupled_workflows;
 mod direct_fem;
 mod engine_solver_bridge;
 mod execution_authority;
+mod execution_input;
 mod execution_observability;
 mod executor;
 #[cfg(test)]
@@ -78,6 +79,8 @@ mod model_collaboration;
 #[cfg(test)]
 mod model_collaboration_tests;
 mod model_provider_adapters;
+mod model_source;
+mod model_source_evidence;
 mod operator_task;
 mod operator_task_provenance;
 mod operator_task_readiness;
@@ -167,6 +170,10 @@ pub use engine_solver_bridge::{
 };
 pub use execution_authority::{
     EXECUTION_AUTHORITY_SCHEMA_VERSION, ExecutionAuthority, validate_execution_authority,
+};
+pub use execution_input::{
+    HEADLESS_EXECUTION_INPUT_SCHEMA_VERSION, HeadlessExecutionInputFingerprint,
+    headless_execution_input_fingerprint,
 };
 pub use execution_observability::{
     HEADLESS_EXECUTION_SUMMARY_SCHEMA_VERSION, HEADLESS_FAILURE_RECEIPT_SCHEMA_VERSION,
@@ -310,10 +317,11 @@ pub use material_reliability::{
 };
 pub use material_reports::{
     MaterialStudyCatalogEntry, MaterialStudyDescriptor, build_material_report,
-    build_material_report_from_run, build_material_report_with_optimization,
-    describe_material_study, extract_material_result_payloads, extract_result_payloads_from_run,
-    find_material_study, material_study_catalog, material_study_descriptors,
-    supported_material_report_study_ids, validate_material_report_compatibility,
+    build_material_report_from_input, build_material_report_from_run,
+    build_material_report_with_optimization, describe_material_study,
+    extract_material_result_payloads, extract_result_payloads_from_run, find_material_study,
+    material_study_catalog, material_study_descriptors, supported_material_report_study_ids,
+    validate_material_report_compatibility,
 };
 pub use material_research::{
     MaterialCardReference, MaterialResearchCandidateReport, MaterialResearchMetricSpec,
@@ -359,6 +367,10 @@ pub use model_collaboration::{
     sanitize_model_context,
 };
 pub use model_provider_adapters::{normalize_model_response, project_model_tools};
+pub use model_source::{
+    HEADLESS_MODEL_SOURCE_SCHEMA_VERSION, HeadlessModelSource, HeadlessModelSourceKind,
+    headless_saved_model_source,
+};
 pub use operator_task::{
     OPERATOR_TASK_EXECUTE_ACTION, OPERATOR_TASK_PREPARE_ACTION, is_operator_task_execute_action,
     is_operator_task_prepare_action, operator_task_error_preview, prepare_operator_task_payload,

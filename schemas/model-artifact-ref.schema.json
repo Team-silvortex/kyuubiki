@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/model-artifact-ref.schema.json",
+  "title": "Normalized Model Artifact Reference",
+  "description": "The normalized six-field reference retained after a native Headless SDK upload. Artifact ID and SHA-256 must both match the prepared and transmitted bytes; their cross-field equality requires semantic validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_id", "sha256", "size_bytes", "media_type", "immutable"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.model-artifact-ref/v1"},
+    "artifact_id": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "size_bytes": {"type": "integer", "minimum": 1},
+    "media_type": {"const": "application/vnd.kyuubiki.model+json"},
+    "immutable": {"const": true}
+  }
+}

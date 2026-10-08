@@ -322,6 +322,15 @@ Then branch by intent:
 - `headless-sdks.md`
   Protocol-first Rust, Elixir, and Python SDK layer for headless AI and
   automation clients.
+- `headless-research-input-identity.md`
+  Native research report input fingerprints, evidence admission, safe recovery,
+  exact encoding and unchanged legacy lineage boundaries.
+- `headless-saved-model-sources.md`
+  Saved-snapshot content fingerprints, optional pre-submit pins, retained source
+  evidence and limits of fetched-content consistency.
+- `headless-model-artifact-identity.md`
+  Prepared/sent/upload-reply byte identity, retained upload bindings and the open
+  large-model normalization/result-file readback boundaries.
 - `operator-sdk.md`
   Proposed operator descriptor, runtime contract, and validation shape for
   future extensible solver and transform capabilities.

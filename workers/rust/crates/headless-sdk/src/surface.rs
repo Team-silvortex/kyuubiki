@@ -99,6 +99,8 @@ pub fn headless_sdk_surface_areas() -> Vec<HeadlessSdkSurfaceArea> {
                 "service_executor",
                 "parameter_patch",
                 "research_round",
+                "execution_input",
+                "model_source",
             ],
             anchor_exports: &[
                 "build_execution_plan",
@@ -107,6 +109,8 @@ pub fn headless_sdk_surface_areas() -> Vec<HeadlessSdkSurfaceArea> {
                 "apply_parameter_patch",
                 "build_headless_research_round_evidence",
                 "verify_headless_research_round_evidence",
+                "headless_execution_input_fingerprint",
+                "headless_saved_model_source",
             ],
         },
         HeadlessSdkSurfaceArea {
@@ -179,6 +183,7 @@ pub fn headless_sdk_surface_areas() -> Vec<HeadlessSdkSurfaceArea> {
             ],
             anchor_exports: &[
                 "build_material_report",
+                "build_material_report_from_input",
                 "validate_material_research_bundle",
                 "build_material_candidate_materialization_plan",
             ],

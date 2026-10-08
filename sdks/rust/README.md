@@ -155,9 +155,8 @@ assert_eq!(
     material_plan["schema_version"],
     "kyuubiki.material-study-execution-plan/v1"
 );
-let retained_bundle: MaterialResearchBundle =
-    serde_json::from_str(include_str!("../../../schemas/examples.material-research-bundle.json"))?;
-retained_bundle.validate()?;
+let retained_json = std::fs::read_to_string("tmp/material-research-bundle.json")?;
+let retained_bundle = MaterialResearchBundle::from_json_verified(&retained_json)?;
 
 let rpc = SolverRpcClient::new("127.0.0.1", 5001);
 let descriptor = rpc.describe_agent()?;
@@ -312,6 +311,21 @@ Example:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example validate_material_research_bundle`
 - Validate a generated bundle:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example validate_material_research_bundle -- tmp/material-research-bundle-composite.json`
+
+The bundle example calls `MaterialResearchBundle::from_json_verified(&text)`
+against the original file. It checks structure and all four embedded artifact
+digests without re-encoding JSON. v1 ignores formatting whitespace outside
+strings but retains key order, numeric tokens and escape spelling. The regular
+`validate()` method checks in-memory metadata only. Digest agreement detects
+content drift, not producer authenticity, whole-bundle metadata integrity or
+physical qualification. Verification describes only the imported document and
+does not survive edits to the returned mutable object. See the
+[import regression](../../reports/material-research-bundle-import-20261008.md).
+
+Additional checks:
+
+- Research bundle integrity regression:
+  `cargo test --manifest-path sdks/rust/Cargo.toml --test material_research_bundle_integrity`
 - Smoke test:
   `cargo test --manifest-path sdks/rust/Cargo.toml --test smoke`
   `cargo test --manifest-path sdks/rust/Cargo.toml --test workflow_contracts`

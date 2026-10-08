@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native Rust Headless large-model uploads bind preparation and transmitted-byte SHA-256/length to the explicit typed artifact acknowledgement before solver submission. Reports retain the normalized upload descriptor and workflow bindings can consume it. Real source macOS Orchestra/two-Agent and CLI experiments replace an acknowledgement with another existing same-size model, reject it without extra jobs/calculations or downstream writes, then verify healthy native-SI bar results by separately fetching and hashing result-file bytes. Scoped upload contract proof only: inline/artifact parameter normalization and SDK result-reference dereference remain open; no authenticated provenance, installed/remote/scale or general numerical qualification.",
+  "evidence_claims": [
+    {
+      "id": "headless-model-artifact-upload-content-binding",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["contract"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor_artifact.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_artifact_http.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_artifact_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_artifact_submission_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_value_ownership_tests.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "workers/rust/crates/headless-sdk/src/contracts.rs",
+        "workers/rust/crates/headless-sdk/src/contract_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_model_artifact.rs",
+        "workers/rust/crates/cli/tests/support/ack_loss_proxy.rs",
+        "workers/rust/crates/cli/tests/support/agent_lifecycle.rs",
+        "schemas/model-artifact-ref.schema.json",
+        "config/architecture/headless-workflow-qualification.json",
+        "docs/headless-model-artifact-identity.md",
+        "reports/headless-model-artifact-identity-20261008.md"
+      ],
+      "required_text": [
+        "Headless Model Artifact Identity",
+        "model_artifact_upload",
+        "model_artifact_receipt_invalid:",
+        "upload_receipts_require_exact_typed_digest_size_schema_and_media_fields",
+        "modified_temporary_content_cannot_be_rebound_to_a_valid_upload_acknowledgement",
+        "invalid_large_upload_receipts_halt_the_batch_before_solver_or_downstream_post",
+        "real_large_upload_identity_blocks_substituted_existing_content_before_calculation"
+      ]
+    }
+  ]
+}

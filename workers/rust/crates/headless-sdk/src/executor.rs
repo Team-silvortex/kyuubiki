@@ -8,7 +8,8 @@ use crate::workflow_bindings::{binding_failure_step, resolve_step_payload};
 use crate::{
     HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessBlockedConfirmation, HeadlessEngine,
     HeadlessExecutionBatch, HeadlessExecutionStepReport, HeadlessRisk, HeadlessRunReport,
-    find_action_contract, is_operator_task_execute_action, is_operator_task_prepare_action,
+    build_preflight_failure_report, find_action_contract, headless_execution_input_fingerprint,
+    is_operator_task_execute_action, is_operator_task_prepare_action,
     prepare_operator_task_payload, preview_operator_task_execute_payload,
     service_executor_supports_action, validate_batch,
 };
@@ -121,6 +122,20 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
             validation,
         );
     }
+    let execution_input = match headless_execution_input_fingerprint(batch) {
+        Ok(fingerprint) => fingerprint,
+        Err(message) => {
+            return build_preflight_failure_report(
+                Some(batch),
+                &batch.workflow_id,
+                &format!("execute:{}", executor.name()),
+                "document_validation",
+                "batch_validation",
+                &message,
+                &[],
+            );
+        }
+    };
     let mut results = BindingResults::new(batch);
     let mut steps = Vec::with_capacity(batch.steps.len());
     let mut executed_step_count = 0;
@@ -277,6 +292,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
     HeadlessRunReport {
         schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
         workflow_id: batch.workflow_id.clone(),
+        execution_input: Some(execution_input),
         mode: format!("execute:{}", executor.name()),
         status,
         executed_step_count,

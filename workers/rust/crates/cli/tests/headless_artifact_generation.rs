@@ -9,6 +9,10 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+#[path = "support/health_request.rs"]
+mod health_request;
+use health_request::read_health_request;
+
 static SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 struct Scratch(PathBuf);
@@ -107,7 +111,6 @@ impl HealthService {
                     }
                     Err(error) => panic!("accept health request: {error}"),
                 };
-                stream.set_nonblocking(false).unwrap();
                 stream
                     .set_write_timeout(Some(Duration::from_secs(2)))
                     .unwrap();
@@ -124,33 +127,6 @@ impl HealthService {
             thread: Some(thread),
         }
     }
-}
-
-fn read_health_request(stream: &mut TcpStream) -> Vec<u8> {
-    let deadline = Instant::now() + Duration::from_secs(2);
-    let mut request = Vec::with_capacity(256);
-    while !request.windows(4).any(|part| part == b"\r\n\r\n") {
-        assert!(
-            request.len() < 4096,
-            "health request headers exceed fixture budget"
-        );
-        let remaining = deadline.saturating_duration_since(Instant::now());
-        assert!(
-            !remaining.is_zero(),
-            "health request header deadline exceeded"
-        );
-        stream.set_read_timeout(Some(remaining)).unwrap();
-        let mut chunk = [0; 256];
-        let capacity = chunk.len().min(4096 - request.len());
-        let count = match stream.read(&mut chunk[..capacity]) {
-            Ok(count) => count,
-            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
-            Err(error) => panic!("read health request headers: {error}"),
-        };
-        assert_ne!(count, 0, "health request ended before complete headers");
-        request.extend_from_slice(&chunk[..count]);
-    }
-    request
 }
 
 impl Drop for HealthService {

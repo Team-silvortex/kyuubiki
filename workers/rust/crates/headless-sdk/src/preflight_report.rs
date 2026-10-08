@@ -92,6 +92,7 @@ fn build_failure_report(
             workflow_id.to_string()
         },
         mode: mode.to_string(),
+        execution_input: None,
         status: "invalid".to_string(),
         executed_step_count: 0,
         warning_count: validation.warning_count,

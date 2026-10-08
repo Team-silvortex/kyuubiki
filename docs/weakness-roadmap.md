@@ -22,7 +22,7 @@ Use the [early Daji mainline](current-line.md#early-daji-mainline) as the
 acceptance journey. Research agents control work through the official Headless
 SDKs; Rust Agents execute admitted tasks. GUI/PWDT, Headless control, and
 Rust-only operator extensions remain distinct surfaces. No model output may
-grant itself approval or substitute for numerical validation.
+grant itself approval or substitute for numerical validation. [Large-model research transport](headless-model-artifact-identity.md#known-unfinished-boundaries) still needs inline/artifact normalization parity and bounded verified SDK result-file readback; upload identity alone does not close that journey.
 
 ## Current Tensor Status
 

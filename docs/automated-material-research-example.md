@@ -115,6 +115,17 @@ step count, and chain trace count aligned with the retained artifacts. This
 keeps the single-file story honest when an agent or reviewer reads only the
 top-level summary first.
 
+For retained-file import in either Rust SDK, use
+`MaterialResearchBundle::from_json_verified(&text)` with the original file text.
+It checks the structure and all four artifact digests before returning an owned
+bundle. v1 hashes compact original JSON plus LF: formatting whitespace outside
+strings may change, but key order, numeric spelling and string escapes must not.
+Reserializing a parsed bundle is not an equivalent source document. The regular
+in-memory validator and Python/Elixir helpers remain metadata/structure checks.
+Digests do not protect every top-level field or authenticate the producer, and
+later edits to the returned object do not retain a verification guarantee.
+See [the import regression](../reports/material-research-bundle-import-20261008.md).
+
 Execution authority and numerical qualification are intentionally separate.
 `execution_trace.authority.assertions` must report `all_real_solver`,
 `no_mock_execution`, and `no_fallback` as true or the bundle is rejected. The

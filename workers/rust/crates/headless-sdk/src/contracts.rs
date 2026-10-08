@@ -1,4 +1,11 @@
 use crate::{HeadlessActionContract, HeadlessEngine, HeadlessRisk};
+const DIRECT_FEM_OUTPUTS: &[&str] = &[
+    "job_id",
+    "status",
+    "progress",
+    "job",
+    "model_artifact_upload",
+];
 
 const CONTRACTS: &[HeadlessActionContract] = &[
     HeadlessActionContract {
@@ -130,7 +137,13 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &[],
-        output_keys: &["job_id", "status", "endpoint"],
+        output_keys: &[
+            "job_id",
+            "status",
+            "endpoint",
+            "model_source",
+            "model_artifact_upload",
+        ],
     },
     HeadlessActionContract {
         id: "solve_from_model_version",
@@ -138,7 +151,14 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model_version_id", "endpoints"],
-        output_keys: &["job_id", "status", "model_version_id", "endpoint"],
+        output_keys: &[
+            "job_id",
+            "status",
+            "model_version_id",
+            "endpoint",
+            "model_source",
+            "model_artifact_upload",
+        ],
     },
     HeadlessActionContract {
         id: "solve_and_wait_from_model_version",
@@ -146,7 +166,15 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model_version_id", "endpoints"],
-        output_keys: &["job_id", "status", "model_version_id", "endpoint", "result"],
+        output_keys: &[
+            "job_id",
+            "status",
+            "model_version_id",
+            "endpoint",
+            "result",
+            "model_source",
+            "model_artifact_upload",
+        ],
     },
     HeadlessActionContract {
         id: "solve_plane_quad_2d",
@@ -154,7 +182,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_bar_1d",
@@ -162,7 +190,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_acoustic_bar_1d",
@@ -170,7 +198,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_thermal_bar_1d",
@@ -178,7 +206,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_heat_bar_1d",
@@ -186,7 +214,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_transient_heat_bar_1d",
@@ -194,7 +222,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_electrostatic_bar_1d",
@@ -202,7 +230,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_magnetostatic_bar_1d",
@@ -210,7 +238,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_magnetostatic_plane_triangle_2d",
@@ -218,7 +246,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_magnetostatic_plane_quad_2d",
@@ -226,7 +254,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_electrostatic_plane_triangle_2d",
@@ -234,7 +262,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_heat_plane_quad_2d",
@@ -242,7 +270,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_stokes_flow_plane_triangle_2d",
@@ -250,7 +278,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_stokes_flow_plane_quad_2d",
@@ -258,7 +286,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_heat_plane_triangle_2d",
@@ -266,7 +294,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_thermal_plane_quad_2d",
@@ -274,7 +302,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_thermal_plane_triangle_2d",
@@ -282,7 +310,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_electrostatic_plane_quad_2d",
@@ -290,7 +318,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_electric_conduction_plane_quad_2d",
@@ -298,7 +326,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_truss_2d",
@@ -306,7 +334,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_truss_3d",
@@ -314,7 +342,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_thermal_truss_2d",
@@ -322,7 +350,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_thermal_truss_3d",
@@ -330,7 +358,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_beam_1d",
@@ -338,7 +366,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_thermal_beam_1d",
@@ -346,7 +374,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_torsion_1d",
@@ -354,7 +382,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_spring_1d",
@@ -362,7 +390,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_transient_spring_1d",
@@ -370,7 +398,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_harmonic_spring_1d",
@@ -378,7 +406,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_nonlinear_spring_1d",
@@ -386,7 +414,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_contact_gap_1d",
@@ -394,7 +422,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_cohesive_interface_1d",
@@ -402,7 +430,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_cohesive_interface_2d",
@@ -410,7 +438,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_cohesive_interface_mesh_2d",
@@ -418,7 +446,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_cohesive_interface_mesh_3d",
@@ -426,7 +454,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_spring_2d",
@@ -434,7 +462,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_spring_3d",
@@ -442,7 +470,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_plane_triangle_2d",
@@ -450,7 +478,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_frame_2d",
@@ -458,7 +486,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_modal_frame_2d",
@@ -466,7 +494,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_buckling_beam_1d",
@@ -474,7 +502,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_buckling_frame_2d",
@@ -482,7 +510,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_frame_2d_p_delta",
@@ -490,7 +518,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_frame_2d_material_p_delta",
@@ -498,7 +526,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_frame_3d",
@@ -506,7 +534,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_solid_tetra_3d",
@@ -514,7 +542,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_modal_frame_3d",
@@ -522,7 +550,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_thermal_frame_2d",
@@ -530,7 +558,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_thermal_frame_3d",
@@ -538,7 +566,7 @@ const CONTRACTS: &[HeadlessActionContract] = &[
         category: "solve",
         risk: HeadlessRisk::Normal,
         required_payload_keys: &["model"],
-        output_keys: &["job_id", "status", "progress", "job"],
+        output_keys: DIRECT_FEM_OUTPUTS,
     },
     HeadlessActionContract {
         id: "solve_composite_thermo_electric_panel",

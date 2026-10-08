@@ -19,6 +19,8 @@ enum Wire {
         path: String,
         remove_identity: Option<(&'static str, &'static str)>,
         advertised_length: Option<usize>,
+        substitute_artifact: Option<Value>,
+        request_limit: usize,
     },
 }
 
@@ -56,6 +58,8 @@ impl AckLossProxy {
                 path: path.into(),
                 remove_identity: None,
                 advertised_length: None,
+                substitute_artifact: None,
+                request_limit: LIMIT,
             },
         )
     }
@@ -78,6 +82,8 @@ impl AckLossProxy {
                 path: path.into(),
                 remove_identity: Some((record, identity)),
                 advertised_length: None,
+                substitute_artifact: None,
+                request_limit: LIMIT,
             },
         )
     }
@@ -95,6 +101,22 @@ impl AckLossProxy {
                 path: path.into(),
                 remove_identity: None,
                 advertised_length: Some(length),
+                substitute_artifact: None,
+                request_limit: LIMIT,
+            },
+        )
+    }
+
+    pub fn http_with_artifact_reference(port: u16, reference: Value) -> Result<Self> {
+        Self::start(
+            port,
+            Wire::Http {
+                method: "POST",
+                path: "/api/v1/model-artifacts".into(),
+                remove_identity: None,
+                advertised_length: None,
+                substitute_artifact: Some(reference),
+                request_limit: 9_000_000,
             },
         )
     }
@@ -206,6 +228,7 @@ fn http_message(
     stream: &mut TcpStream,
     deadline: Instant,
     request: Option<(&str, &str)>,
+    limit: usize,
 ) -> Result<(Vec<u8>, Value)> {
     let mut bytes = Vec::new();
     while !bytes.ends_with(b"\r\n\r\n") {
@@ -242,7 +265,7 @@ fn http_message(
         .or_else(|| matches!(request, Some(("DELETE" | "GET", _))).then_some(Ok(0)))
         .ok_or("missing HTTP body length")?
         .map_err(|e| e.to_string())?;
-    if (length == 0 && request.is_none()) || length > LIMIT {
+    if (length == 0 && request.is_none()) || length > limit {
         return Err("relay HTTP body cap exceeded".into());
     }
     let mut body = vec![0; length];
@@ -312,14 +335,17 @@ fn relay(mut client: TcpStream, port: u16, wire: Wire, log: &Mutex<Capture>) -> 
             path,
             remove_identity,
             advertised_length,
+            substitute_artifact,
+            request_limit,
         } => {
-            let (bytes, query) = http_message(&mut client, deadline, Some((method, &path)))
-                .map_err(|e| format!("read caller HTTP: {e}"))?;
+            let (bytes, query) =
+                http_message(&mut client, deadline, Some((method, &path)), request_limit)
+                    .map_err(|e| format!("read caller HTTP: {e}"))?;
             log.lock().unwrap().requests.push(query);
             upstream
                 .write_all(&bytes)
                 .map_err(|e| format!("send upstream HTTP: {e}"))?;
-            let (_, acknowledgement) = http_message(&mut upstream, deadline, None)
+            let (_, acknowledgement) = http_message(&mut upstream, deadline, None, LIMIT)
                 .map_err(|e| format!("read upstream HTTP: {e}"))?;
             log.lock().unwrap().discarded.push(acknowledgement.clone());
             if let Some(length) = advertised_length {
@@ -331,14 +357,21 @@ fn relay(mut client: TcpStream, port: u16, wire: Wire, log: &Mutex<Capture>) -> 
                     .push(json!({"advertised_length":length}));
                 return Ok(());
             }
-            if let Some((record, identity)) = remove_identity {
+            if remove_identity.is_some() || substitute_artifact.is_some() {
                 let mut corrupted = acknowledgement;
-                corrupted
-                    .get_mut(record)
-                    .and_then(Value::as_object_mut)
-                    .ok_or("actual acknowledgement has no record object")?
-                    .remove(identity)
-                    .ok_or("actual acknowledgement has no record identity")?;
+                if let Some((record, identity)) = remove_identity {
+                    corrupted
+                        .get_mut(record)
+                        .and_then(Value::as_object_mut)
+                        .ok_or("actual acknowledgement has no record object")?
+                        .remove(identity)
+                        .ok_or("actual acknowledgement has no record identity")?;
+                }
+                if let Some(reference) = substitute_artifact {
+                    *corrupted
+                        .get_mut("artifact")
+                        .ok_or("missing actual artifact")? = reference;
+                }
                 let body = serde_json::to_vec(&corrupted).map_err(|e| e.to_string())?;
                 client
                     .write_all(

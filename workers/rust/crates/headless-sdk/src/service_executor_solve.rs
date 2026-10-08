@@ -6,7 +6,9 @@ use crate::service_executor_job_read::prefer_job_result;
 use crate::service_executor_job_receipt::submission_context;
 use crate::service_executor_job_wait::{execute_job_wait, validate_job_wait_options};
 use crate::service_executor_model_reference::{ModelReference, load_model_reference};
-use crate::{HeadlessExecutorError, HeadlessExecutorOutcome, direct_fem_submit_route};
+use crate::{
+    HeadlessExecutorError, HeadlessExecutorOutcome, HeadlessModelSource, direct_fem_submit_route,
+};
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 
@@ -15,8 +17,9 @@ pub(crate) fn execute_direct_mesh_solve(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let resolved_payload = resolve_direct_mesh_source(base_url, api_token, payload)?;
-    execute_resolved_mesh_solve(base_url, api_token, &resolved_payload)
+    let (resolved_payload, source) = resolve_direct_mesh_source(base_url, api_token, payload)?;
+    let outcome = execute_resolved_mesh_solve(base_url, api_token, &resolved_payload)?;
+    attach_model_source(outcome, source)
 }
 
 fn execute_resolved_mesh_solve(
@@ -76,16 +79,41 @@ fn resolve_direct_mesh_source(
     base_url: &str,
     api_token: Option<&str>,
     payload: &Value,
-) -> Result<Value, HeadlessExecutorError> {
+) -> Result<(Value, Option<HeadlessModelSource>), HeadlessExecutorError> {
     if payload.get("model_version_id").is_some() || payload.get("modelVersionId").is_some() {
         return load_model_reference(base_url, api_token, payload, ModelReference::Version)
-            .map(|loaded| loaded.resolved);
+            .map(|loaded| (loaded.resolved, Some(loaded.source)));
     }
     if payload.get("model_id").is_some() || payload.get("modelId").is_some() {
         return load_model_reference(base_url, api_token, payload, ModelReference::Model)
-            .map(|loaded| loaded.resolved);
+            .map(|loaded| (loaded.resolved, Some(loaded.source)));
     }
-    Ok(payload.clone())
+    if payload.get("expected_model_source").is_some() {
+        return Err(error(
+            "model_reference_invalid: model source pin requires a saved reference",
+        ));
+    }
+    Ok((payload.clone(), None))
+}
+
+fn attach_model_source(
+    mut outcome: HeadlessExecutorOutcome,
+    source: Option<HeadlessModelSource>,
+) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    let source =
+        serde_json::to_value(source).map_err(|_| error("failed to encode model source receipt"))?;
+    outcome
+        .result
+        .as_object_mut()
+        .ok_or_else(|| error("saved solve returned a non-object result"))?
+        .insert("model_source".into(), source);
+    outcome
+        .result
+        .as_object_mut()
+        .unwrap()
+        .entry("model_artifact_upload")
+        .or_insert(Value::Null);
+    Ok(outcome)
 }
 
 pub(crate) fn execute_solve_from_model_version(
@@ -114,7 +142,7 @@ pub(crate) fn execute_solve_from_model_version(
                 "model_version_id".to_string(),
                 Value::String(model_version_id.to_string()),
             );
-        return Ok(outcome);
+        return attach_model_source(outcome, Some(loaded.source));
     }
     let mut outcome = execute_resolved_mesh_solve(base_url, api_token, &resolved)?;
     outcome
@@ -125,7 +153,7 @@ pub(crate) fn execute_solve_from_model_version(
             "model_version_id".to_string(),
             Value::String(model_version_id.to_string()),
         );
-    Ok(outcome)
+    attach_model_source(outcome, Some(loaded.source))
 }
 
 fn direct_fem_action_for_study_kind(study_kind: &str) -> Option<String> {
@@ -213,7 +241,9 @@ pub(crate) fn combine_solve_and_wait_results(
         .cloned()
         .unwrap_or(Value::Null);
     let endpoint = solved.get("endpoint").cloned().unwrap_or(Value::Null);
-    Value::Object(Map::from_iter([
+    let model_source = solved.get("model_source").cloned();
+    let model_artifact_upload = solved.get("model_artifact_upload").cloned();
+    let mut combined = Map::from_iter([
         ("job_id".into(), Value::String(job_id.into())),
         ("status".into(), status),
         ("model_version_id".into(), model_version_id),
@@ -221,7 +251,14 @@ pub(crate) fn combine_solve_and_wait_results(
         ("solve".into(), solved),
         ("wait".into(), waited),
         ("result".into(), fetched),
-    ]))
+    ]);
+    if let Some(source) = model_source {
+        combined.insert("model_source".into(), source);
+    }
+    if let Some(upload) = model_artifact_upload {
+        combined.insert("model_artifact_upload".into(), upload);
+    }
+    Value::Object(combined)
 }
 
 fn direct_mesh_request(payload: &Value) -> Result<Value, HeadlessExecutorError> {

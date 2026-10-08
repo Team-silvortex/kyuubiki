@@ -1,5 +1,8 @@
-use crate::HeadlessExecutorError;
 use crate::service_executor::{request_json, validate_path_segment};
+use crate::{
+    HeadlessExecutorError, HeadlessModelSource, HeadlessModelSourceKind,
+    headless_saved_model_source,
+};
 use serde_json::{Map, Value};
 
 pub(crate) const INVALID_REFERENCE: &str = "model_reference_invalid:";
@@ -13,6 +16,7 @@ pub(crate) enum ModelReference {
 pub(crate) struct LoadedModelReference {
     pub resolved: Value,
     pub kind: String,
+    pub source: HeadlessModelSource,
 }
 
 pub(crate) fn load_model_reference(
@@ -45,6 +49,26 @@ pub(crate) fn load_model_reference(
     };
     let id = requested_identity(payload, aliases)?
         .ok_or_else(|| invalid("missing saved reference identity"))?;
+    let source_kind = match reference {
+        ModelReference::Model => HeadlessModelSourceKind::Model,
+        ModelReference::Version => HeadlessModelSourceKind::ModelVersion,
+    };
+    let expected = payload
+        .get("expected_model_source")
+        .map(HeadlessModelSource::decode)
+        .transpose()
+        .map_err(|detail| invalid(&detail))?;
+    if let Some(expected) = &expected {
+        let expected_id = match reference {
+            ModelReference::Model => Some(expected.model_id.as_str()),
+            ModelReference::Version => expected.model_version_id.as_deref(),
+        };
+        if expected.source_kind != source_kind || expected_id != Some(id) {
+            return Err(invalid(
+                "model source pin does not match requested reference",
+            ));
+        }
+    }
     let envelope = request_json(
         base_url,
         api_token,
@@ -90,7 +114,18 @@ pub(crate) fn load_model_reference(
         .get("payload")
         .filter(|value| value.is_object())
         .ok_or_else(|| invalid("saved record requires an object payload"))?;
+    let source = headless_saved_model_source(&envelope[envelope_key], source_kind)
+        .map_err(|detail| invalid(&detail))?;
+    if expected
+        .as_ref()
+        .is_some_and(|expected| expected != &source)
+    {
+        return Err(invalid(
+            "saved model source content does not match expected_model_source",
+        ));
+    }
     let mut resolved = payload.as_object().cloned().unwrap_or_default();
+    resolved.remove("expected_model_source");
     resolved.insert(id_key.into(), Value::String(id.into()));
     resolved.insert("model_id".into(), Value::String(model_id.into()));
     resolved.insert("project_id".into(), Value::String(project_id.into()));
@@ -101,6 +136,7 @@ pub(crate) fn load_model_reference(
     Ok(LoadedModelReference {
         resolved: Value::Object(resolved),
         kind: kind.into(),
+        source,
     })
 }
 

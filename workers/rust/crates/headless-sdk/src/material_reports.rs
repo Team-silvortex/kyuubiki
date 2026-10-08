@@ -1,8 +1,8 @@
 use crate::{
-    HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessExecutionBatch, HeadlessRunReport,
-    MaterialOptimizationProfile, MaterialResearchMetricSpec, build_composite_panel_report,
-    build_dielectric_screening_report, build_dielectric_screening_report_with_optimization,
-    build_heat_spreader_screening_report, build_heat_spreader_screening_report_with_optimization,
+    HeadlessExecutionBatch, HeadlessRunReport, MaterialOptimizationProfile,
+    MaterialResearchMetricSpec, build_composite_panel_report, build_dielectric_screening_report,
+    build_dielectric_screening_report_with_optimization, build_heat_spreader_screening_report,
+    build_heat_spreader_screening_report_with_optimization,
     build_structural_panel_screening_report,
     build_structural_panel_screening_report_with_optimization,
     build_thermo_shield_screening_report, build_thermo_shield_screening_report_with_optimization,
@@ -12,6 +12,9 @@ use serde_json::Value;
 
 #[path = "material_report_preflight.rs"]
 mod preflight;
+
+#[path = "material_run_results.rs"]
+mod run_results;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MaterialStudyDescriptor {
@@ -240,22 +243,41 @@ pub fn build_material_report_with_optimization(
     }
 }
 
+/// Checks retained completion, result receipts and the fixed candidate/job chain.
+/// This is consistency validation, not authenticated or numerical provenance.
 pub fn build_material_report_from_run(
     study: &str,
     report: &HeadlessRunReport,
 ) -> Result<Value, String> {
-    let payloads = extract_result_payloads_from_run(report)?;
+    let retained = run_results::RetainedRun::typed(report)?;
+    retained.validate_study(study)?;
+    let payloads = retained.payloads();
     build_material_report(study, &payloads)
+}
+
+/// Builds a fixed report from a checked retained run or caller-owned raw results.
+/// Raw arrays do not establish candidate identity; explicit mock runs remain previews.
+pub fn build_material_report_from_input(
+    study: &str,
+    payload: &Value,
+    optimization: Option<MaterialOptimizationProfile>,
+) -> Result<Value, String> {
+    let payloads = if run_results::is_run_input(payload) {
+        let retained = run_results::RetainedRun::json(payload)?;
+        retained.validate_study(study)?;
+        retained.payloads()
+    } else {
+        extract_material_result_payloads(payload)?
+    };
+    build_material_report_with_optimization(study, &payloads, optimization)
 }
 
 pub fn extract_material_result_payloads(payload: &Value) -> Result<Vec<Value>, String> {
     if let Some(array) = payload.as_array() {
         return Ok(array.clone());
     }
-    if payload.get("schema_version").and_then(Value::as_str)
-        == Some(HEADLESS_EXECUTION_RUN_SCHEMA_VERSION)
-    {
-        return extract_result_payloads_from_run_value(payload);
+    if run_results::is_run_input(payload) {
+        return Ok(run_results::RetainedRun::json(payload)?.payloads());
     }
     for key in ["results", "result_payloads"] {
         if let Some(array) = payload.get(key).and_then(Value::as_array) {
@@ -265,58 +287,10 @@ pub fn extract_material_result_payloads(payload: &Value) -> Result<Vec<Value>, S
     Err("material report input must be an array, include a results array, or be a headless execution run report".to_string())
 }
 
+/// Extracts explicit results from a complete declared execution record.
+/// Use the fixed report builders for study-specific candidate ownership checks.
 pub fn extract_result_payloads_from_run(report: &HeadlessRunReport) -> Result<Vec<Value>, String> {
-    let results = report
-        .steps
-        .iter()
-        .filter(|step| {
-            step.action == "result_fetch" && step.status != "blocked" && step.status != "failed"
-        })
-        .filter_map(|step| {
-            step.result_preview
-                .get("result")
-                .cloned()
-                .or_else(|| Some(step.result_preview.clone()))
-        })
-        .collect::<Vec<_>>();
-    require_non_empty_results(results, typed_run_failure_context(report))
-}
-
-fn extract_result_payloads_from_run_value(payload: &Value) -> Result<Vec<Value>, String> {
-    let results = payload
-        .get("steps")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter(|step| {
-            step.get("action").and_then(Value::as_str) == Some("result_fetch")
-                && step.get("status").and_then(Value::as_str) != Some("blocked")
-                && step.get("status").and_then(Value::as_str) != Some("failed")
-        })
-        .filter_map(|step| {
-            let preview = step.get("result_preview")?;
-            preview
-                .get("result")
-                .cloned()
-                .or_else(|| Some(preview.clone()))
-        })
-        .collect::<Vec<_>>();
-    require_non_empty_results(results, value_run_failure_context(payload))
-}
-
-fn require_non_empty_results(
-    results: Vec<Value>,
-    failure_context: Option<String>,
-) -> Result<Vec<Value>, String> {
-    if results.is_empty() {
-        let message =
-            "headless execution run report does not contain successful result_fetch payloads";
-        return Err(match failure_context {
-            Some(context) => format!("{message}; {context}"),
-            None => message.to_string(),
-        });
-    }
-    Ok(results)
+    Ok(run_results::RetainedRun::typed(report)?.payloads())
 }
 
 fn typed_run_failure_context(report: &HeadlessRunReport) -> Option<String> {
@@ -422,9 +396,13 @@ mod preflight_tests;
 mod input_tests;
 
 #[cfg(test)]
+#[path = "material_run_result_tests.rs"]
+mod run_result_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{HeadlessExecutionStepReport, HeadlessRisk};
+    use crate::{HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessExecutionStepReport, HeadlessRisk};
     use serde_json::json;
 
     #[test]
@@ -570,9 +548,10 @@ mod tests {
         let run = HeadlessRunReport {
             schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
             workflow_id: "template.material_dielectric_screening".to_string(),
+            execution_input: None,
             mode: "execute:mock".to_string(),
             status: "ok".to_string(),
-            executed_step_count: 3,
+            executed_step_count: 1,
             warning_count: 0,
             blocked_by_confirmation: None,
             validation: crate::HeadlessValidationReport {
@@ -586,12 +565,12 @@ mod tests {
             },
             execution_summary: crate::HeadlessExecutionSummary::default(),
             steps: vec![HeadlessExecutionStepReport {
-                index: 3,
+                index: 1,
                 action: "result_fetch".to_string(),
                 risk: HeadlessRisk::Normal,
                 status: "executed".to_string(),
                 payload: json!({ "job_id": "job-1" }),
-                result_preview: json!({ "result": { "max_electric_field": 42.0e6 } }),
+                result_preview: json!({ "job_id": "job-1", "result": { "max_electric_field": 42.0e6 } }),
                 requires_confirmation: false,
             }],
         };
@@ -606,6 +585,7 @@ mod tests {
         let run = HeadlessRunReport {
             schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
             workflow_id: "workflow.failed-service".to_string(),
+            execution_input: None,
             mode: "execute:service".to_string(),
             status: "failed".to_string(),
             executed_step_count: 0,

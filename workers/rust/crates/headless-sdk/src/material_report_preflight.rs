@@ -139,7 +139,9 @@ fn owned_job_source(
         .and_then(|(source, _)| roots.get(&source).copied()))
 }
 
-fn expected_candidates(study: &str) -> Result<(&'static str, Vec<&'static str>), String> {
+pub(super) fn expected_candidates(
+    study: &str,
+) -> Result<(&'static str, Vec<&'static str>), String> {
     Ok(match study {
         "material_heat_spreader_screening" => (
             "solve_heat_plane_quad_2d",

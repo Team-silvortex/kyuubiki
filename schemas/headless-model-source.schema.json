@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/headless-model-source.schema.json",
+  "title": "Headless Saved Model Source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_kind", "project_id", "model_id", "kind", "sha256"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.headless-model-source/v1"},
+    "source_kind": {"enum": ["model", "model_version"]},
+    "project_id": {"$ref": "#/$defs/identity"},
+    "model_id": {"$ref": "#/$defs/identity"},
+    "model_version_id": {"anyOf": [{"$ref": "#/$defs/identity"}, {"type": "null"}]},
+    "kind": {"type": "string", "minLength": 1, "pattern": "^\\S(?:[^\\u0000-\\u001f\\u007f-\\u009f]*\\S)?$",
+      "not": {"pattern": "[\\u0000-\\u001f\\u007f-\\u009f]"}},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "allOf": [{
+    "if": {"properties": {"source_kind": {"const": "model_version"}}},
+    "then": {"required": ["model_version_id"], "properties": {"model_version_id": {"$ref": "#/$defs/identity"}}}
+  }],
+  "$defs": {
+    "identity": {"type": "string", "minLength": 1,
+      "pattern": "^[A-Za-z0-9_-][A-Za-z0-9_.-]*$", "not": {"pattern": "\\.\\."}}
+  }
+}

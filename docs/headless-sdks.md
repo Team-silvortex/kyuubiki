@@ -973,6 +973,55 @@ Runtime result, numerical and lineage validation remain separate gates. Mock
 preview success is not material research qualification. See
 [material preflight regression](../reports/headless-material-preflight-20261007.md).
 
+#### Research input identity
+
+Native research run reports also bind their effective inputs before dispatch.
+Evidence builders reject missing, unsupported or stale input fingerprints,
+including tiny changes hidden by legacy lineage digest rounding. Older reports
+remain readable, but cannot be backfilled into new qualified evidence. See
+[Headless research input identity](./headless-research-input-identity.md).
+
+#### Verified material research bundle import
+
+For a saved `kyuubiki.material-research-bundle/v1` JSON document, use
+`MaterialResearchBundle::from_json_verified(&text)` in either Rust SDK. It checks
+structure and all four embedded artifact SHA-256 digests using compact original
+JSON tokens plus LF. Formatting whitespace may change, but object order, number
+tokens and string escapes must not. Read the original file, not reserialized JSON.
+The in-memory `validate_material_research_bundle` helper checks structure only.
+Digests cover the four artifacts, not all bundle metadata; they detect content
+drift, not producer authenticity or physical correctness. Python/Elixir helpers
+remain structure checks. See [the import regression](../reports/material-research-bundle-import-20261008.md).
+
+#### Retained material run results
+
+`build_material_report_from_run` and `build_material_report_from_input` check
+retained execution records before interpreting results against fixed candidates.
+The latter also accepts caller-owned raw arrays or `results`/`result_payloads`
+objects and an optional optimization profile; the standalone native material
+report command now uses this same input dispatcher.
+
+A run must declare the current schema, a named `execute:` mode, `status: ok`,
+valid issue-free validation, no confirmation/failure stop, a matching successful
+step count, ordered indices and only `executed` steps. Each result fetch requires
+a resolved job identity, consistent aliases, a matching receipt and an explicit
+object result. Failed/unfinished runs cannot contribute partial results; dry runs,
+unknown step statuses, missing results and compacted root summaries fail closed.
+Non-mock runs reject explicit preview receipts. An explicitly declared mock run
+remains a preview, not a scientific result.
+
+Fixed reports additionally require every unique candidate's matching study and
+solver, a unique submitted job, a completed owned wait and canonical result order.
+Explicit returned root research identities must not contradict that candidate job.
+Interleaved/grouped schedules, study aliases and custom workflow IDs remain valid.
+Run-shaped JSON cannot bypass these checks by adding a fallback `results` array.
+Validation borrows retained payloads; only admitted result objects are cloned for
+the existing owned report API. It performs no service requests, replay or writes.
+This proves declared receipt consistency, not authenticity, physical input
+immutability, numerical accuracy or durable recovery. Raw arrays retain caller
+responsibility for identity and applicability. See
+[retained-run regression](../reports/headless-material-run-results-20261008.md).
+
 #### Post-run artifact generation
 
 The native CLI routes material-report construction and research-evidence

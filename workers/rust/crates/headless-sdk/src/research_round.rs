@@ -335,7 +335,8 @@ fn validate_execution(
             report.mode
         ));
     }
-    if report.status != "ok" || !report.validation.ok {
+    if report.status != "ok" || !report.validation.ok || report.execution_summary.failure.is_some()
+    {
         return Err(format!(
             "headless research round requires a successful validated run, got status {}",
             report.status
@@ -347,6 +348,13 @@ fn validate_execution(
             "headless research round batch is invalid: {}",
             expected_validation.issues.join("; ")
         ));
+    }
+    let expected_input = crate::headless_execution_input_fingerprint(batch)?;
+    if report.execution_input.as_ref() != Some(&expected_input) {
+        return Err(
+            "headless research round execution input fingerprint is missing, unsupported, or does not match the effective batch; execute the current batch again"
+                .to_string(),
+        );
     }
     if report.validation != expected_validation || report.warning_count != batch.warnings.len() {
         return Err(
@@ -363,7 +371,7 @@ fn validate_execution(
                 .to_string(),
         );
     }
-    for (batch_step, report_step) in batch.steps.iter().zip(&report.steps) {
+    for (position, (batch_step, report_step)) in batch.steps.iter().zip(&report.steps).enumerate() {
         let requires_confirmation = matches!(
             batch_step.risk,
             HeadlessRisk::Sensitive | HeadlessRisk::Destructive
@@ -379,6 +387,11 @@ fn validate_execution(
                     .to_string(),
             );
         }
+        crate::model_source_evidence::validate_saved_source_evidence(
+            batch_step,
+            report_step,
+            &report.steps[..position],
+        )?;
     }
     Ok(())
 }

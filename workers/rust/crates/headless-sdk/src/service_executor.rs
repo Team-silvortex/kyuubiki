@@ -275,7 +275,8 @@ pub(crate) fn execute_direct_fem_submit(
     let explicit_context = submission_context(payload)?;
     let mut context = submission_context(model)?;
     context.extend(explicit_context);
-    let mut request_body = prepare_direct_fem_request_body(base_url, api_token, model)?;
+    let prepared = prepare_direct_fem_request_body(base_url, api_token, model)?;
+    let mut request_body = prepared.body;
     if !context.is_empty() {
         request_body
             .as_object_mut()
@@ -285,9 +286,17 @@ pub(crate) fn execute_direct_fem_submit(
             .extend(context.clone());
     }
     let result = request_json(base_url, api_token, "POST", route, Some(request_body))?;
+    let mut result = normalize_job_submission_with_context(result, &context)?;
+    result
+        .as_object_mut()
+        .expect("normalized submission is an object")
+        .insert(
+            "model_artifact_upload".into(),
+            prepared.upload.unwrap_or(Value::Null),
+        );
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
-        result: normalize_job_submission_with_context(result, &context)?,
+        result,
     })
 }
 

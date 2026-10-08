@@ -9,6 +9,9 @@ const NEXT_ROUND_EXECUTION_SCHEMA_VERSION: &str =
 const MATERIAL_EXPLORATION_CHAIN_SCHEMA_VERSION: &str = "kyuubiki.material-exploration-chain/v1";
 const SCREENING_RESEARCH_BUNDLE_POSTURE: &str = "screening_research_bundle";
 
+#[path = "material_research_bundle_integrity.rs"]
+mod integrity;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MaterialResearchBundle {
     pub schema_version: String,
@@ -75,6 +78,20 @@ pub struct MaterialResearchBundleMaterialCardRef {
     pub source: String,
 }
 
+impl MaterialResearchBundle {
+    /// Checks structure and all four embedded artifact digests using the original
+    /// v1 JSON tokens. Does not authenticate the producer or certify physics.
+    pub fn from_json_verified(text: &str) -> Result<Self, String> {
+        let bundle = serde_json::from_str(text)
+            .map_err(|error| format!("invalid material research bundle JSON: {error}"))?;
+        validate_material_research_bundle(&bundle)?;
+        integrity::verify_raw_artifacts(text, &bundle.artifact_checksums)?;
+        Ok(bundle)
+    }
+}
+
+/// Validates in-memory structure and declared metadata, not raw JSON digests.
+/// Use `MaterialResearchBundle::from_json_verified` for retained file import.
 pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Result<(), String> {
     require_equal(
         &bundle.schema_version,
@@ -132,6 +149,10 @@ pub fn validate_material_research_bundle(bundle: &MaterialResearchBundle) -> Res
     )?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "material_research_bundle_integrity_tests.rs"]
+mod integrity_tests;
 
 fn validate_execution_trace(trace: &Value) -> Result<(), String> {
     let authority = trace

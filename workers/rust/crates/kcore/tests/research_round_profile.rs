@@ -112,9 +112,14 @@ fn artifact(id: &str, role: &str, source: &str, schema: &str) -> ExportArtifact 
 }
 
 fn build_fixture(label: &str) -> Fixture {
+    build_fixture_with_input(label, 10.0)
+}
+
+fn build_fixture_with_input(label: &str, input: f64) -> Fixture {
     let root = fixture(label);
     fs::create_dir_all(&root).expect("create fixture");
-    let first_batch = batch();
+    let mut first_batch = batch();
+    first_batch.steps[0].payload["research_input"] = json!(input);
     let first_report = report(&first_batch, 48.0);
     let first_evidence = build_headless_research_round_evidence(
         &first_batch,
@@ -132,7 +137,7 @@ fn build_fixture(label: &str) -> Fixture {
         template_id: None,
         changes: vec![HeadlessParameterChange {
             path: "/steps/0/payload/research_input".to_string(),
-            expected: json!(10.0),
+            expected: json!(input),
             value: json!(12.0),
         }],
     };
@@ -268,6 +273,28 @@ fn exports_and_reverifies_a_self_contained_two_round_research_series() {
     let verification = verify_path(&output).expect("verify research KCore");
     assert_eq!(verification.semantic.contract_count, 1);
     assert_eq!(verification.semantic.research_round_count, 2);
+    fs::remove_dir_all(fixture.root).expect("clean fixture");
+}
+
+#[test]
+fn rejects_a_changed_input_even_when_legacy_batch_digest_is_unchanged() {
+    let mut fixture = build_fixture_with_input("input-fingerprint", 1.0);
+    fixture
+        .spec
+        .artifacts
+        .retain(|artifact| artifact.source.starts_with("round-1."));
+    fixture.spec.entrypoints = vec!["round-1-evidence".into()];
+    fixture.spec.contracts[0].artifact_id = "round-1-evidence".into();
+    let batch_path = fixture.root.join("round-1.batch.json");
+    let mut batch: Value = serde_json::from_slice(&fs::read(&batch_path).unwrap()).unwrap();
+    // The legacy .15-decimal digest collapses this to 1.0, so indexing still finds the batch.
+    batch["steps"][0]["payload"]["research_input"] = json!(f64::from_bits(1.0_f64.to_bits() + 1));
+    write_json(&batch_path, &batch);
+    let output = fixture.root.join("stale-input.kcore");
+    let error =
+        export_spec(fixture.spec, &fixture.root, &output).expect_err("stale input must fail");
+    assert!(error.contains("execution input fingerprint"), "{error}");
+    assert!(!output.exists());
     fs::remove_dir_all(fixture.root).expect("clean fixture");
 }
 

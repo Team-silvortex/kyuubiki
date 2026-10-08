@@ -6,9 +6,11 @@ pub(crate) use crate::report_compaction::compact_report_value;
 use crate::workflow_binding_results::BindingResults;
 use crate::workflow_bindings::{binding_failure_step, resolve_step_payload};
 use crate::{
-    HeadlessExecutionBatch, HeadlessExecutionSummary, HeadlessRisk, HeadlessValidationReport,
-    is_operator_task_execute_action, is_operator_task_prepare_action, operator_task_error_preview,
-    prepare_operator_task_payload, preview_operator_task_execute_payload, validate_batch,
+    HeadlessExecutionBatch, HeadlessExecutionInputFingerprint, HeadlessExecutionSummary,
+    HeadlessRisk, HeadlessValidationReport, build_preflight_failure_report,
+    headless_execution_input_fingerprint, is_operator_task_execute_action,
+    is_operator_task_prepare_action, operator_task_error_preview, prepare_operator_task_payload,
+    preview_operator_task_execute_payload, validate_batch,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -36,6 +38,8 @@ pub struct HeadlessExecutionStepReport {
 pub struct HeadlessRunReport {
     pub schema_version: String,
     pub workflow_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution_input: Option<HeadlessExecutionInputFingerprint>,
     pub mode: String,
     pub status: String,
     pub executed_step_count: usize,
@@ -55,6 +59,20 @@ pub fn run_batch_dry(
     if !validation.ok {
         return build_batch_validation_failure_report(batch, "dry_run", validation);
     }
+    let execution_input = match headless_execution_input_fingerprint(batch) {
+        Ok(fingerprint) => fingerprint,
+        Err(message) => {
+            return build_preflight_failure_report(
+                Some(batch),
+                &batch.workflow_id,
+                "dry_run",
+                "document_validation",
+                "batch_validation",
+                &message,
+                &[],
+            );
+        }
+    };
     let mut results = BindingResults::new(batch);
     let mut steps = Vec::with_capacity(batch.steps.len());
     let mut executed_step_count = 0;
@@ -153,6 +171,7 @@ pub fn run_batch_dry(
     HeadlessRunReport {
         schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
         workflow_id: batch.workflow_id.clone(),
+        execution_input: Some(execution_input),
         mode: "dry_run".to_string(),
         status,
         executed_step_count,
@@ -362,6 +381,14 @@ pub(crate) fn build_result_preview(action: &str, step_index: usize, payload: &Va
             );
         }
         _ => {}
+    }
+    if crate::direct_fem_submit_route(action).is_some()
+        || matches!(
+            action,
+            "direct_mesh_solve" | "solve_from_model_version" | "solve_and_wait_from_model_version"
+        )
+    {
+        map.insert("model_artifact_upload".into(), Value::Null);
     }
     Value::Object(map)
 }

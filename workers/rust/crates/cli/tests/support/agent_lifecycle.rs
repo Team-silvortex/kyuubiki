@@ -37,6 +37,7 @@ pub(crate) struct LiveAgent {
     capacity: String,
     solver_hold: Option<(String, String)>,
     retain_evidence: bool,
+    orchestrator_url: Option<String>,
 }
 
 impl LiveAgent {
@@ -112,6 +113,7 @@ impl LiveAgent {
             capacity: capacity.into(),
             solver_hold,
             retain_evidence: evidence_root.is_some(),
+            orchestrator_url: None,
         };
         agent.start_process()?;
         Ok(agent)
@@ -162,9 +164,20 @@ impl LiveAgent {
                 .env("KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE", stage)
                 .env("KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_METHOD", method);
         }
+        if let Some(url) = &self.orchestrator_url {
+            command.env("KYUUBIKI_ORCHESTRATOR_URL", url);
+        } else {
+            command.env_remove("KYUUBIKI_ORCHESTRATOR_URL");
+        }
         let child = command.spawn()?;
         self.child = Some(child);
         self.wait_until_ready(Duration::from_secs(30))
+    }
+
+    pub(crate) fn restart_with_orchestrator(&mut self, url: &str) -> Result<(), Box<dyn Error>> {
+        self.stop_process()?;
+        self.orchestrator_url = Some(url.into());
+        self.start_process()
     }
 
     pub(crate) fn stop_process(&mut self) -> Result<(), Box<dyn Error>> {

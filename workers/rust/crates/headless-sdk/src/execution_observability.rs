@@ -133,6 +133,14 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             "none",
             "Inspect the endpoint response size and use a bounded model/result transfer; do not retry an oversized response automatically or replay completed computation.",
         )
+    } else if message.starts_with(crate::service_executor_artifact::INVALID_UPLOAD_RECEIPT) {
+        (
+            "contract_failure",
+            "artifact_upload",
+            false,
+            "none",
+            "Inspect the artifact upload receipt and repair its content identity before an explicit continuation; an uploaded object may remain, but the SDK did not submit a solve. Do not replay the batch automatically.",
+        )
     } else if message.starts_with(crate::service_executor_job_wait::FAILED_JOB) {
         (
             "runtime_failure",

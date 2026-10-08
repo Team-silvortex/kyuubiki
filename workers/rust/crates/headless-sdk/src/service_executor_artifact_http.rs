@@ -8,6 +8,14 @@ use crate::service_executor::{parse_http_url, sanitize_header_value, sanitize_re
 use crate::service_executor_deadline::{read_service_response, write_before_deadline};
 use crate::service_executor_http::{ARTIFACT_IO_TIMEOUT, connect_service_stream_with_deadline};
 use crate::service_executor_response::{after_send_failure, parse_acknowledgement};
+use sha2::{Digest, Sha256};
+
+#[derive(Debug)]
+pub(crate) struct FileUploadAcknowledgement {
+    pub envelope: serde_json::Value,
+    pub sha256: String,
+    pub size_bytes: u64,
+}
 
 pub(crate) fn request_file(
     base_url: &str,
@@ -16,7 +24,7 @@ pub(crate) fn request_file(
     path: &str,
     content_type: &str,
     body_path: &Path,
-) -> Result<serde_json::Value, HeadlessExecutorError> {
+) -> Result<FileUploadAcknowledgement, HeadlessExecutorError> {
     let endpoint = parse_http_url(base_url)?;
     let request_path = sanitize_request_path(path)?;
     let api_token = sanitize_header_value(api_token, "api token")?;
@@ -50,10 +58,13 @@ pub(crate) fn request_file(
     write_before_deadline(&mut stream, head.as_bytes(), deadline, ARTIFACT_IO_TIMEOUT)
         .map_err(|error| after_send_failure(method, error))?;
     let mut sent = 0;
+    let mut digest = Sha256::new();
     let mut buffer = [0; 64 * 1024];
-    loop {
+    while sent < body_len {
+        // Never send a file's growth beyond the advertised HTTP body length.
+        let remaining = (body_len - sent).min(buffer.len() as u64) as usize;
         let length = body
-            .read(&mut buffer)
+            .read(&mut buffer[..remaining])
             .map_err(|error| after_send_failure(method, upload_error("body", error)))?;
         if length == 0 {
             break;
@@ -65,6 +76,7 @@ pub(crate) fn request_file(
             ARTIFACT_IO_TIMEOUT,
         )
         .map_err(|error| after_send_failure(method, error))?;
+        digest.update(&buffer[..length]);
         sent += length as u64;
     }
     if sent != body_len {
@@ -82,7 +94,11 @@ pub(crate) fn request_file(
         .map_err(|error| after_send_failure(method, upload_error("body", error)))?;
     let response = read_service_response(&mut stream, &request_path, deadline, ARTIFACT_IO_TIMEOUT)
         .map_err(|error| after_send_failure(method, error))?;
-    parse_acknowledgement(method, &response, path)
+    Ok(FileUploadAcknowledgement {
+        envelope: parse_acknowledgement(method, &response, path)?,
+        sha256: format!("{:x}", digest.finalize()),
+        size_bytes: sent,
+    })
 }
 
 fn upload_error(stage: &str, error: std::io::Error) -> HeadlessExecutorError {

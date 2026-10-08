@@ -38,6 +38,14 @@ pub(super) fn observe_sequence<R>(
     responses: Vec<Vec<u8>>,
     run: impl FnOnce(&str) -> R,
 ) -> (R, Vec<String>) {
+    observe_sequence_with_limit(responses, 64 * 1024, run)
+}
+
+pub(super) fn observe_sequence_with_limit<R>(
+    responses: Vec<Vec<u8>>,
+    request_limit: usize,
+    run: impl FnOnce(&str) -> R,
+) -> (R, Vec<String>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -68,7 +76,7 @@ pub(super) fn observe_sequence<R>(
             let mut buffer = [0; 4096];
             loop {
                 let size = stream.read(&mut buffer).unwrap();
-                assert!(size > 0 && request.len() + size <= 64 * 1024);
+                assert!(size > 0 && request.len() + size <= request_limit);
                 request.extend_from_slice(&buffer[..size]);
                 if let Some(split) = request.windows(4).position(|part| part == b"\r\n\r\n") {
                     let head = std::str::from_utf8(&request[..split]).unwrap();

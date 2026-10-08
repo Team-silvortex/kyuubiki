@@ -5,6 +5,10 @@ use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[cfg(unix)]
+#[path = "support/health_request.rs"]
+mod health_request;
+
 static SCRATCH_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 struct Scratch(PathBuf);
@@ -428,7 +432,7 @@ fn symlink_parent_is_resolved_before_dotdot_when_protecting_sources() {
 #[cfg(unix)]
 #[test]
 fn alias_created_during_service_execution_preserves_completed_stdout_and_source() {
-    use std::io::{Read, Write};
+    use std::io::Write;
     use std::net::TcpListener;
     use std::time::{Duration, Instant};
     let scratch = Scratch::new();
@@ -452,14 +456,10 @@ fn alias_created_during_service_execution_preserves_completed_stdout_and_source(
             }
         };
         stream
-            .set_read_timeout(Some(Duration::from_secs(2)))
-            .unwrap();
-        stream
             .set_write_timeout(Some(Duration::from_secs(2)))
             .unwrap();
-        let mut request = [0; 4096];
-        let length = stream.read(&mut request).unwrap();
-        assert!(request[..length].starts_with(b"GET /api/health "));
+        let request = health_request::read_health_request(&mut stream);
+        assert!(request.starts_with(b"GET /api/health "));
         fs::hard_link(source, destination).unwrap();
         let body = r#"{"service":"late-alias-fixture","status":"ok"}"#;
         write!(stream,
@@ -472,13 +472,10 @@ fn alias_created_during_service_execution_preserves_completed_stdout_and_source(
                 Ok((mut extra, _)) => {
                     request_count += 1;
                     extra
-                        .set_read_timeout(Some(Duration::from_secs(2)))
-                        .unwrap();
-                    extra
                         .set_write_timeout(Some(Duration::from_secs(2)))
                         .unwrap();
-                    let length = extra.read(&mut request).unwrap();
-                    assert!(request[..length].starts_with(b"GET /api/health "));
+                    let request = health_request::read_health_request(&mut extra);
+                    assert!(request.starts_with(b"GET /api/health "));
                     write!(
                         extra,
                         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",

@@ -30,8 +30,12 @@ mod library_receipts;
 #[allow(dead_code)]
 #[path = "support/modal_agent.rs"]
 mod modal_support;
+#[path = "support/headless_model_artifact.rs"]
+mod model_artifact;
 #[path = "support/headless_model_reference_gates.rs"]
 mod model_reference_gates;
+#[path = "support/headless_model_source.rs"]
+mod model_source;
 #[path = "support/headless_orchestra_cancel_routing.rs"]
 mod orchestra_cancel_routing;
 #[path = "support/headless_orchestra_cancellation.rs"]
@@ -65,6 +69,10 @@ mod write_ack_loss;
 mod artifact_generation;
 #[path = "support/headless_material_preflight.rs"]
 mod material_preflight;
+#[path = "support/headless_material_results.rs"]
+mod material_results;
+#[path = "support/headless_research_input.rs"]
+mod research_input;
 #[path = "support/headless_research_preflight.rs"]
 mod research_preflight;
 

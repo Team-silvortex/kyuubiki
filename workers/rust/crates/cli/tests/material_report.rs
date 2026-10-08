@@ -404,26 +404,26 @@ fn material_report_cli_builds_structural_panel_report() {
 
 #[test]
 fn material_report_cli_reads_headless_run_report_result_fetch_steps() {
-    let input = write_temp_json(
-        "headless-run",
-        &json!({
-            "schema_version": "kyuubiki.headless-execution-run/v1",
-            "workflow_id": "template.material_structural_panel_screening",
-            "mode": "execute:service",
-            "status": "ok",
-            "steps": [
-                { "index": 1, "action": "solve_plane_quad_2d", "status": "executed", "result_preview": { "job_id": "job-a" } },
-                { "index": 2, "action": "job_wait", "status": "executed", "result_preview": { "status": "completed" } },
-                { "index": 3, "action": "result_fetch", "status": "executed", "result_preview": { "result": { "max_stress": 210.0e6, "max_displacement": 0.0009 } } },
-                { "index": 4, "action": "solve_plane_quad_2d", "status": "executed", "result_preview": { "job_id": "job-b" } },
-                { "index": 5, "action": "job_wait", "status": "executed", "result_preview": { "status": "completed" } },
-                { "index": 6, "action": "result_fetch", "status": "executed", "result_preview": { "result": { "max_stress": 160.0e6, "max_displacement": 0.00042 } } },
-                { "index": 7, "action": "solve_plane_quad_2d", "status": "executed", "result_preview": { "job_id": "job-c" } },
-                { "index": 8, "action": "job_wait", "status": "executed", "result_preview": { "status": "completed" } },
-                { "index": 9, "action": "result_fetch", "status": "executed", "result_preview": { "result": { "max_stress": 120.0e6, "max_displacement": 0.00055 } } }
-            ]
-        }),
-    );
+    use kyuubiki_headless_sdk::{
+        MockHeadlessExecutor, build_template_document, execute_batch_with_executor,
+        normalize_workflow_document,
+    };
+    let batch = normalize_workflow_document(
+        &build_template_document("material_structural_panel_screening", None).unwrap(),
+    )
+    .unwrap();
+    let mut run = execute_batch_with_executor(&batch, &mut MockHeadlessExecutor, false, false);
+    let metrics = [(210e6, 0.0009), (160e6, 0.00042), (120e6, 0.00055)];
+    for (step, (stress, displacement)) in run
+        .steps
+        .iter_mut()
+        .filter(|step| step.action == "result_fetch")
+        .zip(metrics)
+    {
+        step.result_preview["result"] =
+            json!({"max_stress":stress,"max_displacement":displacement});
+    }
+    let input = write_temp_json("headless-run", &serde_json::to_value(run).unwrap());
     let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
         .args([
             "structural-panel",

@@ -1,5 +1,6 @@
 use crate::service_executor_ack_loss_tests::{observe, observe_sequence, run};
 use crate::{HeadlessExecutor, ServiceHeadlessExecutor};
+use crate::{HeadlessModelSourceKind, headless_saved_model_source};
 use serde_json::{Value, json};
 
 fn response(value: &Value) -> Vec<u8> {
@@ -67,6 +68,82 @@ fn rejects(action: &str, path: &str, payload: Value, receipt: Value) {
     assert_eq!(failure.retry_strategy, "none");
     assert!(failure.message.starts_with("model_reference_invalid:"));
     assert!(!failure.message.contains("rejected-secret"));
+}
+
+#[test]
+fn saved_source_content_mismatch_stops_before_submission_or_downstream_writes() {
+    for (action, path, mut payload, receipt) in cases() {
+        let version = receipt.get("version").is_some();
+        payload["expected_model_source"] = json!({
+            "schema_version":"kyuubiki.headless-model-source/v1",
+            "source_kind":if version {"model_version"} else {"model"},
+            "project_id":"owned-project", "model_id":"owned-model",
+            "model_version_id":if version {json!("owned-version")} else {Value::Null},
+            "kind":receipt[if version {"version"} else {"model"}]["kind"],
+            "sha256":"0".repeat(64)
+        });
+        rejects(action, path, payload, receipt);
+    }
+}
+
+#[test]
+fn malformed_or_redirected_model_source_pins_stop_before_network_io() {
+    for (action, _, mut payload, receipt) in cases() {
+        let version = receipt.get("version").is_some();
+        let source = headless_saved_model_source(
+            &receipt[if version { "version" } else { "model" }],
+            if version {
+                HeadlessModelSourceKind::ModelVersion
+            } else {
+                HeadlessModelSourceKind::Model
+            },
+        )
+        .unwrap();
+        let source = serde_json::to_value(source).unwrap();
+        for (key, value) in [
+            ("sha256", json!("invalid")),
+            ("schema_version", json!("unknown")),
+            ("unknown", json!("rejected-secret")),
+            (
+                "source_kind",
+                json!(if version { "model" } else { "model_version" }),
+            ),
+            (
+                if version {
+                    "model_version_id"
+                } else {
+                    "model_id"
+                },
+                json!("other"),
+            ),
+        ] {
+            let mut invalid = source.clone();
+            invalid[key] = value;
+            payload["expected_model_source"] = invalid;
+            let (report, calls) = run("http://127.0.0.1:1", action, payload.clone());
+            assert_eq!(calls, [action]);
+            let failure = report.execution_summary.failure.unwrap();
+            assert_eq!(failure.category, "contract_failure", "{failure:?}");
+            assert!(!failure.retryable);
+            assert!(!failure.message.contains("rejected-secret"));
+        }
+        for invalid in [Value::Null, json!([]), json!(false)] {
+            payload["expected_model_source"] = invalid;
+            let error = ServiceHeadlessExecutor::new("http://127.0.0.1:1")
+                .execute_step(action, 1, &payload)
+                .unwrap_err();
+            assert!(error.message.starts_with("model_reference_invalid:"));
+        }
+    }
+    let error = ServiceHeadlessExecutor::new("http://127.0.0.1:1")
+        .execute_step(
+            "direct_mesh_solve",
+            1,
+            &json!({"study_kind":"heat_bar_1d",
+            "input":{},"expected_model_source":{}}),
+        )
+        .unwrap_err();
+    assert!(error.message.starts_with("model_reference_invalid:"));
 }
 
 #[test]
@@ -271,6 +348,16 @@ fn valid_saved_reads_preserve_context_in_native_and_explicit_mesh_routes() {
             }
         }
         payload["projectId"] = json!("owned-project");
+        let expected = headless_saved_model_source(
+            &receipt[key],
+            if key == "version" {
+                HeadlessModelSourceKind::ModelVersion
+            } else {
+                HeadlessModelSourceKind::Model
+            },
+        )
+        .unwrap();
+        payload["expected_model_source"] = serde_json::to_value(&expected).unwrap();
         if key == "version" {
             payload["modelId"] = json!("owned-model");
             receipt["model_version_id"] = json!("owned-version");
@@ -286,7 +373,10 @@ fn valid_saved_reads_preserve_context_in_native_and_explicit_mesh_routes() {
             ],
             |url| ServiceHeadlessExecutor::new(url).execute_step(action, 1, &payload),
         );
-        outcome.unwrap();
+        assert_eq!(
+            outcome.unwrap().result["model_source"],
+            serde_json::to_value(expected).unwrap()
+        );
         assert_eq!(requests.len(), 2);
         let body: Value =
             serde_json::from_str(requests[1].split_once("\r\n\r\n").unwrap().1).unwrap();
@@ -297,6 +387,8 @@ fn valid_saved_reads_preserve_context_in_native_and_explicit_mesh_routes() {
         };
         assert_eq!(input["project_id"], "owned-project");
         assert_eq!(input["nodes"], json!([]));
+        assert!(input.get("expected_model_source").is_none());
+        assert!(input.get("model_source").is_none());
         if key == "version" {
             assert_eq!(input["model_version_id"], "owned-version");
         } else {

@@ -280,6 +280,8 @@
           "workers/rust/crates/headless-sdk/src/executor.rs",
           "workers/rust/crates/headless-sdk/src/service_executor.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_artifact.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_artifact_tests.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_artifact_submission_tests.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_artifact_http.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",

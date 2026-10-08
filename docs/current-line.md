@@ -180,6 +180,50 @@ checks declared identities and structure, not model/material parameter fidelity,
 authenticated result provenance or scientific qualification; generic SDK workflows
 and explicit retained-result report construction remain separate paths.
 
+The [research input identity follow-up](../reports/headless-research-input-fingerprint-20261008.md)
+binds native run reports to lossless effective input fingerprints captured before
+dispatch or compaction. Changed parameters cannot reuse old results merely by
+matching workflow/actions/validation. Two actual bar rounds check their analytic
+displacements and reverify retained evidence without replay; KCore uses the same
+gate. Legacy files remain readable but missing input identity cannot qualify new
+evidence. Legacy lineage digests stay unchanged, and this is not authenticated
+execution, external-model content binding or general scientific qualification.
+
+The [saved model source follow-up](../reports/headless-saved-model-sources-20261008.md)
+adds versioned fetched-content fingerprints and optional native SDK source pins.
+Changed saved content refuses before submission, artifact upload or downstream
+writes; research evidence checks captured source identities and pins. Actual
+source Orchestra/two-Agent bar runs verify mutable updates and historical-version
+results. This is fetched-snapshot consistency, not authenticated engine execution,
+normalized-request identity or installed/cross-language qualification.
+
+The [model upload identity follow-up](../reports/headless-model-artifact-identity-20261008.md)
+checks prepared/sent byte digests and typed server references before solver POST,
+retains `model_artifact_upload` and refuses a different existing same-size model's
+reply without extra calculations or downstream writes. The real source macOS
+test checks healthy native-SI bar results by separately reading result files.
+Inline/artifact parameter normalization and automatic SDK result-reference
+readback remain open; this is scoped upload contract evidence, not new numerical
+or installed/remote qualification.
+
+The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
+rejects unfinished or contradictory execution records, checks fetched job
+identities and ties fixed candidate reports to their own completed waits/results.
+SDK and standalone native report generation share the gate, while raw result
+arrays remain caller-owned and explicit mock outputs remain previews. Five actual
+Orchestra/Agent studies regenerate reports from retained runs without another
+calculation; deliberately corrupted records cannot overwrite prior reports.
+This is receipt consistency, not authenticated provenance or physical accuracy.
+
+The [research bundle import follow-up](../reports/material-research-bundle-import-20261008.md)
+adds `MaterialResearchBundle::from_json_verified` to both Rust SDKs and uses it
+in the published validation example. Saved v1 JSON is checked against all four
+embedded artifact digests without changing key order, number tokens or escapes.
+Formatting whitespace is allowed. In-memory validators and Python/Elixir remain
+structure checks; digest agreement is neither authenticated provenance nor
+whole-bundle metadata protection, numerical qualification or a verified badge
+that survives later object edits.
+
 The [material input profile follow-up](../reports/headless-material-input-profiles-20261007.md)
 closes a fixed-report mismatch: edited solver inputs could still be ranked using
 original factory constants. All five built-in reports now require their matching

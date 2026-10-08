@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/headless-execution-input.schema.json",
+  "title": "Headless Execution Input Fingerprint",
+  "description": "Input identity captured before dispatch or report compaction, not authentication or scientific qualification. SHA-256 over UTF-8 schema_version followed by one NUL byte and sorted-key compact JSON of the effective execution batch with warnings replaced by an empty array. Numbers use lossless serde_json number serialization, not legacy TaskIR decimal rounding. Arrays preserve order; absent template_id remains absent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "sha256"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.headless-execution-input/v1"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
