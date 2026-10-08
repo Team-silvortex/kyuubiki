@@ -61,7 +61,7 @@ pub(super) fn wait_for_task(
     }
 }
 
-fn cancel_execution(
+pub(super) fn cancel_execution(
     agent: &LiveAgent,
     port: u16,
     task: &Value,
@@ -155,7 +155,7 @@ fn cancel_execution(
     })
 }
 
-fn assert_cancelled(report: &HeadlessRunReport, task: &Value, stage: &str) {
+pub(super) fn assert_cancelled(report: &HeadlessRunReport, task: &Value, stage: &str) {
     assert_eq!(report.status, "failed", "{report:?}");
     assert_eq!(report.executed_step_count, 0);
     assert_eq!(report.steps.len(), 1, "downstream step was attempted");

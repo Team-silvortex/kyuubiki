@@ -28,9 +28,10 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
          nodes when is_list(nodes) <- Map.get(graph, "nodes"),
          edges when is_list(edges) <- Map.get(graph, "edges", []),
          execute_solve when is_function(execute_solve, 3) <- Keyword.get(opts, :execute_solve),
-         execute_transform when is_function(execute_transform, 3) <-
+         execute_transform
+         when is_function(execute_transform, 3) or is_function(execute_transform, 4) <-
            Keyword.get(opts, :execute_transform),
-         execute_extract when is_function(execute_extract, 3) <-
+         execute_extract when is_function(execute_extract, 3) or is_function(execute_extract, 4) <-
            Keyword.get(opts, :execute_extract),
          execute_export when is_function(execute_export, 3) <- Keyword.get(opts, :execute_export) do
       run_ordered_workflow_graph(
@@ -279,7 +280,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     with {:ok, operator_id} <- fetch_operator_id(node),
          {:ok, payload} <- resolve_transform_payload(node, incoming, state.artifacts) do
       result =
-        Keyword.fetch!(opts, :execute_transform).(operator_id, payload, Map.get(node, "config"))
+        execute_with_node(Keyword.fetch!(opts, :execute_transform), operator_id, payload, node)
 
       consumed = consumed_artifacts_for_node(node, incoming, state.artifacts)
       publish_operator_result(state, node, result, consumed)
@@ -290,7 +291,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     with {:ok, operator_id} <- fetch_operator_id(node),
          {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts) do
       result =
-        Keyword.fetch!(opts, :execute_extract).(operator_id, payload, Map.get(node, "config"))
+        execute_with_node(Keyword.fetch!(opts, :execute_extract), operator_id, payload, node)
 
       publish_operator_result(
         state,
@@ -358,6 +359,12 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   defp execute_workflow_node(%{"kind" => kind}, _incoming, _inputs, _state, _opts),
     do: {:error, {:unsupported_workflow_node_kind, kind}}
+
+  defp execute_with_node(callback, id, payload, node) do
+    if is_function(callback, 4),
+      do: callback.(id, payload, Map.get(node, "config"), node),
+      else: callback.(id, payload, Map.get(node, "config"))
+  end
 
   defp fetch_operator_id(%{"operator_id" => operator_id})
        when is_binary(operator_id) and operator_id != "",

@@ -1249,7 +1249,7 @@ Current weak point:
   particle velocity, and wave number, clearing its convergence dimension
 - `advection-diffusion-bar-closed-form` now retains a 1, 2, 4, 8, 16, and 32
   element pure-diffusion refinement regression for concentration, diffusive
-  flux, total flux, and zero Peclet number, clearing its convergence dimension; [bounded output hardening](advection-diffusion-service-chain.md#numerical-output-contract) adds orientation/range/cancellation guards; [explicit upwind](advection-diffusion-upwind.md) adds conservative balance and first-order refinement without general CFD qualification
+  flux, total flux, and zero Peclet number, clearing its convergence dimension; [bounded output hardening](advection-diffusion-service-chain.md#numerical-output-contract) adds orientation/range/cancellation guards; [explicit upwind](advection-diffusion-upwind.md) and its [stabilized research chain](advection-diffusion-research-chain.md) add conservative refinement, opt-in decisions and corruption recovery without general CFD qualification
 - `magnetostatic-bar-closed-form` now retains a 1, 2, 4, 8, and 16 element
   magnetic-potential refinement regression for field strength, flux density,
   stored energy, and nodal potential, clearing its convergence dimension

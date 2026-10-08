@@ -25,6 +25,14 @@ mod binding_gates;
 mod binding_lifetimes;
 #[path = "support/headless_cancellation_ack_loss.rs"]
 mod cancellation_ack_loss;
+#[path = "support/headless_diagnostic_cancellation.rs"]
+mod diagnostic_cancellation;
+#[path = "support/diagnostic_domains.rs"]
+mod diagnostic_domains;
+#[path = "support/headless_domain_diagnostic_cancellation.rs"]
+mod domain_diagnostic_cancellation;
+#[path = "support/headless_domain_diagnostics.rs"]
+mod domain_diagnostics;
 #[path = "support/headless_graph_entity_normalization.rs"]
 mod graph_entity_normalization;
 #[path = "support/headless_job_fetch_gates.rs"]
@@ -74,6 +82,8 @@ mod submission_context;
 mod submission_receipts;
 #[path = "support/headless_transport_output.rs"]
 mod transport_output;
+#[path = "support/headless_transport_research.rs"]
+mod transport_research;
 #[path = "support/headless_transport_upwind.rs"]
 mod transport_upwind;
 #[path = "support/headless_write_ack_loss.rs"]

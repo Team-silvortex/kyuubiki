@@ -12,7 +12,8 @@
         "headless_workflow": true,
         "tests": [
           "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
-          "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
+          "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
+          "workers/rust/crates/engine/tests/diagnostic_cancellation_workflow.rs"
         ],
         "reliability_suite": "stokes_flow_reliability",
         "review": {
@@ -95,7 +96,8 @@
         "headless_workflow": true,
         "tests": [
           "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs",
-          "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs"
+          "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
+          "workers/rust/crates/engine/tests/diagnostic_cancellation_workflow.rs"
         ],
         "reliability_suite": "stokes_flow_triangle_reliability",
         "review": {

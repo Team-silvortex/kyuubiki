@@ -1,0 +1,81 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source macOS service evidence extends a bounded native workflow TaskIR adapter to six diagnostics and five quality scores without duplicating Engine physics. Sixteen actual graph jobs require 33 Agent executions; corrupt evidence blocks dependent decisions while raw and independent outputs survive, and explicit reduction recovery avoids solving again. Five standalone diagnostic cancellations retain failed attempts through explicit same-task recovery in ten executions. Real Stokes chains also expose and repair quad/triangle solver RPC names and execution-program method derivation. This is contract and recovery evidence, not general TaskIR solver support, whole-job cancellation, numerical/scale/installed/remote qualification or durable continuation.",
+  "evidence_claims": [
+    {
+      "id": "cross-domain-native-workflow-diagnostics-and-quality-dispatch",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_task_builtin/workflow_diagnostics.rs",
+        "workers/rust/crates/cli/src/tests/operator_task_ir_rpc/agent_native_diagnostics.rs",
+        "workers/rust/crates/cli/tests/support/diagnostic_domains.rs",
+        "workers/rust/crates/cli/tests/support/headless_domain_diagnostics.rs",
+        "apps/web/lib/kyuubiki_web/workflow_native_operator_runtime.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+        "apps/web/test/kyuubiki_web/workflow_native_operator_runtime_test.exs",
+        "reports/native-domain-diagnostic-chains-20261008.md"
+      ],
+      "required_text": [
+        "domain_task_ir_diagnostics_and_quality_match_engine_without_package_fetch",
+        "domain_task_ir_rejects_corrupt_records_and_explicit_rerun_recovers",
+        "domain_native_whitelist_cannot_be_extended_by_kind_or_prefix",
+        "unsupported kinds and prefixed unknown IDs never reach the Agent client",
+        "real_cross_domain_native_diagnostic_quality_chains_isolate_corruption_and_recover",
+        "sixteen jobs must not replay",
+        "six typed solver RPCs, sixteen diagnostic TaskIRs and eleven scoring TaskIRs."
+      ]
+    },
+    {
+      "id": "cross-domain-native-diagnostic-cancellation-and-explicit-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/tests/support/headless_domain_diagnostic_cancellation.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_cancellation.rs",
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/engine/src/cfd_diagnostics.rs",
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "reports/native-domain-diagnostic-chains-20261008.md"
+      ],
+      "required_text": [
+        "real_cross_domain_native_diagnostic_cancellation_preserves_attempts_and_requires_explicit_rerun",
+        "Repeat computed records to exercise reducer cadence, not a larger physical mesh.",
+        "execute_diagnostics",
+        "inspect_cancellation_before_explicit_rerun",
+        "Five cancellations plus five explicit reruns require exactly ten Agent executions."
+      ]
+    },
+    {
+      "id": "stokes-workflow-and-program-native-rpc-method-alignment",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "runtime-agent-cli"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_solver_registry.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_execution_program.ex",
+        "apps/web/test/kyuubiki_web/workflow_cfd_runtime_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_execution_program_test.exs",
+        "workers/rust/crates/protocol/src/types/rpc.rs",
+        "workers/rust/crates/cli/tests/support/headless_domain_diagnostics.rs",
+        "reports/native-domain-diagnostic-chains-20261008.md"
+      ],
+      "required_text": [
+        "Stokes workflow IDs map to the plane RPC methods accepted by the native Agent",
+        "registered solver entrypoints use the dispatch registry rather than ID spelling",
+        "solve_stokes_flow_plane_quad_2d",
+        "solve_stokes_flow_plane_triangle_2d",
+        "solve.stokes_flow_triangle_2d"
+      ]
+    }
+  ]
+}

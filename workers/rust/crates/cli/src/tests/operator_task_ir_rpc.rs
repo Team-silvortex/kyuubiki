@@ -8,7 +8,9 @@ use crate::operator_task_runtime::{
 };
 use kyuubiki_protocol::compute_operator_task_digest;
 
+mod agent_native_diagnostics;
 mod agent_native_material;
+mod agent_native_transport;
 
 fn golden_operator_task_ir() -> serde_json::Value {
     serde_json::from_str(include_str!(

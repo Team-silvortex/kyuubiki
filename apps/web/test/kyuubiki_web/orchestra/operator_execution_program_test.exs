@@ -2,6 +2,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgramTest do
   use ExUnit.Case, async: true
 
   alias KyuubikiWeb.Orchestra.OperatorExecutionProgram
+  alias KyuubikiWeb.WorkflowSolverRegistry
+
+  test "registered solver entrypoints use the dispatch registry rather than ID spelling" do
+    for solver <- WorkflowSolverRegistry.list() do
+      program =
+        OperatorExecutionProgram.build(WorkflowSolverRegistry.descriptor(solver), %{}, %{})
+
+      assert program["entrypoint"]["name"] == Atom.to_string(solver.method)
+    end
+
+    unknown = %{"id" => "solve.custom.physics", "kind" => "solver"}
+
+    assert OperatorExecutionProgram.build(unknown, %{}, %{})["entrypoint"]["name"] ==
+             "solve_custom_physics"
+  end
 
   test "builds solver RPC execution programs" do
     program =

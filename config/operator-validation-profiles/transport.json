@@ -19,7 +19,10 @@
         "finite_range_and_cancellation_regression",
         "independent_upwind_discrete_solution",
         "upwind_continuous_solution_refinement",
-        "conservative_nodal_source_balance"
+        "conservative_nodal_source_balance",
+        "stabilization_diagnostic_integrity",
+        "opt_in_stabilization_quality_decision_chain",
+        "cooperative_diagnostic_cancellation"
       ],
       "formal_invariants": [
         "fixed_boundary_concentrations",
@@ -35,7 +38,13 @@
         "upwind_source_free_uniform_path_concentration_is_bounded_and_monotone",
         "upwind_physical_and_numerical_flux_remain_distinct",
         "upwind_area_weighted_numerical_flux_jump_matches_nodal_source",
-        "upwind_numerical_flux_summary_cancellation_allows_next_call"
+        "upwind_numerical_flux_summary_cancellation_allows_next_call",
+        "upwind_declared_results_require_complete_finite_stabilization_diagnostics",
+        "numerical_flux_identity_uses_scale_relative_roundoff_without_overflow",
+        "opt_in_stabilization_terms_do_not_change_default_quality",
+        "corrupt_diagnostics_block_dependent_decisions_without_losing_independent_outputs",
+        "diagnostic_safe_points_cover_scan_start_chunks_and_end_without_partial_publication",
+        "unobserved_cancellation_does_not_replace_an_original_sample_error"
       ],
       "evidence_paths": [
         "config/operator-reliability/transport.json",
@@ -51,7 +60,15 @@
         "workers/rust/crates/solver/tests/advection_diffusion_bar_upwind.rs",
         "workers/rust/crates/cli/tests/support/headless_transport_upwind.rs",
         "docs/advection-diffusion-upwind.md",
-        "reports/advection-diffusion-upwind-20261008.md"
+        "reports/advection-diffusion-upwind-20261008.md",
+        "workers/rust/crates/engine/src/tests/workflow_transport_stabilization.rs",
+        "workers/rust/crates/engine/tests/transport_stabilization_workflow.rs",
+        "workers/rust/crates/cli/tests/support/headless_transport_research.rs",
+        "docs/advection-diffusion-research-chain.md",
+        "reports/advection-diffusion-research-chain-20261008.md",
+        "workers/rust/crates/engine/src/tests/workflow_diagnostic_cancellation.rs",
+        "workers/rust/crates/cli/tests/support/headless_diagnostic_cancellation.rs",
+        "reports/diagnostic-cancellation-reliability-20261008.md"
       ],
       "commands": [
         {
@@ -83,6 +100,21 @@
           "id": "advection-diffusion-bar-upwind",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test advection_diffusion_bar_upwind -- --nocapture"
+        },
+        {
+          "id": "transport-stabilization-diagnostics",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_transport_stabilization -- --nocapture"
+        },
+        {
+          "id": "transport-stabilization-workflow",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test transport_stabilization_workflow -- --nocapture"
+        },
+        {
+          "id": "transport-diagnostic-cancellation",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_diagnostic_cancellation -- --nocapture"
         }
       ]
     }

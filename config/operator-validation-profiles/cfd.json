@@ -16,7 +16,8 @@
         "boundary_response_cross_check",
         "local_diagnostic_invariant",
         "screening_tolerance_policy_check",
-        "mesh_refinement_invariance"
+        "mesh_refinement_invariance",
+        "cooperative_result_diagnostic_cancellation"
       ],
       "formal_invariants": [
         "finite_velocity_pressure_fields",
@@ -27,7 +28,9 @@
         "linear_field_refinement_preserves_divergence",
         "linear_field_refinement_preserves_shear",
         "viscosity_scales_viscous_stress_and_dissipation",
-        "uniform_velocity_magnitude_and_reynolds_number_survive_representable_scale_changes"
+        "uniform_velocity_magnitude_and_reynolds_number_survive_representable_scale_changes",
+        "node_and_element_diagnostic_scans_poll_at_start_chunks_and_end",
+        "cancelled_diagnostics_do_not_publish_partial_quality_or_override_execution_scope"
       ],
       "evidence_paths": [
         "config/operator-reliability/cfd.json",
@@ -40,7 +43,9 @@
         "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs",
         "workers/rust/crates/solver/tests/multiphysics_output_range.rs",
-        "reports/multiphysics-output-reliability-20260923.md"
+        "reports/multiphysics-output-reliability-20260923.md",
+        "workers/rust/crates/engine/tests/diagnostic_cancellation_workflow.rs",
+        "reports/cross-domain-diagnostic-cancellation-20261008.md"
       ],
       "commands": [
         {
@@ -72,6 +77,11 @@
           "id": "stokes-mesh-convergence",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_mesh_convergence -- --nocapture"
+        },
+        {
+          "id": "cross-domain-diagnostic-cancellation",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test diagnostic_cancellation_workflow -- --nocapture"
         }
       ]
     },
@@ -90,7 +100,8 @@
         "local_diagnostic_invariant",
         "screening_tolerance_policy_check",
         "release_candidate_scope_guard",
-        "mesh_refinement_invariance"
+        "mesh_refinement_invariance",
+        "cooperative_result_diagnostic_cancellation"
       ],
       "formal_invariants": [
         "finite_velocity_pressure_fields",
@@ -100,7 +111,9 @@
         "explicit_non_navier_stokes_scope",
         "linear_field_refinement_preserves_divergence",
         "linear_field_refinement_preserves_shear",
-        "viscosity_scales_viscous_stress_and_dissipation"
+        "viscosity_scales_viscous_stress_and_dissipation",
+        "node_and_element_diagnostic_scans_poll_at_start_chunks_and_end",
+        "cancelled_diagnostics_do_not_publish_partial_quality_or_override_execution_scope"
       ],
       "evidence_paths": [
         "config/operator-reliability/cfd.json",
@@ -112,7 +125,9 @@
         "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
         "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
         "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
-        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs",
+        "workers/rust/crates/engine/tests/diagnostic_cancellation_workflow.rs",
+        "reports/cross-domain-diagnostic-cancellation-20261008.md"
       ],
       "commands": [
         {
@@ -139,6 +154,11 @@
           "id": "stokes-mesh-convergence",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test stokes_flow_mesh_convergence -- --nocapture"
+        },
+        {
+          "id": "cross-domain-diagnostic-cancellation",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test diagnostic_cancellation_workflow -- --nocapture"
         }
       ]
     }

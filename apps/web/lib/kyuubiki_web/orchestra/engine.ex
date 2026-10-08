@@ -10,6 +10,7 @@ defmodule KyuubikiWeb.Orchestra.Engine do
   alias KyuubikiWeb.WorkflowGraphPreflight
   alias KyuubikiWeb.WorkflowGraphResponse
   alias KyuubikiWeb.WorkflowGraphRunner
+  alias KyuubikiWeb.WorkflowNativeOperatorRuntime
   alias KyuubikiWeb.WorkflowOperatorCatalog
   alias KyuubikiWeb.WorkflowOperatorRuntime
   alias KyuubikiWeb.WorkflowTemplateCatalog
@@ -98,8 +99,32 @@ defmodule KyuubikiWeb.Orchestra.Engine do
           end
         )
       end,
-      execute_transform: &WorkflowOperatorRuntime.run_transform_operator/3,
-      execute_extract: &WorkflowOperatorRuntime.run_extract_operator/3,
+      execute_transform: fn id, payload, config, node ->
+        if WorkflowNativeOperatorRuntime.supports?("transform", id),
+          do:
+            WorkflowNativeOperatorRuntime.run(
+              "transform",
+              id,
+              payload,
+              config,
+              node,
+              orchestration_context
+            ),
+          else: WorkflowOperatorRuntime.run_transform_operator(id, payload, config)
+      end,
+      execute_extract: fn id, payload, config, node ->
+        if WorkflowNativeOperatorRuntime.supports?("extract", id),
+          do:
+            WorkflowNativeOperatorRuntime.run(
+              "extract",
+              id,
+              payload,
+              config,
+              node,
+              orchestration_context
+            ),
+          else: WorkflowOperatorRuntime.run_extract_operator(id, payload, config)
+      end,
       execute_export: &WorkflowOperatorRuntime.run_export_operator/3
     )
   end

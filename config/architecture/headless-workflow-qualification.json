@@ -1,12 +1,13 @@
 {
   "schema_version": "kyuubiki.headless-workflow-qualification-contract/v1",
   "report_schema": "kyuubiki.headless-workflow-qualification-report/v1",
-  "minimum_total_tests": 544,
+  "minimum_total_tests": 546,
   "suites": [
     {
       "id": "headless-sdk-core",
-      "minimum_tests": 528,
+      "minimum_tests": 530,
       "source_files": [
+        "workers/rust/crates/headless-sdk/src/workflow_dataset_preflight.rs",
         "workers/rust/crates/headless-sdk/src/execution_observability.rs",
         "workers/rust/crates/headless-sdk/src/preflight_report.rs",
         "workers/rust/crates/headless-sdk/src/run.rs",
@@ -53,6 +54,8 @@
         "workers/rust/crates/headless-sdk/src/workflow_batch.rs"
       ],
       "required_tests": [
+        "workflow_dataset_preflight::tests::typed_graph_without_dataset_contract_survives_headless_preflight",
+        "workflow_dataset_preflight::tests::typed_graph_with_sparse_dataset_metadata_survives_headless_preflight",
         "execution_observability::tests::authorization_status_requires_transport_context",
         "execution_observability::tests::terminal_decode_failure_keeps_specific_stage_without_retrying_acknowledged_job",
         "preflight_report::tests::preflight_failure_is_a_standard_non_retryable_run_report",

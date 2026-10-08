@@ -3,6 +3,17 @@ defmodule KyuubikiWeb.CanonicalJsonTest do
 
   alias KyuubikiWeb.CanonicalJson
 
+  test "shared TaskIR float fixture uses exact fixed-15 ties-to-even rounding" do
+    path = Path.expand("../../../../schemas/examples.task-ir-canonical-floats.json", __DIR__)
+
+    for example <- path |> File.read!() |> Jason.decode!() |> Map.fetch!("cases") do
+      assert CanonicalJson.encode!(example["value"]) == example["canonical"]
+
+      assert CanonicalJson.encode!(example["value"] |> Jason.encode!() |> Jason.decode!()) ==
+               example["canonical"]
+    end
+  end
+
   test "encodes object keys in lexicographic order recursively" do
     assert CanonicalJson.encode!(%{
              "z" => 1,

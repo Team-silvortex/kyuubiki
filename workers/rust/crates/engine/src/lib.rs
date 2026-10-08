@@ -29,6 +29,7 @@ mod thermal_quality;
 mod thermo_diagnostics;
 mod transport_diagnostics;
 mod transport_quality;
+mod transport_stabilization_diagnostics;
 mod workflow;
 mod workflow_artifact_retention;
 mod workflow_bundle_exports;
@@ -93,8 +94,9 @@ pub use operator_sdk_host::{
 pub use operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
 pub use workflow::{run_workflow_graph, run_workflow_graph_with_options};
 pub use workflow_executor::{
-    is_supported_workflow_operator, run_solve_operator, solve_operator_runtime_manifest,
-    supported_workflow_operator_ids, verify_solver_result_provenance,
+    is_supported_workflow_operator, run_extract_operator, run_solve_operator,
+    run_transform_operator, solve_operator_runtime_manifest, supported_workflow_operator_ids,
+    verify_solver_result_provenance,
 };
 pub use workflow_topology::{WorkflowTopologyProfile, analyze_workflow_topology};
 

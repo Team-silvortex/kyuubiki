@@ -1199,7 +1199,7 @@ this separate RPC diagnostic. Local HTTP regressions cancel an owned Agent
 directly, check that no downstream project or partial result is published,
 and explicitly rerun the identical task on the same Agent. They cover a
 precomputation axial bar, 2D modal matrix multiplication, and 3D modal final shape
-validation. The publication boundary and already-recorded watchdog reason are
+validation; [native diagnostic scans](advection-diffusion-research-chain.md#cooperative-diagnosis-cancellation) also cancel without partial summaries and retain explicit-rerun attempt history. The publication boundary and already-recorded watchdog reason are
 tested separately at the Rust unit boundary. Deterministic thread-shutdown tests
 inject cancellation and watchdog termination only during heartbeat stop; a separate
 legacy RPC regression injects cancellation during result serialization. They are
@@ -1800,7 +1800,7 @@ Large service submissions do not expand a complete FEM model into the Elixir
 process or one solver RPC frame. The control plane streams the model into its
 SHA-256 store and sends a `kyuubiki.model-artifact-ref/v1` reference to the
 selected Rust Agent. The Agent verifies the declared byte length and digest
-before decoding it; [field graph decoding](graph-entity-input-normalization.md) shares object/ID rules across ten inline/file routes, including the [advection-diffusion service chain](advection-diffusion-service-chain.md) and its [explicit upwind scheme and numerical-flux metrics](advection-diffusion-upwind.md).
+before decoding it; [field graph decoding](graph-entity-input-normalization.md) shares object/ID rules across ten inline/file routes, including the [advection-diffusion service chain](advection-diffusion-service-chain.md), [explicit upwind metrics](advection-diffusion-upwind.md) and [native stabilized research decisions and recovery](advection-diffusion-research-chain.md).
 
 When a solve was sourced from a model artifact, its result follows the same
 bounded transport rule. The Agent serializes directly to a temporary file,

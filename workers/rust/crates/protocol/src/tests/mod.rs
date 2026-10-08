@@ -15,6 +15,7 @@ mod operator_task_ir_fuzz;
 mod rpc_fuzz;
 mod solver_execution_capability;
 mod spring_control_rpc;
+mod task_ir_canonical_floats;
 mod thermal_plane_rpc;
 mod transport_scheme;
 mod workflow_dataset_contract;

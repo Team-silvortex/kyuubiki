@@ -247,7 +247,9 @@ pub enum WorkflowNodeKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct WorkflowDefaults {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cache_policy: Option<WorkflowCachePolicy>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub orchestrated: Option<bool>,
 }
 
@@ -255,10 +257,13 @@ pub struct WorkflowDefaults {
 pub struct WorkflowPort {
     pub id: String,
     pub artifact_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cardinality: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dataset_value: Option<String>,
 }
 
@@ -266,10 +271,15 @@ pub struct WorkflowPort {
 pub struct WorkflowNode {
     pub id: String,
     pub kind: WorkflowNodeKind,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub operator_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cache_policy: Option<WorkflowCachePolicy>,
     pub inputs: Vec<WorkflowPort>,
     pub outputs: Vec<WorkflowPort>,
@@ -287,7 +297,7 @@ pub struct WorkflowEdge {
     pub from: WorkflowNodePortRef,
     pub to: WorkflowNodePortRef,
     pub artifact_type: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dataset_value: Option<String>,
 }
 
@@ -297,8 +307,9 @@ pub struct WorkflowGraph {
     pub id: String,
     pub name: String,
     pub version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dataset_contract: Option<WorkflowDatasetContract>,
     pub entry_nodes: Vec<String>,
     #[serde(default)]

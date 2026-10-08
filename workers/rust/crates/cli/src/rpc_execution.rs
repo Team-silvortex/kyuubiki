@@ -77,10 +77,17 @@ fn execute_operator_task_ir(
         Err(mut error) => {
             let control = guard.solver_control();
             if control.was_interrupted() {
+                let stage = if control.last_checkpoint().is_some_and(|point| {
+                    point.stage == kyuubiki_solver::solver_control::SolverStage::ResultDiagnostics
+                }) {
+                    "execute_diagnostics"
+                } else {
+                    "execute_solver"
+                };
                 error = OperatorTaskRuntimeError::with_task(
                     "cancelled",
                     error.message,
-                    "execute_solver",
+                    stage,
                     request.params.get("task_ir"),
                 );
             }

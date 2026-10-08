@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.protocol-validation-qualification-contract/v2",
   "report_schema": "kyuubiki.protocol-validation-qualification-report/v2",
-  "minimum_protocol_tests": 128,
+  "minimum_protocol_tests": 132,
   "minimum_rpc_methods": 56,
   "minimum_task_ir_count": 5,
   "minimum_security_boundaries": 9,
@@ -27,6 +27,10 @@
     "elixir_control_plane"
   ],
   "required_tests": [
+    "tests::task_ir_canonical_floats::task_ir_shared_float_fixture_preserves_fixed_15_rounding_and_signed_zero",
+    "tests::workflow_dataset_contract::typed_workflow_omits_unset_authoring_fields_without_dropping_explicit_values",
+    "tests::workflow_dataset_contract::typed_dataset_contract_retains_schema_marker_and_omits_unset_metadata",
+    "tests::workflow_dataset_contract::typed_dataset_contract_rejects_missing_or_unsupported_schema_marker",
     "tests::transport_scheme::transport_scheme_shared_fixture_accepts_only_explicit_supported_schemes",
     "tests::transport_scheme::legacy_transport_result_decodes_without_new_optional_diagnostics",
     "tests::transport_scheme::upwind_result_preserves_separate_physical_and_numerical_diagnostics",

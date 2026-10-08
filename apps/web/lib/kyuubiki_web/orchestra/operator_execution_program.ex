@@ -5,6 +5,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
 
   @schema_version "kyuubiki.operator-execution-program/v1"
 
+  alias KyuubikiWeb.WorkflowSolverRegistry
+
   @spec schema_version() :: String.t()
   def schema_version, do: @schema_version
 
@@ -57,8 +59,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
   defp entrypoint(operator_id, "solver") when is_binary(operator_id) do
     %{
       "kind" => "solver_method",
-      "name" =>
-        operator_id |> String.replace_prefix("solve.", "solve_") |> String.replace(".", "_")
+      "name" => solver_method(operator_id)
     }
   end
 
@@ -68,6 +69,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
       "name" => operator_id,
       "operator_kind" => kind
     }
+  end
+
+  defp solver_method(operator_id) do
+    case WorkflowSolverRegistry.fetch(operator_id) do
+      {:ok, %{method: method}} ->
+        Atom.to_string(method)
+
+      :error ->
+        operator_id |> String.replace_prefix("solve.", "solve_") |> String.replace(".", "_")
+    end
   end
 
   defp bindings do

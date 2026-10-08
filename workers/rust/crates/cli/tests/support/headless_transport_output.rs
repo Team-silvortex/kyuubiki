@@ -78,9 +78,18 @@ pub(super) fn cli(
     url: &str,
     success: bool,
 ) -> Result<HeadlessRunReport> {
+    cli_with_policy(batch, url, success, false)
+}
+
+pub(super) fn cli_with_policy(
+    batch: &HeadlessExecutionBatch,
+    url: &str,
+    success: bool,
+    allow_sensitive: bool,
+) -> Result<HeadlessRunReport> {
     let source = write_temp_json("transport-finite-output", &serde_json::to_value(batch)?);
     let path = source.parent().unwrap().join("report.json");
-    let output = run_headless_command(&[
+    let mut args = vec![
         "run",
         source.to_str().unwrap(),
         "--execute",
@@ -91,7 +100,11 @@ pub(super) fn cli(
         "--json",
         "--report-out",
         path.to_str().unwrap(),
-    ]);
+    ];
+    if allow_sensitive {
+        args.push("--allow-sensitive");
+    }
+    let output = run_headless_command(&args);
     assert_eq!(output.status.success(), success, "{output:?}");
     let report = parse_json_output(&output);
     assert_eq!(report, serde_json::from_slice::<Value>(&fs::read(path)?)?);

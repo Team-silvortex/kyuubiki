@@ -251,6 +251,40 @@ extend the current validation profile; eight actual source-Agent admissions
 check inline/file/workflow execution, retained research metrics and failure
 recovery. This does not promote historical qualification or general CFD accuracy.
 
+The [stabilized research-chain follow-up](advection-diffusion-research-chain.md)
+retains artificial diffusion through diagnostics, opt-in quality targets and
+objective decisions. Native source workflows block coarse/corrupt evidence,
+retain independent branches and recover with explicit healthy submissions.
+Typed graph/dataset wire repairs and shared Rust/Elixir float rounding keep the
+same chain executable through Headless, Orchestra and Agent without duplicate
+physics implementations. This is bounded source evidence, not material acceptance.
+
+The [diagnostic cancellation follow-up](../reports/diagnostic-cancellation-reliability-20261008.md)
+adds cooperative safe points to shared borrowed-result scans, including the
+stabilization pass. Native task cancellation blocks partial summaries and later
+writes, while an explicit same-task rerun retains the original failed attempt.
+This does not promise bounded JSON processing, arbitrary-plugin preemption,
+durable restart or remote-scale cancellation latency.
+
+The [cross-domain cancellation follow-up](../reports/cross-domain-diagnostic-cancellation-20261008.md)
+closes both independent Stokes diagnostic loops and tests thermal, electric,
+magnetic and thermo-mechanical vector/component reductions. Five synchronous
+Engine graphs cannot publish cancelled results even with `on_error: skip`;
+fresh complete graphs recover. A real single-quad Stokes result can explicitly
+repeat diagnosis without another solve. This does not qualify non-transport
+native TaskIR routing, public graph cancellation or durable continuation.
+
+The [native domain service follow-up](../reports/native-domain-diagnostic-chains-20261008.md)
+then extends the existing diagnostic/scoring whitelist to eleven Engine built-ins.
+Five actual study chains plus a Stokes triangle chain run sixteen graph jobs in
+33 Agent executions. Corrupt results block dependent decisions; retained healthy
+results can be diagnosed/scored again without another solve. Five exact-target
+diagnostic cancellations retain failed attempts through explicit successful
+reruns in ten executions. Stokes quad/triangle RPC names and execution-program
+generation now use the registered methods. This adds bounded source routing and
+recovery evidence, not new TaskIR solver support, public whole-job cancellation,
+installed/remote acceptance, scale or numerical accuracy.
+
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job
 identities and ties fixed candidate reports to their own completed waits/results.

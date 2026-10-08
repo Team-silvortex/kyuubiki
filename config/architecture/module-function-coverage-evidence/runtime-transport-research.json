@@ -1,0 +1,114 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded steady 1D upwind research chains retain stabilization diagnostics, apply opt-in quality targets and isolate corrupt evidence before dependent decisions. Typed graph/dataset serialization and shared fixed-15 Rust/Elixir float encoding repairs keep the native source Headless/Orchestra/Agent path executable. Four actual workflow jobs require ten Agent executions and preserve source-bound retained research without replay. Shared borrowed-record reductions additionally support cooperative cancellation; a separate standalone TaskIR service test retains the cancelled attempt and completes one explicit rerun in exactly two executions. This is not installed/remote/scale qualification, lossless TaskIR authentication, general CFD accuracy or calibrated material acceptance; historical qualification remains unchanged.",
+  "evidence_claims": [
+    {
+      "id": "transport-stabilized-research-numerics-and-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/transport_stabilization_diagnostics.rs",
+        "workers/rust/crates/engine/src/transport_quality.rs",
+        "workers/rust/crates/engine/src/tests/workflow_transport_stabilization.rs",
+        "workers/rust/crates/engine/tests/transport_stabilization_workflow.rs",
+        "config/operator-validation-profiles/transport.json",
+        "docs/advection-diffusion-research-chain.md",
+        "reports/advection-diffusion-research-chain-20261008.md"
+      ],
+      "required_text": [
+        "stabilization_identity_is_scaled_without_unused_overflow_or_absolute_floor",
+        "selected_stabilization_metrics_never_default_missing_or_corrupt_data_to_zero",
+        "late_stabilization_corruption_cannot_hide_behind_healthy_peaks",
+        "real_upwind_solve_diagnose_score_decision_chain_tracks_mesh_diffusion_not_physical_flux",
+        "corrupt_upwind_diagnostics_block_dependent_decisions_and_healthy_evidence_recovers",
+        "policy demonstration, not evidence that eight elements resolve the boundary"
+      ]
+    },
+    {
+      "id": "transport-research-typed-wire-and-cross-language-digest",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-protocol", "sdk-headless", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "workers/rust/crates/protocol/src/workflow.rs",
+        "workers/rust/crates/protocol/src/operator.rs",
+        "workers/rust/crates/protocol/src/tests/workflow_dataset_contract.rs",
+        "workers/rust/crates/protocol/src/tests/task_ir_canonical_floats.rs",
+        "workers/rust/crates/headless-sdk/src/workflow_dataset_preflight.rs",
+        "apps/web/lib/kyuubiki_web/canonical_json.ex",
+        "apps/web/test/kyuubiki_web/canonical_json_test.exs",
+        "schemas/examples.task-ir-canonical-floats.json",
+        "docs/advection-diffusion-research-chain.md"
+      ],
+      "required_text": [
+        "typed_workflow_omits_unset_authoring_fields_without_dropping_explicit_values",
+        "typed_dataset_contract_rejects_missing_or_unsupported_schema_marker",
+        "typed_graph_with_sparse_dataset_metadata_survives_headless_preflight",
+        "task_ir_shared_float_fixture_preserves_fixed_15_rounding_and_signed_zero",
+        "The legacy digest still rounds to 15 decimal places: tiny values can collide."
+      ]
+    },
+    {
+      "id": "transport-research-native-task-chain-and-failure-isolation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_task_builtin/workflow_diagnostics.rs",
+        "workers/rust/crates/cli/src/tests/operator_task_ir_rpc/agent_native_transport.rs",
+        "workers/rust/crates/cli/tests/support/headless_transport_research.rs",
+        "apps/web/lib/kyuubiki_web/workflow_native_operator_runtime.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/test/kyuubiki_web/workflow_native_operator_runtime_test.exs",
+        "docs/advection-diffusion-research-chain.md",
+        "reports/advection-diffusion-research-chain-20261008.md"
+      ],
+      "required_text": [
+        "real_upwind_research_decision_chain_retains_metrics_blocks_corruption_and_recovers",
+        "stale identity and pending delivery acknowledgements cannot publish operator output",
+        "TaskIR binds original node, parent job, authority context and placement without copying physics",
+        "ten Agent executions, not four full-graph Agent executions.",
+        "not scientific readiness"
+      ]
+    },
+    {
+      "id": "shared-diagnostic-scan-cancellation-and-explicit-native-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "runtime-agent-cli", "sdk-headless", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/tests/workflow_diagnostic_cancellation.rs",
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/tests/support/headless_diagnostic_cancellation.rs",
+        "config/operator-validation-profiles/transport.json",
+        "docs/advection-diffusion-research-chain.md",
+        "reports/diagnostic-cancellation-reliability-20261008.md"
+      ],
+      "required_text": [
+        "diagnostic_scan_cancellation_stops_before_late_corruption_and_fresh_call_recovers",
+        "stabilization_scan_cancellation_does_not_publish_earlier_physical_peaks",
+        "diagnostic_safe_points_cover_empty_short_chunked_and_final_scans",
+        "diagnostic_error_before_next_safe_point_is_not_relabelled_as_cancellation",
+        "real_native_diagnostic_scan_cancel_retains_failure_and_explicit_same_task_rerun_recovers",
+        "execute_diagnostics",
+        "one cancellation and one explicit rerun only",
+        "cadence, not wall-clock latency.",
+        "The exact cancellation fixture uses a standalone TaskIR batch;"
+      ]
+    }
+  ]
+}

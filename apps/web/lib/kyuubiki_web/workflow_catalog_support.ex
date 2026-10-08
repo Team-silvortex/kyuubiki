@@ -31,6 +31,7 @@ defmodule KyuubikiWeb.WorkflowCatalogSupport do
     descriptor
     |> WorkflowOperatorCategoryTaxonomy.assign()
     |> WorkflowOperatorModules.assign()
+    |> KyuubikiWeb.WorkflowNativeOperatorRuntime.enrich_descriptor()
     |> Map.put_new(
       "execution",
       %{

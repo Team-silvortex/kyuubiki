@@ -127,3 +127,7 @@ or remote/large-scale qualification. Historical operator qualification records
 are unchanged; the new tests extend the current validation profile only.
 
 See the [verification report](../reports/advection-diffusion-upwind-20261008.md).
+
+Continue with the [stabilized research chain](advection-diffusion-research-chain.md)
+to preserve these diagnostics through configured quality and objective decisions,
+including native service execution, corrupt-evidence isolation and explicit recovery.

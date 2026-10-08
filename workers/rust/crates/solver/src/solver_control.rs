@@ -85,6 +85,7 @@ pub enum SolverStage {
     ModalRoundoffPrepare,
     ModalRoundoffSearch,
     ModalRoundoffValidate,
+    ResultDiagnostics,
 }
 
 impl SolverStage {
@@ -167,6 +168,7 @@ impl SolverStage {
             Self::ModalRoundoffPrepare => "modal_roundoff_prepare",
             Self::ModalRoundoffSearch => "modal_roundoff_search",
             Self::ModalRoundoffValidate => "modal_roundoff_validate",
+            Self::ResultDiagnostics => "result_diagnostics",
         }
     }
 
@@ -249,6 +251,7 @@ impl SolverStage {
             Self::ModalRoundoffPrepare,
             Self::ModalRoundoffSearch,
             Self::ModalRoundoffValidate,
+            Self::ResultDiagnostics,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)
@@ -417,6 +420,13 @@ pub(crate) fn checkpoint_chunk(
     } else {
         Ok(())
     }
+}
+
+/// Cooperative reduction of borrowed result records, using the current execution scope.
+/// Counts are local to each scan; these observations cannot resume a partial result.
+#[inline]
+pub fn checkpoint_diagnostics(completed: usize, total: usize) -> Result<(), String> {
+    checkpoint_chunk(SolverStage::ResultDiagnostics, completed, total)
 }
 
 pub(crate) fn checkpoint(stage: SolverStage, completed_steps: usize) -> Result<(), String> {

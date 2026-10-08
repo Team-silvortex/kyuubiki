@@ -1,3 +1,4 @@
+use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -80,8 +81,11 @@ pub enum WorkflowDatasetEncoding {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowDatasetAxis {
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub size: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub semantic: Option<String>,
 }
 
@@ -97,13 +101,18 @@ pub struct WorkflowDatasetValueInfo {
     pub data_class: String,
     pub element_type: String,
     pub shape: WorkflowDatasetShape,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub semantic_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub unit: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub encoding: Option<WorkflowDatasetEncoding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub schema_ref: Option<OperatorSchemaRef>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Default)]
+#[serde(from = "WorkflowDatasetContractWire")]
 pub struct WorkflowDatasetContract {
     pub id: String,
     pub version: String,
@@ -111,6 +120,48 @@ pub struct WorkflowDatasetContract {
     pub values: Vec<WorkflowDatasetValueInfo>,
     #[serde(default)]
     pub metadata: BTreeMap<String, String>,
+}
+
+// Keep the wire marker mandatory without adding a field to Rust authoring structs.
+#[derive(Deserialize)]
+enum WorkflowDatasetSchema {
+    #[serde(rename = "kyuubiki.workflow-dataset/v1")]
+    V1,
+}
+
+#[derive(Deserialize)]
+struct WorkflowDatasetContractWire {
+    #[serde(rename = "schema_version")]
+    _schema_version: WorkflowDatasetSchema,
+    id: String,
+    version: String,
+    #[serde(default)]
+    values: Vec<WorkflowDatasetValueInfo>,
+    #[serde(default)]
+    metadata: BTreeMap<String, String>,
+}
+
+impl From<WorkflowDatasetContractWire> for WorkflowDatasetContract {
+    fn from(wire: WorkflowDatasetContractWire) -> Self {
+        Self {
+            id: wire.id,
+            version: wire.version,
+            values: wire.values,
+            metadata: wire.metadata,
+        }
+    }
+}
+
+impl Serialize for WorkflowDatasetContract {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut state = serializer.serialize_struct("WorkflowDatasetContract", 5)?;
+        state.serialize_field("schema_version", "kyuubiki.workflow-dataset/v1")?;
+        state.serialize_field("id", &self.id)?;
+        state.serialize_field("version", &self.version)?;
+        state.serialize_field("values", &self.values)?;
+        state.serialize_field("metadata", &self.metadata)?;
+        state.end()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

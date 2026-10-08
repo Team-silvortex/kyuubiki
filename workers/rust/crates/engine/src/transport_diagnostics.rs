@@ -1,3 +1,4 @@
+use crate::transport_stabilization_diagnostics::extract_stabilization;
 use crate::workflow_diagnostic_samples::{
     Field, Samples, configured_name, insert_finite, missing_sample,
 };
@@ -64,6 +65,12 @@ pub fn extract_transport_result_diagnostics(
                 components,
             )?);
         }
+        measured_groups += usize::from(extract_stabilization(
+            object,
+            &elements,
+            prefix,
+            &mut summary,
+        )?);
         if measured_groups == 0 {
             return Err("did not find any diagnostic fields".to_string());
         }

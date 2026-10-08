@@ -345,6 +345,46 @@ mod tests {
         .expect("example workflow graph should parse")
     }
 
+    fn typed_graph(graph: Value) -> Value {
+        let graph: kyuubiki_protocol::WorkflowGraph = serde_json::from_value(graph).unwrap();
+        serde_json::to_value(graph).unwrap()
+    }
+
+    fn minimal_graph() -> Value {
+        serde_json::json!({"schema_version":"kyuubiki.workflow-graph/v1", "id":"typed-graph", "name":"Typed graph", "version":"1.0.0",
+            "entry_nodes":["input"], "output_nodes":["output"],
+            "nodes":[{"id":"input","kind":"input","inputs":[],"outputs":[{"id":"value","artifact_type":"artifact/result_summary"}]},
+                     {"id":"output","kind":"output","inputs":[{"id":"value","artifact_type":"artifact/result_summary"}],"outputs":[]}],
+            "edges":[{"id":"edge","from":{"node":"input","port":"value"},"to":{"node":"output","port":"value"},"artifact_type":"artifact/result_summary"}]})
+    }
+
+    #[test]
+    fn typed_graph_without_dataset_contract_survives_headless_preflight() {
+        let graph = typed_graph(minimal_graph());
+        let report = preflight_workflow_dataset_contract(&graph);
+        assert!(report.ok, "{:?}", report.issues);
+        assert!(graph.get("dataset_contract").is_none());
+        let mut explicit_null = graph;
+        explicit_null["dataset_contract"] = Value::Null;
+        assert!(!preflight_workflow_dataset_contract(&explicit_null).ok);
+    }
+
+    #[test]
+    fn typed_graph_with_sparse_dataset_metadata_survives_headless_preflight() {
+        let mut graph = minimal_graph();
+        graph["dataset_contract"] = serde_json::json!({"schema_version":"kyuubiki.workflow-dataset/v1", "id":"typed-values", "version":"1.0.0",
+            "values":[{"id":"summary","data_class":"report","element_type":"json_object","shape":{"axes":[{"id":"samples"}]}}]});
+        graph["nodes"][0]["outputs"][0]["dataset_value"] = Value::String("summary".into());
+        graph["nodes"][1]["inputs"][0]["dataset_value"] = Value::String("summary".into());
+        graph["edges"][0]["dataset_value"] = Value::String("summary".into());
+        let graph = typed_graph(graph);
+        let report = preflight_workflow_dataset_contract(&graph);
+        assert!(report.ok, "{:?}", report.issues);
+        assert_eq!(report.dataset_value_count, 1);
+        assert_eq!(report.referenced_dataset_values, ["summary"]);
+        assert!(report.unresolved_dataset_values.is_empty());
+    }
+
     #[test]
     fn workflow_dataset_preflight_accepts_example_graph() {
         let report = preflight_workflow_dataset_contract(&example_graph());

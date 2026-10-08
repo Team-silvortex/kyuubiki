@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source macOS Engine evidence adds existing execution-control safe points to both Stokes diagnostic loops. Eight integration tests cover CFD node/element and final-record cancellation, four other domain vector scans, thermo stress-component fallback, and five domain graph quality chains. Execution scopes reject cancelled publication even when the inner graph permits on_error skip. One real single-quad Stokes result is diagnosed again explicitly without solving again; synthetic record fixtures do not establish physical fidelity or scale. This does not qualify non-transport Agent diagnostic routing, installed/remote execution, durable continuation or new numerical accuracy; prior qualification is unchanged.",
+  "evidence_claims": [
+    {
+      "id": "cross-domain-diagnostic-cancellation-and-scoped-graph-publication",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/cfd_diagnostics.rs",
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/thermo_diagnostics.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/engine/tests/diagnostic_cancellation_workflow.rs",
+        "config/operator-validation-profiles/cfd.json",
+        "docs/advection-diffusion-research-chain.md",
+        "reports/cross-domain-diagnostic-cancellation-20261008.md"
+      ],
+      "required_text": [
+        "cfd_node_scan_cancellation_precedes_late_corruption_and_fresh_call_recovers",
+        "cfd_element_scan_cancellation_discards_completed_node_statistics",
+        "cfd_safe_point_cadence_covers_both_scans_and_short_final_records",
+        "cfd_pending_cancellation_is_observed_before_reading_first_record",
+        "shared_domain_vector_scans_cancel_after_scalar_groups_without_partial_results",
+        "thermo_component_fallback_cancels_without_publishing_earlier_stress_peaks",
+        "diagnostic_graph_error_policy_cannot_publish_cancelled_work_and_fresh_run_recovers",
+        "real_stokes_result_final_diagnostic_cancellation_allows_explicit_reduction_rerun",
+        "the cancelled execution scope rejects its publication.",
+        "Synthetic record fixtures are not physical models or scale benchmarks."
+      ]
+    }
+  ]
+}

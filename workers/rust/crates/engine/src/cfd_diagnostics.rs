@@ -1,6 +1,7 @@
 use crate::workflow_domain_quality::{QualityGoal, QualityScore, QualityTerm, score_quality_terms};
 use crate::workflow_metric_resolver::{checked_metric_value, display_metric_value};
 use crate::workflow_result_admission::require_converged_result;
+use kyuubiki_solver::solver_control::checkpoint_diagnostics;
 use serde_json::{Map, Value};
 
 pub fn extract_stokes_flow_result_diagnostics(
@@ -26,6 +27,7 @@ fn extract_diagnostics(object: &Map<String, Value>, config: &Value) -> Result<Va
         .unwrap_or("cfd");
     let mut velocity = MetricStats::default();
     let mut pressure = MetricStats::default();
+    checkpoint_diagnostics(0, nodes.len())?;
     for (index, entry) in nodes.iter().enumerate() {
         let row = sample_object(entry, "nodes", index)?;
         velocity.observe(
@@ -38,6 +40,7 @@ fn extract_diagnostics(object: &Map<String, Value>, config: &Value) -> Result<Va
             sample_metric(row, "pressure", "nodes", index)?,
             index + 1,
         );
+        checkpoint_diagnostics(index + 1, nodes.len())?;
     }
 
     let mut divergence = MetricStats::default();
@@ -45,6 +48,7 @@ fn extract_diagnostics(object: &Map<String, Value>, config: &Value) -> Result<Va
     let mut dissipation = MetricStats::default();
     let total_field = format!("{prefix}_viscous_dissipation_total");
     let mut total = 0.0;
+    checkpoint_diagnostics(0, elements.len())?;
     for (index, entry) in elements.iter().enumerate() {
         let row = sample_object(entry, "elements", index)?;
         divergence.observe(
@@ -65,6 +69,7 @@ fn extract_diagnostics(object: &Map<String, Value>, config: &Value) -> Result<Va
                 "{total_field} became non-finite at payload.elements[{index}]"
             ));
         }
+        checkpoint_diagnostics(index + 1, elements.len())?;
     }
 
     let mut summary = Map::new();

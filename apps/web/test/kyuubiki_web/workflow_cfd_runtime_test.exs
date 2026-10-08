@@ -3,6 +3,22 @@ defmodule KyuubikiWeb.WorkflowCfdRuntimeTest do
 
   alias KyuubikiWeb.WorkflowOperatorCatalog
   alias KyuubikiWeb.WorkflowOperatorRuntime
+  alias KyuubikiWeb.WorkflowSolverRegistry
+  alias KyuubikiWeb.Orchestra.OperatorExecutionProgram
+
+  test "Stokes workflow IDs map to the plane RPC methods accepted by the native Agent" do
+    for shape <- ["quad", "triangle"] do
+      id = "solve.stokes_flow_#{shape}_2d"
+      method = "solve_stokes_flow_plane_#{shape}_2d"
+      assert {:ok, solver} = WorkflowSolverRegistry.fetch(id)
+      assert Atom.to_string(solver.method) == method
+
+      program =
+        OperatorExecutionProgram.build(WorkflowSolverRegistry.descriptor(solver), %{}, %{})
+
+      assert program["entrypoint"] == %{"kind" => "solver_method", "name" => method}
+    end
+  end
 
   test "catalog exposes stokes flow CFD operators" do
     operators = WorkflowOperatorCatalog.list() |> Enum.map(& &1["id"]) |> MapSet.new()

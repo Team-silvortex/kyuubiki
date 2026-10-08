@@ -1,4 +1,5 @@
 use crate::workflow_result_admission::require_converged_result;
+use kyuubiki_solver::solver_control::checkpoint_diagnostics;
 use serde_json::{Map, Value, json};
 
 pub(crate) struct Field<'a> {
@@ -156,6 +157,7 @@ impl<'a> Samples<'a> {
     ) -> Result<bool, String> {
         let mut count = 0_usize;
         let mut first_missing = None;
+        checkpoint_diagnostics(0, self.entries.len())?;
         for (index, entry) in self.entries.iter().enumerate() {
             let row = entry
                 .as_object()
@@ -166,6 +168,7 @@ impl<'a> Samples<'a> {
             } else {
                 first_missing.get_or_insert(index);
             }
+            checkpoint_diagnostics(index + 1, self.entries.len())?;
         }
         // Entirely absent optional groups stay absent, but partial groups cannot claim completeness.
         if count > 0 || required {

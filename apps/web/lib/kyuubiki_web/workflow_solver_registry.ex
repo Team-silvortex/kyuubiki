@@ -51,10 +51,11 @@ defmodule KyuubikiWeb.WorkflowSolverRegistry do
        "thermal-contact-resistance",
        "matching-edges"
      ]},
-    {"solve.stokes_flow_quad_2d", :solve_stokes_flow_quad_2d, "fluid", "stokes_flow_quad_2d",
+    {"solve.stokes_flow_quad_2d", :solve_stokes_flow_plane_quad_2d, "fluid",
+     "stokes_flow_quad_2d",
      "Solve a low-Reynolds steady 2D Stokes flow quad model and expose velocity, pressure, divergence, and Reynolds diagnostics.",
      ["verified", "fluid", "cfd", "stokes", "flow", "quad", "2d"]},
-    {"solve.stokes_flow_triangle_2d", :solve_stokes_flow_triangle_2d, "fluid",
+    {"solve.stokes_flow_triangle_2d", :solve_stokes_flow_plane_triangle_2d, "fluid",
      "stokes_flow_triangle_2d",
      "Solve a low-Reynolds steady 2D Stokes flow triangle model and expose velocity, pressure, divergence, and Reynolds diagnostics.",
      ["verified", "fluid", "cfd", "stokes", "flow", "triangle", "2d"]},

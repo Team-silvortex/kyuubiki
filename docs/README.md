@@ -346,6 +346,11 @@ Then branch by intent:
 - `advection-diffusion-upwind.md`
   Explicit conservative 1D upwind, separate artificial-diffusion diagnostics,
   independent refinement/balance tests and actual source-Agent execution.
+- `advection-diffusion-research-chain.md`
+  Stabilized solve/diagnose/score/objective decisions, strict flux consistency,
+  opt-in research targets, native TaskIR routing, cooperative diagnostic cancellation
+  and explicit failure recovery, with bounded cross-domain Engine cancellation
+  and native diagnostic/scoring service chains for five additional domains.
 - `operator-sdk.md`
   Proposed operator descriptor, runtime contract, and validation shape for
   future extensible solver and transform capabilities.

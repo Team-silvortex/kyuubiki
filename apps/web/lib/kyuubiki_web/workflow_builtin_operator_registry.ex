@@ -280,6 +280,9 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
   ]
 
   @extract_specs [
+    {"extract.transport_result_diagnostics", "transport_result_diagnostics",
+     "Extract complete physical and explicitly declared upwind stabilization diagnostics through the Rust engine.",
+     ["extract", "transport", "diagnostics", "headless_safe"]},
     {"extract.result_summary", "result_summary",
      "Extract a compact summary from a solver result artifact.",
      ["extract", "summary", "headless_safe"]},

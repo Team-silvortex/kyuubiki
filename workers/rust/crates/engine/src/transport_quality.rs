@@ -84,7 +84,34 @@ fn default_quality_terms() -> [QualityTerm; 4] {
 fn quality_term_for(field: &str) -> Option<QualityTerm> {
     default_quality_terms()
         .into_iter()
+        .chain(stabilization_quality_terms())
         .find(|term| term.field == field)
+}
+
+fn stabilization_quality_terms() -> [QualityTerm; 3] {
+    [
+        QualityTerm {
+            field: "transport_artificial_diffusivity_peak",
+            label: "Peak artificial diffusivity",
+            target: 1.0,
+            weight: 1.0,
+            goal: QualityGoal::Min,
+        },
+        QualityTerm {
+            field: "transport_stabilization_flux_peak_magnitude",
+            label: "Peak stabilization flux magnitude",
+            target: 1.0,
+            weight: 1.0,
+            goal: QualityGoal::Min,
+        },
+        QualityTerm {
+            field: "transport_numerical_flux_peak_magnitude",
+            label: "Peak numerical transport flux magnitude",
+            target: 1.0,
+            weight: 1.0,
+            goal: QualityGoal::Min,
+        },
+    ]
 }
 
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
