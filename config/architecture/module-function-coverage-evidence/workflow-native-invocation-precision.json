@@ -1,0 +1,77 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source macOS Orchestra native workflow recovery adds an adapter-computed lossless JSON input/config/context binding within existing TaskIR v1 identity. All eleven bounded native operators reject numeric alias drift before probe or redispatch, unchanged source Agent/BEAM restarts remain reusable, and same-task-name live thermal inputs retain distinct identities. This is bounded contract/recovery evidence, not independently recomputed Agent integrity or lossless generic TaskIR numeric identity; the latter remains an explicit open qualification scope.",
+  "evidence_claims": [
+    {
+      "id": "workflow-native-lossless-invocation-recovery-guard",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_native_invocation.ex",
+        "apps/web/lib/kyuubiki_web/workflow_native_operator_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_native_invocation_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_native_operator_runtime_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_result_recovery_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_native_invocation_identity.rs",
+        "workers/rust/crates/cli/tests/support/headless_workflow_native_receipt_recovery.rs",
+        "docs/operator-task-ir-digest.md",
+        "reports/workflow-native-invocation-precision-20261011.md"
+      ],
+      "required_text": [
+        "workflow_native_invocation_sha256",
+        "TaskIR v1 rounds floats to fixed-15",
+        "computed binding is idempotent and overrides supplied values without granting authority",
+        "through a rounded TaskIR digest",
+        "an old receipt without exact invocation binding cannot be silently upgraded",
+        "native invocation binding preserves numeric payloads and overrides caller claims",
+        "real_native_workflow_distinguishes_tiny_inputs_under_the_same_task_name",
+        "real_solved_workflow_restart_reuses_durable_artifacts_before_native_receipt_recovery",
+        "twenty-two numeric-alias cases failed",
+        "not independent numerical accuracy"
+      ]
+    },
+    {
+      "id": "task-ir-lossless-numeric-identity-open",
+      "status": "open",
+      "grade": "declared",
+      "modules": ["runtime-protocol"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/canonical_json.ex",
+        "workers/rust/crates/protocol/src/operator_task_ir.rs",
+        "workers/rust/crates/protocol/src/tests/task_ir_canonical_floats.rs",
+        "schemas/examples.task-ir-canonical-floats.json",
+        "docs/operator-task-ir-digest.md",
+        "reports/workflow-native-invocation-precision-20261011.md"
+      ],
+      "required_text": [
+        "task_ir_legacy_digest_is_not_lossless_numeric_identity",
+        "The Agent still verifies the existing v1 TaskIR digest",
+        "Default adoption and installed workflow recovery rollout remain open.",
+        "Full lossless numeric identity across arbitrary TaskIR authors remains open"
+      ]
+    }
+  ],
+  "qualification_requirements": [
+    {
+      "id": "task-ir-cross-authoring-lossless-numeric-identity",
+      "module_id": "runtime-protocol",
+      "paradigm": "validation",
+      "dimension": "contract",
+      "scope": "lossless-numeric-identity-all-taskir-authors",
+      "target": "qualified",
+      "claims": ["task-ir-lossless-numeric-identity-open", "task-ir-typed-numeric-identity-opt-in", "task-ir-typed-agent-capability-routing", "workflow-typed-execution-envelope-contract"],
+      "basis": [
+        "workers/rust/crates/protocol/src/tests/task_ir_canonical_floats.rs",
+        "docs/operator-task-ir-digest.md",
+        "reports/workflow-native-invocation-precision-20261011.md"
+      ],
+      "acceptance": "Adopt a versioned Rust/Elixir cross-authoring numeric identity contract with independent Agent recomputation; retain tiny, adjacent, signed-zero and config/input drift fixtures plus actual transport and unchanged-identity recovery. Explicit typed v2 authoring, source capability routing and bounded HTTP/Agent/SQLite native workflow continuation are verified, with solves, branches and original receipts retained across Orchestra restart. Default adoption, actual PostgreSQL, executable package-host and installed mixed-peer acceptance remain open. Caller-supplied adapter bindings, opt-in-only evidence and historical fixed-15 qualification cannot satisfy this scope."
+    }
+  ]
+}

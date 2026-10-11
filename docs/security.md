@@ -248,9 +248,22 @@ must retain their own contracts and evidence instead of inheriting this result.
 
 ### Operator TaskIR admission
 
-TaskIR digest verification protects the declared fields from accidental or
-in-flight mutation, but it is not an authorization decision. Before package
-fetch or execution, the control plane, Headless SDK, and Agent now apply the
+Legacy TaskIR digest verification detects declared-field changes distinguishable
+by fixed-15 encoding; tiny or adjacent floats can still alias. Orchestra's native
+workflow adapter adds an exact invocation binding for receipt reuse. Explicit
+`typed-ieee754-v2` tasks additionally bind decoded binary64/int64/uint64 values,
+with independent control-plane, Rust SDK and Agent recomputation. Unknown or
+malformed encoding selectors fail closed, not back to legacy. Defaults remain
+legacy pending default adoption and installed-peer recovery rollout. Explicit
+native workflow selection binds an immutable lossless execution envelope;
+source restarts retain successful solves, branch decisions and original receipts,
+while missing receipts still block without replay. No old record is resealed. Typed task
+dispatch requires an explicit encoding capability and RPC method, not unknown
+or role-only peers; transport failure does not authorize a legacy downgrade.
+Capability metadata and neither digest encoding are authorization decisions or
+arbitrary-precision decimal identity.
+See [typed digest scope](operator-task-ir-digest.md#typed-binary64-task-digest).
+Before package fetch or execution, the control plane, Headless SDK, and Agent apply the
 language-neutral `kyuubiki.operator-task-admission/v1` policy.
 
 The admission report fails closed when:
@@ -342,7 +355,10 @@ and rejected standby submissions remove their newly allocated queue record.
 
 Lease-store timeout or connection loss fails closed. The coordinator stops its
 tracked runners and retries election instead of continuing with cached owner
-state. `KYUUBIKI_ORCHESTRA_INSTANCE_ID` is an identity, not a credential; it
+state. Raw lease queries follow the currently selected repository pool, sharing
+the same transaction as protected checkpoint writes. A dynamic repository must
+not check a lease in the default pool while writing elsewhere.
+`KYUUBIKI_ORCHESTRA_INSTANCE_ID` is an identity, not a credential; it
 must be unique per concurrently running Orchestra but does not replace API,
 cluster, database, or transport authentication.
 
@@ -357,10 +373,30 @@ components are blocked on the unavailable database.
 Long-running takeover uses request-generation-scoped Agent cancellation for
 transport loss. A broken heartbeat from the fenced owner can cancel only its
 own execution request, not a replacement request carrying the same workflow job
-ID. Explicit operator cancellation remains job-scoped. Persisted workflow
-envelopes also canonicalize numerically integral JSON floats before hashing so
-PostgreSQL JSONB normalization cannot create a false digest-tamper result;
-non-integral values retain their original numeric value.
+ID. Explicit operator cancellation remains job-scoped. Legacy workflow envelopes
+canonicalize integral JSON floats before hashing. Explicit typed native workflows
+instead store one canonical execution JSON string: PostgreSQL JSONB cannot fold
+integer/float pairs or signed zero inside it. No old record is silently resealed.
+
+Job, status, result and result-chunk reads, job/result lists, workload discovery,
+database export and project-bundle export return HTTP 503 with the opaque
+`analysis_store_unavailable` error when their store is unavailable, rather than
+an empty success, false not-found response or uncaught storage exception. The
+direct control-plane helpers return the same domain error. Restored reads do not
+resubmit work, rewrite results or authorize retrying an ambiguous write. This
+boundary handles known storage failures; unrelated programming errors still fail.
+Collection authorization precedes storage access. Failed bundle reads have no
+attachment header; genuine empty collections remain successful. Result lists and
+exports exclude private recovery records and owner sessions. See the
+[collection outage controls](../reports/analysis-collection-outage-20261011.md).
+The three composite paths now read SQL records in one transaction: PostgreSQL
+uses read-only repeatable read; SQLite uses a deferred WAL snapshot. Model/version,
+job/result and exported security-event reads cannot mix concurrent commits.
+Call these helpers outside an existing transaction; otherwise they return the
+unavailable error rather than inherit unverified isolation. JSON stores do not
+share this boundary. This is a public-record projection, not a full database or
+external-artifact backup. See the
+[SQL export snapshot controls](../reports/analysis-export-snapshot-20261011.md).
 
 ### Direct mesh GUI
 

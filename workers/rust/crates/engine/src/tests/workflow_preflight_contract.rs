@@ -60,6 +60,43 @@ fn shared_graph_preflight_structure() {
 }
 
 #[test]
+fn ambiguous_input_bindings_cannot_execute_or_be_hidden_by_skip() {
+    let fixture = fixture();
+    let cases: Vec<_> = fixture["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["error"] == "single input" || case["id"] == "input-ignores-upstream")
+        .collect();
+    assert_eq!(cases.len(), 6);
+    for case in cases {
+        let mut request = fixture["request"].clone();
+        for change in case["changes"].as_array().unwrap() {
+            set_path(
+                &mut request,
+                change["path"].as_array().unwrap(),
+                change["value"].clone(),
+                change["op"] == "append",
+            );
+        }
+        for reverse_nodes in [false, true] {
+            for reverse_edges in [false, true] {
+                let mut request: WorkflowGraphRunRequest =
+                    serde_json::from_value(request.clone()).unwrap();
+                if reverse_nodes {
+                    request.graph.nodes.reverse();
+                }
+                if reverse_edges {
+                    request.graph.edges.reverse();
+                }
+                let error = crate::run_workflow_graph(request).unwrap_err();
+                assert!(error.contains(case["error"].as_str().unwrap()), "{error}");
+            }
+        }
+    }
+}
+
+#[test]
 fn shared_graph_preflight_budgets() {
     let fixture = fixture();
     for budget in fixture["budgets"].as_array().unwrap() {

@@ -18,6 +18,7 @@ fn workflow_runs_nonlinear_spring_1d_solver() {
             entry_nodes: vec!["spring_input".to_string()],
             output_nodes: vec!["spring_output".to_string()],
             defaults: WorkflowDefaults {
+                native_task_digest_encoding: Default::default(),
                 cache_policy: Some(WorkflowCachePolicy::Cached),
                 orchestrated: Some(true),
             },

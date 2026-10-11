@@ -38,12 +38,14 @@ pub fn protocol_benchmark_surface() -> ProtocolBenchmarkSurface {
                 evidence_scope: "TaskIR digest, execution summary, and capability admission",
                 protocol_contracts: &[
                     "kyuubiki.operator-task-ir/v1",
+                    "kyuubiki.task-digest/typed-ieee754-v2",
                     "kyuubiki.operator-execution/v1",
                     "kyuubiki.solver-execution-capability/v1",
                     "kyuubiki.agent-solver-qualification/v2",
                 ],
                 regression_commands: &[
                     "cargo test -p kyuubiki-protocol operator_task_ir",
+                    "cargo test -p kyuubiki-protocol task_digest_v2",
                     "cargo test -p kyuubiki-protocol solver_execution_capability",
                     "cargo test -p kyuubiki-protocol agent_solver_qualification",
                 ],

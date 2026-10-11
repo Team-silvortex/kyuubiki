@@ -34,6 +34,7 @@ fn graph() -> WorkflowGraph {
         entry_nodes: vec!["interface_input".to_string()],
         output_nodes: vec!["interface_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

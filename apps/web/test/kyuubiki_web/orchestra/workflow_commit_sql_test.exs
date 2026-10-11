@@ -10,6 +10,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCommitSqlTest do
   alias KyuubikiWeb.Storage
   alias KyuubikiWeb.TestSupport.AnalysisCommitFault
   alias KyuubikiWeb.TestSupport.WorkflowCommitFixture, as: Fixture
+  alias KyuubikiWeb.TestSupport.WorkflowSolveCheckpointFixture, as: SolveFixture
+  alias KyuubikiWeb.TestSupport.WorkflowBranchCheckpointFixture, as: BranchFixture
 
   @moduletag skip: not Storage.sqlite?()
 
@@ -17,10 +19,25 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCommitSqlTest do
     Fixture.setup_coordinator()
   end
 
-  for operation <- [:progress, :complete, :fail, :cancel, :native_block],
+  for operation <- [
+        :progress,
+        :complete,
+        :fail,
+        :cancel,
+        :native_block,
+        :solve_checkpoint,
+        :checkpoint_block,
+        :branch_checkpoint,
+        :branch_checkpoint_block
+      ],
       target <- [:job, :result] do
     test "#{operation} rolls back when the #{target} write fails and permits a retry" do
-      fixture = Fixture.claimed_job()
+      fixture =
+        case unquote(operation) do
+          :solve_checkpoint -> SolveFixture.claimed()
+          :branch_checkpoint -> BranchFixture.claimed()
+          _ -> Fixture.claimed_job()
+        end
 
       drop =
         case unquote(target) do
@@ -100,6 +117,38 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCommitSqlTest do
     do: WorkflowRecoveryCoordinator.fail(fixture.id, fixture.claim, "solver failure")
 
   defp write(:cancel, fixture), do: WorkflowRecoveryCoordinator.cancel(fixture.id)
+
+  defp write(:solve_checkpoint, fixture),
+    do:
+      WorkflowRecoveryCoordinator.solve_checkpoint(
+        fixture.id,
+        fixture.claim,
+        {:commit, fixture.request, 42}
+      )
+
+  defp write(:checkpoint_block, fixture),
+    do:
+      WorkflowRecoveryCoordinator.block_solve_checkpoint(
+        fixture.id,
+        fixture.claim,
+        :commit_failed
+      )
+
+  defp write(:branch_checkpoint, fixture),
+    do:
+      WorkflowRecoveryCoordinator.branch_checkpoint(
+        fixture.id,
+        fixture.claim,
+        {:commit, fixture.request, BranchFixture.decision()}
+      )
+
+  defp write(:branch_checkpoint_block, fixture),
+    do:
+      WorkflowRecoveryCoordinator.block_branch_checkpoint(
+        fixture.id,
+        fixture.claim,
+        :commit_failed
+      )
 
   defp write(:native_block, fixture),
     do:

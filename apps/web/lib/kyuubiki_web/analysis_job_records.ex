@@ -9,9 +9,13 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
   alias KyuubikiWeb.Playground.AgentClient
+  alias KyuubikiWeb.Storage.FailureBoundary
 
   @spec fetch_job(String.t()) :: {:ok, map()} | {:error, term()}
-  def fetch_job(job_id) when is_binary(job_id) do
+  def fetch_job(job_id) when is_binary(job_id),
+    do: FailureBoundary.run(fn -> read_job(job_id) end)
+
+  defp read_job(job_id) do
     case Store.get(job_id) do
       {:ok, job} ->
         payload = serialize_payload(job)
@@ -33,7 +37,10 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
   end
 
   @spec fetch_job_status(String.t()) :: {:ok, map()} | {:error, term()}
-  def fetch_job_status(job_id) when is_binary(job_id) do
+  def fetch_job_status(job_id) when is_binary(job_id),
+    do: FailureBoundary.run(fn -> read_job_status(job_id) end)
+
+  defp read_job_status(job_id) do
     case Store.get(job_id) do
       {:ok, job} ->
         payload = serialize_payload(job)
@@ -44,8 +51,10 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
     end
   end
 
-  @spec list_jobs() :: map()
-  def list_jobs do
+  @spec list_jobs() :: map() | {:error, :analysis_store_unavailable}
+  def list_jobs, do: FailureBoundary.run(&read_jobs/0)
+
+  defp read_jobs do
     jobs =
       Store.list()
       |> Enum.map(fn job ->
@@ -95,8 +104,10 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
     end
   end
 
-  @spec list_results() :: map()
-  def list_results do
+  @spec list_results() :: map() | {:error, :analysis_store_unavailable}
+  def list_results, do: FailureBoundary.run(&read_results/0)
+
+  defp read_results do
     results =
       Enum.map(AnalysisResultStore.list(), fn entry ->
         Map.update(entry, "result", %{}, &WorkflowRecoveryEnvelope.public_result/1)
@@ -106,7 +117,10 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
   end
 
   @spec fetch_result(String.t()) :: {:ok, map()} | {:error, term()}
-  def fetch_result(job_id) when is_binary(job_id) do
+  def fetch_result(job_id) when is_binary(job_id),
+    do: FailureBoundary.run(fn -> read_result(job_id) end)
+
+  defp read_result(job_id) do
     case AnalysisResultStore.get(job_id) do
       {:ok, result} ->
         {:ok, %{"job_id" => job_id, "result" => WorkflowRecoveryEnvelope.public_result(result)}}
@@ -164,9 +178,10 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
   end
 
   defp fetch_raw_result(job_id) do
-    case AnalysisResultStore.get(job_id) do
+    case FailureBoundary.run(fn -> AnalysisResultStore.get(job_id) end) do
       {:ok, result} -> {:ok, WorkflowRecoveryEnvelope.public_result(result)}
       :error -> {:error, {:result_not_found, job_id}}
+      {:error, _} = error -> error
     end
   end
 

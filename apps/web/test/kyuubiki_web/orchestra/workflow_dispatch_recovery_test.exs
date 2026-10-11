@@ -8,7 +8,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowDispatchRecoveryTest do
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard, as: Guard
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
   alias KyuubikiWeb.Orchestra.{WorkflowRecoveryCoordinator, WorkflowRecoveryEnvelope}
+  alias KyuubikiWeb.Orchestra.WorkflowSolveCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowBranchCheckpoint
   alias KyuubikiWeb.TestSupport.WorkflowCommitFixture, as: Fixture
+  alias KyuubikiWeb.TestSupport.WorkflowSolveCheckpointFixture, as: SolveFixture
+  alias KyuubikiWeb.TestSupport.WorkflowBranchCheckpointFixture, as: BranchFixture
 
   setup do
     Fixture.setup_coordinator()
@@ -85,11 +89,78 @@ defmodule KyuubikiWeb.Orchestra.WorkflowDispatchRecoveryTest do
     Fixture.unchanged(fixture)
   end
 
+  test "a retained successful solve checkpoint cannot override an ambiguous native dispatch",
+       ctx do
+    fixture = native_job()
+    key = WorkflowRecoveryEnvelope.internal_key()
+    recovery = fixture.runtime[key]
+    graph = Map.update!(recovery["envelope"]["graph"], "nodes", &[SolveFixture.solve_node() | &1])
+
+    {:ok, pending} =
+      WorkflowRecoveryEnvelope.new(graph, %{}, recovery["envelope"]["orchestration_context"], %{})
+
+    {:ok, running, claim} =
+      WorkflowRecoveryEnvelope.claim(pending, fixture.claim["owner_session_id"], :initial)
+
+    request =
+      WorkflowSolveCheckpoint.request(
+        SolveFixture.solve_node(),
+        %{},
+        running["envelope"]["orchestration_context"]
+      )
+
+    {:ok, saved, :retained} = WorkflowSolveCheckpoint.put(running, request, 42, claim)
+    fixture = %{fixture | runtime: Map.put(fixture.runtime, key, saved), claim: claim}
+    assert :ok = AnalysisResultStore.put(fixture.id, fixture.runtime)
+    attempt = dispatch(fixture.id, "outcome_unknown")
+    path = Path.join(ctx.root, attempt <> ".json")
+    before = File.read!(path)
+    assert %{"recovered" => 0, "blocked" => 1} = WorkflowRecoveryCoordinator.recover_now()
+    assert_blocked(fixture)
+    {:ok, blocked} = AnalysisResultStore.get(fixture.id)
+    assert blocked[key][WorkflowSolveCheckpoint.key()] == saved[WorkflowSolveCheckpoint.key()]
+    assert File.read!(path) == before
+  end
+
   test "actual parent identity blocks even if the child task name differs" do
     fixture = native_job()
     changed = put_in(request(fixture.id), ["params", "task_ir", "task_id"], "different-task")
     assert {:ok, _} = Journal.begin_dispatch(changed, endpoint())
     assert {:error, :workflow_dispatch_outcome_unconfirmed} = validate(fixture)
+  end
+
+  test "a retained branch decision cannot override an ambiguous native dispatch", ctx do
+    fixture = native_job()
+    key = WorkflowRecoveryEnvelope.internal_key()
+    recovery = fixture.runtime[key]
+    graph = Map.update!(recovery["envelope"]["graph"], "nodes", &[BranchFixture.condition() | &1])
+
+    {:ok, pending} =
+      WorkflowRecoveryEnvelope.new(graph, %{}, recovery["envelope"]["orchestration_context"], %{})
+
+    {:ok, running, claim} =
+      WorkflowRecoveryEnvelope.claim(pending, fixture.claim["owner_session_id"], :initial)
+
+    req =
+      WorkflowBranchCheckpoint.request(
+        BranchFixture.condition(),
+        1,
+        running["envelope"]["orchestration_context"]
+      )
+
+    {:ok, saved, :retained} =
+      WorkflowBranchCheckpoint.put(running, req, BranchFixture.decision(), claim)
+
+    fixture = %{fixture | runtime: Map.put(fixture.runtime, key, saved), claim: claim}
+    :ok = AnalysisResultStore.put(fixture.id, fixture.runtime)
+    attempt = dispatch(fixture.id, "outcome_unknown")
+    path = Path.join(ctx.root, attempt <> ".json")
+    before = File.read!(path)
+    assert %{"recovered" => 0, "blocked" => 1} = WorkflowRecoveryCoordinator.recover_now()
+    assert_blocked(fixture)
+    {:ok, blocked} = AnalysisResultStore.get(fixture.id)
+    assert blocked[key][WorkflowBranchCheckpoint.key()] == saved[WorkflowBranchCheckpoint.key()]
+    assert File.read!(path) == before
   end
 
   test "an explicit foreign parent is not inferred from a matching child task name" do

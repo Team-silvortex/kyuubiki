@@ -169,6 +169,86 @@
         </p>
       </section>
 
+      <section class="docs-card docs-section" id="input-bindings">
+        <h2>Input bindings before execution and recovery</h2>
+        <p class="docs-copy">
+          Both the Rust graph executor and Orchestra validate connected input
+          edges before executing any node. A second connection to a single-input
+          node is a graph error, not another input that can be silently ignored.
+          The same gate applies when Orchestra rebuilds a retained workflow.
+        </p>
+        <ul class="docs-list">
+          <li><code>solve</code>, <code>extract</code>, <code>export</code>,
+            <code>condition</code>, and ordinary single-payload transforms
+            accept at most one incoming edge. Declared but unconnected spare
+            ports are allowed. Missing inputs still use the existing execution
+            and explicit failure policy.</li>
+          <li>Named multi-input transforms assemble a payload keyed by target
+            port. Use an existing combination operator to construct a solver
+            payload, then connect that one artifact to the solve node. A custom
+            operator name does not itself declare a multi-input binding mode.</li>
+          <li><code>transform.first_available</code> waits for all predecessors
+            to resolve and chooses the first available artifact in edge
+            declaration order. Consumed-artifact and lineage records name only
+            that selected source, not unused alternatives.</li>
+          <li>Input nodes read <code>input_artifacts</code> and cannot have
+            incoming edges. Output nodes may receive multiple ports; each port
+            retains its own value and source lineage.</li>
+          <li><code>on_error: "skip"</code>, compact responses, retained solve
+            artifacts, and retained branch decisions cannot bypass this graph
+            gate. Synchronous and asynchronous API requests return a validation
+            error before dispatch or job admission.</li>
+          <li>Orchestra also binds recoverable solves, condition decisions and
+            native receipts to the actual consumed path through rebuilt local
+            nodes. A join selecting another source must not reuse an old result
+            merely because its final input value is equal. First-available joins
+            bind only the selected source; unused alternatives do not invalidate
+            the same path. One recursive short digest per published artifact is
+            ephemeral, not a retained ancestor tree or a copy of the payload.</li>
+          <li id="native-invocation-precision">The native diagnostic/scoring adapter also binds lossless input,
+            configuration and context JSON to task identity. TaskIR v1 alone
+            rounds small floats for digesting; changed tiny values must not
+            authorize an old receipt. The adapter replaces supplied bindings
+            without changing original numbers or routing authority. This is
+            not a general TaskIR precision upgrade or an independently verified
+            Agent-side binding.</li>
+          <li id="typed-task-digest">TaskIR also supports an explicit typed IEEE-754 v2 digest
+            encoding. Rust and Elixir authors retain decoded binary64 values and
+            bounded integers; the control plane, Rust SDK and Agent independently
+            recompute identity. Shared numeric vectors and real HTTP/Agent tests
+            cover five diagnostic domains. Unknown encoding and tiny changes fail
+            before execution. Typed tasks require an explicit Agent encoding
+            capability and RPC method; old or unprofiled peers are not fallbacks.
+            Ten HTTP-dispatched Rust/Elixir tasks retain original receipts across
+            an Orchestra restart without re-execution. Agent restart instead
+            returns unknown outcomes, without replay or publication. Builders
+            still default to legacy pending installed-peer and default-adoption
+            acceptance. Explicit <code>defaults.native_task_digest_encoding</code>
+            now selects the native diagnostic/scoring adapter; new-codec workflows
+            retain one lossless execution JSON string. Five source solved-domain
+            chains restore solve outputs, branch decisions and native receipts
+            across real Orchestra restarts without repeated completed work or
+            changed scoring identity. Lost Agent receipts block continuation.
+            A <a href="../reports/workflow-typed-postgres-recovery-20261011.md">PostgreSQL follow-up</a>
+            repeats seven bounded source macOS rounds against a remote JSONB store
+            and checks rollback, selected-pool lease fencing and numeric identity.
+            This is not Linux Agent, installed-runtime or default cold-start acceptance.
+            Solve RPCs and local transforms do not change encoding; old evidence is never
+            silently resealed. This is not arbitrary-precision decimal identity
+            or authenticated author provenance.</li>
+        </ul>
+        <p class="docs-copy">
+          Input binding does not add snapshot history or make local transforms
+          durable. Recovery still rebuilds local transforms and joins, checks
+          exact checkpoint invocations, and blocks ambiguous native outcomes.
+          Operator availability remains specific to each runtime's catalog.
+          Previously unbound recovery records cannot be silently adopted by a
+          bound invocation; submit a new job explicitly rather than deleting
+          evidence to authorize replay. These path digests do not authenticate
+          data provenance or establish numerical correctness.
+        </p>
+      </section>
+
       <section class="docs-card docs-section" id="summary-validation">
         <h2>Summary cross-check gates</h2>
         <p class="docs-copy">

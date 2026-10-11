@@ -9,6 +9,8 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
   }
 
   alias KyuubikiWeb.Playground.AgentClient
+  alias KyuubikiWeb.WorkflowNativeInvocation
+  alias KyuubikiWeb.WorkflowTaskDigestPolicy
 
   @operators %{
     "extract.transport_result_diagnostics" => "extract",
@@ -70,6 +72,7 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
     do: {:error, :invalid_native_workflow_operator_request}
 
   defp execute(id, payload, config, node, context, opts) do
+    context = WorkflowNativeInvocation.bind_context(context, payload, config)
     configured = Application.get_env(:kyuubiki_web, __MODULE__, [])
     client = Keyword.get(opts, :client, Keyword.get(configured, :client, AgentClient))
     on_progress = Keyword.get(opts, :on_progress, fn _ -> :ok end)
@@ -90,6 +93,11 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
     rpc_opts = Keyword.merge(rpc_opts, Keyword.take(opts, [:before_dispatch]))
 
     with {:ok, task} <- OperatorTaskIR.build(id, payload, config, task_opts),
+         {:ok, task} <-
+           WorkflowTaskDigestPolicy.seal(
+             task,
+             Keyword.get(opts, :native_task_digest_encoding, WorkflowTaskDigestPolicy.legacy())
+           ),
          {:ok, summary} <- OperatorTaskExecutionSummary.build(task) do
       case WorkflowNativeResultRecovery.resolve(task, summary, context, opts) do
         :execute -> dispatch(client, task, summary, rpc_opts, on_progress)

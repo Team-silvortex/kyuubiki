@@ -1,7 +1,9 @@
 ExUnit.start()
 
 Path.wildcard(Path.join(__DIR__, "support/**/*.exs"))
-|> Enum.reject(&String.ends_with?(&1, "/headless_live_server.exs"))
+|> Enum.reject(fn path ->
+  Path.basename(path) in ["headless_live_server.exs", "headless_result_fixtures.exs"]
+end)
 |> Enum.each(&Code.require_file/1)
 
 defmodule KyuubikiWeb.TestSupport.FakePlaygroundAgent do

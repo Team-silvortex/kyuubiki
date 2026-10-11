@@ -41,6 +41,13 @@
     "report_schema": "operator-task-admission.schema.json",
     "policy": "authority, execution mode, package identity, fetchability, cache scope, and routing values must form one fail-closed route"
   },
+  "x-kyuubiki-task-digest-encodings": {
+    "selector": "integrity.task_digest_encoding",
+    "absent_default": "kyuubiki.task-digest/fixed15-v1",
+    "typed_encoding": "kyuubiki.task-digest/typed-ieee754-v2",
+    "typed_contract": "../docs/operator-task-ir-digest.md#typed-binary64-task-digest",
+    "policy": "Explicit unknown, null or non-string selectors fail closed. No digest-based inference or silent fallback. Envelope schema and descriptor digest remain v1."
+  },
   "$defs": {
     "sha256Hex": {
       "type": "string",
@@ -201,6 +208,10 @@
         "operator_integrity": { "type": ["object", "null"] },
         "descriptor_digest": { "$ref": "#/$defs/sha256Hex" },
         "task_digest": { "$ref": "#/$defs/sha256Hex" },
+        "task_digest_encoding": {
+          "type": "string",
+          "enum": ["kyuubiki.task-digest/fixed15-v1", "kyuubiki.task-digest/typed-ieee754-v2"]
+        },
         "task_digest_fields": {
           "type": "array",
           "items": { "type": "string" },

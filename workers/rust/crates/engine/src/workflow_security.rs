@@ -1,4 +1,7 @@
-use crate::workflow_executor::is_supported_workflow_operator;
+use crate::workflow_executor::{
+    is_supported_workflow_operator, transform_operator_accepts_partial_inputs,
+    transform_operator_requires_port_map,
+};
 use kyuubiki_protocol::{WorkflowGraph, WorkflowGraphRunRequest, WorkflowNodeKind};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
@@ -56,6 +59,7 @@ pub fn validate_workflow_security(request: &WorkflowGraphRunRequest) -> Result<(
     validate_edges(graph, &node_ports)?;
     validate_entry_and_output_nodes(graph, &node_ports)?;
     validate_acyclic_graph(graph, &node_ports)?;
+    validate_input_bindings(graph)?;
     validate_input_artifacts(request, &node_ports)
 }
 
@@ -233,6 +237,34 @@ fn validate_edges(
             return Err(format!(
                 "workflow edge {} creates duplicate incoming edge for target port {}.{}",
                 edge.id, edge.to.node, edge.to.port
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_input_bindings(graph: &WorkflowGraph) -> Result<(), String> {
+    let mut counts = HashMap::new();
+    for edge in &graph.edges {
+        *counts.entry(edge.to.node.as_str()).or_insert(0_usize) += 1;
+    }
+    for node in &graph.nodes {
+        let count = counts.get(node.id.as_str()).copied().unwrap_or(0);
+        if node.kind == WorkflowNodeKind::Input && count > 0 {
+            return Err(format!(
+                "workflow input node {} cannot have incoming edges",
+                node.id
+            ));
+        }
+        let multiple_inputs = node.kind == WorkflowNodeKind::Transform
+            && node.operator_id.as_deref().is_some_and(|operator| {
+                transform_operator_accepts_partial_inputs(operator)
+                    || transform_operator_requires_port_map(operator)
+            });
+        if count > 1 && node.kind != WorkflowNodeKind::Output && !multiple_inputs {
+            return Err(format!(
+                "workflow node {} uses a single input but has {count} incoming edges",
+                node.id
             ));
         }
     }

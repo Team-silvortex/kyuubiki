@@ -33,8 +33,12 @@ pub(super) fn request(
 }
 
 pub(super) fn assert_ready(domain: Domain, result: &Value) {
+    assert_ready_with_skips(domain, result, &[]);
+}
+
+pub(super) fn assert_ready_with_skips(domain: Domain, result: &Value, skipped: &[&str]) {
     assert_eq!(result["failed_nodes"], json!([]), "{}", domain.name);
-    assert_eq!(result["skipped_nodes"], json!([]));
+    assert_eq!(result["skipped_nodes"], json!(skipped));
     let artifacts = &result["artifacts"];
     let raw = artifacts["raw.payload"].clone();
     let expected =

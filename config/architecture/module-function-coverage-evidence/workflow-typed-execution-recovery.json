@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Explicit native workflow digest policy preserves typed Rust authoring and one lossless durable execution envelope. Seven source macOS HTTP/Agent/SQLite rounds restore solved artifacts, branch routes and native receipts with unchanged scoring identity and no repeated completed work; lost Agent receipts block without replay. A separate PostgreSQL follow-up verifies the same bounded source restart chains. Defaults and installed/remote-Agent/package-host qualification remain open.",
+  "evidence_claims": [
+    {
+      "id": "workflow-typed-execution-envelope-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-protocol", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "schemas/workflow-graph.schema.json",
+        "tests/fixtures/workflow-graph-preflight.json",
+        "workers/rust/crates/protocol/src/workflow.rs",
+        "workers/rust/crates/protocol/src/tests/workflows.rs",
+        "apps/web/lib/kyuubiki_web/workflow_task_digest_policy.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_execution_envelope.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_typed_execution_envelope_test.exs",
+        "reports/workflow-typed-execution-recovery-20261011.md"
+      ],
+      "required_text": [
+        "native_task_digest_encoding",
+        "kyuubiki.workflow-execution-envelope/v2",
+        "workflow_native_digest_policy_round_trips_and_rejects_unknown_encodings",
+        "typed execution survives an outer storage round trip without numeric normalization",
+        "typed encoding cannot be silently removed or downgraded on restart",
+        "Default encoding remains legacy"
+      ]
+    },
+    {
+      "id": "workflow-typed-native-continuation-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_native_operator_runtime.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_solve_checkpoint.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_branch_checkpoint.ex",
+        "apps/web/test/support/headless_native_recovery_gate.exs",
+        "workers/rust/crates/cli/tests/support/headless_live_server.rs",
+        "workers/rust/crates/cli/tests/support/headless_workflow_native_receipt_recovery.rs",
+        "reports/workflow-typed-execution-recovery-20261011.md"
+      ],
+      "required_text": [
+        "real_typed_solved_branch_workflow_restart_preserves_numeric_identity_without_reexecution",
+        "real_typed_raw_workflow_restart_preserves_input_numeric_identity",
+        "real_typed_workflow_lost_agent_receipt_blocks_after_solve_and_branch_restore",
+        "restart changed typed scoring identity",
+        "This adds verified source macOS HTTP/Agent/SQLite contract and recovery evidence"
+      ]
+    }
+  ]
+}

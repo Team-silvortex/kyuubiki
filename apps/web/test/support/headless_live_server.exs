@@ -1,5 +1,6 @@
 Code.require_file("workflow_api_fixtures.exs", __DIR__)
 Code.require_file("workflow_api_test_support.exs", __DIR__)
+Code.require_file("headless_live_postgres.exs", __DIR__)
 
 alias KyuubikiWeb.TestSupport.WorkflowApi
 alias KyuubikiWeb.Playground.AgentPool
@@ -26,6 +27,7 @@ if System.get_env("KYUUBIKI_HEADLESS_LIVE_NATIVE_GATE_ROOT") do
 end
 
 # The launcher uses --no-start so recovery never sees an empty temporary journal first.
+KyuubikiWeb.TestSupport.HeadlessLivePostgres.configure()
 {:ok, _} = Application.ensure_all_started(:kyuubiki_web)
 
 case scenario do

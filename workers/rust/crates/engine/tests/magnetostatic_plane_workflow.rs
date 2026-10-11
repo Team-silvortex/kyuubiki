@@ -240,6 +240,7 @@ fn graph_for(
         entry_nodes: vec!["magnetic_input".to_string()],
         output_nodes: vec!["magnetic_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

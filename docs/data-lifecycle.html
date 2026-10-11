@@ -112,6 +112,89 @@
             the execution envelope retained; it never falls back to another execution.
             Reads add no result archive or disk budget. This is bounded receipt-assisted
             recovery, not general durable node checkpoints or exactly-once execution.</li>
+          <li><strong>Workflow solve-artifact checkpoints:</strong> successful small typed
+            solves retain output JSON in the existing private recovery database record,
+            not in dispatch files or separate archives. Each active parent has at most
+            32 entries, 512 KiB per output, 2 MiB total encoded checkpoint bytes,
+            65,536 decoded JSON nodes per output and 250,000 container JSON nodes.
+            Output byte counting stops before encoding an oversized copy. Encoded JSON
+            preserves integral floats and tiny values across SQL/JSON storage; parent,
+            envelope, node, invocation and output digests bind reuse to a later owned claim.
+            Writes share the job/result transaction, and reads do not renew or duplicate
+            entries. Oversized new outputs are not retained and use the original replay
+            policy. Completed, failed and cancelled transitions prune this additional
+            payload; blocked recovery retains it for inspection until explicit job/result
+            deletion. Database pages follow existing storage maintenance, not immediate
+            physical compaction. Public recovery exposes only limits and count, not outputs
+            or owner sessions. These are per-parent bounds, not a total process/disk cap.
+            Unknown dispatches and side-effect restrictions still block recovery. See the
+            <a href="../reports/workflow-solve-artifact-checkpoints-20261011.md">bounded artifact report</a>.</li>
+          <li><strong>Explicit typed native execution:</strong>
+            <code>defaults.native_task_digest_encoding</code> selects new-codec
+            native diagnostic/scoring TaskIR nodes. Their v2 execution envelope
+            stores one canonical JSON string for graph, inputs, context and response
+            options, rather than an additional archive or parallel payload map.
+            String storage prevents JSONB from normalizing integral floats and
+            signed zero. The envelope digest and public encoding metadata must
+            agree on restart; unknown encodings and downgrades are rejected.
+            Legacy records keep their existing representation and are not resealed.
+            Ordinary terminal transitions prune the string; blocked jobs keep the
+            existing single copy until explicit deletion. A
+            <a href="../reports/workflow-typed-postgres-recovery-20261011.md">bounded PostgreSQL follow-up</a>
+            verifies JSONB identity, selected-pool lease fencing, transactional rollback
+            and seven source restart rounds. Four read APIs return opaque 503 responses
+            during storage loss, then read unchanged data after restoration.
+            This is not an installed-runtime, default cold-start, power-loss or
+            revision-two PWDT checkpoint-lifecycle qualification.</li>
+          <li><strong>Collection and export availability:</strong> job/result lists,
+            workload discovery, database export and project-bundle download reject known
+            store failures with an opaque unavailable response. Failed bundles have no
+            attachment header. Restored reads preserve original records, real empty lists
+            remain successful, and authorization runs before storage access. Public exports
+            exclude private recovery records and owner sessions. See
+            the <a href="../reports/analysis-collection-outage-20261011.md">collection controls</a>.</li>
+          <li><strong>SQL export consistency:</strong> workload discovery, database export
+            and project-bundle export read their database collections in one transaction.
+            PostgreSQL uses read-only repeatable read; SQLite uses a deferred WAL snapshot.
+            Concurrent version edits, project removal, joint job/result deletion and
+            security-event publication cannot mix generations. Existing transactions are
+            rejected rather than inheriting unverified isolation. JSON cross-store reads,
+            external artifacts and full database backups remain outside this scope. See
+            the <a href="../reports/analysis-export-snapshot-20261011.md">snapshot controls</a>.</li>
+          <li><strong>Workflow branch decisions:</strong> the same private recovery record
+            additionally retains at most 64 successful condition decisions and 64 KiB
+            encoded bytes per active parent. Entries contain node/input-context digests,
+            selected port, predicate result and producing claim, never artifact payloads
+            or a scheduler snapshot. Writes use the shared lease-fenced job/result
+            transaction before port publication. Later reads do not renew entries;
+            changed input blocks instead of selecting another route. Capacity pressure
+            omits new entries without eviction, retaining original replay policy for
+            unrecorded conditions. Ordinary terminal transitions prune the ledger;
+            blocked recovery retains it until explicit deletion. Public recovery exposes
+            only count and read-only limits. Per-parent logical pruning is not a global
+            disk cap or immediate physical database compaction. See the
+            <a href="../reports/workflow-branch-checkpoints-20261011.md">branch recovery report</a>.</li>
+          <li><strong>Consumed-path recovery binding:</strong> Orchestra retains one
+            recursive SHA-256 path digest in memory per published graph artifact,
+            with no ancestor tree or copied artifact values. The computed digest
+            participates in existing solve/branch invocation and native TaskIR
+            identities, not a new persistent scheduler snapshot. First-available
+            joins bind only their selected input. Changed paths and previously
+            unbound evidence cannot silently authorize reuse even when the current
+            payload is equal. Existing checkpoint, journal and Agent-cache limits
+            and cleanup rules remain unchanged. This is path consistency, not
+            authenticated data provenance or a total memory cap. See the
+            <a href="../reports/workflow-consumed-path-recovery-20261011.md">consumed-path report</a>.</li>
+          <li><strong>Native invocation precision:</strong> the native workflow
+            adapter adds one lossless input/config/context digest string to the
+            existing TaskIR context, not a new payload cache or backup. Encoding
+            for this digest uses transient memory proportional to the invocation;
+            it does not retain copied artifacts or add a journal bucket. Existing
+            journal, checkpoint and Agent receipt limits still apply. Changed or
+            previously unbound invocations block reuse without rewriting evidence
+            or authorizing replay. This adapter guard does not replace generic v1
+            digesting or independently authenticate exact Agent inputs. See the
+            <a href="../reports/workflow-native-invocation-precision-20261011.md">native precision report</a>.</li>
           <li><strong>Agent TaskIR receipt retention:</strong> a separate read-only retrieval
             RPC uses process memory only, without disk spools or backups. At most 64
             reservations, 8 MiB per encoded response, 32 MiB total encoded response bytes
@@ -195,8 +278,8 @@
           The initial checkpoint label does not replace the requested model name.</p>
         <p class="docs-copy">Project export selects an active version only from the
           active model. A model without checkpoints exports a null active version rather
-          than a checkpoint belonging to a different model. This does not make a live
-          multi-query export an atomic database snapshot or add a new import endpoint.
+          than a checkpoint belonging to a different model. SQL exports now use the
+          shared read snapshot described above; no new import endpoint is added.
           See the <a href="../reports/project-version-chain-20260909.md">project/version
           chain regression report</a> for API reconstruction, concurrency and rollback scope.</p>
         <p class="docs-copy">For project-bound execution, submit <code>project_id</code>

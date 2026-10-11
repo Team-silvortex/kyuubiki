@@ -380,6 +380,15 @@ impl AgentDescriptor {
                     ],
                 ),
                 CapabilityDescriptor {
+                    id: crate::TASK_DIGEST_TYPED_V2.to_string(),
+                    role: "task_digest".to_string(),
+                    methods: vec![
+                        RpcMethod::RunOperatorTaskIr,
+                        RpcMethod::FetchOperatorTaskResult,
+                    ],
+                    tags: vec!["independent-digest-verification".to_string()],
+                },
+                CapabilityDescriptor {
                     id: "control".to_string(),
                     role: "runtime".to_string(),
                     methods: vec![

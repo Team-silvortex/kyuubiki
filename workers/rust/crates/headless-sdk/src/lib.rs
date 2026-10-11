@@ -190,6 +190,9 @@ pub use executor::{
 };
 pub use hybrid_executor::HybridHeadlessExecutor;
 pub use kyuubiki_protocol::CancelExecutionRequest;
+pub use kyuubiki_protocol::{
+    TASK_DIGEST_FIXED15_V1, TASK_DIGEST_TYPED_V2, seal_operator_task_digest,
+};
 pub use material_candidate_materialization::build_material_candidate_materialization_plan;
 pub use material_candidate_rerun::{
     build_materialized_candidate_report, build_materialized_candidate_steps,

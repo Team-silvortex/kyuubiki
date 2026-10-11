@@ -12,6 +12,7 @@ defmodule KyuubikiWeb.WorkflowGraphScheduler do
       branch_decisions: [],
       node_runs: [],
       artifact_lineage: [],
+      artifact_bindings: %{},
       artifacts: %{},
       loop_passes: 0,
       started_at_us: System.monotonic_time(:microsecond)

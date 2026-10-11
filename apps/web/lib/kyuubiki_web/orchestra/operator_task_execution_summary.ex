@@ -14,12 +14,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
   @spec validate_digest(map()) :: :ok | {:error, term()}
   def validate_digest(%{"integrity" => %{"task_digest" => task_digest}} = task)
       when is_binary(task_digest) and task_digest != "" do
-    actual = OperatorTaskIR.compute_task_digest(task)
-
-    if actual == task_digest do
-      :ok
-    else
-      {:error, {:operator_task_digest_mismatch, %{expected: task_digest, actual: actual}}}
+    with {:ok, actual} <- OperatorTaskIR.compute_task_digest_checked(task) do
+      if actual == task_digest do
+        :ok
+      else
+        {:error, {:operator_task_digest_mismatch, %{expected: task_digest, actual: actual}}}
+      end
     end
   end
 
@@ -27,7 +27,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
 
   @spec build(map()) :: {:ok, map()} | {:error, term()}
   def build(task) when is_map(task) do
-    with :ok <- execution_program_present?(task),
+    with {:ok, task_digest} <- OperatorTaskIR.compute_task_digest_checked(task),
+         :ok <- execution_program_present?(task),
          :ok <- validate_program_schema(task),
          {:ok, operator_id} <- required_string(task, ["operator", "id"]),
          {:ok, operator_kind} <- required_string(task, ["operator", "kind"]),
@@ -46,7 +47,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
          :ok <- validate_entrypoint(program_kind, operator_id, entrypoint_name) do
       summary = %{
         "status" => "verified",
-        "task_digest" => OperatorTaskIR.compute_task_digest(task),
+        "task_digest" => task_digest,
         "task_id" => Map.get(task, "task_id", ""),
         "operator_id" => operator_id,
         "operator_kind" => operator_kind,

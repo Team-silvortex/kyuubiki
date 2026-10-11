@@ -247,10 +247,31 @@ pub enum WorkflowNodeKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct WorkflowDefaults {
+    #[serde(
+        default,
+        skip_serializing_if = "WorkflowNativeTaskDigestEncoding::is_legacy"
+    )]
+    pub native_task_digest_encoding: WorkflowNativeTaskDigestEncoding,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cache_policy: Option<WorkflowCachePolicy>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub orchestrated: Option<bool>,
+}
+
+/// Encoding selection for Orchestra's native diagnostic/scoring TaskIR adapter, not solve RPCs.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkflowNativeTaskDigestEncoding {
+    #[default]
+    #[serde(rename = "kyuubiki.task-digest/fixed15-v1")]
+    Fixed15V1,
+    #[serde(rename = "kyuubiki.task-digest/typed-ieee754-v2")]
+    TypedIeee754V2,
+}
+
+impl WorkflowNativeTaskDigestEncoding {
+    fn is_legacy(&self) -> bool {
+        *self == Self::Fixed15V1
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

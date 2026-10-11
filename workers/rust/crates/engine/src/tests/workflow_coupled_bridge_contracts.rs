@@ -56,6 +56,7 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
         entry_nodes: vec!["electrostatic_model".to_string()],
         output_nodes: vec!["summary_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

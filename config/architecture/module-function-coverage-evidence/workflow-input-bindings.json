@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source macOS Rust/Orchestra graph input binding validation rejects silently ignored connections before execution, restored checkpoint lookup and asynchronous admission. Shared negative fixtures, callback/lineage checks and two actual branch/join restart rounds establish contract consistency only, not durable continuation, independent numerical accuracy or operational qualification.",
+  "evidence_claims": [
+    {
+      "id": "workflow-consumed-input-binding-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_graph_inputs.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_preflight.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/test/kyuubiki_web/workflow_graph_preflight_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_graph_input_binding_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_branch_recovery_api_test.exs",
+        "tests/fixtures/workflow-graph-preflight.json",
+        "workers/rust/crates/engine/src/workflow_security.rs",
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/src/tests/workflow_preflight_contract.rs",
+        "workers/rust/crates/cli/tests/support/headless_workflow_native_receipt_recovery.rs",
+        "docs/book-ch05-workflow-and-operators.html",
+        "reports/workflow-input-bindings-20261011.md"
+      ],
+      "required_text": [
+        "uses a single input but has",
+        "input-ignores-upstream",
+        "custom callbacks cannot silently discard an additional connected input",
+        "multi-port output publishes each input with its own lineage",
+        "ambiguous input bindings are rejected before synchronous execution or job admission",
+        "ambiguous_input_bindings_cannot_execute_or_be_hidden_by_skip",
+        "missing rebuilt join lineage",
+        "Input bindings before execution and recovery",
+        "The two joined restart rounds require exactly six Agent executions",
+        "not general durable per-node continuation"
+      ]
+    }
+  ]
+}

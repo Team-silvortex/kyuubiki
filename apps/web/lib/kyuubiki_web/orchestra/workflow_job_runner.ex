@@ -95,7 +95,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
           orchestration_context,
           fn progress -> apply_progress(job_id, claim, progress) end,
           response_options,
-          recover_native_results: claim["generation"] > 1
+          recover_native_results: claim["generation"] > 1,
+          solve_checkpoint: fn action ->
+            WorkflowRecoveryCoordinator.solve_checkpoint(job_id, claim, action)
+          end,
+          branch_checkpoint: fn action ->
+            WorkflowRecoveryCoordinator.branch_checkpoint(job_id, claim, action)
+          end
         )
       end)
 
@@ -108,6 +114,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
 
       {:ok, {:error, {:workflow_node_error, _node, {:native_workflow_recovery_blocked, reason}}}} ->
         WorkflowRecoveryCoordinator.block_native_recovery(job_id, claim, reason)
+
+      {:ok, {:error, {:workflow_node_error, _node, {:workflow_solve_checkpoint_blocked, reason}}}} ->
+        WorkflowRecoveryCoordinator.block_solve_checkpoint(job_id, claim, reason)
+
+      {:ok,
+       {:error, {:workflow_node_error, _node, {:workflow_branch_checkpoint_blocked, reason}}}} ->
+        WorkflowRecoveryCoordinator.block_branch_checkpoint(job_id, claim, reason)
 
       {:ok, {:error, reason}} ->
         if not cancelled?(job_id), do: fail_job(job_id, claim, inspect(reason))

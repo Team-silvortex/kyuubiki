@@ -1,4 +1,5 @@
 use super::{LiveServer, Scratch, repo_root, spawn_log_reader};
+use sha2::{Digest, Sha256};
 use std::{
     error::Error,
     io::BufReader,
@@ -7,6 +8,65 @@ use std::{
     sync::{Arc, Mutex, mpsc},
     time::Duration,
 };
+
+enum LiveDatabase<'a> {
+    Sqlite(Option<&'a Path>),
+    Postgres(&'a str),
+}
+
+pub(super) struct OwnedPostgresScope {
+    url: String,
+    schema: String,
+    cleaned: bool,
+}
+
+impl OwnedPostgresScope {
+    pub(super) fn new(url: &str, root: &Path) -> Self {
+        Self {
+            url: url.into(),
+            schema: postgres_schema(root),
+            cleaned: false,
+        }
+    }
+
+    pub(super) fn cleanup(&mut self) -> Result<(), Box<dyn Error>> {
+        let script = "test/support/headless_live_postgres.exs";
+        let output = Command::new("mix")
+            .args([
+                "run",
+                "--no-start",
+                "-r",
+                script,
+                "-e",
+                "KyuubikiWeb.TestSupport.HeadlessLivePostgres.cleanup()",
+            ])
+            .current_dir(repo_root().join("apps/web"))
+            .env("MIX_ENV", "test")
+            .env("ERL_FLAGS", "+S 2:2")
+            .env("KYUUBIKI_STORAGE_BACKEND", "postgres")
+            .env("DATABASE_URL", &self.url)
+            .env("KYUUBIKI_HEADLESS_LIVE_POSTGRES_SCHEMA", &self.schema)
+            .output()?;
+        if !output.status.success() {
+            return Err("owned PostgreSQL test schema cleanup failed".into());
+        }
+        self.cleaned = true;
+        Ok(())
+    }
+}
+
+impl Drop for OwnedPostgresScope {
+    fn drop(&mut self) {
+        if !self.cleaned && self.cleanup().is_err() {
+            eprintln!("owned PostgreSQL test schema cleanup failed");
+        }
+    }
+}
+
+fn postgres_schema(root: &Path) -> String {
+    let digest = format!("{:x}", Sha256::digest(root.to_string_lossy().as_bytes()));
+    format!("owned_live_{}", &digest[..48])
+}
 
 pub(super) fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
     start_live_server_with_agent(None)
@@ -45,7 +105,8 @@ pub(super) fn start_live_server_with_result_fixtures(
         peer_port,
         data_dir,
         result_fixtures,
-        database,
+        LiveDatabase::Sqlite(database),
+        false,
         false,
     )
 }
@@ -61,7 +122,57 @@ pub(super) fn start_live_server_with_native_gate(
         Some(peer_port),
         Some(data_dir),
         false,
-        Some(database),
+        LiveDatabase::Sqlite(Some(database)),
+        true,
+        false,
+    )
+}
+
+pub(super) fn start_live_server_with_described_agents(
+    agent_port: u16,
+    data_dir: &Path,
+) -> Result<LiveServer, Box<dyn Error>> {
+    start_server(
+        Some(agent_port),
+        None,
+        Some(data_dir),
+        false,
+        LiveDatabase::Sqlite(None),
+        false,
+        true,
+    )
+}
+
+pub(super) fn start_live_server_with_typed_native_gate(
+    agent_port: u16,
+    peer_port: u16,
+    data_dir: &Path,
+    database: &Path,
+) -> Result<LiveServer, Box<dyn Error>> {
+    start_server(
+        Some(agent_port),
+        Some(peer_port),
+        Some(data_dir),
+        false,
+        LiveDatabase::Sqlite(Some(database)),
+        true,
+        true,
+    )
+}
+
+pub(super) fn start_live_server_with_typed_postgres_gate(
+    agent_port: u16,
+    peer_port: u16,
+    data_dir: &Path,
+    database_url: &str,
+) -> Result<LiveServer, Box<dyn Error>> {
+    start_server(
+        Some(agent_port),
+        Some(peer_port),
+        Some(data_dir),
+        false,
+        LiveDatabase::Postgres(database_url),
+        true,
         true,
     )
 }
@@ -71,16 +182,14 @@ fn start_server(
     peer_port: Option<u16>,
     data_dir: Option<&Path>,
     result_fixtures: bool,
-    database: Option<&Path>,
+    database: LiveDatabase<'_>,
     native_gate: bool,
+    describe_agents: bool,
 ) -> Result<LiveServer, Box<dyn Error>> {
     let root = repo_root();
     let web_root = root.join("apps/web");
     let server_script = web_root.join("test/support/headless_live_server.exs");
     let scratch = Scratch::new()?;
-    let sqlite_path = database
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| scratch.0.join("kyuubiki.sqlite3"));
     let data_root = data_dir
         .map(Path::to_path_buf)
         .unwrap_or_else(|| scratch.0.join("data"));
@@ -97,10 +206,12 @@ fn start_server(
             "ERL_FLAGS",
             std::env::var_os("ERL_FLAGS").unwrap_or_else(|| "+S 2:2".into()),
         )
-        .env("KYUUBIKI_STORAGE_BACKEND", "sqlite")
-        .env("SQLITE_DATABASE_PATH", sqlite_path)
         .env("KYUUBIKI_DATA_DIR", &data_root)
         .env("KYUUBIKI_DEPLOYMENT_MODE", "local")
+        .env(
+            "KYUUBIKI_HEADLESS_LIVE_DESCRIBE_AGENTS",
+            if describe_agents { "1" } else { "0" },
+        )
         .env(
             "KYUUBIKI_HEADLESS_LIVE_RESULT_FIXTURES",
             if result_fixtures { "1" } else { "0" },
@@ -119,12 +230,37 @@ fn start_server(
         )
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    let shared_lease = match database {
+        LiveDatabase::Sqlite(path) => {
+            let sqlite_path = path
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|| scratch.0.join("kyuubiki.sqlite3"));
+            command
+                .env("KYUUBIKI_STORAGE_BACKEND", "sqlite")
+                .env("SQLITE_DATABASE_PATH", sqlite_path);
+            path.is_some()
+        }
+        LiveDatabase::Postgres(url) => {
+            command
+                .env("KYUUBIKI_STORAGE_BACKEND", "postgres")
+                .env("DATABASE_URL", url)
+                .env(
+                    "KYUUBIKI_HEADLESS_LIVE_POSTGRES_SCHEMA",
+                    postgres_schema(&data_root),
+                )
+                .env_remove("SQLITE_DATABASE_PATH");
+            true
+        }
+    };
+    if matches!(database, LiveDatabase::Sqlite(_)) {
+        command.env_remove("KYUUBIKI_HEADLESS_LIVE_POSTGRES_SCHEMA");
+    }
     if native_gate {
         command.env("KYUUBIKI_HEADLESS_LIVE_NATIVE_GATE_ROOT", &data_root);
     } else {
         command.env_remove("KYUUBIKI_HEADLESS_LIVE_NATIVE_GATE_ROOT");
     }
-    if database.is_some() {
+    if shared_lease {
         // Only the explicit restart fixture shares a lease across real BEAM process incarnations.
         command.env(
             "KYUUBIKI_ORCHESTRA_LEASE_NAME",
@@ -162,6 +298,13 @@ fn start_server(
         Some(ready_tx),
     );
     spawn_log_reader(BufReader::new(stderr), Arc::clone(&stderr_log), None);
-    server.port = ready_rx.recv_timeout(Duration::from_secs(60))?;
+    server.port = ready_rx
+        .recv_timeout(Duration::from_secs(60))
+        .map_err(|error| {
+            format!(
+                "live Orchestra readiness failed: {error}\n{}",
+                server.logs()
+            )
+        })?;
     Ok(server)
 }

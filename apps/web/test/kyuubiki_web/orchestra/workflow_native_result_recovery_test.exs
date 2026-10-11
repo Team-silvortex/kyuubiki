@@ -11,6 +11,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeResultRecoveryTest do
   }
 
   alias KyuubikiWeb.WorkflowNativeOperatorRuntime, as: Native
+  alias KyuubikiWeb.WorkflowNativeInvocation
 
   @policy Path.expand("../../../../../schemas/agent-task-result-retention.schema.json", __DIR__)
           |> File.read!()
@@ -189,6 +190,86 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeResultRecoveryTest do
     end
   end
 
+  test "identical payloads from a changed consumed path cannot adopt an original receipt", ctx do
+    for original_binding <- [nil, String.duplicate("a", 64)] do
+      spec = spec()
+
+      spec =
+        if original_binding,
+          do: put_in(spec, [:context, "workflow_input_binding_sha256"], original_binding),
+          else: spec
+
+      record = seed(ctx, spec)
+      path = Path.join(ctx.root, record["attempt_id"] <> ".json")
+      before = File.read!(path)
+
+      changed =
+        put_in(spec, [:context, "workflow_input_binding_sha256"], String.duplicate("b", 64))
+
+      assert spec.payload === changed.payload
+      assert task(spec)["task_id"] == task(changed)["task_id"]
+
+      assert {:error, {:native_workflow_recovery_blocked, :input_changed}} = run(ctx, changed)
+      refute_receive {:probe, _, _}, 0
+      refute_receive {:executed, _}, 0
+      assert File.read!(path) == before
+    end
+  end
+
+  test "an unchanged consumed-path binding restores without probing an alternate attempt", ctx do
+    spec = put_in(spec(), [:context, "workflow_input_binding_sha256"], String.duplicate("a", 64))
+    record = seed(ctx, spec)
+    assert {:ok, %{"retained" => 42}} = run(ctx, spec)
+    assert_receive {:probe, _, query}
+    assert query["attempt_id"] == record["attempt_id"]
+    refute_receive {:probe, _, _}, 0
+    refute_receive {:executed, _}, 0
+  end
+
+  for {kind, id} <- @operators, field <- [:payload, :config] do
+    test "lossless #{field} drift cannot reuse #{id} through a rounded TaskIR digest", ctx do
+      pairs = [
+        {1.0e-30, 2.0e-30},
+        {1.0e-300, 2.0e-300},
+        {0.0, 1.0e-30},
+        {-0.0, -1.0e-30},
+        {0.3333333333333333, 0.33333333333333337}
+      ]
+
+      for {{original, current}, index} <- Enum.with_index(pairs) do
+        spec = spec(unquote(kind), unquote(id))
+        spec = put_in(spec, [:node, "id"], "native-#{index}")
+        spec = Map.put(spec, unquote(field), %{"nested" => [%{"value" => original}]})
+        changed = Map.put(spec, unquote(field), %{"nested" => [%{"value" => current}]})
+
+        assert KyuubikiWeb.CanonicalJson.encode!(spec[unquote(field)]) ==
+                 KyuubikiWeb.CanonicalJson.encode!(changed[unquote(field)])
+
+        refute KyuubikiWeb.Storage.DurableJson.encode!(spec[unquote(field)]) ==
+                 KyuubikiWeb.Storage.DurableJson.encode!(changed[unquote(field)])
+
+        record = seed(ctx, spec)
+        path = Path.join(ctx.root, record["attempt_id"] <> ".json")
+        before = File.read!(path)
+        assert {:error, {:native_workflow_recovery_blocked, :input_changed}} = run(ctx, changed)
+        refute_receive {:probe, _, _}, 0
+        refute_receive {:executed, _}, 0
+        assert File.read!(path) == before
+      end
+    end
+  end
+
+  test "an old receipt without exact invocation binding cannot be silently upgraded", ctx do
+    spec = put_in(spec(), [:context, "workflow_input_binding_sha256"], String.duplicate("a", 64))
+    record = seed(ctx, spec, "observed_executed", "parent-job", false)
+    path = Path.join(ctx.root, record["attempt_id"] <> ".json")
+    before = File.read!(path)
+    assert {:error, {:native_workflow_recovery_blocked, :input_changed}} = run(ctx, spec)
+    refute_receive {:probe, _, _}, 0
+    refute_receive {:executed, _}, 0
+    assert File.read!(path) == before
+  end
+
   test "foreign parents cannot supply recovery results even with the exact child TaskIR", ctx do
     spec = spec()
     seed(ctx, spec, "observed_executed", "other-parent")
@@ -355,11 +436,16 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeResultRecoveryTest do
     }
   end
 
-  defp task(spec) do
+  defp task(spec, bound \\ true) do
+    context =
+      if bound,
+        do: WorkflowNativeInvocation.bind_context(spec.context, spec.payload, spec.config),
+        else: spec.context
+
     {:ok, task} =
       OperatorTaskIR.build(spec.id, spec.payload, spec.config,
         node: spec.node,
-        orchestration_context: spec.context,
+        orchestration_context: context,
         task_id: Native.task_id(spec.context, spec.node, spec.id),
         placement_tags: spec.node["placement_tags"],
         required_capabilities: spec.node["required_capabilities"]
@@ -368,8 +454,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeResultRecoveryTest do
     task
   end
 
-  defp seed(ctx, spec, state \\ "observed_executed", parent \\ "parent-job") do
-    task = task(spec)
+  defp seed(ctx, spec, state \\ "observed_executed", parent \\ "parent-job", bound \\ true) do
+    task = task(spec, bound)
 
     request = %{
       "id" => "rpc-#{System.unique_integer([:positive])}",

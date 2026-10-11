@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Executed source SQL composite-read snapshot controls on SQLite and remote PostgreSQL 16.14. Real second-connection commits during project/version edits, project deletion, joint job/result deletion and security-event publication cannot mix exported record generations. Dynamic repository selection, isolation settings, ambient-transaction refusal, rollback and connection-state release are checked. JSON is regression-only; installed GUI, external artifacts, full backups and large-export performance remain open.",
+  "evidence_claims": [
+    {
+      "id": "analysis-sql-export-shared-read-snapshot",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/storage/read_snapshot.ex",
+        "apps/web/lib/kyuubiki_web/storage/failure_boundary.ex",
+        "apps/web/lib/kyuubiki_web/analysis_exports.ex",
+        "apps/web/lib/kyuubiki_web/workloads.ex",
+        "apps/web/test/support/export_read_interleave.exs",
+        "apps/web/test/kyuubiki_web/storage/export_read_snapshot_test.exs",
+        "apps/web/test/kyuubiki_web/storage/read_snapshot_test.exs",
+        "reports/analysis-export-snapshot-20261011.md"
+      ],
+      "required_text": [
+        "ReadSnapshot.run",
+        "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY",
+        "mode: :deferred",
+        "keeps model and version collections from one generation",
+        "keeps job and result collections from one joint commit",
+        "keeps a project removed after its first model read",
+        "database security events share the same snapshot",
+        "a query failure discards partial data and releases the transaction",
+        "the snapshot uses the selected dynamic repository",
+        "public exports refuse an ambient transaction",
+        "PostgreSQL rejects accidental writes within the read-only snapshot",
+        "not a complete database backup"
+      ]
+    }
+  ]
+}

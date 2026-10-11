@@ -1,24 +1,13 @@
 defmodule KyuubikiWeb.WorkflowGraphRunner do
   @moduledoc false
   alias KyuubikiWeb.WorkflowCondition
+  alias KyuubikiWeb.WorkflowGraphInputs
   alias KyuubikiWeb.WorkflowGraphRecovery
   alias KyuubikiWeb.WorkflowGraphPreflight
+  alias KyuubikiWeb.WorkflowGraphProvenance
   alias KyuubikiWeb.WorkflowGraphRunnerMetrics
   alias KyuubikiWeb.WorkflowGraphScheduler
   alias KyuubikiWeb.WorkflowJsonBudget
-
-  @enveloped_multi_input_operators [
-    "transform.benchmark_structural_pair",
-    "transform.benchmark_acoustic_pair",
-    "transform.benchmark_modal_pair",
-    "transform.benchmark_dynamic_pair",
-    "transform.benchmark_transport_pair",
-    "transform.benchmark_coupled_heat_pair",
-    "transform.benchmark_electrostatic_pair",
-    "transform.benchmark_magnetostatic_pair",
-    "transform.benchmark_cfd_pair",
-    "transform.join_parameter_sweep_results"
-  ]
 
   def run(graph, input_artifacts, opts \\ [])
 
@@ -27,11 +16,15 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     with :ok <- WorkflowGraphPreflight.validate(graph, input_artifacts),
          nodes when is_list(nodes) <- Map.get(graph, "nodes"),
          edges when is_list(edges) <- Map.get(graph, "edges", []),
-         execute_solve when is_function(execute_solve, 3) <- Keyword.get(opts, :execute_solve),
+         execute_solve when is_function(execute_solve, 3) or is_function(execute_solve, 4) <-
+           Keyword.get(opts, :execute_solve),
          execute_transform
-         when is_function(execute_transform, 3) or is_function(execute_transform, 4) <-
+         when is_function(execute_transform, 3) or is_function(execute_transform, 4) or
+                is_function(execute_transform, 5) <-
            Keyword.get(opts, :execute_transform),
-         execute_extract when is_function(execute_extract, 3) or is_function(execute_extract, 4) <-
+         execute_extract
+         when is_function(execute_extract, 3) or is_function(execute_extract, 4) or
+                is_function(execute_extract, 5) <-
            Keyword.get(opts, :execute_extract),
          execute_export when is_function(execute_export, 3) <- Keyword.get(opts, :execute_export) do
       run_ordered_workflow_graph(
@@ -131,6 +124,14 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
       kind == "input" or workflow_node_ready?(node, incoming, state) ->
         started_at_us = System.monotonic_time(:microsecond)
 
+        binding =
+          WorkflowGraphProvenance.input_digest(
+            state,
+            consumed_artifacts_for_node(node, incoming, state.artifacts)
+          )
+
+        opts = Keyword.put(opts, :input_binding_sha256, binding)
+
         case execute_workflow_node(node, incoming, input_artifacts, state, opts) do
           {:ok, next_state} ->
             updated =
@@ -147,6 +148,12 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
             {:ok, updated, true}
 
           {:error, {:native_workflow_recovery_blocked, _} = reason} ->
+            throw({:workflow_node_error, node_id, reason})
+
+          {:error, {:workflow_solve_checkpoint_blocked, _} = reason} ->
+            throw({:workflow_node_error, node_id, reason})
+
+          {:error, {:workflow_branch_checkpoint_blocked, _} = reason} ->
             throw({:workflow_node_error, node_id, reason})
 
           {:error, reason} ->
@@ -198,7 +205,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     do: {:error, {:workflow_stalled, WorkflowGraphScheduler.pending_node_ids(indexes, state)}}
 
   defp workflow_node_ready?(node, incoming, state) do
-    if transform_operator_accepts_partial_inputs?(node) do
+    if WorkflowGraphInputs.partial_inputs?(node) do
       # Match the Rust topological runner: do not choose a fallback while a preferred input is pending.
       Enum.all?(incoming, &WorkflowGraphScheduler.resolved?(state, get_in(&1, ["from", "node"]))) and
         Enum.any?(incoming, &Map.has_key?(state.artifacts, edge_from_key(&1)))
@@ -206,35 +213,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
       Enum.all?(incoming, &Map.has_key?(state.artifacts, edge_from_key(&1)))
     end
   end
-
-  defp transform_operator_accepts_partial_inputs?(%{
-         "kind" => "transform",
-         "operator_id" => "transform.first_available"
-       }),
-       do: true
-
-  defp transform_operator_accepts_partial_inputs?(_node), do: false
-
-  defp transform_operator_requires_port_map?(%{
-         "kind" => "transform",
-         "operator_id" => operator_id
-       })
-       when operator_id in @enveloped_multi_input_operators or
-              operator_id in [
-                "transform.merge_summary_pair",
-                "transform.compare_summary_pair",
-                "transform.aggregate_summary_collection",
-                "transform.select_best_summary",
-                "transform.compose_quality_objective",
-                "transform.compose_diagnostics_bundle",
-                "transform.compose_diagnostics_report_payload",
-                "transform.resolve_focus_bridge_execution",
-                "transform.validate_electrostatic_heat_bridge",
-                "transform.validate_heat_thermo_bridge"
-              ],
-       do: true
-
-  defp transform_operator_requires_port_map?(_node), do: false
 
   defp unresolved_missing_inputs?(incoming, state) do
     Enum.any?(incoming, fn edge ->
@@ -268,7 +246,12 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   defp execute_workflow_node(%{"kind" => "solve"} = node, incoming, _inputs, state, opts) do
     with {:ok, operator_id} <- fetch_operator_id(node),
          {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts) do
-      result = Keyword.fetch!(opts, :execute_solve).(operator_id, payload, node)
+      callback = Keyword.fetch!(opts, :execute_solve)
+
+      result =
+        if is_function(callback, 4),
+          do: callback.(operator_id, payload, node, Keyword.fetch!(opts, :input_binding_sha256)),
+          else: callback.(operator_id, payload, node)
 
       publish_operator_result(
         state,
@@ -283,7 +266,13 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     with {:ok, operator_id} <- fetch_operator_id(node),
          {:ok, payload} <- resolve_transform_payload(node, incoming, state.artifacts) do
       result =
-        execute_with_node(Keyword.fetch!(opts, :execute_transform), operator_id, payload, node)
+        execute_with_node(
+          Keyword.fetch!(opts, :execute_transform),
+          operator_id,
+          payload,
+          node,
+          opts
+        )
 
       consumed = consumed_artifacts_for_node(node, incoming, state.artifacts)
       publish_operator_result(state, node, result, consumed)
@@ -294,7 +283,13 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     with {:ok, operator_id} <- fetch_operator_id(node),
          {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts) do
       result =
-        execute_with_node(Keyword.fetch!(opts, :execute_extract), operator_id, payload, node)
+        execute_with_node(
+          Keyword.fetch!(opts, :execute_extract),
+          operator_id,
+          payload,
+          node,
+          opts
+        )
 
       publish_operator_result(
         state,
@@ -320,10 +315,10 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     end
   end
 
-  defp execute_workflow_node(%{"kind" => "condition"} = node, incoming, _inputs, state, _opts) do
+  defp execute_workflow_node(%{"kind" => "condition"} = node, incoming, _inputs, state, opts) do
     with {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts),
-         {:ok, predicate_result} <- WorkflowCondition.evaluate(payload, Map.get(node, "config")),
-         {:ok, selected_output} <- select_condition_output(node, predicate_result) do
+         {:ok, decision} <- execute_condition(payload, node, opts),
+         {:ok, selected_output} <- WorkflowCondition.validate_decision(node, decision) do
       artifact_key = artifact_key(Map.get(node, "id"), Map.get(selected_output, "id"))
       source_artifacts = incoming_artifact_keys(incoming, state.artifacts)
 
@@ -336,7 +331,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
          Map.get(selected_output, "id"),
          source_artifacts
        )
-       |> append_branch_decision(node, selected_output, predicate_result)}
+       |> append_branch_decision(node, selected_output, decision["predicate_result"])}
     end
   end
 
@@ -363,10 +358,42 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   defp execute_workflow_node(%{"kind" => kind}, _incoming, _inputs, _state, _opts),
     do: {:error, {:unsupported_workflow_node_kind, kind}}
 
-  defp execute_with_node(callback, id, payload, node) do
-    if is_function(callback, 4),
-      do: callback.(id, payload, Map.get(node, "config"), node),
-      else: callback.(id, payload, Map.get(node, "config"))
+  defp execute_condition(payload, node, opts) do
+    case Keyword.get(opts, :execute_condition, &WorkflowCondition.decide/2) do
+      callback when is_function(callback, 2) or is_function(callback, 3) ->
+        result =
+          if is_function(callback, 3),
+            do: callback.(payload, node, Keyword.fetch!(opts, :input_binding_sha256)),
+            else: callback.(payload, node)
+
+        case result do
+          {:ok, _decision} = result -> result
+          {:error, _reason} = error -> error
+          _ -> {:error, :invalid_condition_result}
+        end
+
+      _ ->
+        {:error, :invalid_condition_executor}
+    end
+  end
+
+  defp execute_with_node(callback, id, payload, node, opts) do
+    cond do
+      is_function(callback, 5) ->
+        callback.(
+          id,
+          payload,
+          Map.get(node, "config"),
+          node,
+          Keyword.fetch!(opts, :input_binding_sha256)
+        )
+
+      is_function(callback, 4) ->
+        callback.(id, payload, Map.get(node, "config"), node)
+
+      true ->
+        callback.(id, payload, Map.get(node, "config"))
+    end
   end
 
   defp fetch_operator_id(%{"operator_id" => operator_id})
@@ -377,7 +404,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   defp resolve_single_input_payload(%{"id" => node_id}, incoming, artifacts) do
     case incoming do
-      [first | _] ->
+      [first] ->
         key = edge_from_key(first)
 
         case Map.fetch(artifacts, key) do
@@ -387,17 +414,20 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
       [] ->
         {:error, {:missing_workflow_input, node_id}}
+
+      _multiple ->
+        {:error, {:ambiguous_workflow_input, node_id}}
     end
   end
 
   defp resolve_transform_payload(node, incoming, artifacts) do
-    if transform_operator_accepts_partial_inputs?(node) do
+    if WorkflowGraphInputs.partial_inputs?(node) do
       case Enum.find(incoming, &Map.has_key?(artifacts, edge_from_key(&1))) do
         nil -> {:error, {:missing_workflow_input, Map.get(node, "id")}}
         edge -> {:ok, Map.fetch!(artifacts, edge_from_key(edge))}
       end
     else
-      if transform_operator_requires_port_map?(node) and not input_envelope?(node, incoming) do
+      if WorkflowGraphInputs.named_inputs?(node) and not input_envelope?(node, incoming) do
         resolve_named_transform_payload(node, incoming, artifacts)
       else
         resolve_single_input_payload(node, incoming, artifacts)
@@ -407,9 +437,9 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   # A single explicit envelope port preserves direct invocation; a missing named
   # input must never be mistaken for an already assembled multi-input payload.
-  defp input_envelope?(%{"operator_id" => operator_id, "inputs" => [%{"id" => port}]}, [edge])
-       when operator_id in @enveloped_multi_input_operators and port in ["input", "payload"],
-       do: get_in(edge, ["to", "port"]) == port
+  defp input_envelope?(%{"inputs" => [%{"id" => port}]} = node, [edge])
+       when port in ["input", "payload"],
+       do: WorkflowGraphInputs.input_envelope?(node) and get_in(edge, ["to", "port"]) == port
 
   defp input_envelope?(_node, _incoming), do: false
 
@@ -446,14 +476,11 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   # Keep single-field legacy port envelopes, but never discard sibling data or
   # status fields merely because an artifact contains a same-named JSON key.
-  defp named_transform_input(value, edge, %{"operator_id" => operator_id})
-       when operator_id in @enveloped_multi_input_operators do
-    if is_map(value) and map_size(value) == 1,
-      do: unwrap_named_transform_input(value, edge),
-      else: value
+  defp named_transform_input(value, edge, node) do
+    if WorkflowGraphInputs.input_envelope?(node) and not (is_map(value) and map_size(value) == 1),
+      do: value,
+      else: unwrap_named_transform_input(value, edge)
   end
-
-  defp named_transform_input(value, edge, _node), do: unwrap_named_transform_input(value, edge)
 
   defp unwrap_named_transform_input(value, edge) when is_map(value) do
     case get_in(edge, ["from", "port"]) do
@@ -465,7 +492,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   defp unwrap_named_transform_input(value, _edge), do: value
 
   defp consumed_artifacts_for_node(node, incoming, artifacts) do
-    if transform_operator_accepts_partial_inputs?(node) do
+    if WorkflowGraphInputs.partial_inputs?(node) do
       incoming
       |> Enum.find(&Map.has_key?(artifacts, edge_from_key(&1)))
       |> case do
@@ -481,29 +508,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     incoming
     |> Enum.map(&edge_from_key/1)
     |> Enum.filter(&Map.has_key?(artifacts, &1))
-  end
-
-  defp select_condition_output(node, predicate_result) do
-    outputs = Map.get(node, "outputs", [])
-
-    selected =
-      Enum.find(outputs, fn output ->
-        output_id = Map.get(output, "id")
-
-        (predicate_result and output_id in ["if_true", "true"]) or
-          (!predicate_result and output_id in ["if_false", "false"])
-      end) ||
-        if predicate_result do
-          List.first(outputs)
-        else
-          Enum.at(outputs, 1) || List.first(outputs)
-        end
-
-    if selected do
-      {:ok, selected}
-    else
-      {:error, :missing_condition_outputs}
-    end
   end
 
   defp publish_operator_result(state, node, {:ok, value}, source_artifacts) do
@@ -540,6 +544,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     }
 
     %{state | artifact_lineage: [entry | state.artifact_lineage]}
+    |> WorkflowGraphProvenance.publish(artifact_key, node_id, port_id, source_artifacts)
   end
 
   defp append_branch_decision(state, node, selected_output, predicate_result) do
@@ -561,7 +566,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         incoming,
         duration_ms,
         Keyword.get(opts, :result_options, %{}),
-        &transform_operator_accepts_partial_inputs?/1,
+        &WorkflowGraphInputs.partial_inputs?/1,
         &consumed_artifacts_for_node/3,
         &incoming_artifact_keys/2,
         &artifact_key/2

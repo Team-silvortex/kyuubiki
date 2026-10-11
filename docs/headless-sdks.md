@@ -1507,11 +1507,11 @@ Process identity is observed at inspection time, not pinned before dispatch.
 All responses have `automatic_replay_authorized: false` and
 `terminal_result_available: false`; inspection is not a result cache or replay
 authority. Native graph admission blocks ambiguous outcomes regardless of
-idempotent/checkpoint policy. A later authorized generation can reuse a bounded
-native node's observed-success receipt only with matching TaskIR, actual parent
-and original attempt. Missing/invalid receipts block with the envelope retained,
-never silently re-execute. Confirmed history can age out; typed solves, local
-operators and package cleanup remain outside this receipt-reuse sidecar.
+idempotent/checkpoint policy. Later owned claims reuse native success only with matching TaskIR, actual parent and original attempt; missing receipts block, never silently re-execute.
+Separately, small typed-solve artifacts are retained privately before publication: 32 entries, 512 KiB per output, 2 MiB encoded bytes per parent, with decoded/container JSON budgets.
+Exact invocation digests and lossless output JSON preserve downstream TaskIR identity; claim/lease checks and atomic writes fence reuse. Ordinary terminal states prune artifacts.
+Oversize output is uncached under the original replay policy; corrupt/changed checkpoints block, even with skip-on-error. Public recovery exposes limits/count, not payloads.
+Successful conditions also retain 64 decisions/64 KiB per parent, without payloads: matching later claims reuse the selected port, while changed upstream input or failed commits block even with skip-on-error. Ordinary terminal states prune records; capacity omits new entries without eviction. Local transforms/joins still rebuild and confirmed journal history can age out. See [solve artifacts](../reports/workflow-solve-artifact-checkpoints-20261011.md) and [branch consistency](../reports/workflow-branch-checkpoints-20261011.md); neither grants exactly-once or general durable continuation. [Explicit native workflow encoding](operator-task-ir-digest.md#explicit-native-workflow-encoding-and-recovery) covers Rust authoring and lossless restart storage for diagnostic/scoring TaskIR nodes, not solve RPCs or local transforms; installed/remote qualification remains open.
 
 Local tests cover bounded retention, corruption and partial writes, owner death,
 read authentication, changed targets, probe/response limits, and a real two-Agent

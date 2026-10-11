@@ -34,6 +34,20 @@ defmodule KyuubikiWeb.WorkflowGraphPreflightTest do
                    )
 
           assert {:error, _} = Engine.run_workflow_graph(%{request | "graph" => graph})
+
+          assert {:error, _} =
+                   Engine.execute_workflow_graph(
+                     graph,
+                     request["input_artifacts"],
+                     %{"job_id" => "restored-parent"},
+                     fn _ -> flunk("bad restored graph emitted progress") end,
+                     %{},
+                     solve_checkpoint: fn _ -> flunk("bad graph consulted solve checkpoints") end,
+                     branch_checkpoint: fn _ ->
+                       flunk("bad graph consulted branch checkpoints")
+                     end,
+                     recover_native_results: true
+                   )
         end
       end
     end

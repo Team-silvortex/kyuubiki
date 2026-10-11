@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source macOS typed TaskIR dispatch derives an explicit encoding capability from integrity, excludes old/unprofiled/role-only/method-missing peers and preserves requirements through generic RPC calls. Ten Rust/Elixir tasks execute through actual HTTP/Agent transport and recover original receipts after Orchestra restart without execution. Agent restart returns unknown outcomes without replay or publication. Separate follow-up evidence covers bounded native workflow continuation; defaults, installed mixed-peer and package-host qualification remain open.",
+  "evidence_claims": [
+    {
+      "id": "task-ir-typed-agent-capability-routing",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-protocol", "runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "workers/rust/crates/protocol/src/types/rpc_descriptor.rs",
+        "workers/rust/crates/protocol/src/tests/task_digest_v2.rs",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_ir.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_task_routing.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_pool_router.ex",
+        "apps/web/test/kyuubiki_web/playground/task_digest_routing_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_typed_task_identity.rs",
+        "reports/task-ir-typed-routing-20261011.md"
+      ],
+      "required_text": [
+        "agent_descriptor_explicitly_advertises_typed_digest_verification",
+        "enforce_digest_routing",
+        "unknown old and role-only peers are not typed digest fallbacks",
+        "generic task RPC cannot override the derived capability with empty caller requirements",
+        "unavailable typed peer does not transport-failover to an old peer",
+        "Source-only capability routing is verified"
+      ]
+    },
+    {
+      "id": "task-ir-typed-original-receipt-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_result.ex",
+        "apps/web/test/support/headless_live_agent_pool.exs",
+        "workers/rust/crates/cli/tests/support/headless_live_server.rs",
+        "workers/rust/crates/cli/tests/support/headless_typed_task_identity.rs",
+        "docs/operator-task-ir-digest.md",
+        "reports/task-ir-typed-routing-20261011.md"
+      ],
+      "required_text": [
+        "real_typed_dispatch_requires_advertisement_and_recovers_original_receipts_after_orchestra_restart",
+        "receipt retrieval or rejected drift must not execute",
+        "lost Agent receipts are not replay authority",
+        "This is bounded read-only receipt recovery",
+        "Installed typed workflow continuation remains open"
+      ]
+    }
+  ]
+}

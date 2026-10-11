@@ -96,7 +96,8 @@ defmodule KyuubikiWeb.Orchestra.LeaseSqlBackend do
   end
 
   defp query(sql, params) do
-    SQL.query(repo(), sql, params, timeout: query_timeout_ms())
+    # Raw SQL must share the selected pool and transaction with checkpoint writes.
+    SQL.query(apply(repo(), :get_dynamic_repo, []), sql, params, timeout: query_timeout_ms())
   rescue
     _error -> {:error, :lease_query_failed}
   catch

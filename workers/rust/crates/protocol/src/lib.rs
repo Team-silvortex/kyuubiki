@@ -10,6 +10,7 @@ mod operator;
 mod operator_task_admission;
 mod operator_task_ir;
 mod solver_execution_capability;
+mod task_digest_v2;
 mod workflow;
 
 mod types {
@@ -71,13 +72,14 @@ pub use operator_task_ir::{
     OperatorTaskExecutionPreview, OperatorTaskExecutionSummary, OperatorTaskSummaryError,
     OperatorTaskSummaryErrorCode, canonical_json, canonical_json_sha256,
     compute_operator_task_digest, operator_task_digest_fields, preview_operator_task_execution,
-    summarize_operator_task_execution, summarize_operator_task_execution_checked,
-    verify_operator_task_digest,
+    seal_operator_task_digest, summarize_operator_task_execution,
+    summarize_operator_task_execution_checked, verify_operator_task_digest,
 };
 pub use solver_execution_capability::{
     AGENT_BUILTIN_SOLVER_OPERATOR_IDS, SolverExecutionCapability, SolverExecutionCapabilityReport,
     check_operator_task_execution_capability,
 };
+pub use task_digest_v2::{TASK_DIGEST_FIXED15_V1, TASK_DIGEST_TYPED_V2};
 pub use types::acoustic::*;
 pub use types::acoustic_results::*;
 pub use types::cohesive_interface::*;
@@ -109,9 +111,9 @@ pub use workflow::{
     MagnetostaticHeatToThermoPlaneQuad2dWorkflowResult, WorkflowArtifactLineage,
     WorkflowArtifactProjection, WorkflowBranchDecision, WorkflowCachePolicy, WorkflowDefaults,
     WorkflowEdge, WorkflowGraph, WorkflowGraphRunOptions, WorkflowGraphRunRequest,
-    WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind, WorkflowNodePortRef,
-    WorkflowNodeRunStatus, WorkflowNodeRunTrace, WorkflowPort, WorkflowProgressEvent,
-    coupled_workflow_descriptors, supported_coupled_workflow_kinds,
+    WorkflowGraphRunResult, WorkflowNativeTaskDigestEncoding, WorkflowNode, WorkflowNodeKind,
+    WorkflowNodePortRef, WorkflowNodeRunStatus, WorkflowNodeRunTrace, WorkflowPort,
+    WorkflowProgressEvent, coupled_workflow_descriptors, supported_coupled_workflow_kinds,
 };
 
 pub const RPC_VERSION: u8 = 1;

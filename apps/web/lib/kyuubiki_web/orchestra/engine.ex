@@ -8,10 +8,15 @@ defmodule KyuubikiWeb.Orchestra.Engine do
 
   alias KyuubikiWeb.AnalysisJobSupport
   alias KyuubikiWeb.Playground.AgentRpcTransport
+  alias KyuubikiWeb.Orchestra.WorkflowSolveCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowBranchCheckpoint
+  alias KyuubikiWeb.WorkflowCondition
   alias KyuubikiWeb.WorkflowGraphPreflight
+  alias KyuubikiWeb.WorkflowGraphProvenance
   alias KyuubikiWeb.WorkflowGraphResponse
   alias KyuubikiWeb.WorkflowGraphRunner
   alias KyuubikiWeb.WorkflowNativeOperatorRuntime
+  alias KyuubikiWeb.WorkflowTaskDigestPolicy
   alias KyuubikiWeb.WorkflowOperatorCatalog
   alias KyuubikiWeb.WorkflowOperatorRuntime
   alias KyuubikiWeb.WorkflowTemplateCatalog
@@ -80,57 +85,16 @@ defmodule KyuubikiWeb.Orchestra.Engine do
       when is_map(input_artifacts) and is_map(orchestration_context) and
              (is_nil(progress_callback) or is_function(progress_callback, 1)) and
              is_map(response_options) and is_list(execution_options) do
-    WorkflowGraphRunner.run(
-      graph,
-      input_artifacts,
-      dataset_contract: Map.get(graph, "dataset_contract"),
-      result_options: response_options,
-      progress_callback: progress_callback,
-      execute_solve: fn operator_id, payload, node ->
-        WorkflowOperatorRuntime.run_solve_operator(
-          operator_id,
-          payload,
-          Map.put(node, "orchestration_context", orchestration_context),
-          operator_activity_callback(node, progress_callback),
-          before_dispatch: operator_dispatch_callback(node, progress_callback)
-        )
-      end,
-      execute_transform: fn id, payload, config, node ->
-        if WorkflowNativeOperatorRuntime.supports?("transform", id),
-          do:
-            WorkflowNativeOperatorRuntime.run(
-              "transform",
-              id,
-              payload,
-              config,
-              node,
-              orchestration_context,
-              on_progress: operator_activity_callback(node, progress_callback),
-              before_dispatch: operator_dispatch_callback(node, progress_callback),
-              recover_native_results:
-                Keyword.get(execution_options, :recover_native_results, false)
-            ),
-          else: WorkflowOperatorRuntime.run_transform_operator(id, payload, config)
-      end,
-      execute_extract: fn id, payload, config, node ->
-        if WorkflowNativeOperatorRuntime.supports?("extract", id),
-          do:
-            WorkflowNativeOperatorRuntime.run(
-              "extract",
-              id,
-              payload,
-              config,
-              node,
-              orchestration_context,
-              on_progress: operator_activity_callback(node, progress_callback),
-              before_dispatch: operator_dispatch_callback(node, progress_callback),
-              recover_native_results:
-                Keyword.get(execution_options, :recover_native_results, false)
-            ),
-          else: WorkflowOperatorRuntime.run_extract_operator(id, payload, config)
-      end,
-      execute_export: &WorkflowOperatorRuntime.run_export_operator/3
-    )
+    with {:ok, encoding} <- WorkflowTaskDigestPolicy.resolve(graph) do
+      run_graph(
+        graph,
+        input_artifacts,
+        orchestration_context,
+        progress_callback,
+        response_options,
+        Keyword.put(execution_options, :native_task_digest_encoding, encoding)
+      )
+    end
   end
 
   def execute_workflow_graph(
@@ -142,6 +106,92 @@ defmodule KyuubikiWeb.Orchestra.Engine do
         _execution_options
       ),
       do: {:error, :invalid_workflow_graph}
+
+  defp run_graph(
+         graph,
+         input_artifacts,
+         orchestration_context,
+         progress_callback,
+         response_options,
+         execution_options
+       ) do
+    WorkflowGraphRunner.run(
+      graph,
+      input_artifacts,
+      dataset_contract: Map.get(graph, "dataset_contract"),
+      result_options: response_options,
+      progress_callback: progress_callback,
+      execute_condition: fn payload, node, binding ->
+        WorkflowBranchCheckpoint.run(
+          node,
+          payload,
+          WorkflowGraphProvenance.bind_context(orchestration_context, binding),
+          execution_options,
+          fn ->
+            WorkflowCondition.decide(payload, node)
+          end
+        )
+      end,
+      execute_solve: fn operator_id, payload, node, binding ->
+        context = WorkflowGraphProvenance.bind_context(orchestration_context, binding)
+
+        WorkflowSolveCheckpoint.run(
+          node,
+          payload,
+          context,
+          execution_options,
+          fn ->
+            WorkflowOperatorRuntime.run_solve_operator(
+              operator_id,
+              payload,
+              Map.put(node, "orchestration_context", context),
+              operator_activity_callback(node, progress_callback),
+              before_dispatch: operator_dispatch_callback(node, progress_callback)
+            )
+          end
+        )
+      end,
+      execute_transform: fn id, payload, config, node, binding ->
+        if WorkflowNativeOperatorRuntime.supports?("transform", id),
+          do:
+            WorkflowNativeOperatorRuntime.run(
+              "transform",
+              id,
+              payload,
+              config,
+              node,
+              WorkflowGraphProvenance.bind_context(orchestration_context, binding),
+              on_progress: operator_activity_callback(node, progress_callback),
+              before_dispatch: operator_dispatch_callback(node, progress_callback),
+              native_task_digest_encoding:
+                Keyword.fetch!(execution_options, :native_task_digest_encoding),
+              recover_native_results:
+                Keyword.get(execution_options, :recover_native_results, false)
+            ),
+          else: WorkflowOperatorRuntime.run_transform_operator(id, payload, config)
+      end,
+      execute_extract: fn id, payload, config, node, binding ->
+        if WorkflowNativeOperatorRuntime.supports?("extract", id),
+          do:
+            WorkflowNativeOperatorRuntime.run(
+              "extract",
+              id,
+              payload,
+              config,
+              node,
+              WorkflowGraphProvenance.bind_context(orchestration_context, binding),
+              on_progress: operator_activity_callback(node, progress_callback),
+              before_dispatch: operator_dispatch_callback(node, progress_callback),
+              native_task_digest_encoding:
+                Keyword.fetch!(execution_options, :native_task_digest_encoding),
+              recover_native_results:
+                Keyword.get(execution_options, :recover_native_results, false)
+            ),
+          else: WorkflowOperatorRuntime.run_extract_operator(id, payload, config)
+      end,
+      execute_export: &WorkflowOperatorRuntime.run_export_operator/3
+    )
+  end
 
   defp operator_dispatch_callback(node, progress_callback) do
     fn ->

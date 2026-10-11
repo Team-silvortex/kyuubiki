@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source macOS Orchestra recovery binds exact solve/branch checkpoint invocations and native TaskIR receipts to recursively selected source paths. Controlled application restarts reject equal-valued source switches and preserve unused-alternative independence; two actual Agent/BEAM restart rounds retain unchanged routes. This is bounded contract/recovery evidence, not authenticated data provenance, general durable continuation, independent numerical accuracy, scale or operational qualification.",
+  "evidence_claims": [
+    {
+      "id": "workflow-consumed-path-recovery-binding",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_graph_provenance.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_scheduler.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+        "apps/web/test/kyuubiki_web/workflow_graph_provenance_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_provenance_restart_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_solve_checkpoint_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_branch_checkpoint_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_result_recovery_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_workflow_native_receipt_recovery.rs",
+        "docs/book-ch05-workflow-and-operators.html",
+        "reports/workflow-consumed-path-recovery-20261011.md"
+      ],
+      "required_text": [
+        "workflow_input_binding_sha256",
+        "Each artifact retains one ephemeral path digest, not its ancestors or value.",
+        "recursive path binding distinguishes sources behind the same join output",
+        "unused paths and publication order do not change the selected binding",
+        "equal payload from a changed fallback source blocks solve reuse",
+        "unused failed alternative may change without invalidating the same fallback",
+        "equal inputs cannot reuse a solve with changed or previously unbound provenance",
+        "equal inputs cannot reuse a decision with changed or previously unbound provenance",
+        "identical payloads from a changed consumed path cannot adopt an original receipt",
+        "real_branch_workflow_restart_retains_route_before_native_receipt_recovery",
+        "Source switches are tested with a controlled typed-solve client",
+        "not general durable per-node continuation"
+      ]
+    }
+  ]
+}

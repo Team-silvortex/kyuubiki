@@ -3,6 +3,53 @@ defmodule KyuubikiWeb.WorkflowCondition do
   @operators ~w(truthy falsy eq neq gt gte lt lte contains)
   @max_index 18_446_744_073_709_551_615
 
+  def decide(payload, node) do
+    with {:ok, predicate_result} <- evaluate(payload, Map.get(node, "config")),
+         {:ok, output} <- select_output(node, predicate_result) do
+      {:ok, %{"chosen_output" => output["id"], "predicate_result" => predicate_result}}
+    end
+  end
+
+  def validate_decision(node, %{"chosen_output" => port, "predicate_result" => result} = decision)
+      when is_boolean(result) and map_size(decision) == 2 do
+    with {:ok, output} <- select_output(node, result),
+         true <- output["id"] == port do
+      {:ok, output}
+    else
+      _ -> {:error, :invalid_condition_decision}
+    end
+  end
+
+  def validate_decision(_node, _decision), do: {:error, :invalid_condition_decision}
+
+  def select_output(node, predicate_result) when is_map(node) and is_boolean(predicate_result) do
+    outputs = Map.get(node, "outputs", [])
+
+    if is_list(outputs) and
+         Enum.all?(outputs, &(is_map(&1) and is_binary(&1["id"]) and &1["id"] != "")),
+       do: choose_output(outputs, predicate_result),
+       else: {:error, :invalid_condition_outputs}
+  end
+
+  def select_output(_node, _predicate_result), do: {:error, :invalid_condition_outputs}
+
+  defp choose_output(outputs, predicate_result) do
+    selected =
+      Enum.find(outputs, fn output ->
+        output_id = Map.get(output, "id")
+
+        (predicate_result and output_id in ["if_true", "true"]) or
+          (!predicate_result and output_id in ["if_false", "false"])
+      end) ||
+        if predicate_result do
+          List.first(outputs)
+        else
+          Enum.at(outputs, 1) || List.first(outputs)
+        end
+
+    if selected, do: {:ok, selected}, else: {:error, :missing_condition_outputs}
+  end
+
   def evaluate(payload, config) do
     with {:ok, predicate} <- predicate(config),
          {:ok, operator} <- operator(predicate),

@@ -1,4 +1,7 @@
-use kyuubiki_protocol::check_operator_task_admission;
+use kyuubiki_protocol::{
+    TASK_DIGEST_FIXED15_V1, TASK_DIGEST_TYPED_V2, check_operator_task_admission,
+    compute_operator_task_digest, seal_operator_task_digest,
+};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use std::ffi::OsString;
@@ -62,6 +65,7 @@ enum CheckOutcome {
 
 fn check_contracts(root: &Path) -> RunnerResult<CheckOutcome> {
     let schema = read_json(root, SCHEMA_PATH)?;
+    validate_digest_encodings(&schema)?;
     let constraints = match parse_constraints(&schema) {
         Ok(constraints) => constraints,
         Err(issue) => return Ok(CheckOutcome::Issue(issue)),
@@ -116,10 +120,12 @@ fn check_contracts(root: &Path) -> RunnerResult<CheckOutcome> {
     if let Err(issue) = validate_golden_manifest(root, &tasks_by_path) {
         return Ok(CheckOutcome::Issue(issue));
     }
+    validate_typed_vectors(root)?;
     Ok(CheckOutcome::Ok(task_count))
 }
 
 fn run_self_test(root: &Path) -> RunnerResult<()> {
+    validate_digest_encodings(&read_json(root, SCHEMA_PATH)?)?;
     let task = serde_json::json!({
         "operator": { "kind": "transform" },
         "execution_program": { "program_kind": "solver" }
@@ -134,7 +140,55 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
     }
     run_admission_self_test(root)?;
     run_digest_self_test(root)?;
+    run_typed_digest_self_test(root)?;
     run_descriptor_digest_self_test(root)
+}
+
+fn validate_digest_encodings(schema: &Value) -> RunnerResult<()> {
+    let declaration = &schema["x-kyuubiki-task-digest-encodings"];
+    if declaration["selector"] != "integrity.task_digest_encoding"
+        || declaration["absent_default"] != TASK_DIGEST_FIXED15_V1
+        || declaration["typed_encoding"] != TASK_DIGEST_TYPED_V2
+        || schema.pointer("/properties/integrity/properties/task_digest_encoding/enum")
+            != Some(&serde_json::json!([
+                TASK_DIGEST_FIXED15_V1,
+                TASK_DIGEST_TYPED_V2
+            ]))
+    {
+        return Err("TaskIR schema must declare the supported digest encodings and absent-only legacy default".to_string());
+    }
+    Ok(())
+}
+
+fn validate_typed_vectors(root: &Path) -> RunnerResult<()> {
+    let fixture = read_json(root, "schemas/examples.task-ir-typed-digest.json")?;
+    let cases = fixture["cases"]
+        .as_array()
+        .ok_or("typed digest vectors require cases")?;
+    if fixture["encoding"] != TASK_DIGEST_TYPED_V2 || cases.len() != 26 {
+        return Err("typed digest vector encoding or case coverage changed".to_string());
+    }
+    for case in cases {
+        let mut task = serde_json::json!({"input_artifact":case["value"]});
+        seal_operator_task_digest(&mut task, TASK_DIGEST_TYPED_V2)?;
+        if task["integrity"]["task_digest"] != case["task_digest"] {
+            return Err(format!("typed digest vector mismatch: {case}"));
+        }
+    }
+    Ok(())
+}
+
+fn run_typed_digest_self_test(root: &Path) -> RunnerResult<()> {
+    validate_typed_vectors(root)?;
+    let mut task = read_json(root, EXAMPLE_PATHS[0])?;
+    task["config"] = serde_json::json!({"probe":1e-30});
+    seal_operator_task_digest(&mut task, TASK_DIGEST_TYPED_V2)?;
+    validate_task_digest(&task, &[], "self-typed")?;
+    task["config"]["probe"] = Value::from(2e-30);
+    if validate_task_digest(&task, &[], "self-typed-drift").is_ok() {
+        return Err("self-test did not reject typed numeric drift".to_string());
+    }
+    Ok(())
 }
 
 fn run_admission_self_test(root: &Path) -> RunnerResult<()> {
@@ -341,7 +395,8 @@ fn validate_task_digest(
             "{context}: integrity.task_digest must be a non-empty string"
         ));
     }
-    let actual = compute_task_digest(task);
+    let actual =
+        compute_operator_task_digest(task).map_err(|error| format!("{context}: {error}"))?;
     if expected != actual {
         return Err(format!(
             "{context}: integrity.task_digest mismatch; expected {expected}, computed {actual}"
@@ -467,16 +522,6 @@ fn validate_manifest_values(
         ));
     }
     Ok(())
-}
-
-fn compute_task_digest(task: &Value) -> String {
-    let mut payload = Map::new();
-    for field in REQUIRED_DIGEST_FIELDS {
-        if let Some(value) = task.get(*field) {
-            payload.insert(field.to_string(), value.clone());
-        }
-    }
-    sha256_canonical(&Value::Object(payload))
 }
 
 fn compute_descriptor_digest(task: &Value) -> Result<String, String> {

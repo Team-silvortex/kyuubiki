@@ -88,6 +88,7 @@ fn run_large_chain_case_with_all_options(
         entry_nodes: vec!["heat_model".to_string()],
         output_nodes: vec!["thermo_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

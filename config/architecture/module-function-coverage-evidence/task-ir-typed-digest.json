@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Explicit opt-in typed IEEE-754 v2 TaskIR digest encoding preserves decoded binary64 and bounded integer identity with incremental Rust/Elixir hashing, independent control-plane/SDK/Agent verification, shared vectors and real source macOS HTTP/TCP diagnostic execution. Follow-up evidence adds source capability routing and bounded native workflow recovery. Legacy default and installed/package-host rollout remain open; this is verified contract evidence, not all-author qualification or authentication.",
+  "evidence_claims": [
+    {
+      "id": "task-ir-typed-numeric-identity-opt-in",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-protocol", "orchestra-control-plane", "runtime-agent-cli", "sdk-headless"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "workers/rust/crates/protocol/src/task_digest_v2.rs",
+        "workers/rust/crates/protocol/src/operator_task_ir.rs",
+        "workers/rust/crates/protocol/src/tests/task_digest_v2.rs",
+        "workers/rust/crates/protocol/src/tests/operator_task_ir_fuzz.rs",
+        "workers/rust/crates/headless-sdk/src/operator_task_validation_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_typed_task_identity.rs",
+        "workers/rust/crates/script-runner/src/operator_task_ir_contract.rs",
+        "apps/web/lib/kyuubiki_web/task_digest_v2.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_ir.ex",
+        "apps/web/test/kyuubiki_web/orchestra/task_digest_v2_test.exs",
+        "apps/web/test/kyuubiki_web/api/task_digest_v2_api_test.exs",
+        "apps/web/test/support/task_digest_v2_authoring.exs",
+        "schemas/operator-task-ir.schema.json",
+        "schemas/examples.task-ir-typed-digest.json",
+        "docs/operator-task-ir-digest.md",
+        "reports/task-ir-typed-digest-20261011.md"
+      ],
+      "required_text": [
+        "kyuubiki.task-digest/typed-ieee754-v2",
+        "typed_digest_matches_shared_cross_language_vectors_after_json_roundtrip",
+        "typed_digest_preserves_shared_generated_binary64_corpus_through_json",
+        "typed_digest_encoding_cannot_be_removed_downgraded_or_forged",
+        "typed_digest_covers_every_projected_field_and_distinguishes_numeric_types",
+        "sdk_can_explicitly_seal_typed_tasks_and_reject_numeric_drift",
+        "real_rust_and_elixir_typed_tasks_are_verified_independently_by_agent_and_http",
+        "API encoding errors are explicit and the next valid task still succeeds",
+        "validate_digest_encodings",
+        "Default rollout and installed v2 crash recovery remain open"
+      ]
+    }
+  ]
+}

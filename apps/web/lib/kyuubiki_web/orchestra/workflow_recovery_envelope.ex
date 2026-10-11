@@ -9,9 +9,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   """
 
   alias KyuubikiWeb.Storage.DurableJson
+  alias KyuubikiWeb.Orchestra.WorkflowSolveCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowBranchCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowExecutionEnvelope
+  alias KyuubikiWeb.WorkflowTaskDigestPolicy
 
   @schema_version "kyuubiki.workflow-recovery/v1"
-  @envelope_schema "kyuubiki.workflow-execution-envelope/v1"
   @checkpoint_contract "kyuubiki.operator_task_batch_checkpoint_verification/v1"
   @internal_key "_workflow_recovery"
   @pure_export_operators [
@@ -30,37 +33,36 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   def new(graph, input_artifacts, orchestration_context, response_options)
       when is_map(graph) and is_map(input_artifacts) and is_map(orchestration_context) and
              is_map(response_options) do
-    envelope =
-      %{
-        "schema_version" => @envelope_schema,
-        "graph" => graph,
-        "input_artifacts" => input_artifacts,
-        "orchestration_context" => orchestration_context,
-        "response_options" => response_options
-      }
-      |> normalize_json_numbers()
+    with {:ok, envelope, encoding} <-
+           WorkflowExecutionEnvelope.pack(
+             graph,
+             input_artifacts,
+             orchestration_context,
+             response_options
+           ) do
+      {retry_safety, checkpoint} = recovery_policy(graph)
+      now = timestamp()
 
-    {retry_safety, checkpoint} = recovery_policy(graph)
-    now = timestamp()
-
-    {:ok,
-     %{
-       "schema_version" => @schema_version,
-       "digest_algorithm" => "sha256",
-       "envelope_sha256" => digest(envelope),
-       "envelope" => envelope,
-       "workflow_id" => Map.get(graph, "id"),
-       "retry_safety" => retry_safety,
-       "checkpoint" => checkpoint,
-       "checkpoint_digest" => checkpoint_digest(checkpoint),
-       "state" => "pending",
-       "generation" => 0,
-       "attempt" => 0,
-       "owner_session_id" => nil,
-       "created_at" => now,
-       "updated_at" => now,
-       "history" => [event("prepared", 0, 0, now, %{})]
-     }}
+      {:ok,
+       %{
+         "schema_version" => @schema_version,
+         "digest_algorithm" => "sha256",
+         "envelope_sha256" => digest(envelope),
+         "envelope" => envelope,
+         "native_task_digest_encoding" => encoding,
+         "workflow_id" => Map.get(graph, "id"),
+         "retry_safety" => retry_safety,
+         "checkpoint" => checkpoint,
+         "checkpoint_digest" => checkpoint_digest(checkpoint),
+         "state" => "pending",
+         "generation" => 0,
+         "attempt" => 0,
+         "owner_session_id" => nil,
+         "created_at" => now,
+         "updated_at" => now,
+         "history" => [event("prepared", 0, 0, now, %{})]
+       }}
+    end
   rescue
     _error in [Jason.EncodeError, Protocol.UndefinedError, ArgumentError] ->
       {:error, :invalid_workflow_recovery_envelope}
@@ -75,7 +77,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
           "schema_version" => @schema_version,
           "digest_algorithm" => "sha256",
           "envelope_sha256" => expected,
-          "envelope" => %{"schema_version" => @envelope_schema} = envelope,
+          "envelope" => %{} = envelope,
           "retry_safety" => retry_safety,
           "state" => state,
           "generation" => generation,
@@ -89,32 +91,31 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
                "checkpoint_required"
              ] and is_binary(state) and is_integer(generation) and generation >= 0 and
              is_integer(attempt) and attempt >= 0 do
-    {expected_safety, expected_checkpoint} = recovery_policy(Map.get(envelope, "graph", %{}))
+    with :ok <- verify_digest(envelope, expected),
+         {:ok, execution} <- WorkflowExecutionEnvelope.unpack(envelope),
+         {:ok, encoding} <- WorkflowTaskDigestPolicy.resolve(execution["graph"]) do
+      {expected_safety, expected_checkpoint} = recovery_policy(execution["graph"])
 
-    cond do
-      not valid_digest?(expected) ->
-        {:error, :invalid_workflow_recovery_digest}
+      cond do
+        Map.get(recovery, "native_task_digest_encoding", WorkflowTaskDigestPolicy.legacy()) !=
+            encoding ->
+          {:error, :workflow_recovery_policy_mismatch}
 
-      digest(envelope) != expected ->
-        {:error, :workflow_recovery_digest_mismatch}
+        retry_safety != expected_safety or Map.get(recovery, "checkpoint") != expected_checkpoint ->
+          {:error, :workflow_recovery_policy_mismatch}
 
-      not valid_envelope?(envelope) ->
-        {:error, :invalid_workflow_execution_envelope}
+        Map.get(recovery, "workflow_id") != get_in(execution, ["graph", "id"]) ->
+          {:error, :workflow_recovery_identity_mismatch}
 
-      retry_safety != expected_safety or Map.get(recovery, "checkpoint") != expected_checkpoint ->
-        {:error, :workflow_recovery_policy_mismatch}
+        Map.get(recovery, "checkpoint_digest") != checkpoint_digest(expected_checkpoint) ->
+          {:error, :workflow_recovery_checkpoint_mismatch}
 
-      Map.get(recovery, "workflow_id") != get_in(envelope, ["graph", "id"]) ->
-        {:error, :workflow_recovery_identity_mismatch}
+        retry_safety == "checkpointed" and not verified_checkpoint?(expected_checkpoint) ->
+          {:error, :workflow_recovery_checkpoint_missing_or_invalid}
 
-      Map.get(recovery, "checkpoint_digest") != checkpoint_digest(expected_checkpoint) ->
-        {:error, :workflow_recovery_checkpoint_mismatch}
-
-      retry_safety == "checkpointed" and not verified_checkpoint?(expected_checkpoint) ->
-        {:error, :workflow_recovery_checkpoint_missing_or_invalid}
-
-      true ->
-        :ok
+        true ->
+          :ok
+      end
     end
   rescue
     _error in [Jason.EncodeError, Protocol.UndefinedError, ArgumentError] ->
@@ -122,6 +123,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   end
 
   def verify(_recovery), do: {:error, :invalid_workflow_recovery_record}
+
+  def execution(recovery), do: WorkflowExecutionEnvelope.unpack(Map.get(recovery, "envelope"))
+  defdelegate execution_value(recovery, path), to: WorkflowExecutionEnvelope, as: :value
 
   @spec claim(map(), String.t(), atom()) :: {:ok, map(), map()} | {:error, term()}
   def claim(recovery, session_id, reason)
@@ -227,16 +231,23 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
       "attempt" => Map.get(recovery, "attempt", 0),
       "envelope_sha256" => Map.get(recovery, "envelope_sha256"),
       "envelope_retained" => is_map(Map.get(recovery, "envelope")),
+      "native_task_digest_encoding" =>
+        Map.get(recovery, "native_task_digest_encoding", WorkflowTaskDigestPolicy.legacy()),
+      "solve_checkpoint_policy" => WorkflowSolveCheckpoint.policy(),
+      "solve_checkpoint_count" => checkpoint_count(recovery, WorkflowSolveCheckpoint.key()),
+      "branch_checkpoint_policy" => WorkflowBranchCheckpoint.policy(),
+      "branch_checkpoint_count" => checkpoint_count(recovery, WorkflowBranchCheckpoint.key()),
       "updated_at" => Map.get(recovery, "updated_at"),
       "history" => public_history(Map.get(recovery, "history", []))
     }
   end
 
-  defp valid_envelope?(envelope) do
-    is_map(Map.get(envelope, "graph")) and
-      is_map(Map.get(envelope, "input_artifacts")) and
-      is_map(Map.get(envelope, "orchestration_context")) and
-      is_map(Map.get(envelope, "response_options"))
+  defp verify_digest(envelope, expected) do
+    cond do
+      not valid_digest?(expected) -> {:error, :invalid_workflow_recovery_digest}
+      digest(envelope) != expected -> {:error, :workflow_recovery_digest_mismatch}
+      true -> :ok
+    end
   end
 
   defp claimable_state(%{"state" => state}) when state in @active_states, do: :ok
@@ -318,9 +329,21 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   end
 
   defp maybe_prune_terminal_envelope(recovery, state) when state in @terminal_states,
-    do: Map.delete(recovery, "envelope")
+    do:
+      Map.drop(recovery, [
+        "envelope",
+        WorkflowSolveCheckpoint.key(),
+        WorkflowBranchCheckpoint.key()
+      ])
 
   defp maybe_prune_terminal_envelope(recovery, _state), do: recovery
+
+  defp checkpoint_count(recovery, key) do
+    case Map.get(recovery, key) do
+      %{"entries" => entries} when is_map(entries) -> map_size(entries)
+      _ -> 0
+    end
+  end
 
   defp append_event(recovery, entry) do
     Map.update(recovery, "history", [entry], fn history ->
@@ -353,22 +376,6 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
   end
-
-  # PostgreSQL jsonb treats integral floats and integers as the same JSON number.
-  # Normalize before hashing so a durable round trip cannot invalidate the envelope.
-  defp normalize_json_numbers(value) when is_map(value) do
-    Map.new(value, fn {key, nested} -> {key, normalize_json_numbers(nested)} end)
-  end
-
-  defp normalize_json_numbers(value) when is_list(value),
-    do: Enum.map(value, &normalize_json_numbers/1)
-
-  defp normalize_json_numbers(value) when is_float(value) do
-    integer = trunc(value)
-    if value == integer, do: integer, else: value
-  end
-
-  defp normalize_json_numbers(value), do: value
 
   defp valid_digest?(digest), do: Regex.match?(~r/\A[0-9a-f]{64}\z/, digest)
   defp timestamp, do: DateTime.utc_now(:second) |> DateTime.to_iso8601()

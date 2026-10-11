@@ -20,6 +20,7 @@ fn runs_summary_compare_workflow_graph() {
         ],
         output_nodes: vec!["json_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

@@ -522,6 +522,12 @@ fn resolve_single_input_payload_for_execution(
     artifacts: &mut BTreeMap<String, Value>,
     retention: &WorkflowArtifactRetention,
 ) -> Result<Value, String> {
+    if incoming.len() > 1 {
+        return Err(format!(
+            "workflow node {} has ambiguous single input",
+            node.id
+        ));
+    }
     let planned_edge = incoming.first().ok_or_else(|| {
         format!(
             "workflow node {} requires at least one input artifact in the first executor",

@@ -105,6 +105,7 @@ fn runs_coupled_readiness_as_multi_input_workflow_gate() {
         ],
         output_nodes: vec!["readiness_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

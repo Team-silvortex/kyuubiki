@@ -17,6 +17,18 @@ defmodule KyuubikiWeb.RouterSupport do
 
   def unprocessable(conn, reason), do: respond_json(conn, 422, encode_unprocessable(reason))
 
+  def analysis_read_unavailable(conn),
+    do: respond_json(conn, 503, %{"error" => "analysis_store_unavailable"})
+
+  def respond_analysis_read(%{method: "GET"} = conn, payload) when is_map(payload),
+    do: respond_json(conn, 200, payload)
+
+  def respond_analysis_read(%{method: "GET"} = conn, {:error, :analysis_store_unavailable}),
+    do: analysis_read_unavailable(conn)
+
+  def respond_analysis_read(%{method: "GET"} = conn, {:error, reason}),
+    do: unprocessable(conn, reason)
+
   def request_base_url(conn) do
     trust_forwarded? = Application.get_env(:kyuubiki_web, :trust_forwarded_headers, false)
 

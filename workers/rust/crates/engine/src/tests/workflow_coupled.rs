@@ -21,6 +21,7 @@ fn runs_electrostatic_to_heat_to_thermo_summary_workflow_graph() {
         entry_nodes: vec!["electrostatic_model".to_string()],
         output_nodes: vec!["summary_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

@@ -34,7 +34,13 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCommitFixture do
                progress: Keyword.get(opts, :progress, 0.1)
              })
 
-    graph = %{"id" => id, "nodes" => [], "recovery_policy" => %{"retry_safety" => "idempotent"}}
+    graph =
+      Keyword.get(opts, :graph, %{
+        "id" => id,
+        "nodes" => [],
+        "recovery_policy" => %{"retry_safety" => "idempotent"}
+      })
+
     assert {:ok, pending} = WorkflowRecoveryEnvelope.new(graph, %{}, %{"job_id" => id}, %{})
     session = WorkflowRecoveryCoordinator.snapshot()["session_id"]
     assert {:ok, running, claim} = WorkflowRecoveryEnvelope.claim(pending, session, :initial)

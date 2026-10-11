@@ -7,7 +7,11 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntimeTest do
     OperatorTaskReadiness
   }
 
-  alias KyuubikiWeb.{WorkflowNativeOperatorRuntime, WorkflowOperatorCatalog}
+  alias KyuubikiWeb.{
+    WorkflowNativeInvocation,
+    WorkflowNativeOperatorRuntime,
+    WorkflowOperatorCatalog
+  }
 
   @operators [
     {"extract", "extract.transport_result_diagnostics"},
@@ -109,6 +113,34 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntimeTest do
     refute WorkflowNativeOperatorRuntime.supports?("extract", "extract.unknown")
   end
 
+  test "explicit typed workflow tasks are sealed without normalizing configuration" do
+    encoding = KyuubikiWeb.TaskDigestV2.encoding()
+    config = %{"witness" => [1, 1.0, -0.0, 0.0, 1.0e-30]}
+
+    assert {:ok, _} =
+             run(Client, config, "transform", "transform.score_thermal_quality",
+               native_task_digest_encoding: encoding
+             )
+
+    assert_receive {:task, task, _opts}
+    assert task["config"] === config
+    assert task["integrity"]["task_digest_encoding"] == encoding
+    assert {:ok, digest} = OperatorTaskIR.compute_task_digest_checked(task)
+    assert task["integrity"]["task_digest"] == digest
+    assert encoding in OperatorTaskIR.required_agent_capabilities(task)
+  end
+
+  test "invalid workflow digest encoding cannot reach dispatch" do
+    for encoding <- [nil, false, "unknown"] do
+      assert {:error, _} =
+               run(Client, %{}, "transform", "transform.score_thermal_quality",
+                 native_task_digest_encoding: encoding
+               )
+
+      refute_receive {:task, _, _}
+    end
+  end
+
   test "TaskIR binds original node, parent job, authority context and placement without copying physics" do
     for {kind, id} <- @operators do
       config = %{"enabled_terms" => ["explicit-term"]}
@@ -123,8 +155,50 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntimeTest do
       assert task["input_artifact"] == %{"nodes" => []}
       assert task["config"] == config
       assert task["orchestration_context"]["orch_id"] == "orch-a"
+
+      context = %{
+        "job_id" => "parent-job",
+        "orch_id" => "orch-a",
+        "control_mode" => "orch_managed"
+      }
+
+      assert task["orchestration_context"] ==
+               WorkflowNativeInvocation.bind_context(context, %{"nodes" => []}, config)
+
       assert task["runtime_hints"]["placement_tags"] == ["research"]
       assert task["runtime_hints"]["required_capabilities"] == ["task_ir"]
+    end
+  end
+
+  test "native invocation binding preserves numeric payloads and overrides caller claims" do
+    payload = %{"nodes" => [], "tiny" => [1.0e-300, -0.0]}
+    config = %{"threshold" => 2.0e-300}
+    context = %{"job_id" => "parent-job", "workflow_native_invocation_sha256" => "forged"}
+
+    for {kind, id} <- @operators do
+      assert {:ok, %{"ready" => true}} =
+               WorkflowNativeOperatorRuntime.run(
+                 kind,
+                 id,
+                 payload,
+                 config,
+                 %{"id" => "native", "kind" => kind, "operator_id" => id},
+                 context,
+                 client: Client
+               )
+
+      assert_receive {:task, task, _}
+
+      assert KyuubikiWeb.Storage.DurableJson.encode!(task["input_artifact"]) ==
+               KyuubikiWeb.Storage.DurableJson.encode!(payload)
+
+      assert KyuubikiWeb.Storage.DurableJson.encode!(task["config"]) ==
+               KyuubikiWeb.Storage.DurableJson.encode!(config)
+
+      assert task["orchestration_context"] ==
+               WorkflowNativeInvocation.bind_context(context, payload, config)
+
+      assert :ok = OperatorTaskExecutionSummary.validate_digest(task)
     end
   end
 

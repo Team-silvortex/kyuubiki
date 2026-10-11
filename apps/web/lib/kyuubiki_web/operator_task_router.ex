@@ -119,6 +119,9 @@ defmodule KyuubikiWeb.OperatorTaskRouter do
   defp operator_task_error_code(:missing_operator_task_digest),
     do: "operator_task_digest_missing"
 
+  defp operator_task_error_code({:no_matching_agent, _requirements}),
+    do: "no_matching_agent"
+
   defp operator_task_error_code(:missing_operator_task), do: "operator_task_missing"
   defp operator_task_error_code(:missing_operator_task_batch), do: "operator_task_batch_missing"
 
@@ -132,6 +135,18 @@ defmodule KyuubikiWeb.OperatorTaskRouter do
     do: "operator_task_entrypoint_mismatch"
 
   defp operator_task_error_code(:invalid_operator_task_ir), do: "operator_task_invalid"
+
+  defp operator_task_error_code({reason, _})
+       when reason in [
+              :unsupported_operator_task_digest_encoding,
+              :unsupported_operator_task_digest_algorithm,
+              :invalid_operator_task_digest_encoding
+            ],
+       do: "operator_task_digest_invalid"
+
+  defp operator_task_error_code(:invalid_operator_task_integrity),
+    do: "operator_task_digest_invalid"
+
   defp operator_task_error_code(:invalid_operator_task_batch), do: "operator_task_batch_invalid"
   defp operator_task_error_code(reason) when is_atom(reason), do: Atom.to_string(reason)
 

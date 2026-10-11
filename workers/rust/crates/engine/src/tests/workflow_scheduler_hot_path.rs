@@ -29,6 +29,7 @@ fn run_scheduler_only_chain(ephemeral_passes: bool) {
         entry_nodes: vec!["input".to_string()],
         output_nodes: vec!["output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(false),
         },

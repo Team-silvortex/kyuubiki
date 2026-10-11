@@ -392,7 +392,7 @@ defmodule KyuubikiWeb.Router do
   forward("/api/v1/central", to: KyuubikiWeb.CentralStoreRouter)
 
   get "/api/v1/jobs" do
-    with_auth(conn, :read, fn conn -> respond_json(conn, 200, Analysis.list_jobs()) end)
+    with_auth(conn, :read, fn conn -> respond_analysis_read(conn, Analysis.list_jobs()) end)
   end
 
   get "/api/v1/jobs/:job_id" do
@@ -438,7 +438,7 @@ defmodule KyuubikiWeb.Router do
   end
 
   get "/api/v1/results" do
-    with_auth(conn, :read, fn conn -> respond_json(conn, 200, Analysis.list_results()) end)
+    with_auth(conn, :read, fn conn -> respond_analysis_read(conn, Analysis.list_results()) end)
   end
 
   get "/api/v1/results/:job_id" do
@@ -449,6 +449,9 @@ defmodule KyuubikiWeb.Router do
 
         {:error, {:result_not_found, _}} ->
           respond_json(conn, 404, %{"error" => "result_not_found"})
+
+        {:error, :analysis_store_unavailable} ->
+          analysis_read_unavailable(conn)
 
         {:error, reason} ->
           unprocessable(conn, reason)
@@ -464,6 +467,9 @@ defmodule KyuubikiWeb.Router do
 
         {:error, {:result_not_found, _}} ->
           respond_json(conn, 404, %{"error" => "result_not_found"})
+
+        {:error, :analysis_store_unavailable} ->
+          analysis_read_unavailable(conn)
 
         {:error, {:unsupported_chunk_kind, _}} ->
           respond_json(conn, 422, %{"error" => "unsupported_chunk_kind"})
@@ -508,7 +514,7 @@ defmodule KyuubikiWeb.Router do
   end
 
   get "/api/v1/export/database" do
-    with_auth(conn, :read, fn conn -> respond_json(conn, 200, Analysis.export_database()) end)
+    with_auth(conn, :read, fn conn -> respond_analysis_read(conn, Analysis.export_database()) end)
   end
 
   get "/api/v1/export/security-events" do
@@ -531,7 +537,7 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/workloads/catalog" do
     with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Workloads.workload_catalog(request_base_url(conn)))
+      respond_analysis_read(conn, Workloads.workload_catalog(request_base_url(conn)))
     end)
   end
 
@@ -590,6 +596,9 @@ defmodule KyuubikiWeb.Router do
 
         {:error, :project_not_found} ->
           respond_json(conn, 404, %{"error" => "project_not_found"})
+
+        {:error, :analysis_store_unavailable} ->
+          analysis_read_unavailable(conn)
 
         {:error, reason} ->
           unprocessable(conn, reason)
@@ -770,6 +779,9 @@ defmodule KyuubikiWeb.Router do
 
   defp respond_success({conn, {:error, {:result_not_found, _job_id}}}, _status),
     do: respond_json(conn, 404, %{"error" => "result_not_found"})
+
+  defp respond_success({%{method: "GET"} = conn, {:error, :analysis_store_unavailable}}, _status),
+    do: analysis_read_unavailable(conn)
 
   defp respond_success({conn, {:error, reason}}, _status), do: unprocessable(conn, reason)
 

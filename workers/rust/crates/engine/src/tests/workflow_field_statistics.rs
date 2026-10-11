@@ -20,6 +20,7 @@ fn runs_electrostatic_plane_field_statistics_graph() {
         entry_nodes: vec!["electrostatic_model".to_string()],
         output_nodes: vec!["json_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

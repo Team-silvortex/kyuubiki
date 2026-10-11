@@ -18,6 +18,7 @@ fn runs_electrostatic_to_heat_workflow_graph() {
         entry_nodes: vec!["electrostatic_model".to_string()],
         output_nodes: vec!["heat_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },
@@ -230,6 +231,7 @@ fn runs_minimal_generic_workflow_graph() {
         entry_nodes: vec!["heat_model".to_string()],
         output_nodes: vec!["thermo_summary".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

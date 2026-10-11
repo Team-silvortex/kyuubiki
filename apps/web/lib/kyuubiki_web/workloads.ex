@@ -5,62 +5,71 @@ defmodule KyuubikiWeb.Workloads do
 
   alias KyuubikiWeb.Analysis
   alias KyuubikiWeb.Library
+  alias KyuubikiWeb.Storage.ReadSnapshot
 
   @project_schema_version "kyuubiki.project/v2"
   @project_layout_version "kyuubiki.project-layout/v1"
   @workload_catalog_version "kyuubiki.workload-catalog/v1"
 
-  def workload_catalog(base_url) when is_binary(base_url) do
-    {:ok, projects} = Library.list_projects()
-    jobs = Analysis.list_jobs()["jobs"]
-    results = Analysis.list_results()["results"]
+  @spec workload_catalog(String.t()) :: map() | {:error, term()}
+  def workload_catalog(base_url) when is_binary(base_url),
+    do: ReadSnapshot.run(fn -> read_workload_catalog(base_url) end)
 
-    %{
-      "schema_version" => @workload_catalog_version,
-      "sourceLabel" => "Kyuubiki Control Plane",
-      "generated_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
-      "workloads" =>
-        Enum.map(projects, fn project ->
-          models = Map.get(project, "models", [])
-          versions = Enum.flat_map(models, &list_versions_for_model/1)
-          project_jobs = Enum.filter(jobs, &(&1["project_id"] == project["project_id"]))
-          project_job_ids = MapSet.new(Enum.map(project_jobs, & &1["job_id"]))
+  defp read_workload_catalog(base_url) do
+    with {:ok, projects} <- Library.list_projects(),
+         %{"jobs" => jobs} <- Analysis.list_jobs(),
+         %{"results" => results} <- Analysis.list_results() do
+      %{
+        "schema_version" => @workload_catalog_version,
+        "sourceLabel" => "Kyuubiki Control Plane",
+        "generated_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
+        "workloads" =>
+          Enum.map(projects, fn project ->
+            models = Map.get(project, "models", [])
+            versions = Enum.flat_map(models, &list_versions_for_model/1)
+            project_jobs = Enum.filter(jobs, &(&1["project_id"] == project["project_id"]))
+            project_job_ids = MapSet.new(Enum.map(project_jobs, & &1["job_id"]))
 
-          project_results =
-            Enum.filter(results, fn result ->
-              MapSet.member?(project_job_ids, result["job_id"])
-            end)
+            project_results =
+              Enum.filter(results, fn result ->
+                MapSet.member?(project_job_ids, result["job_id"])
+              end)
 
-          %{
-            "label" => project["name"],
-            "description" => project["description"],
-            "project_id" => project["project_id"],
-            "project_name" => project["name"],
-            "schema" => @project_schema_version,
-            "layout" => @project_layout_version,
-            "download_url" => "#{base_url}/api/v1/projects/#{project["project_id"]}/bundle",
-            "model_count" => length(models),
-            "version_count" => length(versions),
-            "job_count" => length(project_jobs),
-            "result_count" => length(project_results),
-            "analysis_domains" => workload_analysis_domains(models),
-            "analysis_families" => workload_analysis_families(models),
-            "thermal_intents" => workload_thermal_intents(models),
-            "tags" => workload_tags(models)
-          }
-        end)
-    }
+            %{
+              "label" => project["name"],
+              "description" => project["description"],
+              "project_id" => project["project_id"],
+              "project_name" => project["name"],
+              "schema" => @project_schema_version,
+              "layout" => @project_layout_version,
+              "download_url" => "#{base_url}/api/v1/projects/#{project["project_id"]}/bundle",
+              "model_count" => length(models),
+              "version_count" => length(versions),
+              "job_count" => length(project_jobs),
+              "result_count" => length(project_results),
+              "analysis_domains" => workload_analysis_domains(models),
+              "analysis_families" => workload_analysis_families(models),
+              "thermal_intents" => workload_thermal_intents(models),
+              "tags" => workload_tags(models)
+            }
+          end)
+      }
+    end
   end
 
-  def export_project_bundle(project_id) when is_binary(project_id) do
-    with {:ok, project} <- Library.get_project(project_id),
-         {:ok, models} <- Library.list_models(project_id) do
-      versions = Enum.flat_map(models, &list_versions_for_model/1)
-      jobs = project_jobs(project_id)
-      job_ids = MapSet.new(Enum.map(jobs, & &1["job_id"]))
+  @spec export_project_bundle(String.t()) :: {:ok, map()} | {:error, term()}
+  def export_project_bundle(project_id) when is_binary(project_id),
+    do: ReadSnapshot.run(fn -> read_project_bundle(project_id) end)
 
-      results =
-        Enum.filter(Analysis.list_results()["results"], &MapSet.member?(job_ids, &1["job_id"]))
+  defp read_project_bundle(project_id) do
+    with {:ok, project} <- Library.get_project(project_id),
+         {:ok, models} <- Library.list_models(project_id),
+         %{"jobs" => jobs} <- Analysis.list_jobs(),
+         %{"results" => results} <- Analysis.list_results() do
+      versions = Enum.flat_map(models, &list_versions_for_model/1)
+      jobs = Enum.filter(jobs, &(&1["project_id"] == project_id))
+      job_ids = MapSet.new(Enum.map(jobs, & &1["job_id"]))
+      results = Enum.filter(results, &MapSet.member?(job_ids, &1["job_id"]))
 
       {:ok,
        %{
@@ -91,11 +100,6 @@ defmodule KyuubikiWeb.Workloads do
 
     base = if slug == "", do: project["project_id"], else: slug
     "#{base || "project"}.kyuubiki.json"
-  end
-
-  defp project_jobs(project_id) do
-    Analysis.list_jobs()["jobs"]
-    |> Enum.filter(&(&1["project_id"] == project_id))
   end
 
   defp list_versions_for_model(model) do

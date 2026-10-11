@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.AnalysisExports do
   alias KyuubikiWeb.AnalysisJobRecords
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.SecurityEvents.Store, as: SecurityEventStore
+  alias KyuubikiWeb.Storage.ReadSnapshot
 
   @spec create_security_event(map()) :: {:ok, map()} | {:error, term()}
   def create_security_event(attrs) when is_map(attrs) do
@@ -116,29 +117,34 @@ defmodule KyuubikiWeb.AnalysisExports do
     |> Kernel.<>("\n")
   end
 
-  @spec export_database() :: map()
-  def export_database do
-    {:ok, projects} = Library.list_projects()
-    models = Enum.flat_map(projects, &Map.get(&1, "models", []))
+  @spec export_database() :: map() | {:error, term()}
+  def export_database, do: ReadSnapshot.run(&read_database/0)
 
-    model_versions =
-      models
-      |> Enum.flat_map(fn model ->
-        case Library.list_versions(model["model_id"]) do
-          {:ok, versions} -> versions
-          _ -> []
-        end
-      end)
+  defp read_database do
+    with {:ok, projects} <- Library.list_projects(),
+         %{"jobs" => jobs} <- AnalysisJobRecords.list_jobs(),
+         %{"results" => results} <- AnalysisJobRecords.list_results() do
+      models = Enum.flat_map(projects, &Map.get(&1, "models", []))
 
-    %{
-      "exported_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
-      "projects" => projects,
-      "models" => models,
-      "model_versions" => model_versions,
-      "jobs" => AnalysisJobRecords.list_jobs()["jobs"],
-      "results" => AnalysisJobRecords.list_results()["results"],
-      "security_events" => list_security_events()["events"]
-    }
+      model_versions =
+        models
+        |> Enum.flat_map(fn model ->
+          case Library.list_versions(model["model_id"]) do
+            {:ok, versions} -> versions
+            _ -> []
+          end
+        end)
+
+      %{
+        "exported_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
+        "projects" => projects,
+        "models" => models,
+        "model_versions" => model_versions,
+        "jobs" => jobs,
+        "results" => results,
+        "security_events" => list_security_events()["events"]
+      }
+    end
   end
 
   defp normalize_export_filters(filters) do

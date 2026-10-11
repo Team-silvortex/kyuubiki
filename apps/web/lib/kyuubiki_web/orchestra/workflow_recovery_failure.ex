@@ -4,6 +4,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.{LeaseStore, WorkflowNativeResultRecovery, WorkflowRecoveryEnvelope}
+  alias KyuubikiWeb.Orchestra.WorkflowSolveCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowBranchCheckpoint
 
   @active ~w(queued preprocessing partitioning solving postprocessing)a
 
@@ -61,6 +63,36 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
       {:ok, WorkflowRecoveryEnvelope.transition(recovery, "recovery_blocked", details), text}
     else
       {:error, :invalid_native_workflow_recovery_reason}
+    end
+  end
+
+  defp transition(recovery, {:workflow_solve_checkpoint_blocked, reason}) do
+    if WorkflowSolveCheckpoint.blocking_reason?(reason) do
+      text = "workflow recovery blocked: workflow_solve_checkpoint_#{reason}"
+
+      details = %{
+        "reason" => "workflow_solve_checkpoint_#{reason}",
+        "next_action" => "inspect_solve_checkpoint_before_explicit_resubmit"
+      }
+
+      {:ok, WorkflowRecoveryEnvelope.transition(recovery, "recovery_blocked", details), text}
+    else
+      {:error, :invalid_workflow_solve_checkpoint_reason}
+    end
+  end
+
+  defp transition(recovery, {:workflow_branch_checkpoint_blocked, reason}) do
+    if WorkflowBranchCheckpoint.blocking_reason?(reason) do
+      text = "workflow recovery blocked: workflow_branch_checkpoint_#{reason}"
+
+      details = %{
+        "reason" => "workflow_branch_checkpoint_#{reason}",
+        "next_action" => "inspect_branch_checkpoint_before_explicit_resubmit"
+      }
+
+      {:ok, WorkflowRecoveryEnvelope.transition(recovery, "recovery_blocked", details), text}
+    else
+      {:error, :invalid_workflow_branch_checkpoint_reason}
     end
   end
 

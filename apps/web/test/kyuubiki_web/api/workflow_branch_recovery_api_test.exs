@@ -1,6 +1,28 @@
 defmodule KyuubikiWeb.Api.WorkflowBranchRecoveryApiTest do
   use KyuubikiWeb.TestSupport.ApiRouterCase
   alias KyuubikiWeb.TestSupport.WorkflowReportingContract, as: Fixture
+  alias KyuubikiWeb.TestSupport.WorkflowPreflightContract, as: PreflightFixture
+
+  test "ambiguous input bindings are rejected before synchronous execution or job admission" do
+    cases =
+      Enum.filter(PreflightFixture.cases(), fn test_case ->
+        test_case["error"] == "single input" or test_case["id"] == "input-ignores-upstream"
+      end)
+
+    assert length(cases) == 6
+
+    for test_case <- cases, action <- ["run", "jobs"], mode <- ["full", "compact"] do
+      request =
+        PreflightFixture.request(test_case)
+        |> Map.put("response_options", %{"response_mode" => mode})
+
+      {422, error} = post_graph(action, request)
+      assert inspect(error) =~ test_case["error"]
+      refute Map.has_key?(error, "artifacts")
+      refute Map.has_key?(error, "job")
+      assert Store.list() == []
+    end
+  end
 
   test "synchronous recovery retains failure receipts in full and compact API results" do
     for compact <- [false, true], {bad, id, path} <- Fixture.failures(Fixture.request()) do

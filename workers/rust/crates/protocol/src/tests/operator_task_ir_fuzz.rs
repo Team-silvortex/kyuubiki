@@ -118,6 +118,9 @@ fn task_ir_fixture(case_index: usize) -> Value {
         },
         "integrity": {}
     });
+    if case_index % 2 == 0 {
+        value["integrity"]["task_digest_encoding"] = json!(crate::TASK_DIGEST_TYPED_V2);
+    }
     refresh_task_digest(&mut value);
     value
 }

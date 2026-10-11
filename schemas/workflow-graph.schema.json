@@ -95,6 +95,12 @@
         "orchestrated": {
           "type": "boolean"
         },
+        "native_task_digest_encoding": {
+          "type": "string",
+          "description": "Explicit encoding for native diagnostic/scoring TaskIR nodes. Does not change solve RPCs or authorize replay.",
+          "enum": ["kyuubiki.task-digest/fixed15-v1", "kyuubiki.task-digest/typed-ieee754-v2"],
+          "default": "kyuubiki.task-digest/fixed15-v1"
+        },
         "dispatch_policy": {
           "$ref": "#/$defs/workflowDispatchPolicy"
         },

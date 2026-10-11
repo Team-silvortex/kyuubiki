@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.WorkflowGraphPreflight do
   @moduledoc false
-  alias KyuubikiWeb.{WorkflowGraphRecovery, WorkflowJsonBudget}
+  alias KyuubikiWeb.{WorkflowGraphInputs, WorkflowGraphRecovery, WorkflowJsonBudget}
+  alias KyuubikiWeb.WorkflowTaskDigestPolicy
 
   @kinds ~w(input solve transform extract export condition output)
   @operator_kinds ~w(solve transform extract export)
@@ -20,6 +21,7 @@ defmodule KyuubikiWeb.WorkflowGraphPreflight do
 
     with :ok <- schema(graph["schema_version"]),
          :ok <- identifier(graph["id"], "workflow id", true),
+         {:ok, _encoding} <- WorkflowTaskDigestPolicy.resolve(graph),
          :ok <- bounded_list(nodes, "workflow nodes", 2048, false),
          :ok <- bounded_list(edges, "workflow edges", 4096),
          :ok <- WorkflowJsonBudget.validate(graph["dataset_contract"], "dataset_contract", 20_000),
@@ -27,7 +29,8 @@ defmodule KyuubikiWeb.WorkflowGraphPreflight do
          :ok <- validate_edges(edges, index),
          :ok <- validate_references(graph, index, "entry_nodes", "input"),
          :ok <- validate_references(graph, index, "output_nodes", "output"),
-         :ok <- acyclic(index, edges) do
+         :ok <- acyclic(index, edges),
+         :ok <- WorkflowGraphInputs.validate_bindings(nodes, edges) do
       validate_artifacts(input_artifacts, index)
     end
   end

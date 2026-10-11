@@ -52,6 +52,7 @@ fn runs_electrostatic_hotspot_alert_export_graph() {
         entry_nodes: vec!["electrostatic_model".to_string()],
         output_nodes: vec!["alert_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

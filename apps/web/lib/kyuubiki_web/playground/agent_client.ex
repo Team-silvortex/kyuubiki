@@ -13,15 +13,9 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   alias KyuubikiWeb.Playground.AgentRpcTransport
   alias KyuubikiWeb.Playground.AgentRegistry
   alias KyuubikiWeb.Playground.AgentTaskDispatch
+  alias KyuubikiWeb.Playground.AgentTaskRouting
 
   @rpc_version 1
-  @operator_control_opts [
-    :job_id,
-    :queue_timeout_ms,
-    :request_timeout_ms,
-    :orchestration,
-    :before_dispatch
-  ]
 
   @spec solve_bar_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_bar_1d(params, on_progress \\ fn _progress -> :ok end) do
@@ -223,7 +217,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
              OperatorTaskIR.agent_rpc_method(),
              OperatorTaskIR.agent_rpc_params(task_ir, opts),
              progress_handler,
-             operator_task_routing_opts(task_ir, opts)
+             AgentTaskRouting.for_task(task_ir, opts)
            ) do
       {:ok, OperatorTaskReadiness.normalize_agent_result(result)}
     end
@@ -263,66 +257,12 @@ defmodule KyuubikiWeb.Playground.AgentClient do
        when is_list(opts) and is_function(on_progress, 1),
        do: {opts, on_progress}
 
-  defp operator_task_routing_opts(task_ir, opts) do
-    task_ir
-    |> OperatorTaskIR.agent_routing_opts()
-    |> Keyword.merge(Keyword.take(opts, @operator_control_opts))
-    |> maybe_override_retry_policy(opts)
-    |> maybe_require_operator_package_runtime(task_ir, Keyword.get(opts, :mode))
-  end
-
-  defp maybe_override_retry_policy(routing_opts, opts) do
-    retry_safety = Keyword.get(opts, :retry_safety)
-    replay_checkpoint = Keyword.get(opts, :replay_checkpoint)
-
-    cond do
-      retry_safety in [:checkpoint_required, "checkpoint_required"] ->
-        Keyword.put(routing_opts, :retry_safety, retry_safety)
-
-      retry_safety in [:idempotent, "idempotent"] ->
-        Keyword.put(routing_opts, :retry_safety, retry_safety)
-
-      retry_safety in [:checkpointed, "checkpointed"] and
-          verified_replay_checkpoint?(replay_checkpoint) ->
-        routing_opts
-        |> Keyword.put(:retry_safety, retry_safety)
-        |> Keyword.put(:replay_checkpoint, replay_checkpoint)
-
-      true ->
-        routing_opts
-    end
-  end
-
-  defp verified_replay_checkpoint?(%{
-         "operator_task_batch_checkpoint_verification_contract" =>
-           "kyuubiki.operator_task_batch_checkpoint_verification/v1",
-         "status" => "verified",
-         "checkpoint_digest" => digest
-       })
-       when is_binary(digest),
-       do: Regex.match?(~r/\A[0-9a-f]{64}\z/, digest)
-
-  defp verified_replay_checkpoint?(_checkpoint), do: false
-
-  defp maybe_require_operator_package_runtime(routing_opts, task_ir, mode)
-       when mode in [:execute, "execute"] do
-    unbundled_native? =
-      get_in(task_ir, ["runtime_hints", "execution_mode"]) == "agent_native" and
-        get_in(task_ir, ["runtime_hints", "agent_fetchable"]) == false and
-        get_in(task_ir, ["execution_program", "package_ref"]) in [nil, ""]
-
-    if unbundled_native?,
-      do: routing_opts,
-      else: Keyword.put(routing_opts, :requires_operator_package_runtime, true)
-  end
-
-  defp maybe_require_operator_package_runtime(routing_opts, _task_ir, _mode), do: routing_opts
-
   @spec request_with_agent(String.t(), map(), (map() -> any()), keyword()) ::
           {:ok, map(), AgentPool.endpoint()} | {:error, term()}
   def request_with_agent(method, params, on_progress \\ fn _progress -> :ok end, opts \\ [])
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) and is_list(opts) do
     request_id = request_id()
+    opts = OperatorTaskIR.enforce_digest_routing(method, params, opts)
     opts = put_execution_lease(opts, request_id, method)
     request = build_request(request_id, method, params) |> put_rpc_job_id(method, opts)
 

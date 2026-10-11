@@ -345,7 +345,127 @@ parents in ten Agent executions without repeating diagnoses; a sixth restart
 also loses the Agent cache and blocks without replay, retaining its envelope.
 Missing or changed evidence cannot become skip-on-error success. This is bounded
 native receipt-assisted recovery, not general durable per-node continuation,
-typed solver reuse, exactly-once or installed/remote qualification.
+exactly-once or installed/remote qualification.
+
+The [bounded solve-artifact follow-up](../reports/workflow-solve-artifact-checkpoints-20261011.md)
+retains successful small typed-solve results in the existing private recovery
+record before dependent publication. Each parent retains at most 32 entries,
+512 KiB per output and 2 MiB total encoded checkpoint bytes; decoded output and
+container JSON budgets also apply. Original JSON number spelling is preserved
+so restored results do not change downstream TaskIR identity. Later authorized
+claims must match the parent, envelope, node and exact invocation digest.
+Corruption, changed input and failed commits cannot become skip-on-error success.
+Five fresh physical solve/diagnostic/scoring chains survive actual BEAM loss in
+fifteen Agent executions without repeating solved nodes. Oversize output remains
+uncached under the original replay policy, and ordinary terminal states prune
+checkpoint payloads. Local ancestors still replay; unknown dispatches, side
+effects, Agent-cache loss for native results and broad durable/scale qualification
+remain outside this bounded artifact-reuse mechanism.
+
+The [bounded branch-decision follow-up](../reports/workflow-branch-checkpoints-20261011.md)
+retains the first successful condition decision before publishing its selected
+port. Later owned claims reuse the decision only for the same parent, envelope,
+node and lossless input/context digest; replayed upstream drift blocks before
+either branch can dispatch, even with skip-on-error. The private ledger stores
+no input/output payload, is bounded to 64 entries and 64 KiB per parent, does not
+evict older decisions, and is pruned on ordinary terminal transitions. Two actual
+BEAM restarts preserve true/false routes through thermal/electrostatic native
+diagnosis and scoring in six Agent executions. Local transforms and joins still
+rebuild, unretained conditions use the original replay policy, and ambiguous
+dispatches or side-effect restrictions still deny recovery. This is bounded
+branch consistency, not general durable continuation or authenticated provenance.
+
+The [workflow input-binding follow-up](../reports/workflow-input-bindings-20261011.md)
+rejects additional connected inputs to single-payload nodes in both Rust and
+Orchestra, rather than executing only the first while claiming all as sources.
+Input nodes cannot ignore upstream edges. Named multi-input composition,
+first-available priority, spare declared ports and per-port output lineage remain
+supported. The gate applies before synchronous execution, async job admission
+and restored-graph checkpoint lookup; skip-on-error cannot bypass it. Two actual
+BEAM restart rounds still complete true/false thermal/electrostatic routes in six
+Agent executions. This tightens binding consistency without new snapshots,
+general durable continuation or independent numerical qualification.
+
+The [consumed-path recovery follow-up](../reports/workflow-consumed-path-recovery-20261011.md)
+also binds retained solve results, condition decisions and native TaskIR receipts
+to the actual consumed source path through Orchestra's rebuilt local nodes.
+Equal final input values cannot attach an old successful execution to a different
+fallback path. Each published artifact carries one ephemeral recursive digest;
+first-available joins include only the selected source, so changes to unused
+alternatives do not invalidate the same path. Computed bindings override caller
+values, preserve routing authority and add no persistent scheduler snapshots or
+artifact copies. Old unbound recovery evidence cannot be silently upgraded: a
+matching node with a different invocation requires explicit fresh submission.
+Controlled application restarts reproduce and reject source switches; two actual
+Agent/BEAM restart rounds confirm unchanged-route recovery in six executions.
+This is consumed-path consistency, not authenticated or complete data provenance,
+general durable continuation, exactly-once execution or scale qualification.
+
+The [native invocation precision follow-up](../reports/workflow-native-invocation-precision-20261011.md)
+closes a separate numeric-alias path in Orchestra's native diagnostic/scoring
+adapter. TaskIR v1 fixed-decimal encoding can assign the same digest to different
+tiny input or config values. A computed lossless JSON invocation digest now
+participates in native task identity without changing v1 encoding or rounding
+the payload. Caller bindings are overwritten; changed or previously unbound
+invocations block before receipt retrieval or redispatch. Same-name thermal
+tasks distinguish tiny physical inputs, and five actual-domain restart rounds
+retain solved outputs and original receipts without repeating work. This is an
+adapter-owned recovery guard, not independently recomputed Agent integrity or
+lossless TaskIR identity for all SDK/package authors. That broader protocol
+scope remains an explicit open tensor requirement.
+
+The [typed TaskIR digest follow-up](../reports/task-ir-typed-digest-20261011.md)
+adds explicit `typed-ieee754-v2` encoding selection without changing TaskIR
+structure or descriptor digests. Rust and Elixir authors hash typed binary64
+values and bounded integers incrementally; control plane, Rust SDK and Agent
+independently verify the selected digest. Shared vectors and a 1,024-value bit
+corpus cover exact JSON round trips, with actual HTTP/Agent tests across five
+diagnostic domains and both authors. Tiny drift, unknown encoding and marker
+removal fail before computation. This is verified opt-in support, not default
+rollout: installed typed workflow recovery, distributed package hosts and
+installed-platform acceptance remain open. No old record is resealed.
+
+The [typed routing follow-up](../reports/task-ir-typed-routing-20261011.md)
+requires an explicit Agent encoding capability and RPC method, excludes old or
+unprofiled fallbacks, and preserves derived requirements through the generic
+RPC entry point. Ten real Rust/Elixir tasks execute through HTTP across five
+diagnostic domains. An Orchestra restart recovers their original receipts
+without execution; an Agent restart loses receipts and returns unknown outcomes
+without replay or publication. This is source contract/read-only recovery
+evidence, not default adoption, authenticated discovery or installed qualification.
+
+The [typed workflow recovery follow-up](../reports/workflow-typed-execution-recovery-20261011.md)
+adds explicit `defaults.native_task_digest_encoding` selection to native
+diagnostic/scoring workflows, including typed Rust authoring. New-codec jobs
+store one lossless execution JSON string rather than normalized numeric maps;
+legacy jobs and default encoding are unchanged. Five solved physical-domain
+chains retain solve outputs, branch decisions and original native receipts
+across real Orchestra restarts with no repeated completed work. Scoring task
+identity remains the same, including integral floats, signed zero and tiny
+configuration values. A raw thermal input retains the same numeric types, while
+a lost Agent receipt blocks without replay or publication. SQLite and JSON
+regressions pass. The [PostgreSQL follow-up](../reports/workflow-typed-postgres-recovery-20261011.md)
+adds seven source macOS workflow rounds with a remote JSONB store, checkpoint
+rollback and selected-pool lease fencing. Four read APIs contain storage outages
+and return unchanged data after restoration. Installed/remote-Agent, default
+cold-start and package-host acceptance remain open; this does not qualify the
+separate revision-two PWDT lifecycle. Terminal pruning retains no second payload archive.
+
+The [collection outage follow-up](../reports/analysis-collection-outage-20261011.md)
+extends read containment to job/result lists, workload discovery, database export
+and project-bundle download. Known store failure returns an explicit unavailable
+error, not empty data or a partial attachment; restoration reads unchanged records.
+Successful response shapes, genuine empty collections, authorization-before-read,
+project 404s and private recovery exclusion remain intact. This is source service
+acceptance, not installed-GUI qualification.
+
+The [SQL export snapshot follow-up](../reports/analysis-export-snapshot-20261011.md)
+puts workload discovery, database export and project-bundle export inside one
+SQL read transaction. Concurrent model/version edits, project removal, joint
+job/result deletion and security-event publication cannot mix record generations.
+PostgreSQL uses read-only repeatable read; SQLite uses a deferred WAL snapshot.
+Ambient transactions are rejected rather than silently weakening isolation.
+JSON cross-store snapshots, external artifacts and full backup remain separate.
 
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job

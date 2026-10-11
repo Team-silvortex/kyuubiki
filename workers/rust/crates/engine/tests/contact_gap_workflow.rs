@@ -18,6 +18,7 @@ fn workflow_runs_contact_gap_1d_solver() {
             entry_nodes: vec!["contact_input".to_string()],
             output_nodes: vec!["contact_output".to_string()],
             defaults: WorkflowDefaults {
+                native_task_digest_encoding: Default::default(),
                 cache_policy: Some(WorkflowCachePolicy::Cached),
                 orchestrated: Some(true),
             },

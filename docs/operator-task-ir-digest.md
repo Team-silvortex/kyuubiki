@@ -13,9 +13,9 @@ The reference implementations currently live in:
 Both sides must keep the golden fixture below passing before changing TaskIR
 field coverage.
 
-## Digest algorithm
+## Legacy digest algorithm
 
-Both `descriptor_digest` and `task_digest` use:
+`descriptor_digest` and legacy `task_digest` use:
 
 1. Select the digest input fields.
 2. Encode the selected JSON value using Kyuubiki canonical JSON.
@@ -51,6 +51,181 @@ Float examples:
 - `160.0` -> `160.0`
 - `1.2e-5` -> `0.000012`
 - `7.0e10` -> `70000000000.0`
+
+This v1 encoding is not lossless numeric identity. For example, `1e-30` and
+`2e-30` both canonicalize to `0.0`, and adjacent floats can round to the same
+15-place value. A matching v1 digest alone does not establish that every
+original floating-point input is unchanged.
+
+## Native workflow invocation guard
+
+Orchestra's bounded native diagnostic/scoring adapter additionally computes
+`workflow_native_invocation_sha256` in `orchestration_context`. It hashes sorted
+lossless JSON for the actual input artifact, config and context, with an
+internal `kyuubiki.workflow-native-invocation/v1` domain tag. The binding field
+itself is omitted from that input so recomputation is idempotent; supplied
+binding values are replaced, not trusted. Other authority and selected-path
+fields remain unchanged and participate in the binding.
+
+The resulting hexadecimal string participates in the existing TaskIR digest.
+Original payload/config numbers are not rounded, rewritten or duplicated in
+retained records. This prevents the workflow recovery adapter from adopting an
+old receipt for a different exact invocation despite a fixed-decimal collision.
+Missing old bindings block reuse rather than being silently migrated or replayed.
+
+The Agent still verifies the existing v1 TaskIR digest for default/legacy tasks;
+it does not independently recompute this Elixir-adapter binding. This is not
+authentication or a lossless digest upgrade for arbitrary TaskIR authors.
+Explicit typed-v2 tasks use the independently recomputed encoding below instead.
+Default adoption and installed workflow recovery rollout remain open. See the
+[native precision report](../reports/workflow-native-invocation-precision-20261011.md).
+
+## Typed binary64 task digest
+
+Task structure remains `kyuubiki.operator-task-ir/v1`. Authors can explicitly
+select `integrity.task_digest_encoding = kyuubiki.task-digest/typed-ieee754-v2`
+with `digest_algorithm = sha256`. The task field projection is unchanged and
+compiled into the verifier; a supplied `task_digest_fields` list cannot narrow
+coverage. Descriptor digests retain their existing fixed-15 contract.
+
+SHA-256 consumes the ASCII domain `kyuubiki.task-digest/typed-ieee754-v2`, one
+zero byte, then the projected object encoded by this recursive grammar. Every
+length/count is an unsigned 64-bit big-endian integer; tags are ASCII bytes.
+
+| Value | Bytes |
+| --- | --- |
+| null | `n` |
+| true / false | `t` / `f` |
+| string | `s`, UTF-8 byte length, original UTF-8 bytes |
+| integer | `i`, decimal byte length, minimal ASCII decimal with optional minus |
+| float | `d`, the original eight big-endian IEEE-754 binary64 bytes |
+| array | `a`, item count, each encoded item in order |
+| object | `o`, pair count, encoded string key and value for each sorted pair |
+
+Object keys sort by UTF-8 bytes, including within nested objects. No Unicode
+normalization, decimal rounding, integer-to-float conversion, whitespace or JSON
+escape spelling participates. Type tags and lengths prevent user objects or
+strings from impersonating encoded numbers. `1` and `1.0`, positive/negative
+floating-point zero, tiny values and adjacent binary64 values have distinct
+preimages. The root projected object has depth zero; values deeper than 128 fail.
+
+The numeric model is **decoded finite binary64 plus int64/uint64-range integers**
+(`-9223372036854775808` through `18446744073709551615`). This is not exact decimal
+arithmetic or preservation of every possible JSON number token. Decimal tokens
+that decode to the same binary64 have the same identity and execution value.
+Elixir rejects larger integers, non-JSON values, non-string keys and invalid
+UTF-8 instead of converting them. Existing ingress size/depth limits still apply.
+
+Authors opt in explicitly:
+
+```rust
+use kyuubiki_headless_sdk::{TASK_DIGEST_TYPED_V2, seal_operator_task_digest};
+seal_operator_task_digest(&mut task, TASK_DIGEST_TYPED_V2)?;
+```
+
+```elixir
+{:ok, task} = OperatorTaskIR.seal_task_digest(task, KyuubikiWeb.TaskDigestV2.encoding())
+```
+
+Rust sealing updates integrity only after successful computation. Elixir returns
+an error without a changed task. Existing integrity metadata is otherwise
+preserved. Both hash incrementally rather than creating another encoded input
+copy; sorted objects need transient key-entry storage. No new retained artifacts,
+snapshots or database tables are introduced.
+
+Missing encoding means legacy `kyuubiki.task-digest/fixed15-v1` only. Explicit
+null, non-string or unknown encoding and unsupported algorithms fail closed.
+Verifiers never guess encoding by trying multiple digests. Removing/changing a
+v2 encoding marker without resealing fails; the distinct domain also prevents
+interpreting a typed digest as a legacy digest. Control plane, Rust SDK and
+Agent independently recompute the selected digest before execution admission.
+This detects changes, not the identity or authorization of the author.
+
+`schemas/examples.task-ir-typed-digest.json` retains 26 shared vectors plus a
+1,024-value deterministic binary64 corpus. Real source macOS transport tests
+cover Rust/Elixir authors, HTTP verification and independent Agent recomputation
+across five diagnostic domains, without the native adapter binding. This does
+not qualify all executable package hosts, installed peers, Python/Elixir SDK
+distribution or all persistence backends. Bounded source workflow recovery under v2
+is described below; installed and remote qualification remain open.
+Builders stay legacy by default; old records are not automatically resealed. See the
+[typed digest report](../reports/task-ir-typed-digest-20261011.md).
+
+### Agent capability routing and retained receipts
+
+Rust Agents advertise the exact encoding string as a capability ID with role
+`task_digest` and methods `run_operator_task_ir` / `fetch_operator_task_result`.
+Orchestra derives this requirement from the integrity selector, in addition to
+the task's declared runtime requirements. It does not alter the signed task or
+trust a caller option that asks for a different encoding. The generic task RPC
+entry point also retains this requirement if caller capabilities are empty.
+
+Typed tasks require an explicit capability ID and a declared RPC method.
+An old Agent, a role-only advertisement or an endpoint without metadata cannot
+be a typed fallback. A failed capable endpoint cannot fail over to those peers.
+No match returns `no_matching_agent` before dispatch. Operators using legacy
+encoding retain existing routing behavior. Advertisements are compatibility
+metadata, not authenticated proof of peer identity; the Agent still verifies
+the digest independently. Static endpoints must carry truthful descriptor
+metadata, or use registered discovery, rather than assume support from an address.
+
+Source macOS tests execute ten typed tasks through HTTP and a real Agent:
+Rust/Elixir authors across thermal, electrostatic, magnetostatic,
+thermomechanical and Stokes diagnostics. One real Orchestra restart retains the
+dispatch journal and retrieves all ten original Agent receipts without another
+execution. Tiny config drift is rejected before dispatch. After Agent restart,
+the same queries return unknown outcomes and never grant automatic replay or
+result publication. This is bounded read-only receipt recovery, not durable
+Agent results, whole-workflow continuation or exactly-once execution. See the
+[typed routing and recovery report](../reports/task-ir-typed-routing-20261011.md).
+
+### Explicit native workflow encoding and recovery
+
+Workflow authors can set a graph-bound policy:
+
+```json
+{
+  "defaults": {
+    "native_task_digest_encoding": "kyuubiki.task-digest/typed-ieee754-v2"
+  }
+}
+```
+
+This selects the native diagnostic/scoring TaskIR adapter only, not solve RPCs,
+local transforms or executable package hosts. Missing selection stays legacy;
+null, non-string or unknown selection fails preflight. Rust authors use
+`WorkflowDefaults.native_task_digest_encoding` and
+`WorkflowNativeTaskDigestEncoding::TypedIeee754V2`; typed serialization preserves
+the setting. Internal execution options cannot override the graph policy.
+
+Typed asynchronous jobs use `kyuubiki.workflow-execution-envelope/v2`: one
+canonical `execution_json` string containing the graph, input artifacts,
+orchestration context and response options. It is data, not a path or executable.
+The existing recovery digest binds this representation; no parallel payload
+copy is retained. JSONB cannot normalize numbers inside a string. Decode retains
+integer/float distinctions, signed zero, adjacent values and tiny floats before
+initial execution and after restart. Legacy v1 envelopes keep their existing
+numeric normalization; no old job or receipt is resealed. Encoding is visible in
+public recovery metadata, but private execution data is not.
+
+Seven source workflow rounds cover five solved physical-domain chains with
+both branch routes, one raw thermal-result input, and one lost-Agent-receipt
+negative case. Actual Orchestra restart reuses successful solves, retained
+decisions and original native receipts; downstream scoring retains its
+pre-restart TaskIR digest. Losing the Agent receipt blocks continuation without
+replay or publication. Checkpoint verification decodes the execution once per
+operation, not once per retained entry. Completed, failed and cancelled jobs
+prune the execution payload; blocked recovery retains the existing single copy.
+
+The [PostgreSQL follow-up](../reports/workflow-typed-postgres-recovery-20261011.md)
+also verifies seven source macOS HTTP/Agent rounds against a remote PostgreSQL
+store, including JSONB numeric identity, checkpoint rollback and selected-pool
+lease fencing. Four read APIs report storage loss without throwing or rewriting
+data. This is bounded recovery, not exactly-once, large-model qualification or
+durable Agent receipts. Default adoption, installed mixed-peer, remote mesh,
+Linux Agents, default cold-start policy and arbitrary package-host acceptance
+remain open. See also the
+[SQLite workflow recovery report](../reports/workflow-typed-execution-recovery-20261011.md).
 
 ## Descriptor digest
 

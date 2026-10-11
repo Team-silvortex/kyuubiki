@@ -135,6 +135,7 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
 
   defp capability_match_status(endpoint, method, required_capabilities) do
     capability_ids = endpoint |> Map.get(:capabilities, []) |> Enum.map(& &1.id)
+    typed_digest = KyuubikiWeb.TaskDigestV2.encoding()
 
     has_metadata? =
       capability_ids != [] or Map.get(endpoint, :methods, []) != [] or
@@ -142,6 +143,13 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
         Enum.any?(Map.get(endpoint, :capabilities, []), &is_binary(&1.role))
 
     cond do
+      typed_digest in required_capabilities and typed_digest not in capability_ids ->
+        :mismatch
+
+      typed_digest in required_capabilities and is_binary(method) and
+          not supports_method?(endpoint, method) ->
+        :mismatch
+
       not has_metadata? ->
         :unknown
 

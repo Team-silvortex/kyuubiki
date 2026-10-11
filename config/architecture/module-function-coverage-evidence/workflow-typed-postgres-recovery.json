@@ -1,0 +1,76 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Executed isolated PostgreSQL typed persistence, transaction rollback, selected-pool lease fencing and real source macOS HTTP/Agent restart continuation. Seven bounded rounds use remote PostgreSQL; lost receipts block without replay. Four read APIs contain storage loss without mutations. Installed/Linux-Agent/mesh/default-cold-start and revision-two PWDT lifecycle qualification remain open.",
+  "evidence_claims": [
+    {
+      "id": "workflow-typed-postgres-checkpoint-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/lease_sql_backend.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_execution_envelope.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_checkpoint_store.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_typed_postgres_test.exs",
+        "reports/workflow-typed-postgres-recovery-20261011.md"
+      ],
+      "required_text": [
+        "get_dynamic_repo",
+        "lease reads and writes use the currently selected repository schema",
+        "JSONB numeric equality cannot conflate typed execution strings",
+        "typed compare-and-swap rejects numeric identity changes without writing",
+        "old claims and displaced leases cannot read or commit checkpoints",
+        "terminal joint publication prunes private execution and both checkpoint payloads",
+        "Final PostgreSQL selection: 23 tests passed"
+      ]
+    },
+    {
+      "id": "workflow-typed-postgres-native-continuation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["recovery"],
+      "files": [
+        "apps/web/test/support/headless_live_postgres.exs",
+        "apps/web/test/support/headless_live_server.exs",
+        "apps/web/test/support/headless_native_recovery_gate.exs",
+        "workers/rust/crates/cli/tests/support/headless_live_server.rs",
+        "workers/rust/crates/cli/tests/support/headless_workflow_native_receipt_recovery.rs",
+        "reports/workflow-typed-postgres-recovery-20261011.md"
+      ],
+      "required_text": [
+        "real_typed_postgres_solved_branch_restart_preserves_identity_without_reexecution",
+        "real_typed_postgres_raw_restart_preserves_input_numeric_identity",
+        "real_typed_postgres_lost_agent_receipt_blocks_after_checkpoint_restore",
+        "KYUUBIKI_HEADLESS_LIVE_TEST_POSTGRES_URL",
+        "This adds verified source macOS / remote PostgreSQL contract and recovery"
+      ]
+    },
+    {
+      "id": "analysis-read-storage-outage-containment",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis_job_records.ex",
+        "apps/web/lib/kyuubiki_web/router.ex",
+        "apps/web/lib/kyuubiki_web/router_support.ex",
+        "apps/web/test/kyuubiki_web/api/analysis_read_outage_test.exs",
+        "reports/workflow-typed-postgres-recovery-20261011.md"
+      ],
+      "required_text": [
+        "FailureBoundary.run",
+        "analysis_read_unavailable",
+        "headless read helpers return a domain error instead of raising on storage loss",
+        "read reports unavailable storage and succeeds unchanged after restoration",
+        "Mutating routes keep their existing error mapping"
+      ]
+    }
+  ]
+}

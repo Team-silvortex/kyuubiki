@@ -162,7 +162,7 @@ defmodule KyuubikiWeb.Analysis do
   def fetch_job_status(job_id) when is_binary(job_id),
     do: AnalysisJobRecords.fetch_job_status(job_id)
 
-  @spec list_jobs() :: map()
+  @spec list_jobs() :: map() | {:error, :analysis_store_unavailable}
   def list_jobs, do: AnalysisJobRecords.list_jobs()
 
   def update_job(job_id, attrs) when is_binary(job_id) and is_map(attrs),
@@ -172,6 +172,7 @@ defmodule KyuubikiWeb.Analysis do
 
   def delete_job(job_id) when is_binary(job_id), do: AnalysisJobRecords.delete_job(job_id)
 
+  @spec list_results() :: map() | {:error, :analysis_store_unavailable}
   def list_results, do: AnalysisJobRecords.list_results()
 
   def fetch_result(job_id) when is_binary(job_id), do: AnalysisJobRecords.fetch_result(job_id)
@@ -198,5 +199,6 @@ defmodule KyuubikiWeb.Analysis do
   def export_security_events_csv(filters \\ %{}) when is_map(filters),
     do: AnalysisExports.export_security_events_csv(filters)
 
+  @spec export_database() :: map() | {:error, term()}
   def export_database, do: AnalysisExports.export_database()
 end

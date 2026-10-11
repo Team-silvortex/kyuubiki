@@ -1,0 +1,40 @@
+{
+  "schema_version": "kyuubiki.task-digest-vectors/v2",
+  "encoding": "kyuubiki.task-digest/typed-ieee754-v2",
+  "projection": "Each case hashes a task containing only input_artifact = value; these are codec vectors, not executable TaskIR envelopes.",
+  "generated_binary64": {
+    "seed_hex": "243f6a8885a308d3",
+    "finite_mask_hex": "ffefffffffffffff",
+    "generator": "uint64 xorshift left13 right7 left17 with wrapping at each step; mask generated bits, not the generator state",
+    "count": 1024,
+    "task_digest": "748574cd161378bc529fd162eda06d7ad352dc4a92646752a5f9ec22bb64f29b"
+  },
+  "cases": [
+    {"value": null, "task_digest": "3fa5e4b2ad00beef54115d4db23fc874540d05284fac46c138afa7049425f51f"},
+    {"value": true, "task_digest": "1c27579086329a14cfe54fbda2c0f2d0fea79fbc1df8bf86d03643f5e0d25edd"},
+    {"value": false, "task_digest": "3753f3014eeb72e557860dc47461791f41d175b066c0b2ada1f1053eb1579555"},
+    {"value": "", "task_digest": "686f9a07f594addd9ebf904612b4dda8e8c580fea293f69c9726bd1122bd6dc3"},
+    {"value": 0, "task_digest": "dd14c1f98e48ce3f22e2fb1e739c2d74fe3d2528d6edaf77f9459aaaf84f87e1"},
+    {"value": 1, "task_digest": "3a2fcdef2e685b37416625777e8a80ce2391bf1bb6241bcc896649056b4d67fb"},
+    {"value": -1, "task_digest": "4baf1cc277ca115d82bfb0166f0c918bec4aa23bd973d2238fbc034494889294"},
+    {"value": 1.0, "task_digest": "f022a56f9f97c46c57d2b098f35ecccc59836ec99cef88b0af6191d31da90051"},
+    {"value": 0.0, "task_digest": "31bf0c7b17acb1646db9a9bd230de7740d6287b9d388cb648052aa1ff515636f"},
+    {"value": -0.0, "task_digest": "4fe3757108301a1d879d315035fb2d3f35a93bc3d986d50346bfa3a087ccdff2"},
+    {"value": 1e-30, "task_digest": "0f5e6a615cee785c9deb56b6b7ab07eb823b5401531dca2178ac04700f5923fc"},
+    {"value": 2e-30, "task_digest": "cb0a2bd5822249a5763671e422e844c284f6fd4eef42aaff53ed2f25fbc43071"},
+    {"value": 1e-300, "task_digest": "07f479f4ae14a6d30f679e6a7a4888cae966e02d9509059b2b4e3eb4a612b848"},
+    {"value": 2e-300, "task_digest": "55cf6a4ffd5d9d6564bd8edb7fda7c919b9b925580f5d6efe92fc3dabbf0bdb5"},
+    {"value": 5e-324, "task_digest": "f665c545c3d52da573469c374f42afb08e2cc5414b8021e338f5ebfd04f9fd61"},
+    {"value": 1.7976931348623157e308, "task_digest": "af37e3c9ebaee06a15fd95c9050e0383a3dc07ca52b93712c5ae41ce49664436"},
+    {"value": 0.3333333333333333, "task_digest": "cb88a1886f7dc0468703479d70a9e1337213937a3e254401ebc600d2a3c9d847"},
+    {"value": 0.33333333333333337, "task_digest": "5c1cb453ca347138fe2b4206ff2c06dc92ec7493fe3cf128eb5da7dbd96069ef"},
+    {"value": -9223372036854775808, "task_digest": "5a27f789ac63697879c4a914909bcbc2bda7250bc3d16a41c1d026d0e29bd20a"},
+    {"value": 18446744073709551615, "task_digest": "2dc14f6104f7fa2fb4ae29525cdff6bc970bfb2f14fbee592eb903007bee194b"},
+    {"value": [], "task_digest": "5610c1c94beab1f8c23e640780706627dd3e25b72ff8db11b6ecefd9a8d689d3"},
+    {"value": {}, "task_digest": "537240b444b2335e8aa3f7cd86667d1390dee754dfb3c17152d5584bb2ae0e62"},
+    {"value": [1,"1"], "task_digest": "69f120f1ccd0497b146d9095405730dbac9eb5061bcbe9ca37ad7c53d4d3513b"},
+    {"value": {"z":[null,-0.0],"a":{"x":1e-30}}, "task_digest": "8acac07c192d7b163180708a1743f5c4585fc0f49b73dd872596ac27192d9022"},
+    {"value": "\u6750\u6599\n\"\\", "task_digest": "584dc19cb0274df5dda93cd314223fa9f484cde2f29038c7eefc658dde9c9998"},
+    {"value": {"\u00e9":1,"\u4e2d":2,"a":3}, "task_digest": "fecfd202b603168c946fbc4e7b375f2d028d41d24660a33cadc4785c71a02426"}
+  ]
+}

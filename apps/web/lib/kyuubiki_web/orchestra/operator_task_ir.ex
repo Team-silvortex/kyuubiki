@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
   """
 
   alias KyuubikiWeb.CanonicalJson
+  alias KyuubikiWeb.TaskDigestV2
   alias KyuubikiWeb.Orchestra.OperatorExecutionProgram
   alias KyuubikiWeb.WorkflowOperatorCatalog
 
@@ -100,7 +101,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
     []
     |> maybe_put_routing_opt(
       :required_capabilities,
-      normalize_string_list(Map.get(runtime_hints, "required_capabilities"))
+      required_agent_capabilities(task_ir)
     )
     |> maybe_put_routing_opt(
       :placement_tags,
@@ -121,6 +122,42 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
 
   def agent_routing_opts(_task_ir), do: []
 
+  def required_agent_capabilities(task_ir) do
+    hints =
+      case Map.get(task_ir, "runtime_hints") do
+        %{} = hints -> hints
+        _ -> %{}
+      end
+
+    capabilities =
+      normalize_string_list(Map.get(hints, "required_capabilities"))
+
+    if get_in(task_ir, ["integrity", "task_digest_encoding"]) == TaskDigestV2.encoding(),
+      do: Enum.uniq(capabilities ++ [TaskDigestV2.encoding()]),
+      else: capabilities
+  end
+
+  # The generic RPC entry point must not drop requirements carried by a typed task.
+  def enforce_digest_routing(
+        "run_operator_task_ir",
+        %{"task_ir" => %{"integrity" => %{"task_digest_encoding" => encoding}} = task},
+        opts
+      ) do
+    if encoding == TaskDigestV2.encoding() do
+      capabilities = normalize_string_list(Keyword.get(opts, :required_capabilities))
+
+      Keyword.put(
+        opts,
+        :required_capabilities,
+        Enum.uniq(capabilities ++ required_agent_capabilities(task))
+      )
+    else
+      opts
+    end
+  end
+
+  def enforce_digest_routing(_method, _params, opts), do: opts
+
   @spec task_digest_fields() :: [String.t()]
   def task_digest_fields do
     [
@@ -140,9 +177,60 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
 
   @spec compute_task_digest(map()) :: String.t()
   def compute_task_digest(task) when is_map(task) do
-    task
-    |> Map.take(task_digest_fields())
-    |> digest_map()
+    case compute_task_digest_checked(task) do
+      {:ok, digest} -> digest
+      {:error, reason} -> raise ArgumentError, inspect(reason)
+    end
+  end
+
+  @spec compute_task_digest_checked(map()) :: {:ok, String.t()} | {:error, term()}
+  def compute_task_digest_checked(task) when is_map(task) do
+    with {:ok, integrity} <- digest_integrity(task),
+         :ok <- digest_algorithm(integrity) do
+      case Map.get(integrity, "task_digest_encoding", "kyuubiki.task-digest/fixed15-v1") do
+        "kyuubiki.task-digest/fixed15-v1" ->
+          {:ok, task |> Map.take(task_digest_fields()) |> digest_map()}
+
+        "kyuubiki.task-digest/typed-ieee754-v2" ->
+          TaskDigestV2.compute(task, task_digest_fields())
+
+        encoding ->
+          {:error, {:unsupported_operator_task_digest_encoding, encoding}}
+      end
+    end
+  end
+
+  def compute_task_digest_checked(_task), do: {:error, :invalid_operator_task_ir}
+
+  @spec seal_task_digest(map(), String.t()) :: {:ok, map()} | {:error, term()}
+  def seal_task_digest(task, encoding) when is_map(task) do
+    with {:ok, integrity} <- digest_integrity(task),
+         integrity =
+           Map.merge(integrity, %{
+             "digest_algorithm" => "sha256",
+             "task_digest_encoding" => encoding
+           }),
+         task = Map.put(task, "integrity", integrity),
+         {:ok, digest} <- compute_task_digest_checked(task) do
+      {:ok, put_in(task, ["integrity", "task_digest"], digest)}
+    end
+  end
+
+  def seal_task_digest(_task, _encoding), do: {:error, :invalid_operator_task_ir}
+
+  defp digest_integrity(task) do
+    case Map.fetch(task, "integrity") do
+      :error -> {:ok, %{}}
+      {:ok, %{} = integrity} -> {:ok, integrity}
+      _ -> {:error, :invalid_operator_task_integrity}
+    end
+  end
+
+  defp digest_algorithm(integrity) do
+    case Map.get(integrity, "digest_algorithm", "sha256") do
+      "sha256" -> :ok
+      algorithm -> {:error, {:unsupported_operator_task_digest_algorithm, algorithm}}
+    end
   end
 
   defp envelope(operator, input_artifact, config, opts) do

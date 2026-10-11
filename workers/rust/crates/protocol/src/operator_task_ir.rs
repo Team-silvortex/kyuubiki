@@ -42,6 +42,40 @@ pub fn compute_operator_task_digest(task: &Value) -> Result<String, String> {
         .as_object()
         .ok_or_else(|| "operator task ir must be a json object".to_string())?;
 
+    let integrity = match object.get("integrity") {
+        None => None,
+        Some(Value::Object(value)) => Some(value),
+        _ => return Err("operator task integrity must be an object".to_string()),
+    };
+    if let Some(algorithm) = integrity.and_then(|value| value.get("digest_algorithm")) {
+        if algorithm.as_str() != Some("sha256") {
+            return Err("unsupported operator task digest algorithm".to_string());
+        }
+    }
+    let encoding = match integrity.and_then(|value| value.get("task_digest_encoding")) {
+        None => crate::TASK_DIGEST_FIXED15_V1,
+        Some(Value::String(value)) => value.as_str(),
+        _ => return Err("operator task digest encoding must be a string".to_string()),
+    };
+    compute_digest_with_encoding(object, encoding)
+}
+
+fn compute_digest_with_encoding(
+    object: &Map<String, Value>,
+    encoding: &str,
+) -> Result<String, String> {
+    match encoding {
+        crate::TASK_DIGEST_TYPED_V2 => {
+            return crate::task_digest_v2::task_digest(object, OPERATOR_TASK_DIGEST_FIELDS);
+        }
+        crate::TASK_DIGEST_FIXED15_V1 => {}
+        _ => {
+            return Err(format!(
+                "unsupported operator task digest encoding: {encoding}"
+            ));
+        }
+    }
+
     let mut digest_payload = Map::new();
     for field in OPERATOR_TASK_DIGEST_FIELDS {
         if let Some(value) = object.get(*field) {
@@ -52,6 +86,28 @@ pub fn compute_operator_task_digest(task: &Value) -> Result<String, String> {
     Ok(sha256_hex(
         canonical_json(&Value::Object(digest_payload)).as_bytes(),
     ))
+}
+
+/// Explicit authoring opt-in. Validation never infers an encoding from digest contents.
+pub fn seal_operator_task_digest(task: &mut Value, encoding: &str) -> Result<(), String> {
+    let object = task
+        .as_object_mut()
+        .ok_or_else(|| "operator task ir must be a json object".to_string())?;
+    if object
+        .get("integrity")
+        .is_some_and(|value| !value.is_object())
+    {
+        return Err("operator task integrity must be an object".to_string());
+    }
+    let digest = compute_digest_with_encoding(object, encoding)?;
+    let integrity = object
+        .entry("integrity")
+        .or_insert_with(|| Value::Object(Map::new()));
+    let integrity = integrity.as_object_mut().expect("integrity object checked");
+    integrity.insert("digest_algorithm".to_string(), Value::from("sha256"));
+    integrity.insert("task_digest_encoding".to_string(), Value::from(encoding));
+    integrity.insert("task_digest".to_string(), Value::from(digest));
+    Ok(())
 }
 
 pub fn verify_operator_task_digest(task: &Value) -> Result<(), OperatorTaskDigestError> {

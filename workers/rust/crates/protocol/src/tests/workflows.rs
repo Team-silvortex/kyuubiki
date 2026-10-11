@@ -1,6 +1,42 @@
 use super::prelude::*;
 
 #[test]
+fn workflow_native_digest_policy_round_trips_and_rejects_unknown_encodings() {
+    let encoding = "kyuubiki.task-digest/typed-ieee754-v2";
+    let defaults: WorkflowDefaults = serde_json::from_value(serde_json::json!({
+        "native_task_digest_encoding": encoding
+    }))
+    .unwrap();
+    assert_eq!(
+        defaults.native_task_digest_encoding,
+        crate::WorkflowNativeTaskDigestEncoding::TypedIeee754V2
+    );
+    assert_eq!(
+        serde_json::to_value(defaults).unwrap()["native_task_digest_encoding"],
+        encoding
+    );
+    let legacy: WorkflowDefaults = serde_json::from_value(serde_json::json!({})).unwrap();
+    assert!(
+        serde_json::to_value(legacy)
+            .unwrap()
+            .get("native_task_digest_encoding")
+            .is_none()
+    );
+    for value in [
+        serde_json::Value::Null,
+        serde_json::json!(false),
+        serde_json::json!("v3"),
+    ] {
+        assert!(
+            serde_json::from_value::<WorkflowDefaults>(serde_json::json!({
+                "native_task_digest_encoding": value
+            }))
+            .is_err()
+        );
+    }
+}
+
+#[test]
 fn serializes_workflow_artifact_projection_options() {
     let default_options: WorkflowGraphRunOptions =
         serde_json::from_value(serde_json::json!({})).expect("default options should decode");
@@ -431,6 +467,7 @@ fn serializes_workflow_graph_run_request_round_trip() {
         entry_nodes: vec!["heat_model".to_string()],
         output_nodes: vec!["thermo_summary".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

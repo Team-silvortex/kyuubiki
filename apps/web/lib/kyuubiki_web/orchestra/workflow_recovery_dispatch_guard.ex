@@ -3,14 +3,32 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard do
 
   alias KyuubikiWeb.Orchestra.OperatorDispatchJournal, as: Journal
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope, as: Envelope
+  alias KyuubikiWeb.Orchestra.WorkflowSolveCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowBranchCheckpoint
   alias KyuubikiWeb.WorkflowNativeOperatorRuntime, as: Native
 
   def claim(job_id, recovery, session, reason, max_attempts, journal \\ Journal) do
     with :ok <- dispatch_reason(recovery, reason),
          :ok <- attempt_available(recovery, max_attempts),
          {:ok, claimed, claim} <- Envelope.claim(recovery, session, reason),
+         :ok <- verify_solve_checkpoints(claimed, job_id),
+         :ok <- verify_branch_checkpoints(claimed, job_id),
          :ok <- dispatch_fence(job_id, claimed, journal) do
       {:ok, claimed, claim}
+    end
+  end
+
+  defp verify_branch_checkpoints(recovery, job_id) do
+    case WorkflowBranchCheckpoint.verify(recovery, job_id) do
+      :ok -> :ok
+      _ -> {:error, :workflow_branch_checkpoint_invalid}
+    end
+  end
+
+  defp verify_solve_checkpoints(recovery, job_id) do
+    case WorkflowSolveCheckpoint.verify(recovery, job_id) do
+      :ok -> :ok
+      _ -> {:error, :workflow_solve_checkpoint_invalid}
     end
   end
 
@@ -20,17 +38,25 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard do
   def next_action({:workflow_dispatch_journal_unavailable, _reason}),
     do: "restore_dispatch_journal_before_recovery"
 
+  def next_action(:workflow_solve_checkpoint_invalid),
+    do: "inspect_solve_checkpoint_before_explicit_resubmit"
+
+  def next_action(:workflow_branch_checkpoint_invalid),
+    do: "inspect_branch_checkpoint_before_explicit_resubmit"
+
   def next_action(_reason), do: "supply_verified_checkpoint_or_resubmit"
 
   defp dispatch_fence(job_id, recovery, journal) do
-    context = get_in(recovery, ["envelope", "orchestration_context"])
+    with {:ok, envelope} <- Envelope.execution(recovery) do
+      context = envelope["orchestration_context"]
 
-    if context["job_id"] == job_id do
-      with {:ok, tasks} <- native_tasks(recovery["envelope"]["graph"], context) do
-        check_journal(job_id, tasks, journal)
+      if context["job_id"] == job_id do
+        with {:ok, tasks} <- native_tasks(envelope["graph"], context) do
+          check_journal(job_id, tasks, journal)
+        end
+      else
+        {:error, :workflow_recovery_identity_mismatch}
       end
-    else
-      {:error, :workflow_recovery_identity_mismatch}
     end
   end
 

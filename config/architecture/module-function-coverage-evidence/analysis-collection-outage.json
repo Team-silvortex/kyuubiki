@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Executed source analysis collection and composite-export outage controls. Actual store stop/restart returns an opaque unavailable error without empty-success or attachment publication, then reads unchanged records. Empty collections, authorization, not-found semantics and private recovery exclusion are checked. SQL snapshot consistency is tracked by the separate analysis-export-snapshot evidence; installed GUI and independent memory-store outages remain open.",
+  "evidence_claims": [
+    {
+      "id": "analysis-collection-and-export-outage-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis.ex",
+        "apps/web/lib/kyuubiki_web/analysis_job_records.ex",
+        "apps/web/lib/kyuubiki_web/analysis_exports.ex",
+        "apps/web/lib/kyuubiki_web/workloads.ex",
+        "apps/web/lib/kyuubiki_web/storage/read_snapshot.ex",
+        "apps/web/lib/kyuubiki_web/router.ex",
+        "apps/web/lib/kyuubiki_web/router_support.ex",
+        "apps/web/test/kyuubiki_web/api/analysis_collection_outage_test.exs",
+        "reports/analysis-collection-outage-20261011.md"
+      ],
+      "required_text": [
+        "FailureBoundary.run",
+        "respond_analysis_read",
+        "collection fails closed during outage and restores original records",
+        "headless collections and composite reads return the storage error without partial data",
+        "real empty job and result collections remain successful, not unavailable",
+        "An absent project still returns HTTP 404"
+      ]
+    },
+    {
+      "id": "analysis-collection-auth-and-private-recovery-controls",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation"],
+      "dimensions": ["security"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/router.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+        "apps/web/test/kyuubiki_web/api/analysis_collection_outage_test.exs",
+        "reports/analysis-collection-outage-20261011.md"
+      ],
+      "required_text": [
+        "collection authorization precedes storage reads even during an outage",
+        "result collections and exports never expose private recovery records",
+        "owner_session_id",
+        "Project-bundle attachment headers are set only after a",
+        "Successful calls still return their original maps"
+      ]
+    }
+  ]
+}

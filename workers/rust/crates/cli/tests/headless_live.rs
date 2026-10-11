@@ -60,6 +60,8 @@ mod model_artifact;
 mod model_reference_gates;
 #[path = "support/headless_model_source.rs"]
 mod model_source;
+#[path = "support/headless_native_invocation_identity.rs"]
+mod native_invocation_identity;
 #[path = "support/headless_orchestra_cancel_routing.rs"]
 mod orchestra_cancel_routing;
 #[path = "support/headless_orchestra_cancellation.rs"]
@@ -96,6 +98,8 @@ mod transport_output;
 mod transport_research;
 #[path = "support/headless_transport_upwind.rs"]
 mod transport_upwind;
+#[path = "support/headless_typed_task_identity.rs"]
+mod typed_task_identity;
 #[path = "support/headless_workflow_dispatch_identity.rs"]
 mod workflow_dispatch_identity;
 #[path = "support/headless_workflow_dispatch_recovery.rs"]

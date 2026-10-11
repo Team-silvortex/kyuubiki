@@ -410,6 +410,7 @@ fn run_solver_summary_json_graph(
         entry_nodes: vec![input_node_id.to_string()],
         output_nodes: vec!["json_output".to_string()],
         defaults: WorkflowDefaults {
+            native_task_digest_encoding: Default::default(),
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },

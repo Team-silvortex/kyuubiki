@@ -12,14 +12,23 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.LeaseStore
+  alias KyuubikiWeb.Orchestra.WorkflowActivityStore
   alias KyuubikiWeb.Orchestra.WorkflowAdmission
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
   alias KyuubikiWeb.Orchestra.WorkflowNodeProgress
+  alias KyuubikiWeb.Orchestra.WorkflowNodeProgressStore
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard, as: DispatchGuard
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryFailure
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryScan
+
+  alias KyuubikiWeb.Orchestra.{
+    WorkflowCheckpointStore,
+    WorkflowSolveCheckpoint,
+    WorkflowBranchCheckpoint
+  }
+
   alias KyuubikiWeb.Storage.FailureBoundary
 
   @active_job_statuses [:queued, :preprocessing, :partitioning, :solving, :postprocessing]
@@ -73,9 +82,37 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   def block_native_recovery(job_id, claim, reason)
       when is_binary(job_id) and is_map(claim) do
+    block_checkpoint(job_id, claim, :native_workflow_recovery_blocked, reason)
+  end
+
+  def block_solve_checkpoint(job_id, claim, reason)
+      when is_binary(job_id) and is_map(claim) do
+    block_checkpoint(job_id, claim, :workflow_solve_checkpoint_blocked, reason)
+  end
+
+  def block_branch_checkpoint(job_id, claim, reason)
+      when is_binary(job_id) and is_map(claim) do
+    block_checkpoint(job_id, claim, :workflow_branch_checkpoint_blocked, reason)
+  end
+
+  defp block_checkpoint(job_id, claim, tag, reason) do
+    GenServer.call(__MODULE__, {:fail, job_id, claim, {tag, reason}}, @call_timeout)
+  end
+
+  def solve_checkpoint(job_id, claim, action)
+      when is_binary(job_id) and is_map(claim) do
     GenServer.call(
       __MODULE__,
-      {:fail, job_id, claim, {:native_workflow_recovery_blocked, reason}},
+      {:checkpoint, WorkflowSolveCheckpoint, job_id, claim, action},
+      @call_timeout
+    )
+  end
+
+  def branch_checkpoint(job_id, claim, action)
+      when is_binary(job_id) and is_map(claim) do
+    GenServer.call(
+      __MODULE__,
+      {:checkpoint, WorkflowBranchCheckpoint, job_id, claim, action},
       @call_timeout
     )
   end
@@ -214,6 +251,16 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     else
       {:reply, {:error, :orchestra_standby}, state}
     end
+  end
+
+  def handle_call({:checkpoint, checkpoint, job_id, claim, action}, _from, state)
+      when checkpoint in [WorkflowSolveCheckpoint, WorkflowBranchCheckpoint] do
+    result =
+      if Ownership.owner?(state),
+        do: WorkflowCheckpointStore.access(job_id, claim, action, state.lease, checkpoint),
+        else: {:error, :orchestra_standby}
+
+    {:reply, result, Ownership.after_write(state, result)}
   end
 
   def handle_call({:fail, job_id, claim, message}, _from, state) do
@@ -440,8 +487,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     with {:ok, runtime, recovery} <- fetch_runtime(job_id),
          {:ok, claimed, claim} <-
            DispatchGuard.claim(job_id, recovery, state.session_id, reason, state.max_attempts),
+         {:ok, envelope} <- WorkflowRecoveryEnvelope.execution(claimed),
          :ok <- put_runtime_recovery(job_id, runtime, claimed, state.lease) do
-      case WorkflowJobRunner.start_claimed(job_id, claim, Map.fetch!(claimed, "envelope")) do
+      case WorkflowJobRunner.start_claimed(job_id, claim, envelope) do
         {:ok, pid} ->
           {{:ok, pid}, track_runner(job_id, pid, state)}
 
@@ -471,6 +519,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
              :workflow_recovery_identity_mismatch,
              :workflow_recovery_checkpoint_mismatch,
              :workflow_recovery_checkpoint_missing_or_invalid,
+             :workflow_solve_checkpoint_invalid,
+             :workflow_branch_checkpoint_invalid,
              :invalid_workflow_recovery_record,
              :workflow_dispatch_outcome_unconfirmed
            ] ->
@@ -487,89 +537,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end
   end
 
-  defp touch_activity_if_owned(job_id, claim, node_id, lease, persist?) do
-    LeaseStore.with_lease(lease, fn ->
-      with {:ok, job} <- active_job(job_id),
-           {:ok, _runtime, recovery} <- fetch_runtime(job_id),
-           true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim) do
-        if persist? do
-          # A live operator is not a completed graph node and cannot reset the execution deadline.
-          case Store.apply_progress_if_current(
-                 %{
-                   job_id: job_id,
-                   stage: Atom.to_string(job.status),
-                   progress: job.progress,
-                   iteration: job.iteration,
-                   message: "workflow node #{node_id} active"
-                 },
-                 job
-               ) do
-            {:ok, _job} -> :ok
-            error -> error
-          end
-        else
-          :ok
-        end
-      else
-        false -> {:error, :stale_workflow_execution_claim}
-        error -> error
-      end
-    end)
-  end
+  defp touch_activity_if_owned(job_id, claim, node_id, lease, persist?),
+    do: WorkflowActivityStore.touch(job_id, claim, node_id, lease, persist?)
 
-  defp record_progress_if_owned(job_id, claim, update, lease) do
-    with {:ok, update} <- WorkflowNodeProgress.normalize(update) do
-      node_id = update["node_id"]
-      resolved_nodes = update["resolved_nodes"]
-
-      LeaseStore.with_lease(lease, fn ->
-        with {:ok, job} <- active_job(job_id),
-             {:ok, runtime, recovery} <- fetch_runtime(job_id),
-             true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
-             execution_progress <- min(resolved_nodes / update["total_nodes"], 0.98),
-             replay? <- claim["generation"] > 1,
-             progress <-
-               if(replay?, do: max(job.progress, execution_progress), else: execution_progress),
-             progress_event <- WorkflowNodeProgress.event(update, progress),
-             progress_event <-
-               Map.merge(progress_event, %{
-                 "generation" => claim["generation"],
-                 "attempt" => claim["attempt"],
-                 "execution_progress" => execution_progress
-               }),
-             updated_runtime <-
-               runtime
-               |> Map.put("current_node", node_id)
-               |> Map.update("progress_events", [progress_event], fn events ->
-                 (List.wrap(events) ++ [progress_event]) |> Enum.take(-25)
-               end),
-             {:ok, _updated_job} <-
-               Store.apply_progress_with_result(
-                 %{
-                   job_id: job_id,
-                   stage: "solving",
-                   progress: progress,
-                   iteration:
-                     if(replay?,
-                       do: max(job.iteration || 0, resolved_nodes),
-                       else: resolved_nodes
-                     ),
-                   message: "#{update["status"]} workflow node #{node_id}"
-                 },
-                 job,
-                 runtime,
-                 updated_runtime
-               ) do
-          :ok
-        else
-          false -> {:error, :stale_workflow_execution_claim}
-          {:error, _reason} = error -> error
-          :error -> {:error, {:workflow_recovery_not_found, job_id}}
-          {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
-        end
-      end)
-    end
-  end
+  defp record_progress_if_owned(job_id, claim, update, lease),
+    do: WorkflowNodeProgressStore.record(job_id, claim, update, lease)
 
   defp commit_result_if_owned(job_id, claim, result, lease) do
     LeaseStore.with_lease(lease, fn ->

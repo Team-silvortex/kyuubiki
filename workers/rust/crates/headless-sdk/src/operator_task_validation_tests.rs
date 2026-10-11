@@ -3,6 +3,34 @@ use kyuubiki_protocol::{SolverExecutionCapability, compute_operator_task_digest}
 use serde_json::{Value, json};
 
 #[test]
+fn sdk_can_explicitly_seal_typed_tasks_and_reject_numeric_drift() {
+    let mut task = solver_task_fixture(false);
+    task["config"] = json!({"numeric_probe":1e-30});
+    crate::seal_operator_task_digest(&mut task, crate::TASK_DIGEST_TYPED_V2).unwrap();
+    assert!(validate_operator_task_for_builtin_agent(&task).ok);
+    crate::prepare_operator_task_payload(&json!({"task":task.clone()})).unwrap();
+    task["config"]["numeric_probe"] = json!(2e-30);
+    let report = validate_operator_task_for_builtin_agent(&task);
+    assert!(!report.ok && !report.digest_ok);
+    assert!(crate::prepare_operator_task_payload(&json!({"task":task})).is_err());
+}
+
+#[test]
+fn sdk_refuses_unknown_or_removed_typed_encoding() {
+    let mut task = solver_task_fixture(false);
+    crate::seal_operator_task_digest(&mut task, crate::TASK_DIGEST_TYPED_V2).unwrap();
+    let mut unknown = task.clone();
+    unknown["integrity"]["task_digest_encoding"] = json!("future");
+    assert!(!validate_operator_task_for_builtin_agent(&unknown).digest_ok);
+    assert!(crate::prepare_operator_task_payload(&json!({"task":unknown})).is_err());
+    task["integrity"]
+        .as_object_mut()
+        .unwrap()
+        .remove("task_digest_encoding");
+    assert!(!validate_operator_task_for_builtin_agent(&task).digest_ok);
+}
+
+#[test]
 fn validates_solver_task_against_builtin_agent_capability() {
     let task = solver_task_fixture(false);
 
