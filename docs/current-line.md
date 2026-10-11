@@ -465,7 +465,85 @@ SQL read transaction. Concurrent model/version edits, project removal, joint
 job/result deletion and security-event publication cannot mix record generations.
 PostgreSQL uses read-only repeatable read; SQLite uses a deferred WAL snapshot.
 Ambient transactions are rejected rather than silently weakening isolation.
-JSON cross-store snapshots, external artifacts and full backup remain separate.
+External artifacts and full backup remain separate.
+
+The [JSON read consistency follow-up](../reports/analysis-memory-snapshot-20261011.md)
+adds generation-validated views across the live project library, shared analysis
+state and security-event store. The same three exports capture each accessed
+store once per attempt, verify the captures coexisted, and discard conflicting
+reads with at most three attempts. Sustained conflicts or store loss return the
+unavailable error without partial downloads; restored analysis reads retain the
+original records. ABA changes and restarts invalidate tokens; in-context writes
+are rejected rather than retried. No new processes, persistent snapshots or
+cross-file durability guarantees are introduced. The JSON library remains volatile.
+
+The [independent history follow-up](../reports/history-read-reliability-20261011.md)
+extends failure containment to project/model/version reads, model/version
+checkpoint reconciliation and security-event history/JSON/CSV export. Known
+storage failure returns opaque 503 JSON; real empty lists, absent records,
+checkpoint `no-store`, filtering and authorization keep their existing behavior.
+SQL project/model details and receipts read one generation per call, reusing only
+an owned snapshot on the same dynamic repository. Nested query failures explicitly
+roll back with the original error, including PostgreSQL aborted transactions.
+Version and security query failures cannot publish partial composite exports.
+Single-store memory reads add no full-store capture or persistent history, and
+version-context failure cannot authorize task creation. Separate HTTP requests,
+installed GUIs and large-history performance remain separate acceptance work.
+
+The [Workbench security-history follow-up](../reports/workbench-security-history-recovery-20261011.md)
+validates complete event responses before publication and preserves known records
+on same-filter refresh failure. Pending/unavailable reads cannot claim empty
+history or zero-data facets. Filter changes invalidate older requests before paint;
+all overlapping success/failure combinations retain the latest read's records and
+recovery feedback. Explicit GUI and PWDT refresh never replay writes or submissions.
+Fourteen new Chromium controls and the 56-case recovery selection pass using real
+client code with isolated mocked services. This is verified source client recovery,
+not installed-WebView, remote-outage or scale acceptance.
+
+The [Workbench result-history follow-up](../reports/workbench-result-history-recovery-20261011.md)
+validates complete result lists and preserves known records, selection and editing
+on read failure. Pending/unavailable reads do not claim empty history or a current
+record count. The local Results refresh action and runtime Retry All both recover
+reads without replaying computations or writes; only the latest request publishes
+records or clears its warning. Successful read recovery also preserves unsaved
+drafts for the same record, while explicit record selection loads verified data.
+Confirmed save/delete and failed follow-up reads have separate feedback; confirmed
+deletion removes its local record without hiding other results. This is source
+client recovery with isolated mocked services, not installed or remote acceptance.
+
+The [Workbench job-editing follow-up](../reports/workbench-job-draft-recovery-20261011.md)
+extends draft protection to task metadata. Each dirty message/project/version/case
+field survives verified refresh or read recovery while untouched fields follow
+the latest values. Explicit record selection loads that record; authoritative
+empty history clears selection. A slow save cannot replace later typing on the
+same job or another selected job. Reconciled saved fields become clean again;
+GUI Retry All and PWDT recovery do not replay writes. Job and result editing share
+a small in-memory reconciliation rule, not a persistent draft cache. Installed
+WebViews, backend-authority transitions and multi-user conflict handling remain
+separate acceptance work.
+
+The [Workbench job-record follow-up](../reports/workbench-job-record-recovery-20261011.md)
+separates mutation confirmation from follow-up reads. Optional version clearing
+sends explicit null; required project/case clearing is rejected rather than
+silently omitted. Shared backend validation also rejects whitespace-only required
+identities. Workbench validates job identity and lifecycle, plus explicit deletion
+confirmation, before changing local records. Confirmed deletion removes only its
+job/result pair and fences pre-confirmation reads; other selections and editing
+survive. Job and result refresh start independently, and failed reads cannot
+revoke a confirmed write. Ambiguous responses require read reconciliation, not
+automatic write replay. Source Chromium controls with mocked services and real
+JSON/SQLite API tests remain distinct from installed or remote acceptance.
+
+The [Workbench result-record follow-up](../reports/workbench-result-record-recovery-20261011.md)
+requires a matching result identity and object payload for write confirmation;
+deletion additionally requires boolean true. Malformed success responses preserve
+editing and do not start follow-up reads or replay writes. Save/export reject
+nonobject drafts and numeric overflow before any write or download. Backend and
+download failures are not blamed on valid draft JSON, and download activation
+releases its temporary object URL even on failure. Export uses the working draft,
+not necessarily the saved result. Slow-response and stale-read controls protect
+other selection and newer typing. Real JSON/SQLite result APIs remain separate
+from mocked-service source Chromium, installed WebViews and remote acceptance.
 
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job

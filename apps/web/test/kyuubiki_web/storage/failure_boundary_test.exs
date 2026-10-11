@@ -17,10 +17,15 @@ defmodule KyuubikiWeb.Storage.FailureBoundaryTest do
   end
 
   test "known memory store exit reasons are bounded including unknown timeout outcomes" do
-    for reason <- [:noproc, :normal, :shutdown, :killed, :timeout, {:shutdown, :unavailable}] do
+    for store <- [
+          AnalysisMemoryState,
+          KyuubikiWeb.Library.MemoryBackend,
+          KyuubikiWeb.SecurityEvents.MemoryBackend
+        ],
+        reason <- [:noproc, :normal, :shutdown, :killed, :timeout, {:shutdown, :unavailable}] do
       assert {:error, :analysis_store_unavailable} =
                FailureBoundary.run(fn ->
-                 exit({reason, {GenServer, :call, [AnalysisMemoryState, :get, 10]}})
+                 exit({reason, {GenServer, :call, [store, :get, 10]}})
                end)
     end
   end

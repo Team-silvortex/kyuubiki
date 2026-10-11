@@ -79,6 +79,8 @@ type WorkbenchSystemRuntimePanelProps = {
   auditTitle: string;
   auditCountLabel: string;
   auditEmptyLabel: string;
+  auditReadError?: string;
+  auditReadPending?: boolean;
   auditSessionLabel: string;
   auditWindowLabel: string;
   auditSourceLabel: string;
@@ -163,6 +165,8 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   auditTitle,
   auditCountLabel,
   auditEmptyLabel,
+  auditReadError,
+  auditReadPending,
   auditSessionLabel,
   auditWindowLabel,
   auditSourceLabel,
@@ -373,6 +377,8 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
           title={auditTitle}
           countLabel={auditCountLabel}
           emptyLabel={auditEmptyLabel}
+          readError={auditReadError}
+          readPending={auditReadPending}
           sessionLabel={auditSessionLabel}
           windowLabel={auditWindowLabel}
           sourceLabel={auditSourceLabel}

@@ -50,6 +50,8 @@ export function WorkbenchSystemSidebarMount({
   runtimeAuditProjectFacets,
   runtimeAuditModelVersionFacets,
   securityEventRecords,
+  securityEventReadError,
+  securityEventReadPending,
   securityEventWindowFilter,
   securityEventSourceFilter,
   securityEventRiskFilter,
@@ -118,6 +120,9 @@ export function WorkbenchSystemSidebarMount({
   saveAdminJobRecord,
   deleteAdminJobRecord,
   adminResultRows,
+  resultReadPending,
+  resultReadError,
+  refreshResults,
   selectedAdminResultJobId,
   handleSelectAdminResult,
   jobHistory,
@@ -371,8 +376,10 @@ export function WorkbenchSystemSidebarMount({
           securityRows={runtimeSecurityRows}
           securityFooter={<p className="card-copy">{t.runtimeSecurityFooter}</p>}
           auditTitle={t.securityAudit}
-          auditCountLabel={String(securityEventRecords.length)}
+          auditCountLabel={securityEventReadPending ? t.busy : securityEventReadError ? t.stabilityWatch : String(securityEventRecords.length)}
           auditEmptyLabel={getWorkbenchRuntimeAuditEmptyLabel(language)}
+          auditReadError={securityEventReadError}
+          auditReadPending={securityEventReadPending}
           auditSessionLabel={t.auditSessionLabel}
           auditWindowLabel={t.auditWindow}
           auditSourceLabel={t.auditSource}
@@ -453,6 +460,9 @@ export function WorkbenchSystemSidebarMount({
           t={t}
           adminJobRows={adminJobRows}
           adminResultRows={adminResultRows}
+          resultReadPending={resultReadPending}
+          resultReadError={resultReadError}
+          refreshResults={refreshResults}
           systemDataTab={systemDataTab}
           handleSystemDataTabChange={handleSystemDataTabChange}
           adminFilterProjectId={adminFilterProjectId}

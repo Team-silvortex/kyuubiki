@@ -120,7 +120,7 @@ defmodule KyuubikiWeb.Storage.ExportReadSnapshotTest do
     assert {:ok, :checked} =
              apply(repo, :transaction, [
                fn ->
-                 assert {:ok, [_]} = Library.list_projects()
+                 assert {:ok, [_]} = Library.list_models(fixture.project["project_id"])
                  id = fixture.project["project_id"]
 
                  assert {:error, :analysis_store_unavailable} =

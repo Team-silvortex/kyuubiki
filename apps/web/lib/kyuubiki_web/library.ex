@@ -5,12 +5,15 @@ defmodule KyuubikiWeb.Library do
 
   @default_model_schema_version "kyuubiki.model/v1"
 
+  alias KyuubikiWeb.Storage
+  alias KyuubikiWeb.Storage.{FailureBoundary, ReadSnapshot}
+
   def list_projects do
-    backend().list_projects()
+    read(fn -> backend().list_projects() end, true)
   end
 
   def get_project(project_id) when is_binary(project_id) do
-    backend().get_project(project_id)
+    read(fn -> backend().get_project(project_id) end, true)
   end
 
   def create_project(attrs) when is_map(attrs) do
@@ -32,11 +35,11 @@ defmodule KyuubikiWeb.Library do
   end
 
   def list_models(project_id) when is_binary(project_id) do
-    backend().list_models(project_id)
+    read(fn -> backend().list_models(project_id) end)
   end
 
   def get_model(model_id) when is_binary(model_id) do
-    backend().get_model(model_id)
+    read(fn -> backend().get_model(model_id) end, true)
   end
 
   def create_model(project_id, attrs) when is_binary(project_id) and is_map(attrs) do
@@ -59,11 +62,11 @@ defmodule KyuubikiWeb.Library do
   end
 
   def list_versions(model_id) when is_binary(model_id) do
-    backend().list_versions(model_id)
+    read(fn -> backend().list_versions(model_id) end)
   end
 
   def get_version(version_id) when is_binary(version_id) do
-    backend().get_version(version_id)
+    read(fn -> backend().get_version(version_id) end)
   end
 
   def create_version(model_id, attrs) when is_binary(model_id) and is_map(attrs) do
@@ -93,13 +96,20 @@ defmodule KyuubikiWeb.Library do
       when operation in [:model, :version] and is_binary(parent) and byte_size(parent) in 1..128 do
     with {:ok, id} when is_binary(id) <-
            KyuubikiWeb.Library.CheckpointRequest.normalize(%{"request_id" => request_id}) do
-      {:ok, backend().get_checkpoint(operation, parent, id)}
+      read(fn -> {:ok, backend().get_checkpoint(operation, parent, id)} end, true)
     else
       _ -> {:error, :invalid_checkpoint_request_id}
     end
   end
 
   def get_checkpoint(_, _, _), do: {:error, :invalid_checkpoint_request}
+
+  defp read(callback, composite? \\ false) do
+    # SQL details span several queries; a single memory read is already atomic.
+    if composite? and Storage.sql?(),
+      do: ReadSnapshot.run(callback),
+      else: FailureBoundary.run(callback)
+  end
 
   defp backend do
     if KyuubikiWeb.Storage.sql?() do

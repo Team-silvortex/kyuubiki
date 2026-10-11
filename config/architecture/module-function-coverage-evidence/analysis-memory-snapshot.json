@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Executed source lightweight JSON composite-read consistency controls. Unique write/incarnation tokens validate immutable views across accessed library, analysis and security stores. Actual concurrent writes, ABA restoration, restart, bounded conflict, mid-read outage and independent store failures are checked. HTTP failure responses have no partial attachment; writes are not retried. No new processes, durable snapshots or library persistence are introduced. Installed GUI, distributed/multi-file durability and large-export performance remain open.",
+  "evidence_claims": [
+    {
+      "id": "analysis-json-export-generation-validation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/storage/memory_snapshot.ex",
+        "apps/web/lib/kyuubiki_web/storage/read_snapshot.ex",
+        "apps/web/lib/kyuubiki_web/storage/analysis_memory_state.ex",
+        "apps/web/lib/kyuubiki_web/storage/failure_boundary.ex",
+        "apps/web/lib/kyuubiki_web/library/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/security_events/memory_backend.ex",
+        "apps/web/test/support/memory_read_interleave.exs",
+        "apps/web/test/kyuubiki_web/storage/memory_read_snapshot_test.exs",
+        "apps/web/test/kyuubiki_web/storage/memory_export_snapshot_test.exs",
+        "reports/analysis-memory-snapshot-20261011.md"
+      ],
+      "required_text": [
+        "MemorySnapshot.run",
+        "@max_attempts 3",
+        "Process.delete(@context)",
+        "ABA content restoration still invalidates the captured generation",
+        "a restarted analysis store cannot reuse an old process generation",
+        "continuous writes stop after three attempts and release the read context",
+        "in-context mutations are refused without executing or retrying writes",
+        "each accessed store is captured once and telemetry never carries stored payloads",
+        "rejects a mid-read analysis outage and restores original data",
+        "only database export requires the separate security-event store",
+        "without a partial attachment",
+        "The lightweight project library remains volatile"
+      ]
+    }
+  ]
+}

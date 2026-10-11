@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench security history validates complete responses, retains known same-filter records on failure, and distinguishes pending/unavailable from authoritative empty history. Filter changes invalidate prior requests before paint; same-scope overlapping successes and failures cannot overwrite newer records or warnings. Fourteen real Chromium controls use the actual React client with isolated mocked services; twenty-one added unit controls reject malformed success and preserve extensible fields without copies or automatic retries. Explicit GUI/PWDT refresh is read-only. Installed WebViews, remote runtime outages, scale and physical correctness remain separate.",
+  "evidence_claims": [
+    {
+      "id": "workbench-security-history-client-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/lib/workbench/security-event-backend-service-core.ts",
+        "apps/frontend/src/components/workbench/workbench-data-refresh-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-sidebar-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-sidebar-mount-props.tsx",
+        "apps/frontend/src/components/workbench/workbench-system-sidebar-mount.tsx",
+        "apps/frontend/src/components/workbench/system/workbench-system-runtime-panel.tsx",
+        "apps/frontend/src/components/workbench/system/workbench-security-audit-card.tsx",
+        "apps/frontend/test/workflow/workbench-security-event-backend-service.test.ts",
+        "tests/integration/workbench-ui-security-history-recovery.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-security-history-recovery-20261011.md"
+      ],
+      "required_text": [
+        "SECURITY_EVENT_HISTORY_INVALID",
+        "Keep the last validated history for this scope",
+        "Invalidate before paint",
+        "securityEventReadPending",
+        "data-workbench-audit=\"read-error\"",
+        "data-workbench-audit=\"read-pending\"",
+        "accepts authoritative empty history and extensible event fields without copying",
+        "preserves the original unavailable error without retrying",
+        "read failure must not erase known audit history",
+        "first-read failure is unavailable, not an authoritative empty history",
+        "pending filtered history never masquerades as empty or reuses old facets",
+        "filter failure never shows records from the previous scope",
+        "concurrent refresh discards late",
+        "runtime/refreshAll",
+        "56 passed, zero failures or skips"
+      ]
+    }
+  ]
+}

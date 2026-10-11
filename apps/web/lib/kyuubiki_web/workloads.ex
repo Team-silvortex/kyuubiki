@@ -18,7 +18,11 @@ defmodule KyuubikiWeb.Workloads do
   defp read_workload_catalog(base_url) do
     with {:ok, projects} <- Library.list_projects(),
          %{"jobs" => jobs} <- Analysis.list_jobs(),
-         %{"results" => results} <- Analysis.list_results() do
+         %{"results" => results} <- Analysis.list_results(),
+         {:ok, versions} <-
+           list_versions_for_models(Enum.flat_map(projects, &Map.get(&1, "models", []))) do
+      version_counts = Enum.frequencies_by(versions, & &1["model_id"])
+
       %{
         "schema_version" => @workload_catalog_version,
         "sourceLabel" => "Kyuubiki Control Plane",
@@ -26,7 +30,6 @@ defmodule KyuubikiWeb.Workloads do
         "workloads" =>
           Enum.map(projects, fn project ->
             models = Map.get(project, "models", [])
-            versions = Enum.flat_map(models, &list_versions_for_model/1)
             project_jobs = Enum.filter(jobs, &(&1["project_id"] == project["project_id"]))
             project_job_ids = MapSet.new(Enum.map(project_jobs, & &1["job_id"]))
 
@@ -44,7 +47,10 @@ defmodule KyuubikiWeb.Workloads do
               "layout" => @project_layout_version,
               "download_url" => "#{base_url}/api/v1/projects/#{project["project_id"]}/bundle",
               "model_count" => length(models),
-              "version_count" => length(versions),
+              "version_count" =>
+                Enum.reduce(models, 0, fn model, count ->
+                  count + Map.get(version_counts, model["model_id"], 0)
+                end),
               "job_count" => length(project_jobs),
               "result_count" => length(project_results),
               "analysis_domains" => workload_analysis_domains(models),
@@ -65,8 +71,8 @@ defmodule KyuubikiWeb.Workloads do
     with {:ok, project} <- Library.get_project(project_id),
          {:ok, models} <- Library.list_models(project_id),
          %{"jobs" => jobs} <- Analysis.list_jobs(),
-         %{"results" => results} <- Analysis.list_results() do
-      versions = Enum.flat_map(models, &list_versions_for_model/1)
+         %{"results" => results} <- Analysis.list_results(),
+         {:ok, versions} <- list_versions_for_models(models) do
       jobs = Enum.filter(jobs, &(&1["project_id"] == project_id))
       job_ids = MapSet.new(Enum.map(jobs, & &1["job_id"]))
       results = Enum.filter(results, &MapSet.member?(job_ids, &1["job_id"]))
@@ -102,10 +108,16 @@ defmodule KyuubikiWeb.Workloads do
     "#{base || "project"}.kyuubiki.json"
   end
 
-  defp list_versions_for_model(model) do
-    case Library.list_versions(model["model_id"]) do
-      {:ok, versions} -> versions
-      _ -> []
+  defp list_versions_for_models(models) do
+    Enum.reduce_while(models, {:ok, []}, fn model, {:ok, collected} ->
+      case Library.list_versions(model["model_id"]) do
+        {:ok, versions} -> {:cont, {:ok, [versions | collected]}}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, chunks} -> {:ok, chunks |> Enum.reverse() |> List.flatten()}
+      {:error, _} = error -> error
     end
   end
 

@@ -13,6 +13,12 @@ function controllerDeps(overrides: Record<string, unknown> = {}) {
     directMeshSelectionMode: "healthiest",
     frontendRuntimeMode: "direct_mesh_gui",
     jobPollTokenRef: { current: 0 },
+    resultRefreshSeqRef: { current: 0 },
+    setResultReadPending: () => {},
+    setRuntimeRecovery: () => {},
+    setResultRecords: () => {},
+    setSelectedAdminResultJobId: () => {},
+    adminDataBackendService: { fetchResults: async () => ({ results: [] }) },
     refreshJobHistory: async () => {},
     runBackendService: {
       fetchJob: async () => { throw new Error("not used"); },

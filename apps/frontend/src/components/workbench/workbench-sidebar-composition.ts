@@ -5,9 +5,11 @@ import { buildWorkbenchSidebarMountProps } from "@/components/workbench/workbenc
 import { WorkbenchRuntimeRecoveryCard } from "@/components/workbench/system/workbench-runtime-recovery-card";
 import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
 import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
+import type { WorkbenchRuntimeRecoveryState } from "@/components/workbench/workbench-runtime-recovery";
 
 type WorkbenchSidebarCompositionProps = Record<string, any> &
   Pick<WorkbenchSystemSidebarMountProps, "jobHistory" | "protocolAgents"> & {
+    runtimeRecovery: WorkbenchRuntimeRecoveryState;
     handleLanguageChange: (language: string) => void;
     handleModelToolsPageChange: (page: ModelToolsPage) => void;
   };
@@ -131,6 +133,8 @@ export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarComposit
     runtimeAuditProjectFacets: studyResultDerived.runtimeAuditProjectFacets,
     runtimeAuditModelVersionFacets: studyResultDerived.runtimeAuditModelVersionFacets,
     securityEventRecords: props.securityEventRecords,
+    securityEventReadPending: props.securityEventReadPending,
+    securityEventReadError: props.runtimeRecovery.issues.find((issue) => issue.channel === "security_events")?.message,
     securityEventWindowFilter: props.securityEventWindowFilter,
     securityEventSourceFilter: props.securityEventSourceFilter,
     securityEventRiskFilter: props.securityEventRiskFilter,
@@ -199,6 +203,9 @@ export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarComposit
     saveAdminJobRecord: props.saveAdminJobRecord,
     deleteAdminJobRecord: props.deleteAdminJobRecord,
     adminResultRows: studyResultDerived.adminResultRows,
+    resultReadPending: workspaceState.resultReadPending,
+    resultReadError: props.runtimeRecovery.issues.find((issue) => issue.channel === "results")?.message,
+    refreshResults: primaryActionsController.refreshResults,
     selectedAdminResultJobId: props.selectedAdminResultJobId,
     handleSelectAdminResult: uiActionController.handleSelectAdminResult,
     adminResultDraft: props.adminResultDraft,

@@ -108,6 +108,7 @@ export function useWorkbenchSessionComposition(props: WorkbenchSessionCompositio
 
   const {
     projectContext,
+    securityEventReadPending,
     refreshHealth,
     refreshProjects,
     refreshSecurityEvents,
@@ -254,11 +255,13 @@ export function useWorkbenchSessionComposition(props: WorkbenchSessionCompositio
       await Promise.allSettled([
         refreshHealth(),
         refreshJobHistory(),
+        props.refreshResults(),
         refreshProjects(),
         refreshSecurityEvents(),
         sessionWorkflowController.refreshWorkflowCatalog(),
       ]);
     },
+    securityEventReadPending,
     projectFlows,
     adminJobMessage,
     adminJobProjectId,

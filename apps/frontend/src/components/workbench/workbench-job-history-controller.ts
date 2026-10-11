@@ -53,6 +53,17 @@ type CancelWorkbenchJobArgs = {
 
 export type WorkbenchCancellationResult = WorkbenchOperationResult<{ jobId: string; contextChanged?: boolean }>;
 
+export function removeConfirmedWorkbenchJobRecord(jobId: string, deps: {
+  jobHistoryRefreshSeqRef: { current: number };
+  setJobHistory: Dispatch<SetStateAction<JobState[]>>;
+  setSelectedAdminJobId: Dispatch<SetStateAction<string | null>>;
+}) {
+  // Reads started before confirmation cannot resurrect a deleted record.
+  deps.jobHistoryRefreshSeqRef.current += 1;
+  deps.setJobHistory((current) => current.filter((entry) => entry.job_id !== jobId));
+  deps.setSelectedAdminJobId((current) => current === jobId ? null : current);
+}
+
 export function readWorkbenchJobHistory(payload: unknown): JobState[] {
   const jobs = (payload as JobHistoryPayload | null)?.jobs;
   if (!Array.isArray(jobs)) throw new Error("JOB_HISTORY_INVALID: expected a job list.");
@@ -125,6 +136,10 @@ export function useWorkbenchJobHistoryController({
   const jobHistoryRefreshSeqRef = useRef(0);
   const pendingCancellations = useRef(new Map<string, Promise<WorkbenchCancellationResult>>());
 
+  const removeConfirmedJobRecord = useCallback((jobId: string) => {
+    removeConfirmedWorkbenchJobRecord(jobId, { jobHistoryRefreshSeqRef, setJobHistory, setSelectedAdminJobId });
+  }, []);
+
   const refreshJobHistory = useCallback(async () => {
     const refreshSeq = ++jobHistoryRefreshSeqRef.current;
 
@@ -193,6 +208,7 @@ export function useWorkbenchJobHistoryController({
     selectedAdminJobId,
     setSelectedAdminJobId,
     refreshJobHistory,
+    removeConfirmedJobRecord,
     cancelCurrentJob,
   };
 }

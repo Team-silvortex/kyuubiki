@@ -1,0 +1,69 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Executed source independent history-read controls on JSON, SQLite and remote PostgreSQL 16.14. Eleven library/receipt/security routes contain known store loss with opaque 503 JSON, including failed CSV reads. Four composite SQL details reuse only an owned same-repository snapshot; real concurrent commits cannot mix generations. Missing-table faults propagate through exports and contained nested errors explicitly roll back without losing the original error. Existing empty/missing/auth/filter/cache responses remain intact. No writes are retried or volatile-library persistence added. Installed GUI, multi-request snapshots and large-history performance remain open.",
+  "evidence_claims": [
+    {
+      "id": "independent-history-read-failure-containment",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/library.ex",
+        "apps/web/lib/kyuubiki_web/analysis_exports.ex",
+        "apps/web/lib/kyuubiki_web/analysis_job_support.ex",
+        "apps/web/lib/kyuubiki_web/router.ex",
+        "apps/web/lib/kyuubiki_web/router_support.ex",
+        "apps/web/lib/kyuubiki_web/workloads.ex",
+        "apps/web/test/kyuubiki_web/api/history_read_outage_test.exs",
+        "apps/web/test/kyuubiki_web/storage/history_partial_export_test.exs",
+        "reports/history-read-reliability-20261011.md"
+      ],
+      "required_text": [
+        "respond_library_read",
+        "respond_analysis_text_read",
+        "reports a library outage without replacing history with empty data",
+        "reports a security-store outage and restores the original event",
+        "headless history helpers return an opaque error, not successful error payloads",
+        "history authentication precedes storage access, including CSV export",
+        "version context derivation propagates unavailability without creating a task",
+        "security history keeps filters, summary and CSV projections",
+        "version query failure cannot be replaced by an empty exported history",
+        "security query failure does not turn a database export into a successful partial map",
+        "persist the volatile project library"
+      ]
+    },
+    {
+      "id": "independent-history-sql-snapshot-and-rollback",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/library.ex",
+        "apps/web/lib/kyuubiki_web/storage/read_snapshot.ex",
+        "apps/web/test/support/export_read_interleave.exs",
+        "apps/web/test/kyuubiki_web/library/history_read_snapshot_test.exs",
+        "apps/web/test/kyuubiki_web/storage/read_snapshot_test.exs",
+        "apps/web/test/kyuubiki_web/storage/history_partial_export_test.exs",
+        "reports/history-read-reliability-20261011.md"
+      ],
+      "required_text": [
+        "ReadSnapshot.run(callback)",
+        "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY",
+        "apply(repo, :rollback, [reason])",
+        "keeps the project and embedded models from one SQL snapshot",
+        "model detail keeps its latest pointer and version list from one SQL snapshot",
+        "checkpoint reconciliation does not mix a receipt with later deletion",
+        "HTTP history retains a coherent view during concurrent deletion",
+        "nested SQL reads reuse only an owned snapshot and release its context",
+        "nested SQL snapshots reject a different dynamic repository without running it",
+        "a contained nested query failure rolls back with the original storage error",
+        "Independent HTTP requests can observe different generations"
+      ]
+    }
+  ]
+}

@@ -15,6 +15,8 @@ import {
   saveWorkbenchAdminResultRecord,
 } from "@/components/workbench/workbench-admin-result-controller";
 import { resetActiveResult } from "@/components/workbench/workbench-file-helpers";
+import { deleteWorkbenchAdminJobRecord, saveWorkbenchAdminJobRecord } from "./workbench-admin-job-controller";
+import type { WorkbenchRuntimeRecoveryState } from "./workbench-runtime-recovery";
 import {
   applyHistoryJobPayload,
   type HistoryJobResult,
@@ -57,6 +59,8 @@ type PrimaryActionsControllerDeps = {
   startTransition: (callback: () => void) => void;
   adminDataBackendService: WorkbenchAdminDataBackendService;
   resultRefreshSeqRef: { current: number };
+  setResultReadPending: (value: boolean) => void;
+  setRuntimeRecovery: (value: WorkbenchRuntimeRecoveryState | ((current: WorkbenchRuntimeRecoveryState) => WorkbenchRuntimeRecoveryState)) => void;
   setResultRecords: (value: any[] | ((current: any[]) => any[])) => void;
   setSelectedAdminResultJobId: (value: any) => void;
   directMeshEndpointsText: string;
@@ -89,6 +93,7 @@ type PrimaryActionsControllerDeps = {
   truss3dModel: any;
   trussDiagnostics: any;
   refreshJobHistory: () => Promise<void>;
+  removeConfirmedJobRecord: (jobId: string) => void;
   setSidebarSection: (value: any) => void;
   setWorkflowPanelTab: (value: any) => void;
   setSelectedWorkflowId: (value: any) => void;
@@ -141,6 +146,9 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
   async function refreshResults() {
     await refreshWorkbenchResults({
       resultRefreshSeqRef: deps.resultRefreshSeqRef,
+      setResultReadPending: deps.setResultReadPending,
+      setRuntimeRecovery: deps.setRuntimeRecovery,
+      resultScopeLabel: deps.t.results,
       adminDataBackendService: deps.adminDataBackendService,
       setResultRecords: deps.setResultRecords,
       setSelectedAdminResultJobId: deps.setSelectedAdminResultJobId,
@@ -468,40 +476,14 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
   };
 
   const saveAdminJobRecord = () => {
-    if (!deps.selectedAdminJobId) return;
-
     deps.startTransition(() => {
-      void (async () => {
-        try {
-          await deps.adminDataBackendService.updateJob(deps.selectedAdminJobId!, {
-            message: deps.adminJobMessage,
-            project_id: deps.adminJobProjectId || undefined,
-            model_version_id: deps.adminJobModelVersionId || undefined,
-            simulation_case_id: deps.adminJobCaseId || undefined,
-          });
-          await deps.refreshJobHistory();
-          deps.setMessage(deps.t.jobSaved);
-        } catch (error) {
-          deps.setMessage(error instanceof Error ? error.message : deps.t.initialFailed);
-        }
-      })();
+      void saveWorkbenchAdminJobRecord({ ...deps, labels: deps.t });
     });
   };
 
   const deleteAdminJobRecord = () => {
-    if (!deps.selectedAdminJobId) return;
-
     deps.startTransition(() => {
-      void (async () => {
-        try {
-          await deps.adminDataBackendService.deleteJob(deps.selectedAdminJobId!);
-          await deps.refreshJobHistory();
-          await refreshResults();
-          deps.setMessage(deps.t.jobDeleted);
-        } catch (error) {
-          deps.setMessage(error instanceof Error ? error.message : deps.t.initialFailed);
-        }
-      })();
+      void deleteWorkbenchAdminJobRecord({ ...deps, refreshResults, labels: deps.t });
     });
   };
 
@@ -517,6 +499,9 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     if (!deps.selectedAdminResultJobId) return;
     deps.startTransition(() => {
       void saveWorkbenchAdminResultRecord({
+        setResultReadPending: deps.setResultReadPending,
+        setRuntimeRecovery: deps.setRuntimeRecovery,
+        resultScopeLabel: deps.t.results,
         resultRefreshSeqRef: deps.resultRefreshSeqRef,
         adminDataBackendService: deps.adminDataBackendService,
         setResultRecords: deps.setResultRecords as any,
@@ -534,6 +519,9 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     if (!deps.selectedAdminResultJobId) return;
     deps.startTransition(() => {
       void deleteWorkbenchAdminResultRecord({
+        setResultReadPending: deps.setResultReadPending,
+        setRuntimeRecovery: deps.setRuntimeRecovery,
+        resultScopeLabel: deps.t.results,
         resultRefreshSeqRef: deps.resultRefreshSeqRef,
         adminDataBackendService: deps.adminDataBackendService,
         setResultRecords: deps.setResultRecords as any,
@@ -549,6 +537,9 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
 
   const exportAdminResultRecord = () => {
     exportWorkbenchAdminResultRecord({
+      setResultReadPending: deps.setResultReadPending,
+      setRuntimeRecovery: deps.setRuntimeRecovery,
+      resultScopeLabel: deps.t.results,
       resultRefreshSeqRef: deps.resultRefreshSeqRef,
       adminDataBackendService: deps.adminDataBackendService,
       setResultRecords: deps.setResultRecords as any,

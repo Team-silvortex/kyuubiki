@@ -276,6 +276,9 @@ async function startMockBackend() {
         if (index < 0) return respondJson(response, 404, { error: "job not found" }, request);
         const body = await readJsonBody(request);
         const updated = { ...state.adminJobs[index], ...body, updated_at: FIXED_AT };
+        if (["project_id", "simulation_case_id"].some((key) => typeof updated[key] !== "string" || !updated[key].trim())) {
+          return respondJson(response, 422, { error: "required job context cannot be empty" }, request);
+        }
         state.adminJobs[index] = updated;
         state.jobRecordMutations.push({ method: "PATCH", job_id: jobId, body });
         return respondJson(response, 200, { job: updated }, request);
@@ -285,6 +288,7 @@ async function startMockBackend() {
         const index = state.adminJobs.findIndex((entry) => entry.job_id === jobId);
         if (index < 0) return respondJson(response, 404, { error: "job not found" }, request);
         const [deletedJob] = state.adminJobs.splice(index, 1);
+        state.adminResults = state.adminResults.filter((entry) => entry.job_id !== jobId);
         state.jobRecordMutations.push({ method: "DELETE", job_id: jobId, body: null });
         return respondJson(response, 200, { deleted: true, job: deletedJob }, request);
       }
@@ -294,7 +298,10 @@ async function startMockBackend() {
         const index = state.adminResults.findIndex((entry) => entry.job_id === jobId);
         if (index < 0) return respondJson(response, 404, { error: "result not found" }, request);
         const body = await readJsonBody(request);
-        const updated = { ...state.adminResults[index], result: body?.result ?? {}, updated_at: FIXED_AT };
+        if (!body?.result || typeof body.result !== "object" || Array.isArray(body.result)) {
+          return respondJson(response, 422, { error: "missing_result_payload" }, request);
+        }
+        const updated = { ...state.adminResults[index], result: body.result, updated_at: FIXED_AT };
         state.adminResults[index] = updated;
         state.resultRecordMutations.push({ method: "PATCH", job_id: jobId, body });
         return respondJson(response, 200, { job_id: jobId, result: updated.result }, request);

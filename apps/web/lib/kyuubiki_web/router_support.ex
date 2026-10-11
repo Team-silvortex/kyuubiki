@@ -29,6 +29,25 @@ defmodule KyuubikiWeb.RouterSupport do
   def respond_analysis_read(%{method: "GET"} = conn, {:error, reason}),
     do: unprocessable(conn, reason)
 
+  def respond_library_read(conn, result, key, missing \\ nil)
+
+  def respond_library_read(%{method: "GET"} = conn, {:ok, payload}, key, _missing),
+    do: respond_json(conn, 200, %{key => payload})
+
+  def respond_library_read(%{method: "GET"} = conn, :error, _key, missing)
+      when is_binary(missing),
+      do: respond_json(conn, 404, %{"error" => missing})
+
+  def respond_library_read(%{method: "GET"} = conn, {:error, _} = error, _key, _missing),
+    do: respond_analysis_read(conn, error)
+
+  def respond_analysis_text_read(%{method: "GET"} = conn, payload, content_type)
+      when is_binary(payload),
+      do: respond_text(conn, 200, content_type, payload)
+
+  def respond_analysis_text_read(%{method: "GET"} = conn, {:error, _} = error, _content_type),
+    do: respond_analysis_read(conn, error)
+
   def request_base_url(conn) do
     trust_forwarded? = Application.get_env(:kyuubiki_web, :trust_forwarded_headers, false)
 

@@ -97,5 +97,9 @@ library/security-memory-store outages, power loss, large collection performance
 or every possible mid-query failure. The outage controls alone do not prove atomic
 concurrent-edit snapshots or consistent database backups. The later
 [SQL snapshot follow-up](analysis-export-snapshot-20261011.md) establishes one read
-transaction for the three composite SQL paths; JSON cross-store consistency and
-full backups remain separate. No installed app, version metadata or Git history changes.
+transaction for the three composite SQL paths. The later
+[JSON follow-up](analysis-memory-snapshot-20261011.md) covers live memory-store
+consistency and separate library/security-store outages in composite reads;
+the [history follow-up](history-read-reliability-20261011.md) covers independent
+library/receipt and security-history routes. Full backups remain separate.
+No installed app, version metadata or Git history changes.

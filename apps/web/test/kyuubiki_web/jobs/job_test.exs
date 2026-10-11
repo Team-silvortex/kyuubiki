@@ -4,6 +4,33 @@ defmodule KyuubikiWeb.Jobs.JobTest do
   alias KyuubikiWeb.Jobs.Job
   alias KyuubikiWeb.Jobs.ProgressEvent
 
+  for field <- [:job_id, :project_id, :simulation_case_id], value <- ["  ", "\t\r\n"] do
+    test "rejects whitespace-only #{field} #{inspect(value)} on creation" do
+      attrs = %{job_id: "job-1", project_id: "project-1", simulation_case_id: "case-1"}
+
+      assert {:error, {:invalid_or_missing, unquote(field)}} =
+               Job.new(Map.put(attrs, unquote(field), unquote(value)))
+    end
+  end
+
+  for field <- [:project_id, :simulation_case_id] do
+    test "rejects whitespace-only #{field} on metadata updates" do
+      assert {:ok, job} =
+               Job.new(%{job_id: "job-1", project_id: "project-1", simulation_case_id: "case-1"})
+
+      assert {:error, {:invalid_or_missing, unquote(field)}} =
+               Job.update_metadata(job, %{Atom.to_string(unquote(field)) => "\t\r\n"})
+    end
+  end
+
+  test "required identity checks never silently trim a nonblank identifier" do
+    attrs = %{job_id: " job-1 ", project_id: " project-1 ", simulation_case_id: " case-1 "}
+    assert {:ok, job} = Job.new(attrs)
+    for {key, value} <- attrs, do: assert(Map.fetch!(job, key) == value)
+    assert {:ok, updated} = Job.update_metadata(job, %{"project_id" => " project-2 "})
+    assert updated.project_id == " project-2 "
+  end
+
   test "rejects unknown statuses" do
     assert {:error, {:invalid_status, "mystery"}} =
              Job.new(%{

@@ -163,6 +163,7 @@ export function useWorkbenchWorkspaceState(params: {
   const [canvasViewportWidth, setCanvasViewportWidth] = useState(980);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
+  const [resultReadPending, setResultReadPending] = useState(true);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
@@ -286,6 +287,8 @@ export function useWorkbenchWorkspaceState(params: {
     setJob,
     resultRecords,
     setResultRecords,
+    resultReadPending,
+    setResultReadPending,
     projects,
     setProjects,
     selectedProjectId,

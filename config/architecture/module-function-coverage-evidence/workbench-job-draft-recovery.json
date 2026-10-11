@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench job editing preserves dirty message, project, version and case fields through healthy refresh, failed reads and explicit recovery, while clean fields follow verified values. Explicit selection loads that record and authoritative removal clears orphan editing. Slow saves cannot replace newer typing on the same or another selected job; reconciled saved fields become clean again. GUI Retry All and PWDT recovery never replay writes. Job and result editing share a string reconciliation rule with in-memory selected-record baselines, not persistent caches. Eighteen real Chromium controls use isolated mocked services, with twenty added pure unit controls. This is not installed-WebView, remote, scale, multi-user conflict, backend-authority transition or ambiguous-write reconciliation evidence.",
+  "evidence_claims": [
+    {
+      "id": "workbench-job-draft-client-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-admin-security-state.ts",
+        "apps/frontend/src/components/workbench/workbench-job-history-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-primary-actions-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-session-composition.ts",
+        "apps/frontend/test/workflow/workbench-admin-security-state.test.ts",
+        "tests/integration/workbench-ui-job-draft-recovery.test.mjs",
+        "tests/integration/workbench-ui-project-fixture.shared.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-job-draft-recovery-20261011.md"
+      ],
+      "required_text": [
+        "reconcileWorkbenchAdminDraft",
+        "jobDraftBaselineRef",
+        "resultDraftBaselineRef",
+        "first selection loads the verified record",
+        "confirmed removal clears a dirty draft",
+        "confirmed save cleans only the submitted value, never later typing",
+        "failed reads must not automatically retry",
+        "read recovery must not replay the failed write",
+        "a confirmed saved draft must become clean after read reconciliation",
+        "Workbench slow job save cannot replace newer typing",
+        "Workbench dirty job late",
+        "runtime/refreshAll",
+        "18 passed, zero failures or skips"
+      ]
+    }
+  ]
+}

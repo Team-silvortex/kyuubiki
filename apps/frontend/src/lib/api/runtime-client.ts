@@ -122,7 +122,7 @@ export function updateJobRecord(
   jobId: string,
   input: Partial<{
     project_id: string;
-    model_version_id: string;
+    model_version_id: string | null;
     simulation_case_id: string;
     message: string;
   }>,
@@ -238,7 +238,7 @@ export function createRuntimeApiClient(request: RuntimeRequestJson) {
       jobId: string,
       input: Partial<{
         project_id: string;
-        model_version_id: string;
+        model_version_id: string | null;
         simulation_case_id: string;
         message: string;
       }>,

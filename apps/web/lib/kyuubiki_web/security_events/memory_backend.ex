@@ -4,14 +4,15 @@ defmodule KyuubikiWeb.SecurityEvents.MemoryBackend do
   use Agent
 
   alias KyuubikiWeb.Persistence
+  alias KyuubikiWeb.Storage.MemorySnapshot
 
   def start_link(_opts) do
-    Agent.start_link(fn -> load_events() end, name: __MODULE__)
+    MemorySnapshot.start_link(fn -> load_events() end, name: __MODULE__)
   end
 
   def create(attrs) when is_map(attrs) do
     with {:ok, event} <- normalize_event(attrs) do
-      Agent.update(__MODULE__, fn events ->
+      MemorySnapshot.update(__MODULE__, fn events ->
         updated = [event | events] |> Enum.take(500)
         Persistence.write_json!(Persistence.security_events_path(), updated)
         updated
@@ -22,7 +23,7 @@ defmodule KyuubikiWeb.SecurityEvents.MemoryBackend do
   end
 
   def list(filters \\ %{}) do
-    Agent.get(__MODULE__, fn events ->
+    MemorySnapshot.get(__MODULE__, fn events ->
       events
       |> Enum.filter(&matches_filters?(&1, filters))
       |> Enum.take(normalize_limit(filters))
@@ -30,7 +31,7 @@ defmodule KyuubikiWeb.SecurityEvents.MemoryBackend do
   end
 
   def reset do
-    Agent.update(__MODULE__, fn _ ->
+    MemorySnapshot.update(__MODULE__, fn _ ->
       Persistence.write_json!(Persistence.security_events_path(), [])
       []
     end)

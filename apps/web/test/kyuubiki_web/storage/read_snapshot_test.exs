@@ -42,7 +42,7 @@ defmodule KyuubikiWeb.Storage.ReadSnapshotTest do
     assert {:ok, :checked} =
              apply(repo, :transaction, [
                fn ->
-                 assert {:ok, []} = Library.list_projects()
+                 assert {:ok, []} = Library.list_versions("ambient-missing-model")
 
                  assert {:error, :analysis_store_unavailable} =
                           ReadSnapshot.run(fn -> flunk("must not run in ambient transaction") end)
@@ -75,6 +75,81 @@ defmodule KyuubikiWeb.Storage.ReadSnapshotTest do
     after
       apply(repo, :put_dynamic_repo, [previous])
     end
+  end
+
+  @tag skip: not Storage.sql?()
+  test "nested SQL reads reuse only an owned snapshot and release its context" do
+    repo = Storage.repo_module!()
+
+    assert :checked =
+             ReadSnapshot.run(fn ->
+               assert apply(repo, :in_transaction?, [])
+               assert {:ok, []} = ReadSnapshot.run(&Library.list_projects/0)
+               assert_isolation(apply(repo, :get_dynamic_repo, []))
+               :checked
+             end)
+
+    refute apply(repo, :in_transaction?, [])
+
+    assert {:ok, :checked} =
+             apply(repo, :transaction, [
+               fn ->
+                 assert {:error, :analysis_store_unavailable} = Library.list_projects()
+
+                 assert {:error, :analysis_store_unavailable} =
+                          Library.get_model("ambient-missing-model")
+
+                 assert {:error, :analysis_store_unavailable} =
+                          Library.get_checkpoint(:model, "parent", "ambient-checkpoint-0001")
+
+                 :checked
+               end
+             ])
+
+    assert {:ok, []} = Library.list_projects()
+  end
+
+  @tag skip: not Storage.sql?()
+  test "nested SQL snapshots reject a different dynamic repository without running it" do
+    repo = Storage.repo_module!()
+    other = start_supervised!({repo, name: nil, pool_size: 1}, id: :snapshot_other_repo)
+
+    assert :checked =
+             ReadSnapshot.run(fn ->
+               previous = apply(repo, :put_dynamic_repo, [other])
+
+               try do
+                 assert {:error, :analysis_store_unavailable} =
+                          ReadSnapshot.run(fn ->
+                            flunk("must not cross repository boundaries")
+                          end)
+
+                 refute apply(repo, :in_transaction?, [])
+               after
+                 apply(repo, :put_dynamic_repo, [previous])
+               end
+
+               assert {:ok, []} = Library.list_projects()
+               :checked
+             end)
+
+    assert {:ok, []} = Library.list_projects()
+  end
+
+  @tag skip: not Storage.sql?()
+  test "a contained nested query failure rolls back with the original storage error" do
+    repo = Storage.repo_module!()
+
+    assert {:error, :analysis_store_unavailable} =
+             ReadSnapshot.run(fn ->
+               ReadSnapshot.run(fn ->
+                 SQL.query!(repo, "SELECT * FROM nested_history_missing_table", [])
+               end)
+             end)
+
+    refute apply(repo, :in_transaction?, [])
+    assert {:ok, []} = Library.list_projects()
+    assert {:ok, _} = Library.create_project(%{"name" => "Writable after nested failure"})
   end
 
   @tag skip: not Storage.postgres?()

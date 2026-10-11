@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed source SQL composite-read snapshot controls on SQLite and remote PostgreSQL 16.14. Real second-connection commits during project/version edits, project deletion, joint job/result deletion and security-event publication cannot mix exported record generations. Dynamic repository selection, isolation settings, ambient-transaction refusal, rollback and connection-state release are checked. JSON is regression-only; installed GUI, external artifacts, full backups and large-export performance remain open.",
+  "summary": "Executed source SQL composite-read snapshot controls on SQLite and remote PostgreSQL 16.14. Real second-connection commits during project/version edits, project deletion, joint job/result deletion and security-event publication cannot mix exported record generations. Dynamic repository selection, isolation settings, ambient-transaction refusal, rollback and connection-state release are checked. This evidence is SQL-scoped; JSON live read consistency is tracked separately by analysis-memory-snapshot. Installed GUI, external artifacts, full backups and large-export performance remain open.",
   "evidence_claims": [
     {
       "id": "analysis-sql-export-shared-read-snapshot",

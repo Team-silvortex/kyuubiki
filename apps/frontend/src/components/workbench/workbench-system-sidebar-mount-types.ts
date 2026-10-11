@@ -31,6 +31,8 @@ export type WorkbenchSystemSidebarMountProps = {
   runtimeAuditProjectFacets: Array<{ key: string; label: string; value: string }>;
   runtimeAuditModelVersionFacets: Array<{ key: string; label: string; value: string }>;
   securityEventRecords: Array<unknown>;
+  securityEventReadError?: string;
+  securityEventReadPending?: boolean;
   securityEventWindowFilter: SecurityEventWindow;
   securityEventSourceFilter: WorkbenchSecurityAuditSource | "hub-assistant" | "";
   securityEventRiskFilter: WorkbenchSecurityAuditRisk | "";
@@ -125,6 +127,9 @@ export type WorkbenchSystemSidebarMountProps = {
     status: string | null;
     summary: string;
   }>;
+  resultReadPending?: boolean;
+  resultReadError?: string;
+  refreshResults: () => Promise<void>;
   selectedAdminResultJobId: string | null;
   handleSelectAdminResult: (jobId: string) => void;
   jobHistory: Array<{

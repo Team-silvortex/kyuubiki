@@ -3,6 +3,8 @@ defmodule KyuubikiWeb.Storage.FailureBoundary do
 
   @memory_stores [
     KyuubikiWeb.Storage.AnalysisMemoryState,
+    KyuubikiWeb.Library.MemoryBackend,
+    KyuubikiWeb.SecurityEvents.MemoryBackend,
     KyuubikiWeb.Orchestra.LeaseMemoryBackend
   ]
 

@@ -519,19 +519,23 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/export/security-events" do
     with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Analysis.export_security_events(conn.query_params))
+      respond_analysis_read(conn, Analysis.export_security_events(conn.query_params))
     end)
   end
 
   get "/api/v1/export/security-events.csv" do
     with_auth(conn, :read, fn conn ->
-      respond_text(conn, 200, "text/csv", Analysis.export_security_events_csv(conn.query_params))
+      respond_analysis_text_read(
+        conn,
+        Analysis.export_security_events_csv(conn.query_params),
+        "text/csv"
+      )
     end)
   end
 
   get "/api/v1/security-events" do
     with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Analysis.list_security_events(conn.query_params))
+      respond_analysis_read(conn, Analysis.list_security_events(conn.query_params))
     end)
   end
 
@@ -558,8 +562,7 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/projects" do
     with_auth(conn, :read, fn conn ->
-      {:ok, projects} = Library.list_projects()
-      respond_json(conn, 200, %{"projects" => projects})
+      respond_library_read(conn, Library.list_projects(), "projects")
     end)
   end
 
@@ -574,10 +577,7 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/projects/:project_id" do
     with_auth(conn, :read, fn conn ->
-      case Library.get_project(project_id) do
-        {:ok, project} -> respond_json(conn, 200, %{"project" => project})
-        :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
-      end
+      respond_library_read(conn, Library.get_project(project_id), "project", "project_not_found")
     end)
   end
 
@@ -636,19 +636,17 @@ defmodule KyuubikiWeb.Router do
           _ -> nil
         end
 
-      case Library.get_checkpoint(kind, parent_id, request_id) do
-        {:ok, checkpoint} -> respond_json(conn, 200, %{"checkpoint" => checkpoint})
-        {:error, reason} -> unprocessable(conn, reason)
-      end
+      respond_library_read(
+        conn,
+        Library.get_checkpoint(kind, parent_id, request_id),
+        "checkpoint"
+      )
     end)
   end
 
   get "/api/v1/projects/:project_id/models" do
     with_auth(conn, :read, fn conn ->
-      case Library.list_models(project_id) do
-        {:ok, models} -> respond_json(conn, 200, %{"models" => models})
-        {:error, reason} -> unprocessable(conn, reason)
-      end
+      respond_library_read(conn, Library.list_models(project_id), "models")
     end)
   end
 
@@ -670,10 +668,7 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/models/:model_id" do
     with_auth(conn, :read, fn conn ->
-      case Library.get_model(model_id) do
-        {:ok, model} -> respond_json(conn, 200, %{"model" => model})
-        :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
-      end
+      respond_library_read(conn, Library.get_model(model_id), "model", "model_not_found")
     end)
   end
 
@@ -698,10 +693,7 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/models/:model_id/versions" do
     with_auth(conn, :read, fn conn ->
-      case Library.list_versions(model_id) do
-        {:ok, versions} -> respond_json(conn, 200, %{"versions" => versions})
-        {:error, reason} -> unprocessable(conn, reason)
-      end
+      respond_library_read(conn, Library.list_versions(model_id), "versions")
     end)
   end
 
@@ -723,10 +715,7 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/model-versions/:version_id" do
     with_auth(conn, :read, fn conn ->
-      case Library.get_version(version_id) do
-        {:ok, version} -> respond_json(conn, 200, %{"version" => version})
-        :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
-      end
+      respond_library_read(conn, Library.get_version(version_id), "version", "version_not_found")
     end)
   end
 

@@ -17,10 +17,12 @@ type SecurityAuditEntryRow = {
 
 type WorkbenchSecurityAuditCardProps = {
   language: string;
-  ui: Pick<WorkbenchCopy, "previousPage" | "nextPage" | "clearFilters" | "exportData">;
+  ui: Pick<WorkbenchCopy, "previousPage" | "nextPage" | "clearFilters" | "exportData" | "busy" | "failureReason">;
   title: string;
   countLabel: string;
   emptyLabel: string;
+  readError?: string;
+  readPending?: boolean;
   sessionLabel: string;
   windowLabel: string;
   sourceLabel: string;
@@ -70,6 +72,8 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
   title,
   countLabel,
   emptyLabel,
+  readError,
+  readPending,
   sessionLabel,
   windowLabel,
   sourceLabel,
@@ -126,7 +130,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
     { label: actionLabel, value: actionValue, options: [] },
   ].filter((filter) => filter.value);
   return (
-    <section className="sidebar-card sidebar-card--compact workbench-audit-card" data-workbench-audit="panel">
+    <section className="sidebar-card sidebar-card--compact workbench-audit-card" data-workbench-audit="panel" aria-busy={Boolean(readPending)}>
       <div className="card-head">
         <h2>{title}</h2>
         <span>{countLabel}</span>
@@ -141,6 +145,8 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
           </div>
         </details>
       </div>
+      {readPending ? <p className="card-copy" role="status" data-workbench-audit="read-pending">{ui.busy}</p> : null}
+      {readError ? <p className="card-copy" role="status" data-workbench-audit="read-error">{ui.failureReason}: {readError}</p> : null}
       <WorkbenchSubpanelNav label={title} value={page} onChange={setPage} attribute="data-workbench-audit-page"
         pages={[{ id: "events", label: compact.events }, { id: "filters", label: `${compact.filters} (${activeFilters.length})` },
           { id: "summary", label: summaryTitle }, { id: "facets", label: compact.facets }]} />
@@ -201,7 +207,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
           onWindowChange(""); onSourceChange(""); onRiskChange(""); onStatusChange(""); onActionChange("");
         }}>{ui.clearFilters}</button>
       </div> : null}
-      {page === "summary" ? <div data-workbench-audit-content="summary">
+      {page === "summary" && (!(readError || readPending) || entries.length > 0) ? <div data-workbench-audit-content="summary">
       <div className="card-section">
         <div className="card-head">
           <h3>{summaryTitle}</h3>
@@ -238,7 +244,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
         )}
       </div>
       </div> : null}
-      {page === "facets" ? <div data-workbench-audit-content="facets">
+      {page === "facets" && (!(readError || readPending) || entries.length > 0) ? <div data-workbench-audit-content="facets">
         {[
           { id: "source", title: sourceStatusTitle, facets: sourceStatusFacets },
           { id: "study", title: studyFacetTitle, facets: studyFacets },
@@ -257,7 +263,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
       <p className="card-copy">{sessionLabel}</p>
       <WorkbenchListPager page={visiblePage} pages={pages} previousLabel={ui.previousPage} nextLabel={ui.nextPage} onChange={setListPage} />
       {entries.length === 0 ? (
-        <p className="card-copy">{emptyLabel}</p>
+        readError || readPending ? null : <p className="card-copy" data-workbench-audit="empty">{emptyLabel}</p>
       ) : (
         <div className="script-panel__catalog">
           {entries.slice(visiblePage * 10, (visiblePage + 1) * 10).map((entry) => (

@@ -39,6 +39,9 @@ type WorkbenchSystemDataMountProps = {
     resultPayload: string;
     jobCancelled: string;
     initialFailed: string;
+    refresh: string;
+    busy: string;
+    failureReason: string;
   };
   adminJobRows: Array<{
     id: string;
@@ -58,6 +61,9 @@ type WorkbenchSystemDataMountProps = {
     summary: string;
   }>;
   systemDataTab: "jobs" | "results";
+  resultReadPending?: boolean;
+  resultReadError?: string;
+  refreshResults: () => Promise<void>;
   handleSystemDataTabChange: (tab: "jobs" | "results") => void;
   adminFilterProjectId: string;
   handleAdminFilterProjectChange: (value: string) => void;
@@ -112,6 +118,9 @@ export function WorkbenchSystemDataMount({
   adminJobRows,
   adminResultRows,
   systemDataTab,
+  resultReadPending,
+  resultReadError,
+  refreshResults,
   handleSystemDataTabChange,
   adminFilterProjectId,
   handleAdminFilterProjectChange,
@@ -158,7 +167,13 @@ export function WorkbenchSystemDataMount({
   return (
     <WorkbenchDataAdminPanel
       title={t.dataAdmin}
-      recordCountLabel={`${t.databaseRecordCount}: ${adminJobRows.length + adminResultRows.length}`}
+      recordCountLabel={`${t.databaseRecordCount}: ${resultReadPending || resultReadError ? "--" : adminJobRows.length + adminResultRows.length}`}
+      resultReadPending={resultReadPending}
+      resultReadError={resultReadError}
+      onRefreshResults={() => void refreshResults()}
+      refreshLabel={t.refresh}
+      busyLabel={t.busy}
+      failureReasonLabel={t.failureReason}
       overviewTabLabel={t.overview}
       jobsTabLabel={t.adminJobs}
       resultsTabLabel={t.adminResults}

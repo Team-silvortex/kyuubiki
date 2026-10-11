@@ -44,6 +44,9 @@ defmodule KyuubikiWeb.AnalysisJobSupport do
 
           :error ->
             {:error, {:model_version_not_found, model_version_id}}
+
+          {:error, _} = error ->
+            error
         end
 
       is_binary(project_id) and project_id != "" ->

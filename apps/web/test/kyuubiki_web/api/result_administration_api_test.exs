@@ -79,6 +79,69 @@ defmodule KyuubikiWeb.Api.ResultAdministrationApiTest do
     Fixture.unchanged(fixture)
   end
 
+  for value <- [nil, [], 42, true, "not an object"] do
+    test "nonobject result #{inspect(value)} is rejected without changing either record" do
+      job = plain_job()
+      original = %{"value" => 1}
+      assert :ok = AnalysisResultStore.put(job.job_id, original)
+      assert {422, %{"error" => "missing_result_payload"}} = patch(job.job_id, unquote(value))
+      assert {:ok, ^original} = AnalysisResultStore.get(job.job_id)
+      assert {:ok, ^job} = Store.get(job.job_id)
+    end
+  end
+
+  for value <- [%{}, %{"nested" => [nil, [], %{}, true, "x", 1.0e-300]}] do
+    test "valid object result #{inspect(value)} produces a matching receipt without mutating its job" do
+      job = plain_job()
+      result = unquote(Macro.escape(value))
+      assert :ok = AnalysisResultStore.put(job.job_id, %{"original" => true})
+      assert {200, %{"job_id" => id, "result" => ^result}} = patch(job.job_id, result)
+      assert id == job.job_id
+      assert {:ok, ^result} = AnalysisResultStore.get(job.job_id)
+      assert {:ok, ^job} = Store.get(job.job_id)
+    end
+  end
+
+  test "confirmed result deletion retains its job and another result and cannot be repeated" do
+    deleted = plain_job()
+    retained = plain_job()
+    assert :ok = AnalysisResultStore.put(deleted.job_id, %{"deleted" => true})
+    assert :ok = AnalysisResultStore.put(retained.job_id, %{"retained" => true})
+
+    assert {200, %{"job_id" => id, "result" => %{"deleted" => true}, "deleted" => true}} =
+             delete(deleted.job_id)
+
+    assert id == deleted.job_id
+    assert {:ok, ^deleted} = Store.get(deleted.job_id)
+    assert {:ok, ^retained} = Store.get(retained.job_id)
+    assert {:ok, %{"retained" => true}} = AnalysisResultStore.get(retained.job_id)
+    assert :error = AnalysisResultStore.get(deleted.job_id)
+    assert {404, %{"error" => "result_not_found"}} = delete(deleted.job_id)
+  end
+
+  for action <- [:save, :delete] do
+    test "confirmed result #{action} stays committed when follow-up history loses storage" do
+      job = plain_job()
+      assert :ok = AnalysisResultStore.put(job.job_id, %{"value" => 1})
+
+      if unquote(action) == :save do
+        assert {200, %{"result" => %{"value" => 2}}} = patch(job.job_id, %{"value" => 2})
+        assert {:ok, %{"value" => 2}} = AnalysisResultStore.get(job.job_id)
+      else
+        assert {200, %{"deleted" => true}} = delete(job.job_id)
+        assert :error = AnalysisResultStore.get(job.job_id)
+      end
+
+      assert {:ok, ^job} = Store.get(job.job_id)
+
+      StorageOutageFixture.without(StorageOutageFixture.store_child(), fn ->
+        conn = conn(:get, "/api/v1/results") |> Router.call(@opts)
+        assert conn.status == 503
+        assert %{"error" => "analysis_store_unavailable"} = Jason.decode!(conn.resp_body)
+      end)
+    end
+  end
+
   defp patch(id, result) do
     conn =
       conn(:patch, "/api/v1/results/#{id}", Jason.encode!(%{"result" => result}))

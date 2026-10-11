@@ -5,15 +5,16 @@ defmodule KyuubikiWeb.Storage.AnalysisMemoryState do
 
   alias KyuubikiWeb.Jobs.Job
   alias KyuubikiWeb.Persistence
+  alias KyuubikiWeb.Storage.MemorySnapshot
 
   @schema "kyuubiki.analysis-memory-state/v1"
 
   def start_link(_opts) do
-    Agent.start_link(&load!/0, name: __MODULE__)
+    MemorySnapshot.start_link(&load!/0, name: __MODULE__)
   end
 
   def get(collection, reader) do
-    Agent.get(__MODULE__, fn state -> reader.(Map.fetch!(state, collection)) end)
+    MemorySnapshot.get(__MODULE__, fn state -> reader.(Map.fetch!(state, collection)) end)
   end
 
   def update(collection, change) do
@@ -24,7 +25,7 @@ defmodule KyuubikiWeb.Storage.AnalysisMemoryState do
   end
 
   def transaction(change) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       {reply, updated} = change.(state)
 
       if updated === state do

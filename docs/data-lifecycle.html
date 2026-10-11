@@ -157,10 +157,89 @@
             and project-bundle export read their database collections in one transaction.
             PostgreSQL uses read-only repeatable read; SQLite uses a deferred WAL snapshot.
             Concurrent version edits, project removal, joint job/result deletion and
-            security-event publication cannot mix generations. Existing transactions are
+            security-event publication cannot mix generations. Unowned existing transactions are
             rejected rather than inheriting unverified isolation. JSON cross-store reads,
             external artifacts and full database backups remain outside this scope. See
             the <a href="../reports/analysis-export-snapshot-20261011.md">snapshot controls</a>.</li>
+          <li><strong>JSON export consistency:</strong> the same three exports capture
+            only the memory stores they read and validate unique write generations.
+            Captures must have coexisted; conflicts discard the read with at most three
+            total attempts. Store loss or sustained conflict returns an unavailable
+            response without a partial attachment. Tokens detect ABA changes and process
+            restarts; in-context writes are rejected rather than retried. Captures are
+            temporary, not new files or retained histories. Only database export depends
+            on security events. This is live read consistency, not a multi-file durable
+            snapshot; the JSON library remains volatile. See the
+            <a href="../reports/analysis-memory-snapshot-20261011.md">JSON controls</a>.</li>
+          <li><strong>Independent history reads:</strong> project/model/version lists and
+            details, checkpoint lookups and security-event history/JSON/CSV exports return
+            opaque 503 JSON during known store loss. Empty and missing records retain
+            their normal responses; checkpoint lookup remains non-cacheable. SQL details
+            and receipts share one snapshot per call; nested reads reuse only an owned
+            snapshot on the same dynamic repository. Contained query errors roll back
+            with their original error, including PostgreSQL aborted transactions.
+            Failed version/security reads cannot become partial successful exports.
+            Single-store memory reads add no full-store capture or durable archive.
+            This is not a snapshot across independent requests or new persistence for
+            the volatile library. See the
+            <a href="../reports/history-read-reliability-20261011.md">history controls</a>.</li>
+          <li><strong>Workbench security history:</strong> complete event responses are
+            validated before publication. Failed same-filter refresh retains known
+            records with visible recovery feedback; filter changes clear old-scope
+            records and invalidate earlier requests before paint. Pending/unavailable
+            reads cannot claim empty history or zero-data facets. Explicit GUI/PWDT
+            refresh is read-only. Fourteen source Chromium controls use isolated mocked
+            services; installed WebViews and remote outages remain separate. See the
+            <a href="../reports/workbench-security-history-recovery-20261011.md">client recovery controls</a>.</li>
+          <li><strong>Workbench result history:</strong> complete result lists are
+            validated before publication. Failed refresh retains verified records,
+            selection and editing; pending/unavailable reads are not empty history.
+            Only the newest read publishes data or changes its recovery issue.
+            Results refresh, runtime Retry All and PWDT recovery are read-only.
+            Successful refresh preserves unsaved drafts for the same record;
+            explicit selection loads the selected record's verified contents.
+            Confirmed save/delete is distinct from an unavailable follow-up read,
+            and confirmed deletion removes its local record. This adds only an
+            in-memory selected-record editing baseline, not a persistent cache or
+            backup history. See the
+            <a href="../reports/workbench-result-history-recovery-20261011.md">result recovery controls</a>.</li>
+          <li><strong>Workbench job editing:</strong> a selected job keeps four
+            in-memory field baselines. Dirty message/project/version/case fields
+            survive history refresh and recovery; clean fields follow verified
+            values. Explicit record selection loads that record, and verified empty
+            history clears selection. Slow saves cannot overwrite later typing on
+            the same or another selected record. Read recovery never replays writes;
+            a reconciled saved value becomes clean again. Job and result editing
+            share the same string rule, without persistent drafts or backups.
+            Cross-record draft retention and multi-user conflicts are separate. See
+            <a href="../reports/workbench-job-draft-recovery-20261011.md">job editing controls</a>.</li>
+          <li><strong>Job record confirmation:</strong> clearing an optional model
+            version sends explicit null, not an omitted patch. Required project/case
+            identities cannot be cleared, and shared task validation rejects
+            whitespace-only required IDs. Workbench checks the returned job identity
+            and lifecycle; deletion additionally requires an explicit true receipt.
+            Unconfirmed responses do not change local records or replay writes.
+            Confirmed deletion removes only its job/result pair, invalidates older
+            reads and preserves other editing. Follow-up job and result reads start
+            independently; their failure cannot revoke a confirmed write. This adds
+            no persistent tombstone, draft archive or backup. Source Chromium and
+            real JSON/SQLite API controls have separate scope; installed, remote
+            and ambiguous-write outcome reconciliation remain open. See the
+            <a href="../reports/workbench-job-record-recovery-20261011.md">job record controls</a>.</li>
+          <li><strong>Result record confirmation:</strong> Workbench requires a matching
+            result identity and object payload; deletion also requires boolean true.
+            Malformed success responses preserve records, selection and editing
+            without automatic reads or write replay. Save/export reject nonobject
+            drafts and non-finite parsed numbers before a write or download.
+            Backend and download failures are distinct from invalid draft input.
+            Export downloads the current working draft, which may be unsaved;
+            activation releases its temporary object URL even on failure.
+            Slow responses cannot discard newer typing or another selection,
+            and old reads cannot resurrect confirmed deletions. This adds no
+            archive, persistent tombstone or backup. Source-browser and real
+            JSON/SQLite API controls do not qualify installed, remote, power-loss
+            or ambiguous-write outcome reconciliation. See the
+            <a href="../reports/workbench-result-record-recovery-20261011.md">result record controls</a>.</li>
           <li><strong>Workflow branch decisions:</strong> the same private recovery record
             additionally retains at most 64 successful condition decisions and 64 KiB
             encoded bytes per active parent. Entries contain node/input-context digests,

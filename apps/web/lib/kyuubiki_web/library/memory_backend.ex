@@ -3,15 +3,17 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
 
   use Agent
   alias KyuubikiWeb.Library.CheckpointRequest
+  alias KyuubikiWeb.Storage.MemorySnapshot
 
   def start_link(_opts) do
-    Agent.start_link(fn -> %{projects: %{}, models: %{}, versions: %{}, requests: %{}} end,
+    MemorySnapshot.start_link(
+      fn -> %{projects: %{}, models: %{}, versions: %{}, requests: %{}} end,
       name: __MODULE__
     )
   end
 
   def list_projects do
-    Agent.get(__MODULE__, fn state ->
+    MemorySnapshot.get(__MODULE__, fn state ->
       projects =
         state.projects
         |> Map.values()
@@ -25,7 +27,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def get_checkpoint(operation, parent, id) do
-    Agent.get(__MODULE__, fn state ->
+    MemorySnapshot.get(__MODULE__, fn state ->
       receipt = state.requests[CheckpointRequest.lookup_key(operation, parent, id)]
 
       exists? =
@@ -37,7 +39,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def get_project(project_id) do
-    Agent.get(__MODULE__, fn state ->
+    MemorySnapshot.get(__MODULE__, fn state ->
       case Map.get(state.projects, project_id) do
         nil -> :error
         project -> {:ok, Map.put(project, "models", list_models_for_state(state, project_id))}
@@ -49,7 +51,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
     timestamp = DateTime.utc_now(:second)
     project = attrs |> Map.put("inserted_at", timestamp) |> Map.put("updated_at", timestamp)
 
-    Agent.update(__MODULE__, fn state ->
+    MemorySnapshot.update(__MODULE__, fn state ->
       put_in(state, [:projects, project["project_id"]], project)
     end)
 
@@ -57,7 +59,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def update_project(project_id, attrs) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       case Map.get(state.projects, project_id) do
         nil ->
           {:error, state}
@@ -72,7 +74,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def delete_project(project_id) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       case Map.get(state.projects, project_id) do
         nil ->
           {:error, state}
@@ -109,11 +111,11 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def list_models(project_id) do
-    Agent.get(__MODULE__, fn state -> {:ok, list_models_for_state(state, project_id)} end)
+    MemorySnapshot.get(__MODULE__, fn state -> {:ok, list_models_for_state(state, project_id)} end)
   end
 
   def get_model(model_id) do
-    Agent.get(__MODULE__, fn state ->
+    MemorySnapshot.get(__MODULE__, fn state ->
       case Map.get(state.models, model_id) do
         nil -> :error
         model -> {:ok, Map.put(model, "versions", list_versions_for_state(state, model_id))}
@@ -122,7 +124,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def create_model(attrs) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       checkpoint(state, :model, attrs, fn state ->
         if Map.has_key?(state.projects, attrs["project_id"]) do
           timestamp = DateTime.utc_now(:second)
@@ -158,7 +160,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def update_model(model_id, attrs) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       case Map.get(state.models, model_id) do
         nil ->
           {:error, state}
@@ -171,7 +173,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def delete_model(model_id) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       case Map.get(state.models, model_id) do
         nil ->
           {:error, state}
@@ -196,11 +198,11 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def list_versions(model_id) do
-    Agent.get(__MODULE__, fn state -> {:ok, list_versions_for_state(state, model_id)} end)
+    MemorySnapshot.get(__MODULE__, fn state -> {:ok, list_versions_for_state(state, model_id)} end)
   end
 
   def get_version(version_id) do
-    Agent.get(__MODULE__, fn state ->
+    MemorySnapshot.get(__MODULE__, fn state ->
       case Map.get(state.versions, version_id) do
         nil -> :error
         version -> {:ok, version}
@@ -209,7 +211,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def create_version(attrs) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       checkpoint(state, :version, attrs, fn state ->
         case Map.get(state.models, attrs["model_id"]) do
           nil ->
@@ -271,7 +273,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def update_version(version_id, attrs) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       case Map.get(state.versions, version_id) do
         nil ->
           {:error, state}
@@ -286,7 +288,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def delete_version(version_id) do
-    Agent.get_and_update(__MODULE__, fn state ->
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
       case Map.get(state.versions, version_id) do
         nil ->
           {:error, state}
@@ -309,7 +311,7 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def reset do
-    Agent.update(__MODULE__, fn _ ->
+    MemorySnapshot.update(__MODULE__, fn _ ->
       %{projects: %{}, models: %{}, versions: %{}, requests: %{}}
     end)
 

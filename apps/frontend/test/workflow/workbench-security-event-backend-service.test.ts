@@ -76,3 +76,58 @@ test("security event backend creates events through transport", async () => {
     },
   ]);
 });
+
+const invalidHistories: Array<[string, unknown]> = [
+  ["null envelope", null],
+  ["missing events", {}],
+  ["null events", { events: null }],
+  ["object events", { events: {} }],
+  ["null entry", { events: [null] }],
+  ["array entry", { events: [[]] }],
+  ["duplicate identity", { events: [securityEvent("duplicate"), securityEvent("duplicate")] }],
+  ...["event_id", "event_type", "source", "action", "risk", "status"].map((field): [string, unknown] =>
+    [`invalid ${field}`, { events: [{ ...securityEvent("event"), [field]: " " }] }]),
+  ["invalid timestamp", { events: [{ ...securityEvent("event"), occurred_at: "not-a-date" }] }],
+  ["null context", { events: [{ ...securityEvent("event"), context: null }] }],
+  ["array context", { events: [{ ...securityEvent("event"), context: [] }] }],
+  ["missing context", { events: [{ ...securityEvent("event"), context: undefined }] }],
+  ["object note", { events: [{ ...securityEvent("event"), note: {} }] }],
+  ["invalid optional timestamp", { events: [{ ...securityEvent("event"), inserted_at: "invalid" }] }],
+];
+
+for (const [name, payload] of invalidHistories) {
+  test(`security event backend rejects ${name} before publishing history`, async () => {
+    let reads = 0;
+    let writes = 0;
+    const service = createSecurityEventBackendService({
+      createEvent: async () => { writes += 1; return { event: securityEvent("write") }; },
+      fetchEvents: async () => { reads += 1; return payload as SecurityEventListPayload; },
+    });
+    await assert.rejects(service.fetchEvents(), /SECURITY_EVENT_HISTORY_INVALID/u);
+    assert.equal(reads, 1);
+    assert.equal(writes, 0);
+  });
+}
+
+test("security event backend accepts authoritative empty history and extensible event fields without copying", async () => {
+  const payload = { events: [{ ...securityEvent("event"), risk: "custom-risk", source: "external-agent",
+    status: "custom-status", note: null, context: { nested: { safe: true } } }] };
+  const service = createSecurityEventBackendService({
+    createEvent: async () => ({ event: securityEvent("write") }),
+    fetchEvents: async () => payload,
+  });
+  assert.equal(await service.fetchEvents(), payload);
+  payload.events.length = 0;
+  assert.equal(await service.fetchEvents(), payload);
+});
+
+test("security event backend preserves the original unavailable error without retrying", async () => {
+  const failure = new Error("history unavailable");
+  let reads = 0;
+  const service = createSecurityEventBackendService({
+    createEvent: async () => ({ event: securityEvent("write") }),
+    fetchEvents: async () => { reads += 1; throw failure; },
+  });
+  await assert.rejects(service.fetchEvents(), (error) => error === failure);
+  assert.equal(reads, 1);
+});

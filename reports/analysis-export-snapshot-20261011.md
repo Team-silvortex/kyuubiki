@@ -35,7 +35,12 @@ transaction could already have queried at weaker isolation, so the boundary
 refuses it with the unavailable error rather than quietly downgrading consistency.
 Even an ambient transaction that happens to have stronger isolation is refused;
 its isolation is not adopted or inferred. Subsequent ordinary reads/writes keep
-their normal connection state. Memory/JSON callbacks retain their previous behavior.
+their normal connection state. The later
+[JSON consistency follow-up](analysis-memory-snapshot-20261011.md) covers the
+separate generation-validation boundary for lightweight memory stores.
+The later [history follow-up](history-read-reliability-20261011.md) permits nested
+reads only inside this boundary's owned snapshot on the same repository. It also
+explicitly rolls back contained nested query failures with their original error.
 
 ## Executed controls
 
@@ -105,8 +110,12 @@ when serialized, not frozen database columns. Export keeps its existing public
 projection, including security-event filtering/limits and private-recovery removal;
 it is not a complete database backup and cannot be used as one.
 
-JSON library, analysis and security stores do not have one global snapshot
-boundary. Standalone job/history reads, external result files, Kcore artifacts,
+The SQL controls do not qualify JSON reads. The later JSON follow-up establishes
+live read consistency, not a global durable snapshot or new library persistence.
+These controls do not qualify standalone history. The later
+[history follow-up](history-read-reliability-20261011.md) covers independent
+project/model/version and security reads, not snapshots across separate requests.
+External result files, Kcore artifacts,
 distributed agent state, installed WebViews, power loss and large-export memory,
 transaction lifetime and latency remain separate acceptance work. No installed
 app, version metadata or Git history changes.

@@ -392,11 +392,53 @@ exports exclude private recovery records and owner sessions. See the
 The three composite paths now read SQL records in one transaction: PostgreSQL
 uses read-only repeatable read; SQLite uses a deferred WAL snapshot. Model/version,
 job/result and exported security-event reads cannot mix concurrent commits.
-Call these helpers outside an existing transaction; otherwise they return the
-unavailable error rather than inherit unverified isolation. JSON stores do not
-share this boundary. This is a public-record projection, not a full database or
-external-artifact backup. See the
-[SQL export snapshot controls](../reports/analysis-export-snapshot-20261011.md).
+Call these helpers outside an unowned existing transaction; otherwise they return
+the unavailable error rather than inherit unverified isolation. Nested reads reuse
+only this boundary's established snapshot on the same dynamic repository.
+Contained nested query failures explicitly roll back with the original error,
+including PostgreSQL's aborted-transaction state. JSON exports instead
+capture each accessed memory store once and validate unique write generations
+before returning. A conflict discards the read and retries at most three total
+attempts; a missing store or sustained conflict returns the unavailable error.
+In-context writes are refused, not replayed. Tokens distinguish process restarts
+and ABA changes without persisting new snapshot files. Only database export
+depends on the separate security-event store. This is a public-record projection,
+not a full database or external-artifact backup. See the
+[SQL export snapshot controls](../reports/analysis-export-snapshot-20261011.md) and
+[JSON read consistency controls](../reports/analysis-memory-snapshot-20261011.md).
+
+Independent project/model/version lists and details, model/version checkpoint
+lookups and security-event history/JSON/CSV exports use the same opaque failure
+response. Failed CSV reads return JSON errors, not successful CSV error text.
+Checkpoint lookups retain `no-store`; genuine unknown, missing and empty records
+keep their prior responses. SQL project/model details and checkpoint reconciliation
+share one read snapshot per call; single memory-store reads remain atomic without
+an extra whole-store capture. Version and security query errors propagate through
+composite exports instead of becoming empty history. These are source service
+guarantees, not one snapshot across separate HTTP requests or new persistence for
+the volatile JSON library. See the
+[history read controls](../reports/history-read-reliability-20261011.md).
+
+Workbench security history rejects malformed successful responses before changing
+records. A same-filter read failure retains validated history and shows unavailable
+feedback; a changed filter clears old-scope records and invalidates pending requests
+before paint. Loading and unavailable reads do not present empty-history or empty
+facet claims. Only the latest scoped read may publish records or clear warnings;
+explicit refresh is read-only, without automatic retries or computation replay.
+The [client recovery controls](../reports/workbench-security-history-recovery-20261011.md)
+use real Chromium with isolated mocked services, not installed-WebView acceptance.
+
+Workbench result history also validates complete envelopes, unique nonblank job
+identities, object results and optional timestamps before publication. Invalid
+success and read failures cannot erase verified records or selection, masquerade
+as empty history, or silently discard unsaved result drafts during recovery.
+Only the newest read can update the result list, loading state or `results`
+recovery issue; unrelated backend warnings remain intact. Explicit Results refresh,
+runtime Retry All and PWDT read recovery never replay computations or record writes.
+Confirmed record save/delete remains separate from an unavailable follow-up read;
+a confirmed deletion is removed locally. The result validator checks envelope
+structure, not solver accuracy, result provenance or authorization. See the
+[result recovery controls](../reports/workbench-result-history-recovery-20261011.md).
 
 ### Direct mesh GUI
 

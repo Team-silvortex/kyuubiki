@@ -234,8 +234,11 @@ defmodule KyuubikiWeb.Jobs.Job do
 
   defp fetch_required_string(attrs, key) do
     case Map.get(attrs, key) do
-      value when is_binary(value) and byte_size(value) > 0 -> {:ok, value}
-      _ -> {:error, {:invalid_or_missing, key}}
+      value when is_binary(value) ->
+        if String.trim(value) == "", do: {:error, {:invalid_or_missing, key}}, else: {:ok, value}
+
+      _ ->
+        {:error, {:invalid_or_missing, key}}
     end
   end
 

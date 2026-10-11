@@ -8,6 +8,7 @@ export type WorkbenchRuntimeRecoveryChannel =
   | "projects"
   | "model_versions"
   | "job_history"
+  | "results"
   | "security_events"
   | "workflow_catalog";
 

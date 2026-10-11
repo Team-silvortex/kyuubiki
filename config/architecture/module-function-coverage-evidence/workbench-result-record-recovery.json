@@ -1,0 +1,64 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench result writes require matching identity, object payload and boolean true deletion confirmation before local effects or follow-up reads. Save/export reject nonobject drafts and parsed numeric overflow; backend/download failures are separate from input errors, and temporary download URLs are released even on activation failure. Twenty-five real Chromium controls use isolated mocked services, fifty new unit controls exercise receipt/input/error boundaries, and ten new real result API controls plus expanded JSON/SQLite regressions verify the backend separately. Draft preservation and old-read fencing remain protected. This is not installed, remote, arbitrary-precision, ambiguous-write reconciliation, power-loss or exactly-once qualification. No persistent archive or production Node dependency is added.",
+  "evidence_claims": [
+    {
+      "id": "workbench-result-record-confirmation-and-export-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/lib/workbench/admin-data-backend-service-core.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-result-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-file-helpers.ts",
+        "apps/frontend/test/workflow/workbench-result-record-confirmation.test.ts",
+        "tests/integration/workbench-ui-result-record-recovery.test.mjs",
+        "tests/integration/workbench-ui-result-history-recovery.test.mjs",
+        "tests/integration/workbench-ui-isolated.shared.mjs",
+        "tests/integration/workbench-ui-project-fixture.shared.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-result-record-recovery-20261011.md"
+      ],
+      "required_text": [
+        "RESULT_RECORD_MUTATION_UNCONFIRMED",
+        "validateResultMutation",
+        "parseResultDraft",
+        "Non-finite result number.",
+        "URL.revokeObjectURL(url)",
+        "read recovery must not replay an unconfirmed result write",
+        "result export download failure is reported accurately and releases its object URL",
+        "result empty object saves and exports the working draft without another write",
+        "confirmed result deletion fences an older",
+        "25 new result-record controls",
+        "65 passed, zero failures or skips",
+        "arbitrary-precision, underflow protection or lossless numeric"
+      ]
+    },
+    {
+      "id": "result-record-object-receipt-and-delete-api",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/test/kyuubiki_web/api/result_administration_api_test.exs",
+        "apps/web/test/support/storage_outage_fixture.exs",
+        "reports/workbench-result-record-recovery-20261011.md"
+      ],
+      "required_text": [
+        "missing_result_payload",
+        "without mutating its job",
+        "confirmed result deletion retains its job and another result and cannot be repeated",
+        "stays committed when follow-up history loses storage",
+        "analysis_store_unavailable",
+        "Ten added real result API controls join five existing controls",
+        "adds\nbackend tests, not new backend production behavior"
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed source analysis collection and composite-export outage controls. Actual store stop/restart returns an opaque unavailable error without empty-success or attachment publication, then reads unchanged records. Empty collections, authorization, not-found semantics and private recovery exclusion are checked. SQL snapshot consistency is tracked by the separate analysis-export-snapshot evidence; installed GUI and independent memory-store outages remain open.",
+  "summary": "Executed source analysis collection and composite-export outage controls. Actual store stop/restart returns an opaque unavailable error without empty-success or attachment publication, then reads unchanged records. Empty collections, authorization, not-found semantics and private recovery exclusion are checked. SQL snapshot consistency is tracked by analysis-export-snapshot evidence; JSON live read consistency and separate library/security-store failures are tracked by analysis-memory-snapshot. Installed GUI remains open.",
   "evidence_claims": [
     {
       "id": "analysis-collection-and-export-outage-recovery",

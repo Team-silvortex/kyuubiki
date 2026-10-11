@@ -243,6 +243,8 @@ export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSour
         runtimeAuditProjectFacets={props.runtimeAuditProjectFacets}
         runtimeAuditModelVersionFacets={props.runtimeAuditModelVersionFacets}
         securityEventRecords={props.securityEventRecords}
+        securityEventReadError={props.securityEventReadError}
+        securityEventReadPending={props.securityEventReadPending}
         securityEventWindowFilter={props.securityEventWindowFilter}
         securityEventSourceFilter={props.securityEventSourceFilter}
         securityEventRiskFilter={props.securityEventRiskFilter}
@@ -314,6 +316,9 @@ export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSour
         saveAdminJobRecord={props.saveAdminJobRecord}
         deleteAdminJobRecord={props.deleteAdminJobRecord}
         adminResultRows={props.adminResultRows}
+        resultReadPending={props.resultReadPending}
+        resultReadError={props.resultReadError}
+        refreshResults={props.refreshResults}
         selectedAdminResultJobId={props.selectedAdminResultJobId}
         handleSelectAdminResult={props.handleSelectAdminResult}
         jobHistory={props.jobHistory}

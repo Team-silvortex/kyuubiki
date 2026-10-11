@@ -92,6 +92,7 @@ export function useWorkbenchDataRefreshController({
   const healthRefreshSeqRef = useRef(0);
   const projectRefreshSeqRef = useRef(0);
   const securityEventsRefreshSeqRef = useRef(0);
+  const [securityEventReadPending, setSecurityEventReadPending] = useState(true);
   const versionsRefreshSeqRef = useRef(0);
   const versionListModelIdRef = useRef(selectedModelId);
   const [projectContext] = useState(() => createWorkbenchProjectContext({
@@ -206,6 +207,7 @@ export function useWorkbenchDataRefreshController({
 
   async function refreshSecurityEvents() {
     const refreshSeq = ++securityEventsRefreshSeqRef.current;
+    setSecurityEventReadPending(true);
 
     try {
       const occurredAfter =
@@ -222,10 +224,12 @@ export function useWorkbenchDataRefreshController({
       });
       if (refreshSeq !== securityEventsRefreshSeqRef.current) return;
       setSecurityEventRecords(payload.events);
+      setSecurityEventReadPending(false);
       clearRecovery("security_events");
     } catch (error) {
       if (refreshSeq !== securityEventsRefreshSeqRef.current) return;
-      setSecurityEventRecords([]);
+      setSecurityEventReadPending(false);
+      // Keep the last validated history for this scope, never turn an outage into an empty audit.
       pushRecovery("security_events", error, "Security audit");
     }
   }
@@ -260,12 +264,27 @@ export function useWorkbenchDataRefreshController({
     void refreshJobHistory();
     void refreshResults();
     void refreshProjects(true);
-    void refreshSecurityEvents();
   }, []);
 
   useEffect(() => {
     void refreshHealth();
   }, [frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode]);
+
+  useLayoutEffect(() => {
+    // Invalidate before paint so old filters cannot publish while the new read is still pending.
+    securityEventsRefreshSeqRef.current += 1;
+    setSecurityEventReadPending(true);
+    setSecurityEventRecords([]);
+    clearRecovery("security_events");
+    return () => { securityEventsRefreshSeqRef.current += 1; };
+  }, [
+    securityEventWindowFilter,
+    securityEventSourceFilter,
+    securityEventRiskFilter,
+    securityEventStatusFilter,
+    securityEventActionFilter,
+    securityEventBackendService,
+  ]);
 
   useEffect(() => {
     void refreshSecurityEvents();
@@ -296,6 +315,7 @@ export function useWorkbenchDataRefreshController({
     refreshHealth,
     refreshProjects,
     refreshSecurityEvents,
+    securityEventReadPending,
     refreshVersions,
   };
 }

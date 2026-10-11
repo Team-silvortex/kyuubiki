@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench job writes distinguish validated confirmation from follow-up read failure. Optional version clearing sends null; required editing is never silently omitted. Matching valid job receipts and explicit true deletion gates precede local removal; confirmed deletion fences both collections, preserves other selection/editing and starts independent reads. Twenty-two real Chromium controls use mocked isolated services; ten real API and nine task-contract controls plus expanded JSON/SQLite regressions validate the backend separately. Ambiguous-write outcome reconciliation, installed GUIs, remote execution, power-loss, exactly-once, conflicts and large-history performance remain open. No persistent snapshots or production Node dependency are added.",
+  "evidence_claims": [
+    {
+      "id": "workbench-job-record-confirmation-and-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/lib/workbench/admin-data-backend-service-core.ts",
+        "apps/frontend/src/lib/api/runtime-client.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-job-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-job-history-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-primary-actions-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-core-composition.ts",
+        "apps/frontend/test/workflow/workbench-admin-data-backend-service.test.ts",
+        "apps/frontend/test/workflow/workbench-admin-job-controller.test.ts",
+        "tests/integration/workbench-ui-job-record-recovery.test.mjs",
+        "tests/integration/workbench-ui-isolated.shared.mjs",
+        "tests/integration/workbench-ui-project-fixture.shared.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-job-record-recovery-20261011.md"
+      ],
+      "required_text": [
+        "JOB_RECORD_MUTATION_UNCONFIRMED",
+        "saveWorkbenchAdminJobRecord",
+        "deleteWorkbenchAdminJobRecord",
+        "removeConfirmedWorkbenchJobRecord",
+        "model_version_id: deps.adminJobModelVersionId || null",
+        "refreshJobHistory(), deps.refreshResults()",
+        "deletion confirmation starts result recovery without waiting for a blocked job read",
+        "confirmed deletion fences old job",
+        "read recovery must not replay an ambiguous mutation",
+        "22 new job-record controls",
+        "58 passed, zero failures or skips"
+      ]
+    },
+    {
+      "id": "job-record-required-identity-and-delete-api",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/jobs/job.ex",
+        "apps/web/test/kyuubiki_web/jobs/job_test.exs",
+        "apps/web/test/kyuubiki_web/api/job_record_recovery_api_test.exs",
+        "apps/web/test/kyuubiki_web/jobs/atomic_deletion_test.exs",
+        "apps/web/test/support/storage_outage_fixture.exs",
+        "reports/workbench-job-record-recovery-20261011.md"
+      ],
+      "required_text": [
+        "String.trim(value)",
+        "required identity checks never silently trim a nonblank identifier",
+        "explicit null clears optional version without changing execution or result",
+        "omitted version is unchanged and is distinct from clearing",
+        "confirmed job deletion removes its result, preserves other work and cannot be repeated",
+        "confirmed deletion stays committed when later collection reads lose storage",
+        "analysis_store_unavailable",
+        "ten real API controls and nine direct task",
+        "power-loss recovery, exactly-once guarantees"
+      ]
+    }
+  ]
+}

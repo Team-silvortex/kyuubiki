@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench result history validates complete lists, preserves verified records, selection and unsaved editing on failed or recovered reads, and separates pending/unavailable from authoritative empty history. Only the latest request publishes data or recovery feedback; unrelated warnings remain. Results refresh, runtime Retry All and PWDT recovery are read-only. Confirmed save/delete remains separate from failed follow-up reads, and deletion removes only its local record. Sixteen actual Chromium controls use isolated mocked services; twenty-eight added unit controls cover result envelopes, failure and ownership. This is not installed, remote, scale, solver correctness or ambiguous-write reconciliation evidence.",
+  "evidence_claims": [
+    {
+      "id": "workbench-result-history-client-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/lib/workbench/admin-data-backend-service-core.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-result-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-security-state.ts",
+        "apps/frontend/src/components/workbench/workbench-session-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-sidebar-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-system-data-mount.tsx",
+        "apps/frontend/src/components/workbench/system/workbench-data-admin-panel.tsx",
+        "apps/frontend/test/workflow/workbench-admin-data-backend-service.test.ts",
+        "apps/frontend/test/workflow/workbench-admin-result-controller.test.ts",
+        "tests/integration/workbench-ui-result-history-recovery.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-result-history-recovery-20261011.md"
+      ],
+      "required_text": [
+        "RESULT_HISTORY_INVALID",
+        "setResultReadPending",
+        "resultDraftBaselineRef",
+        "props.refreshResults()",
+        "data-workbench-results=\"read-error\"",
+        "data-workbench-results=\"read-pending\"",
+        "data-workbench-data-action=\"refresh-results\"",
+        "only explicit reads are permitted",
+        "result recovery clears only its own channel",
+        "read recovery must not discard unsaved edits",
+        "runtime Retry All button really recovers results",
+        "cannot finish a newer pending read",
+        "read recovery must not replay failed writes",
+        "runtime/refreshAll",
+        "16 passed, zero failures or skips"
+      ]
+    }
+  ]
+}

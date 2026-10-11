@@ -29,6 +29,12 @@ type AdminResultRow = {
 type WorkbenchDataAdminPanelProps = {
   title: string;
   recordCountLabel: string;
+  resultReadPending?: boolean;
+  resultReadError?: string;
+  onRefreshResults: () => void;
+  refreshLabel: string;
+  busyLabel: string;
+  failureReasonLabel: string;
   overviewTabLabel: string;
   jobsTabLabel: string;
   resultsTabLabel: string;
@@ -106,6 +112,12 @@ type WorkbenchDataAdminPanelProps = {
 export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   title,
   recordCountLabel,
+  resultReadPending = false,
+  resultReadError,
+  onRefreshResults,
+  refreshLabel,
+  busyLabel,
+  failureReasonLabel,
   overviewTabLabel,
   jobsTabLabel,
   resultsTabLabel,
@@ -183,8 +195,9 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   const latestJob = jobRows[0];
   const waitingJobsCount = jobRows.filter((row) => row.status !== "completed").length;
   const latestResult = resultRows[0];
+  const resultCountLabel = resultReadPending || resultReadError ? "--" : String(resultRows.length);
   return (
-    <section className="sidebar-card sidebar-card--compact" data-workbench-data-admin="panel">
+    <section className="sidebar-card sidebar-card--compact" data-workbench-data-admin="panel" aria-busy={activeTab === "results" && resultReadPending}>
       <div className="card-head">
         <h2>{title}</h2>
         <span>{recordCountLabel}</span>
@@ -197,6 +210,17 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           {resultsTabLabel}
         </button>
       </div>
+      {activeTab === "results" ? (
+        <div className="sidebar-stack" aria-live="polite">
+          {resultReadPending ? <p className="card-copy" data-workbench-results="read-pending">{busyLabel}</p> : null}
+          {resultReadError ? <p className="card-copy" role="status" data-workbench-results="read-error">{failureReasonLabel}: {resultReadError}</p> : null}
+          <div className="button-row">
+            <button className="ghost-button ghost-button--compact" data-workbench-data-action="refresh-results" onClick={onRefreshResults} type="button">
+              {refreshLabel} · {resultsTabLabel}
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="panel-tabs panel-tabs--wide">
         <button className={`panel-tab${dataPage === "overview" ? " panel-tab--active" : ""}`} data-workbench-data-page="overview" onClick={() => setDataPage("overview")} type="button">
           {overviewTabLabel}
@@ -245,12 +269,12 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           <section className="sidebar-card sidebar-card--compact runtime-overview-card">
             <div className="card-head">
               <h2>{resultsTabLabel}</h2>
-              <span>{String(resultRows.length)}</span>
+              <span>{resultCountLabel}</span>
             </div>
             <div className="sidebar-list sidebar-list--metrics">
               <div className="sidebar-list__row">
                 <span>{recordCountLabel}</span>
-                <strong>{resultRows.length}</strong>
+                <strong>{resultCountLabel}</strong>
               </div>
               <div className="sidebar-list__row">
                 <span>{resultsTabLabel}</span>
@@ -403,7 +427,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
               items={resultRows}
               itemHeight={88}
               maxHeight={220}
-              emptyState={<p className="card-copy">{historyEmptyLabel}</p>}
+              emptyState={!resultReadPending && !resultReadError ? <p className="card-copy" data-workbench-results="empty">{historyEmptyLabel}</p> : null}
               itemKey={(entry) => entry.id}
               renderItem={(entry) => (
                 <button

@@ -1,5 +1,10 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
+import type { ResultRecord } from "@/lib/api/security-results-types";
+import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
+import { clearWorkbenchRuntimeRecoveryIssue, upsertWorkbenchRuntimeRecoveryIssue,
+  type WorkbenchRuntimeRecoveryState } from "./workbench-runtime-recovery";
 import type {
   WorkbenchAdminDataBackendService,
 } from "@/lib/workbench/admin-data-backend-service-core";
@@ -7,8 +12,11 @@ import type {
 type RefreshWorkbenchResultsDeps = {
   adminDataBackendService: WorkbenchAdminDataBackendService;
   resultRefreshSeqRef: { current: number };
-  setResultRecords: (value: any[]) => void;
+  setResultRecords: Dispatch<SetStateAction<ResultRecord[]>>;
   setSelectedAdminResultJobId: (value: string | null | ((current: string | null) => string | null)) => void;
+  setResultReadPending: (value: boolean) => void;
+  setRuntimeRecovery: Dispatch<SetStateAction<WorkbenchRuntimeRecoveryState>>;
+  resultScopeLabel: string;
 };
 
 type AdminResultMutationDeps = RefreshWorkbenchResultsDeps & {
@@ -25,13 +33,29 @@ type AdminResultMutationDeps = RefreshWorkbenchResultsDeps & {
   };
 };
 
+function parseResultDraft(draft: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(draft, (_key, value: unknown) => {
+    // JSON.parse can overflow finite JSON numbers; serializing Infinity would silently emit null.
+    if (typeof value === "number" && !Number.isFinite(value)) throw new SyntaxError("Non-finite result number.");
+    return value;
+  });
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new SyntaxError("Result payload must be an object.");
+  }
+  return parsed as Record<string, unknown>;
+}
+
 export async function refreshWorkbenchResults({
   adminDataBackendService,
   resultRefreshSeqRef,
   setResultRecords,
   setSelectedAdminResultJobId,
+  setResultReadPending,
+  setRuntimeRecovery,
+  resultScopeLabel,
 }: RefreshWorkbenchResultsDeps) {
   const refreshSeq = ++resultRefreshSeqRef.current;
+  setResultReadPending(true);
 
   try {
     const payload = await adminDataBackendService.fetchResults();
@@ -40,10 +64,15 @@ export async function refreshWorkbenchResults({
     setSelectedAdminResultJobId((current) =>
       current && payload.results.some((entry) => entry.job_id === current) ? current : payload.results[0]?.job_id ?? null,
     );
-  } catch {
+    setResultReadPending(false);
+    setRuntimeRecovery((current) => clearWorkbenchRuntimeRecoveryIssue(current, "results"));
+  } catch (error) {
     if (refreshSeq !== resultRefreshSeqRef.current) return;
-    setResultRecords([]);
-    setSelectedAdminResultJobId(null);
+    setResultReadPending(false);
+    const requestError = normalizeWorkbenchRequestError(error, resultScopeLabel);
+    setRuntimeRecovery((current) => upsertWorkbenchRuntimeRecoveryIssue({
+      current, channel: "results", error: requestError, scopeLabel: resultScopeLabel,
+    }));
   }
 }
 
@@ -56,13 +85,19 @@ export async function saveWorkbenchAdminResultRecord({
 }: AdminResultMutationDeps) {
   if (!selectedAdminResultJobId) return;
 
+  let parsed: Record<string, unknown>;
   try {
-    const parsed = JSON.parse(adminResultDraft) as Record<string, unknown>;
+    parsed = parseResultDraft(adminResultDraft);
+  } catch {
+    setMessage(labels.invalidJson);
+    return;
+  }
+  try {
     await refreshDeps.adminDataBackendService.updateResult(selectedAdminResultJobId, parsed);
     await refreshWorkbenchResults(refreshDeps);
     setMessage(labels.resultSaved);
   } catch (error) {
-    setMessage(error instanceof SyntaxError ? labels.invalidJson : error instanceof Error ? error.message : labels.initialFailed);
+    setMessage(error instanceof Error ? error.message : labels.initialFailed);
   }
 }
 
@@ -76,6 +111,9 @@ export async function deleteWorkbenchAdminResultRecord({
 
   try {
     await refreshDeps.adminDataBackendService.deleteResult(selectedAdminResultJobId);
+    // A confirmed deletion must not reappear locally when the follow-up read fails.
+    refreshDeps.setResultRecords((current) => current.filter((entry) => entry.job_id !== selectedAdminResultJobId));
+    refreshDeps.setSelectedAdminResultJobId((current) => current === selectedAdminResultJobId ? null : current);
     await refreshWorkbenchResults(refreshDeps);
     setMessage(labels.resultDeleted);
   } catch (error) {
@@ -92,11 +130,17 @@ export function exportWorkbenchAdminResultRecord({
 }: AdminResultMutationDeps) {
   if (!selectedAdminResultJobId) return;
 
+  let parsed: Record<string, unknown>;
   try {
-    const parsed = JSON.parse(adminResultDraft);
-    downloadTextFile(`${selectedAdminResultJobId}-result.json`, JSON.stringify(parsed, null, 2));
-    setMessage(labels.resultJsonDownloaded);
+    parsed = parseResultDraft(adminResultDraft);
   } catch {
     setMessage(labels.invalidJson);
+    return;
+  }
+  try {
+    downloadTextFile(`${selectedAdminResultJobId}-result.json`, JSON.stringify(parsed, null, 2));
+    setMessage(labels.resultJsonDownloaded);
+  } catch (error) {
+    setMessage(error instanceof Error ? error.message : labels.initialFailed);
   }
 }

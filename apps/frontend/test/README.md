@@ -74,6 +74,51 @@ Backend request/conflict/deletion and SQL receipt-transaction tests live in
 These require data revision 2 for SQL stores; use disposable test databases, never
 the installed application's state database.
 
+`tests/integration/workbench-ui-security-history-recovery.test.mjs` covers the real
+audit refresh button and PWDT recovery path with isolated mocked services. It
+preserves validated same-filter history on failure, rejects malformed successful
+responses, clears prior filter data, and discards obsolete responses without
+replaying writes. Loading/unavailable states cannot claim empty history or empty
+facets. Unit controls live in `workbench-security-event-backend-service`; see the
+[scoped recovery results](../../../reports/workbench-security-history-recovery-20261011.md).
+
+`tests/integration/workbench-ui-result-history-recovery.test.mjs` exercises the
+Results refresh and runtime Retry All buttons, PWDT read recovery, malformed
+success, overlapping responses, and confirmed or rejected writes. Failed reads
+retain known records and selection; recovery cannot overwrite unsaved result
+drafts. Loading/unavailable is distinct from empty history. Unit controls live in
+`workbench-admin-data-backend-service` and `workbench-admin-result-controller`.
+See the [result recovery controls](../../../reports/workbench-result-history-recovery-20261011.md)
+for source-client scope, write counters, and disposal requirements.
+
+`tests/integration/workbench-ui-job-draft-recovery.test.mjs` covers task metadata
+editing through GUI Retry All and PWDT read recovery, malformed history, rejected
+or slow saves, record switching and overlapping responses. Dirty fields remain
+local while clean fields follow verified data; read recovery never replays writes.
+The `workbench-admin-security-state` unit filter covers the shared string-draft
+rule. See the [job editing controls](../../../reports/workbench-job-draft-recovery-20261011.md)
+for selected-record scope and disposable-service requirements.
+
+`tests/integration/workbench-ui-job-record-recovery.test.mjs` checks explicit null
+for clearing an optional version, required-field rejection, malformed write
+acknowledgements, and job/result removal after confirmed deletion. Four stale-read
+combinations cannot resurrect deleted records while follow-up reads fail or wait;
+other selections and drafts survive. Read recovery never repeats writes.
+The `workbench-admin-job-controller` and `workbench-admin-data-backend-service`
+unit filters check the same confirmation boundary. See the
+[job record controls](../../../reports/workbench-job-record-recovery-20261011.md)
+for the separate source-browser and real backend API results.
+
+`tests/integration/workbench-ui-result-record-recovery.test.mjs` checks malformed
+result receipts and response bodies, invalid object drafts, slow saves, record
+switching, old reads after confirmed deletion, and successful or failed downloads.
+Read recovery never replays writes; newer typing survives response publication.
+Export uses the working draft rather than silently reading the saved result.
+The `workbench-result-record-confirmation` unit filter checks receipt gates,
+numeric overflow, failure classification and temporary download URL cleanup.
+See the [result record controls](../../../reports/workbench-result-record-recovery-20261011.md)
+for mock-service source-browser scope and separate real backend API results.
+
 `workbench-modeling-performance` and `workbench-truss3d-webgl` unit filters cover
 immutable batch edits, linear selection/adjacency work, 200k-node bounds, scene
 colors, and GPU-resource lifecycle. Run the opt-in CPU benchmark from this directory:

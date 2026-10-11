@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.AnalysisExports do
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.SecurityEvents.Store, as: SecurityEventStore
   alias KyuubikiWeb.Storage.ReadSnapshot
+  alias KyuubikiWeb.Storage.FailureBoundary
 
   @spec create_security_event(map()) :: {:ok, map()} | {:error, term()}
   def create_security_event(attrs) when is_map(attrs) do
@@ -16,13 +17,16 @@ defmodule KyuubikiWeb.AnalysisExports do
     end
   end
 
-  @spec list_security_events(map()) :: map()
+  @spec list_security_events(map()) :: map() | {:error, term()}
   def list_security_events(filters \\ %{}) when is_map(filters) do
-    %{"events" => SecurityEventStore.list(filters)}
+    FailureBoundary.run(fn -> %{"events" => SecurityEventStore.list(filters)} end)
   end
 
-  @spec export_security_events(map()) :: map()
-  def export_security_events(filters \\ %{}) when is_map(filters) do
+  @spec export_security_events(map()) :: map() | {:error, term()}
+  def export_security_events(filters \\ %{}) when is_map(filters),
+    do: FailureBoundary.run(fn -> read_security_events(filters) end)
+
+  defp read_security_events(filters) do
     events = SecurityEventStore.list(filters)
 
     summary =
@@ -71,8 +75,11 @@ defmodule KyuubikiWeb.AnalysisExports do
     }
   end
 
-  @spec export_security_events_csv(map()) :: String.t()
-  def export_security_events_csv(filters \\ %{}) when is_map(filters) do
+  @spec export_security_events_csv(map()) :: String.t() | {:error, term()}
+  def export_security_events_csv(filters \\ %{}) when is_map(filters),
+    do: FailureBoundary.run(fn -> read_security_events_csv(filters) end)
+
+  defp read_security_events_csv(filters) do
     events = SecurityEventStore.list(filters)
 
     rows = [
@@ -123,27 +130,34 @@ defmodule KyuubikiWeb.AnalysisExports do
   defp read_database do
     with {:ok, projects} <- Library.list_projects(),
          %{"jobs" => jobs} <- AnalysisJobRecords.list_jobs(),
-         %{"results" => results} <- AnalysisJobRecords.list_results() do
+         %{"results" => results} <- AnalysisJobRecords.list_results(),
+         %{"events" => events} <- list_security_events() do
       models = Enum.flat_map(projects, &Map.get(&1, "models", []))
 
-      model_versions =
-        models
-        |> Enum.flat_map(fn model ->
-          case Library.list_versions(model["model_id"]) do
-            {:ok, versions} -> versions
-            _ -> []
-          end
-        end)
+      with {:ok, model_versions} <- list_model_versions(models) do
+        %{
+          "exported_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
+          "projects" => projects,
+          "models" => models,
+          "model_versions" => model_versions,
+          "jobs" => jobs,
+          "results" => results,
+          "security_events" => events
+        }
+      end
+    end
+  end
 
-      %{
-        "exported_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
-        "projects" => projects,
-        "models" => models,
-        "model_versions" => model_versions,
-        "jobs" => jobs,
-        "results" => results,
-        "security_events" => list_security_events()["events"]
-      }
+  defp list_model_versions(models) do
+    Enum.reduce_while(models, {:ok, []}, fn model, {:ok, collected} ->
+      case Library.list_versions(model["model_id"]) do
+        {:ok, versions} -> {:cont, {:ok, [versions | collected]}}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, chunks} -> {:ok, chunks |> Enum.reverse() |> List.flatten()}
+      {:error, _} = error -> error
     end
   end
 
