@@ -15,7 +15,13 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   alias KyuubikiWeb.Playground.AgentTaskDispatch
 
   @rpc_version 1
-  @operator_control_opts [:job_id, :queue_timeout_ms, :request_timeout_ms, :orchestration]
+  @operator_control_opts [
+    :job_id,
+    :queue_timeout_ms,
+    :request_timeout_ms,
+    :orchestration,
+    :before_dispatch
+  ]
 
   @spec solve_bar_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_bar_1d(params, on_progress \\ fn _progress -> :ok end) do

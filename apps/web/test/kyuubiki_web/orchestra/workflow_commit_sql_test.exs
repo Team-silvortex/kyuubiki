@@ -17,7 +17,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCommitSqlTest do
     Fixture.setup_coordinator()
   end
 
-  for operation <- [:progress, :complete, :fail, :cancel], target <- [:job, :result] do
+  for operation <- [:progress, :complete, :fail, :cancel, :native_block],
+      target <- [:job, :result] do
     test "#{operation} rolls back when the #{target} write fails and permits a retry" do
       fixture = Fixture.claimed_job()
 
@@ -99,4 +100,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCommitSqlTest do
     do: WorkflowRecoveryCoordinator.fail(fixture.id, fixture.claim, "solver failure")
 
   defp write(:cancel, fixture), do: WorkflowRecoveryCoordinator.cancel(fixture.id)
+
+  defp write(:native_block, fixture),
+    do:
+      WorkflowRecoveryCoordinator.block_native_recovery(
+        fixture.id,
+        fixture.claim,
+        :receipt_unavailable
+      )
 end

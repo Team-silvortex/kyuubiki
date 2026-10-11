@@ -1,5 +1,5 @@
 defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias KyuubikiWeb.WorkflowCatalogSupport
   alias KyuubikiWeb.WorkflowOperatorCatalog
@@ -34,6 +34,13 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
       do: {:ok, %{"solver" => "heat_plane_triangle_2d", "payload" => payload}}
 
     def solve_frame_3d(payload), do: {:ok, %{"solver" => "frame_3d", "payload" => payload}}
+  end
+
+  defmodule LegacySolveClient do
+    def solve_bar_1d(payload) do
+      send(self(), {:legacy_solve, payload})
+      {:ok, payload}
+    end
   end
 
   setup do
@@ -75,6 +82,67 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
   test "rejects unsupported solve operators" do
     assert {:error, {:unsupported_workflow_solve_operator, "solve.unknown"}} =
              WorkflowOperatorRuntime.run_solve_operator("solve.unknown", %{})
+  end
+
+  test "typed solve forwards a dispatch guard outside the serialized model" do
+    guard = fn -> :ok end
+    payload = %{"model" => 2}
+
+    assert {:ok, _} =
+             WorkflowOperatorRuntime.run_solve_operator(
+               "solve.heat_plane_triangle_2d",
+               payload,
+               %{},
+               fn _ -> :ok end,
+               before_dispatch: guard
+             )
+
+    assert_receive {:solve_request, "solve_heat_plane_triangle_2d", ^payload, opts}
+    assert opts[:before_dispatch] == guard
+    assert {:ok, _} = Jason.encode(payload)
+  end
+
+  test "legacy one-arity solve clients cannot bypass a dispatch guard" do
+    Application.put_env(:kyuubiki_web, WorkflowOperatorRuntime,
+      solve_runtime_client: LegacySolveClient
+    )
+
+    assert {:error, :cancelled_before_dispatch} =
+             WorkflowOperatorRuntime.run_solve_operator(
+               "solve.bar_1d",
+               %{},
+               %{},
+               fn _ -> :ok end,
+               before_dispatch: fn -> {:error, :cancelled_before_dispatch} end
+             )
+
+    refute_receive {:legacy_solve, _}, 0
+
+    assert {:ok, %{}} =
+             WorkflowOperatorRuntime.run_solve_operator(
+               "solve.bar_1d",
+               %{},
+               %{},
+               fn _ -> :ok end,
+               before_dispatch: fn -> :ok end
+             )
+
+    assert_receive {:legacy_solve, %{}}
+  end
+
+  test "malformed typed dispatch guards cannot be silently ignored" do
+    for guard <- [nil, false, fn _ -> :ok end] do
+      assert {:error, :invalid_workflow_dispatch_guard} =
+               WorkflowOperatorRuntime.run_solve_operator(
+                 "solve.heat_plane_triangle_2d",
+                 %{},
+                 %{},
+                 fn _ -> :ok end,
+                 before_dispatch: guard
+               )
+
+      refute_receive {:solve_request, _, _, _}, 0
+    end
   end
 
   test "forwards workflow node routing constraints into the solve runtime client" do

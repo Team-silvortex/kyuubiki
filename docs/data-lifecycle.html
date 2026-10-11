@@ -96,7 +96,22 @@
             pruned. Corruption, incomplete replacement and capacity exhaustion stop new TaskIR
             dispatch instead of silently falling back or deleting unknown work. This sidecar
             has local process-restart tests, not power-loss or shared-directory qualification.
-            Read-only inspection never authorizes replay or supplies a missing final result.</li>
+            Read-only inspection never authorizes replay or supplies a missing final result.
+            New v2 records preserve the actual RPC parent job independently of the TaskIR id.
+            Legacy v1 files load without rewriting; legacy or unbound records expose a null
+            job identity and cannot authorize inferred exact cancellation. Receipt retrieval
+            remains available, with no bulk migration, extra backups or larger disk budget.
+            Native graph admission checks ambiguous original attempts before persisting a
+            recovery claim, including normal startup after rollback to pending. Idempotence
+            or checkpoint metadata cannot override an unknown outcome. Blocking retains the
+            original generation/envelope and leaves dispatch files untouched; a missing or
+            corrupt journal is not treated as empty. Purely local graphs remain independent.
+            A later authorized graph generation can reuse a successful native node only by
+            rebuilding the matching TaskIR, verifying its actual v2 parent and reading its
+            original successful receipt. A missing or invalid selected receipt blocks with
+            the execution envelope retained; it never falls back to another execution.
+            Reads add no result archive or disk budget. This is bounded receipt-assisted
+            recovery, not general durable node checkpoints or exactly-once execution.</li>
           <li><strong>Agent TaskIR receipt retention:</strong> a separate read-only retrieval
             RPC uses process memory only, without disk spools or backups. At most 64
             reservations, 8 MiB per encoded response, 32 MiB total encoded response bytes

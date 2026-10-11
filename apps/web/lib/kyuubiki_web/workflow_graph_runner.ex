@@ -146,6 +146,9 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
             maybe_emit_progress(updated, node_id, "completed", indexes.node_count, opts)
             {:ok, updated, true}
 
+          {:error, {:native_workflow_recovery_blocked, _} = reason} ->
+            throw({:workflow_node_error, node_id, reason})
+
           {:error, reason} ->
             if WorkflowGraphRecovery.skip_on_error?(Map.get(node, "config")) do
               updated =

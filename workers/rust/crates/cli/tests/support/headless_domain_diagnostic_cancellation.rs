@@ -9,7 +9,7 @@ use kyuubiki_headless_sdk::{HeadlessExecutor, ServiceHeadlessExecutor};
 use serde_json::{Value, json};
 use std::error::Error;
 
-fn scan_payload(domain: Domain) -> Value {
+pub(super) fn scan_payload(domain: Domain) -> Value {
     let mut raw = domain.raw();
     // Repeat computed records to exercise reducer cadence, not a larger physical mesh.
     for group in ["nodes", "elements"] {

@@ -15,8 +15,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.Orchestra.WorkflowAdmission
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
   alias KyuubikiWeb.Orchestra.WorkflowNodeProgress
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard, as: DispatchGuard
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryFailure
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryScan
   alias KyuubikiWeb.Storage.FailureBoundary
 
@@ -67,6 +69,15 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   def fail(job_id, claim, message)
       when is_binary(job_id) and is_map(claim) and is_binary(message) do
     GenServer.call(__MODULE__, {:fail, job_id, claim, message}, @call_timeout)
+  end
+
+  def block_native_recovery(job_id, claim, reason)
+      when is_binary(job_id) and is_map(claim) do
+    GenServer.call(
+      __MODULE__,
+      {:fail, job_id, claim, {:native_workflow_recovery_blocked, reason}},
+      @call_timeout
+    )
   end
 
   @spec cancel(String.t()) :: :ok | {:error, term()}
@@ -155,15 +166,14 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   def handle_call(
-        {:record_progress, job_id, claim,
-         %{"event" => "operator_activity", "node_id" => node_id}},
+        {:record_progress, job_id, claim, %{"event" => event, "node_id" => node_id}},
         _from,
         state
       )
-      when is_binary(node_id) do
+      when is_binary(node_id) and event in ["operator_activity", "operator_dispatch"] do
     now = System.monotonic_time(:millisecond)
     previous = Map.get(state.activity, job_id)
-    persist? = is_nil(previous) or now - previous >= 1_000
+    persist? = event == "operator_activity" and (is_nil(previous) or now - previous >= 1_000)
 
     result =
       if Ownership.owner?(state),
@@ -186,9 +196,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
       {:reply, result, Ownership.after_write(next_state, result)}
     else
-      if Ownership.owner?(state),
-        do: {:reply, :ok, state},
-        else: {:reply, {:error, :orchestra_standby}, state}
+      # Throttling persistence must not throttle execution fencing.
+      result =
+        if Ownership.owner?(state),
+          do: touch_activity_if_owned(job_id, claim, nil, state.lease, false),
+          else: {:error, :orchestra_standby}
+
+      {:reply, result, Ownership.after_write(state, result)}
     end
   end
 
@@ -424,10 +438,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   defp do_dispatch_job(job_id, reason, state) do
     with {:ok, runtime, recovery} <- fetch_runtime(job_id),
-         :ok <- validate_dispatch_reason(recovery, reason),
-         :ok <- ensure_attempt_available(recovery, state.max_attempts),
          {:ok, claimed, claim} <-
-           WorkflowRecoveryEnvelope.claim(recovery, state.session_id, reason),
+           DispatchGuard.claim(job_id, recovery, state.session_id, reason, state.max_attempts),
          :ok <- put_runtime_recovery(job_id, runtime, claimed, state.lease) do
       case WorkflowJobRunner.start_claimed(job_id, claim, Map.fetch!(claimed, "envelope")) do
         {:ok, pid} ->
@@ -447,6 +459,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       {:error, :workflow_recovery_attempts_exhausted = reason} ->
         {block_recovery(job_id, reason, state.lease), state}
 
+      {:error, {:workflow_dispatch_journal_unavailable, _error} = reason} ->
+        {block_recovery(job_id, reason, state.lease), state}
+
       {:error, integrity_reason}
       when integrity_reason in [
              :invalid_workflow_recovery_digest,
@@ -456,7 +471,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
              :workflow_recovery_identity_mismatch,
              :workflow_recovery_checkpoint_mismatch,
              :workflow_recovery_checkpoint_missing_or_invalid,
-             :invalid_workflow_recovery_record
+             :invalid_workflow_recovery_record,
+             :workflow_dispatch_outcome_unconfirmed
            ] ->
         {block_recovery(job_id, integrity_reason, state.lease), state}
 
@@ -599,22 +615,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end)
   end
 
-  defp fail_if_owned(job_id, claim, message, lease) do
-    LeaseStore.with_lease(lease, fn ->
-      with {:ok, job} <- active_job(job_id),
-           {:ok, runtime, recovery} <- fetch_runtime(job_id),
-           true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
-           failed <-
-             WorkflowRecoveryEnvelope.transition(recovery, "failed", %{"message" => message}) do
-        update_recovery(job, runtime, failed, %{stage: "failed", progress: 1.0, message: message})
-      else
-        false -> {:error, :stale_workflow_execution_claim}
-        {:error, _reason} = error -> error
-        :error -> {:error, {:workflow_recovery_not_found, job_id}}
-        {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
-      end
-    end)
-  end
+  defp fail_if_owned(job_id, claim, message, lease),
+    do: WorkflowRecoveryFailure.finish(job_id, claim, message, lease)
 
   defp cancel_recovery(job_id) do
     case active_job(job_id) do
@@ -651,7 +653,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
         blocked =
           WorkflowRecoveryEnvelope.transition(recovery, "recovery_blocked", %{
             "reason" => format_reason(reason),
-            "next_action" => "supply_verified_checkpoint_or_resubmit"
+            "next_action" => DispatchGuard.next_action(reason)
           })
 
         LeaseStore.with_lease(lease, fn ->
@@ -718,17 +720,6 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       :error -> {:error, {:job_not_found, job_id}}
     end
   end
-
-  defp validate_dispatch_reason(%{"state" => "pending"}, :initial), do: :ok
-  defp validate_dispatch_reason(_recovery, :initial), do: {:error, :workflow_already_dispatched}
-  defp validate_dispatch_reason(_recovery, _reason), do: :ok
-
-  defp ensure_attempt_available(%{"attempt" => attempt}, max_attempts)
-       when is_integer(attempt) and attempt < max_attempts,
-       do: :ok
-
-  defp ensure_attempt_available(_recovery, _max_attempts),
-    do: {:error, :workflow_recovery_attempts_exhausted}
 
   defp reconcile_terminal_job(job_id, "completed", _recovery) do
     Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0}) |> progress_reply()

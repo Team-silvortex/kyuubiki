@@ -12,7 +12,12 @@ use std::{error::Error, fs, path::Path};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-fn request(domain: Domain, input: Value, solve: bool, recover: bool) -> WorkflowGraphRunRequest {
+pub(super) fn request(
+    domain: Domain,
+    input: Value,
+    solve: bool,
+    recover: bool,
+) -> WorkflowGraphRunRequest {
     let req = diagnostic_chain::request(
         domain.name,
         domain.quality,
@@ -27,7 +32,7 @@ fn request(domain: Domain, input: Value, solve: bool, recover: bool) -> Workflow
     }
 }
 
-fn assert_ready(domain: Domain, result: &Value) {
+pub(super) fn assert_ready(domain: Domain, result: &Value) {
     assert_eq!(result["failed_nodes"], json!([]), "{}", domain.name);
     assert_eq!(result["skipped_nodes"], json!([]));
     let artifacts = &result["artifacts"];
@@ -54,7 +59,7 @@ fn assert_ready(domain: Domain, result: &Value) {
     assert_eq!(artifacts["independent_output.value"], json!({"value":7}));
 }
 
-fn assert_dispatches(
+pub(super) fn assert_dispatches(
     client: &ServiceHeadlessExecutor,
     root: &Path,
     job_id: &str,
@@ -94,6 +99,7 @@ fn assert_dispatches(
         let node = if diagnostic { "diagnose" } else { "quality" };
         let task_id = format!("{job_id}:{node}:{id}");
         assert_eq!(record["task_id"], task_id);
+        assert_eq!(record["job_id"], job_id);
         assert_eq!(record["program_id"], id);
         let state = if failed {
             "observed_failed"
@@ -118,6 +124,7 @@ fn assert_dispatches(
             record["request_id"]
         );
         assert_eq!(inspection["attempts"][0]["state"], state);
+        assert_eq!(inspection["attempts"][0]["job_id"], job_id);
         assert_eq!(
             inspection["attempts"][0]["observation"]["status"],
             "retained_dispatch_observation"

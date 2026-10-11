@@ -8,7 +8,7 @@
   "required": ["schema_version", "task_id", "task_digest", "attempt_id", "execution_target", "status", "cancel_registered", "delivery_attempted", "agent_acknowledgement", "uncertainty_reason", "execution_terminal_confirmed", "automatic_replay_authorized", "journal_mutation_performed", "publication_performed", "job_wide_fallback_performed"],
   "properties": {
     "schema_version": {"const": "kyuubiki.operator-task-dispatch-cancellation/v1"},
-    "task_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "task_id": {"type": "string", "minLength": 1, "maxLength": 1024},
     "task_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
     "execution_target": {"$ref": "agent-execution-cancellation.schema.json#/$defs/target"},
@@ -46,7 +46,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["task_id", "task_digest", "attempt_id", "execution_target"],
       "properties": {
-        "task_id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 1024, "description": "TaskIR identity, independent of execution_target.job_id, which must match the retained RPC job."},
         "task_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
         "execution_target": {"$ref": "agent-execution-cancellation.schema.json#/$defs/target"}

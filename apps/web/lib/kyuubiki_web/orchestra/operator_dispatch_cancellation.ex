@@ -49,7 +49,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellation do
          target["process_instance_id"] != "unavailable" and
          is_integer(target["generation"]) and
          target["generation"] in 1..18_446_744_073_709_551_615 and
-         target["job_id"] == payload["task_id"] and
+         valid_task_id?(payload["task_id"]) and
          hex?(payload["task_digest"], 64) and hex?(payload["attempt_id"], 32) do
       :ok
     else
@@ -66,6 +66,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellation do
 
   defp valid_identity?(_), do: false
 
+  defp valid_task_id?(value) when is_binary(value) and byte_size(value) in 1..1024,
+    do: String.valid?(value)
+
+  defp valid_task_id?(_), do: false
+
   defp hex?(value, size) when is_binary(value),
     do: byte_size(value) == size and Regex.match?(~r/\A[0-9a-f]+\z/, value)
 
@@ -74,9 +79,17 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellation do
   defp match_record(nil, _), do: :ok
 
   defp match_record(record, target) do
-    if record["request_id"] == target["request_id"] and record["task_id"] == target["job_id"],
-      do: :ok,
-      else: {:error, :operator_task_dispatch_target_mismatch}
+    cond do
+      is_nil(Files.job_id(record)) ->
+        {:error, :operator_task_dispatch_job_identity_unknown}
+
+      record["request_id"] == target["request_id"] and
+          Files.job_id(record) == target["job_id"] ->
+        :ok
+
+      true ->
+        {:error, :operator_task_dispatch_target_mismatch}
+    end
   end
 
   defp deliver(nil, _, _, _), do: not_sent("no_retained_dispatch")

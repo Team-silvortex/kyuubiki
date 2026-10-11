@@ -8,7 +8,8 @@ defmodule KyuubikiWeb.Api.OperatorDispatchCancellationApiTest do
     peer = start_agent("peer")
     Application.put_env(:kyuubiki_web, AgentPool, endpoints: [owner, peer])
     AgentPool.reload()
-    query = retained_query(owner)
+    query = retained_query(owner, "parent-workflow")
+    refute query["execution_target"]["job_id"] == query["task_id"]
     {:ok, before} = Journal.lookup(query["task_id"], query["task_digest"])
     call = Task.async(fn -> cancel(query) end)
     assert_receive {:agent_request, "owner", handler, request}, 1_000
@@ -107,13 +108,15 @@ defmodule KyuubikiWeb.Api.OperatorDispatchCancellationApiTest do
     Router.call(connection, @opts)
   end
 
-  defp retained_query(endpoint) do
+  defp retained_query(endpoint, parent_job \\ nil) do
     id = "cancel-task-#{Base.encode16(:crypto.strong_rand_bytes(8))}"
+    job_id = parent_job || id
     digest = String.duplicate("a", 64)
 
     request = %{
       "id" => "original-#{id}",
       "params" => %{
+        "job_id" => job_id,
         "task_ir" => %{
           "task_id" => id,
           "integrity" => %{"task_digest" => digest},
@@ -133,7 +136,7 @@ defmodule KyuubikiWeb.Api.OperatorDispatchCancellationApiTest do
         "process_instance_id" => "original-process",
         "request_id" => request["id"],
         "generation" => 3,
-        "job_id" => id
+        "job_id" => job_id
       }
     }
   end

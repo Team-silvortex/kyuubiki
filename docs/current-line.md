@@ -285,6 +285,68 @@ generation now use the registered methods. This adds bounded source routing and
 recovery evidence, not new TaskIR solver support, public whole-job cancellation,
 installed/remote acceptance, scale or numerical accuracy.
 
+The [public graph cancellation follow-up](../reports/native-workflow-job-cancellation-20261011.md)
+connects native diagnostic/scoring activity to the existing workflow watchdog.
+Cancelled-job heartbeats retain dispatch ownership for targeted cancellation
+without renewing state or permitting node/result publication. Five domains under
+default and skip-on-error handling exercise ten cancellations and ten explicit
+recovery graphs in sixty Agent executions. Bystander requests stay untouched;
+cancelled diagnostic attempts remain failed with no score dispatch or automatic
+replay. Retained recovery diagnostics are not successful scientific outputs.
+This is source macOS diagnostic-stage graph-route evidence, not arbitrary parallel
+graph cancellation, installed/remote acceptance, numerical accuracy or durable recovery.
+
+The [queue cancellation and progress-fencing follow-up](../reports/native-workflow-queue-fencing-20261011.md)
+then closes the non-persisted node-progress path: write throttling no longer
+bypasses terminal-job, execution-claim or Orchestra-lease checks. Controlled
+300-node graphs cannot enter dependent scoring after cancelled completion.
+Five domains under both default and skip-on-error policies cover twenty queued
+cancellations and twenty explicit recovery graphs in one hundred Agent executions.
+Queued diagnosis/scoring never dispatches, completed diagnosis observations stay
+unchanged, and releasing capacity cannot resurrect the cancelled graph. This
+does not qualify every pre-admission race, arbitrary parallel graphs or durable recovery.
+
+The [dispatch-admission follow-up](../reports/native-workflow-dispatch-fencing-20261011.md)
+separates in-flight activity from permission to start a new operator. Typed solves
+and bounded native diagnostics/scoring recheck job, execution claim and Orchestra
+lease immediately before dispatch, including capacity retries. TaskIR client
+options now preserve that guard without serializing it. Twelve public-cancellation
+runner cases and twenty-four actual-client TCP failure cases prevent new admission,
+peer retries and extra journal attempts without liveness writes or Agent health
+penalties. This is controlled source admission evidence, not exhaustive races,
+remote/installed acceptance or independent numerical qualification.
+
+The [parent dispatch identity follow-up](../reports/native-workflow-dispatch-identity-20261011.md)
+separates executable TaskIR identity from the actual RPC parent job in the compact
+v2 dispatch record. Legacy v1 records remain readable without bulk rewriting or
+guessed cancellation authority. Five real graph diagnoses are inspected and
+precisely cancelled through the Rust SDK while same-parent peer executions remain
+active; five explicit recovery graphs succeed in 25 Agent executions. Failed
+diagnoses cannot dispatch scoring, satisfy a successful wait or become successful
+old attempts. This is local source contract/recovery evidence, not remote or
+installed acceptance, independent numerical qualification or exhaustive races.
+
+The [native restart-fencing follow-up](../reports/native-workflow-dispatch-recovery-20261011.md)
+checks retained ambiguous dispatches before graph claims, including ordinary
+startup after rollback to pending. Idempotence or checkpoint metadata cannot
+override an unconfirmed original outcome. Five real BEAM restarts preserve
+SQLite, dispatch records and lease identity; old generations stay blocked and
+five explicit new graphs succeed in 20 Agent executions. Original receipts remain
+read-only, and pure local recovery does not depend on the native dispatch journal.
+This is local source restart denial, not durable node continuation, exactly-once,
+power-loss or installed/remote qualification.
+
+The [native successful-receipt recovery follow-up](../reports/native-workflow-success-receipt-recovery-20261011.md)
+lets a later authorized graph generation reuse an observed successful native
+node only after rebuilding its TaskIR, matching the actual parent and reading
+the original attempt through existing completion gates. Claim/lease checks run
+before and after receipt retrieval. Five real BEAM restarts complete the same
+parents in ten Agent executions without repeating diagnoses; a sixth restart
+also loses the Agent cache and blocks without replay, retaining its envelope.
+Missing or changed evidence cannot become skip-on-error success. This is bounded
+native receipt-assisted recovery, not general durable per-node continuation,
+typed solver reuse, exactly-once or installed/remote qualification.
+
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job
 identities and ties fixed candidate reports to their own completed waits/results.

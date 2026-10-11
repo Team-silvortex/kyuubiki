@@ -1,12 +1,20 @@
 defmodule KyuubikiWeb.Playground.AgentCapacityRetryTest do
   use ExUnit.Case, async: false
+  alias KyuubikiWeb.Orchestra.{Engine, OperatorDispatchJournal}
   alias KyuubikiWeb.Playground.{AgentClient, AgentExecutionGate, AgentPool}
+  alias KyuubikiWeb.{WorkflowNativeOperatorRuntime, WorkflowOperatorRuntime}
 
   setup do
     original = Application.get_env(:kyuubiki_web, AgentPool, [])
+    solve = Application.get_env(:kyuubiki_web, WorkflowOperatorRuntime, [])
+    native = Application.get_env(:kyuubiki_web, WorkflowNativeOperatorRuntime, [])
+    Application.put_env(:kyuubiki_web, WorkflowOperatorRuntime, solve_runtime_client: AgentClient)
+    Application.put_env(:kyuubiki_web, WorkflowNativeOperatorRuntime, client: AgentClient)
 
     on_exit(fn ->
       Application.put_env(:kyuubiki_web, AgentPool, original)
+      Application.put_env(:kyuubiki_web, WorkflowOperatorRuntime, solve)
+      Application.put_env(:kyuubiki_web, WorkflowNativeOperatorRuntime, native)
       AgentPool.reload()
     end)
 
@@ -67,6 +75,103 @@ defmodule KyuubikiWeb.Playground.AgentCapacityRetryTest do
     assert_receive {:capacity_request, "capacity-fenced", _}
     refute_receive {:capacity_request, "capacity-fenced", _}, 50
     assert AgentExecutionGate.snapshot().active_lease_count == 0
+  end
+
+  for {kind, id} <- [
+        {"solve", "solve.bar_1d"},
+        {"extract", "extract.transport_result_diagnostics"},
+        {"transform", "transform.score_transport_quality"}
+      ],
+      failure <- [:returned_error, :throw, :error, :exit],
+      retry? <- [false, true] do
+    @tag operator: {kind, id}, dispatch_failure: failure, after_capacity_rejection: retry?
+    test "#{id} #{failure} dispatch fence blocks TCP and journal admission with retry=#{retry?}",
+         ctx do
+      first = agent("workflow-first", 1)
+      peer = agent("workflow-peer", 0)
+      configure([first, peer])
+      {kind, id} = ctx.operator
+      job_id = "dispatch-fence-#{System.unique_integer([:positive])}"
+      Process.put(:workflow_dispatch_checks, 0)
+
+      callback = fn
+        %{"event" => "operator_dispatch", "node_id" => "operator"} ->
+          calls = Process.get(:workflow_dispatch_checks)
+          Process.put(:workflow_dispatch_checks, calls + 1)
+
+          if calls == 0 and ctx.after_capacity_rejection,
+            do: send(self(), :first_dispatch_authorized),
+            else: reject_dispatch(ctx.dispatch_failure)
+
+        _ ->
+          :ok
+      end
+
+      assert {:error, {:workflow_node_error, "operator", {:progress_callback_failed, failure, _}}} =
+               Engine.execute_workflow_graph(
+                 graph(kind, id),
+                 %{"input" => %{}},
+                 %{"job_id" => job_id},
+                 callback
+               )
+
+      assert failure == ctx.dispatch_failure
+      expected = if ctx.after_capacity_rejection, do: 1, else: 0
+      assert Process.get(:workflow_dispatch_checks) == expected + 1
+
+      if ctx.after_capacity_rejection do
+        assert_receive :first_dispatch_authorized
+        assert_receive {:capacity_request, "workflow-first", _}
+      end
+
+      refute_receive {:capacity_request, _, _}, 50
+      assert %{active_lease_count: 0, queued_request_count: 0} = AgentExecutionGate.snapshot()
+      for endpoint <- AgentPool.endpoints(), do: assert(endpoint.consecutive_failures == 0)
+
+      attempts =
+        :sys.get_state(OperatorDispatchJournal).records
+        |> Map.values()
+        |> Enum.filter(&String.starts_with?(&1["task_id"], job_id <> ":"))
+
+      assert length(attempts) == if(kind == "solve", do: 0, else: expected)
+      for attempt <- attempts, do: assert(attempt["state"] == "not_dispatched")
+    end
+  end
+
+  defp reject_dispatch(:returned_error), do: {:error, :cancelled_before_dispatch}
+  defp reject_dispatch(:throw), do: throw(:cancelled_before_dispatch)
+  defp reject_dispatch(:error), do: raise("dispatch owner retired")
+  defp reject_dispatch(:exit), do: exit(:cancelled_before_dispatch)
+
+  defp graph(kind, id) do
+    port = %{"id" => "value", "artifact_type" => "artifact/result_summary"}
+
+    %{
+      "schema_version" => "kyuubiki.workflow-graph/v1",
+      "id" => "dispatch-fence",
+      "entry_nodes" => ["input"],
+      "output_nodes" => ["output"],
+      "nodes" => [
+        %{"id" => "input", "kind" => "input", "outputs" => [port]},
+        %{
+          "id" => "operator",
+          "kind" => kind,
+          "operator_id" => id,
+          "inputs" => [port],
+          "outputs" => [port]
+        },
+        %{"id" => "output", "kind" => "output", "inputs" => [port], "outputs" => []}
+      ],
+      "edges" =>
+        for {from, to} <- [{"input", "operator"}, {"operator", "output"}] do
+          %{
+            "id" => from <> "-" <> to,
+            "artifact_type" => "artifact/result_summary",
+            "from" => %{"node" => from, "port" => "value"},
+            "to" => %{"node" => to, "port" => "value"}
+          }
+        end
+    }
   end
 
   defp request(opts) do

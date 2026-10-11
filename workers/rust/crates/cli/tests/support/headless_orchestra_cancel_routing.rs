@@ -9,7 +9,7 @@ use std::path::Path;
 use std::thread;
 use std::time::{Duration, Instant};
 
-struct HoldMarkers<'a>(&'a Path, &'a Path);
+pub(super) struct HoldMarkers<'a>(pub(super) &'a Path, pub(super) &'a Path);
 impl Drop for HoldMarkers<'_> {
     fn drop(&mut self) {
         let _ = fs::remove_file(self.0);
@@ -17,7 +17,7 @@ impl Drop for HoldMarkers<'_> {
     }
 }
 
-fn task_result(port: u16, task: Value) -> Result<Value, String> {
+pub(super) fn task_result(port: u16, task: Value) -> Result<Value, String> {
     let mut executor = ServiceHeadlessExecutor::try_new(&format!("http://127.0.0.1:{port}"))
         .map_err(|e| e.message)?;
     let outcome = executor
@@ -29,7 +29,7 @@ fn task_result(port: u16, task: Value) -> Result<Value, String> {
     Ok(outcome.result)
 }
 
-fn active(agent: &LiveAgent, job: &str) -> Result<Value, Box<dyn Error>> {
+pub(super) fn active(agent: &LiveAgent, job: &str) -> Result<Value, Box<dyn Error>> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let reply = agent.request("routing-describe", "describe_agent", json!({}))?;

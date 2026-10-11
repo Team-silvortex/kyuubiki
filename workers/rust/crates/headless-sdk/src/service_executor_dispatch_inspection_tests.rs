@@ -85,6 +85,46 @@ fn inspection_cancellation_target_must_match_every_observed_identity() {
 }
 
 #[test]
+fn explicit_parent_identity_must_match_target_and_null_never_grants_cancellation() {
+    let mut valid = receipt();
+    valid["task_id"] = json!("parent:diagnose:extract.thermal_result_diagnostics");
+    valid["attempts"][0]["job_id"] = json!("parent");
+    valid["attempts"][0]["observation"] = json!({
+        "status":"original_endpoint_reports_active_request", "outcome":"unknown",
+        "process_instance_id":"owner-boot", "generation":3, "cancel_requested":false,
+        "execution_target":{"process_instance_id":"owner-boot", "request_id":"request", "generation":3, "job_id":"parent"}
+    });
+    let task_id = valid["task_id"].as_str().unwrap().to_owned();
+    validate(&valid, &task_id, &"a".repeat(64)).unwrap();
+    for job in [
+        Value::Null,
+        json!("foreign"),
+        json!(true),
+        json!({}),
+        json!(""),
+        json!("x".repeat(1025)),
+    ] {
+        let mut bad = valid.clone();
+        bad["attempts"][0]["job_id"] = job;
+        assert!(validate(&bad, &task_id, &"a".repeat(64)).is_err());
+    }
+    valid["attempts"][0]["observation"]["execution_target"] = Value::Null;
+    valid["attempts"][0]["job_id"] = Value::Null;
+    validate(&valid, &task_id, &"a".repeat(64)).unwrap();
+    for malformed in [
+        json!(false),
+        json!(123),
+        json!([]),
+        json!(""),
+        json!("x".repeat(1025)),
+    ] {
+        let mut bad = valid.clone();
+        bad["attempts"][0]["job_id"] = malformed;
+        assert!(validate(&bad, &task_id, &"a".repeat(64)).is_err());
+    }
+}
+
+#[test]
 fn journal_failure_after_dispatch_is_unknown_and_never_retryable() {
     let preview = crate::execution_observability::failure_preview(
         1,

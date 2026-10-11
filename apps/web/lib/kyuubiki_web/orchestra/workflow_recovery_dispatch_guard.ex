@@ -1,0 +1,73 @@
+defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard do
+  @moduledoc "Checks replay admission without promoting observations into execution authority."
+
+  alias KyuubikiWeb.Orchestra.OperatorDispatchJournal, as: Journal
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope, as: Envelope
+  alias KyuubikiWeb.WorkflowNativeOperatorRuntime, as: Native
+
+  def claim(job_id, recovery, session, reason, max_attempts, journal \\ Journal) do
+    with :ok <- dispatch_reason(recovery, reason),
+         :ok <- attempt_available(recovery, max_attempts),
+         {:ok, claimed, claim} <- Envelope.claim(recovery, session, reason),
+         :ok <- dispatch_fence(job_id, claimed, journal) do
+      {:ok, claimed, claim}
+    end
+  end
+
+  def next_action(:workflow_dispatch_outcome_unconfirmed),
+    do: "inspect_original_dispatch_before_explicit_resubmit"
+
+  def next_action({:workflow_dispatch_journal_unavailable, _reason}),
+    do: "restore_dispatch_journal_before_recovery"
+
+  def next_action(_reason), do: "supply_verified_checkpoint_or_resubmit"
+
+  defp dispatch_fence(job_id, recovery, journal) do
+    context = get_in(recovery, ["envelope", "orchestration_context"])
+
+    if context["job_id"] == job_id do
+      with {:ok, tasks} <- native_tasks(recovery["envelope"]["graph"], context) do
+        check_journal(job_id, tasks, journal)
+      end
+    else
+      {:error, :workflow_recovery_identity_mismatch}
+    end
+  end
+
+  defp native_tasks(graph, context) do
+    nodes = Map.get(graph, "nodes", [])
+
+    if is_list(nodes) and Enum.all?(nodes, &is_map/1) do
+      native = Enum.filter(nodes, &Native.supports?(&1["kind"], &1["operator_id"]))
+
+      if Enum.all?(native, &(is_binary(&1["id"]) and byte_size(&1["id"]) > 0)),
+        do: {:ok, Enum.map(native, &Native.task_id(context, &1, &1["operator_id"]))},
+        else: {:error, :invalid_workflow_execution_envelope}
+    else
+      {:error, :invalid_workflow_execution_envelope}
+    end
+  end
+
+  defp check_journal(_job_id, [], _journal), do: :ok
+
+  defp check_journal(job_id, tasks, journal) do
+    case Journal.workflow_replay_fence(job_id, tasks, journal) do
+      :ok -> :ok
+      {:error, :workflow_dispatch_outcome_unconfirmed} = blocked -> blocked
+      {:error, reason} -> {:error, {:workflow_dispatch_journal_unavailable, reason}}
+    end
+  end
+
+  defp dispatch_reason(%{"state" => "pending", "generation" => 0, "attempt" => 0}, :initial),
+    do: :ok
+
+  defp dispatch_reason(_recovery, :initial), do: {:error, :workflow_already_dispatched}
+  defp dispatch_reason(_recovery, _reason), do: :ok
+
+  defp attempt_available(%{"attempt" => attempt}, max_attempts)
+       when is_integer(attempt) and attempt < max_attempts,
+       do: :ok
+
+  defp attempt_available(_recovery, _max_attempts),
+    do: {:error, :workflow_recovery_attempts_exhausted}
+end

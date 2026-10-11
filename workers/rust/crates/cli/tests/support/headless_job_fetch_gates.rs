@@ -206,6 +206,7 @@ fn real_stored_incomplete_jobs_remain_inspectable_but_not_accepted_results() -> 
         Some(peer.port()),
         Some(&data.0),
         true,
+        None,
     )?;
     let mut direct = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{}", server.port));
     let before_projects = http_json(server.port, "/api/v1/projects", None)?.1;

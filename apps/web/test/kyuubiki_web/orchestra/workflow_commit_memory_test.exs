@@ -13,7 +13,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCommitMemoryTest do
     Fixture.setup_coordinator()
   end
 
-  for operation <- [:progress, :complete, :fail, :cancel] do
+  for operation <- [:progress, :complete, :fail, :cancel, :native_block] do
     test "#{operation} survives a failed shared-snapshot write without partial receipts" do
       fixture = Fixture.claimed_job()
       coordinator = Process.whereis(WorkflowRecoveryCoordinator)
@@ -47,4 +47,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCommitMemoryTest do
     do: WorkflowRecoveryCoordinator.fail(fixture.id, fixture.claim, "solver failure")
 
   defp write(:cancel, fixture), do: WorkflowRecoveryCoordinator.cancel(fixture.id)
+
+  defp write(:native_block, fixture),
+    do:
+      WorkflowRecoveryCoordinator.block_native_recovery(
+        fixture.id,
+        fixture.claim,
+        :receipt_unavailable
+      )
 end

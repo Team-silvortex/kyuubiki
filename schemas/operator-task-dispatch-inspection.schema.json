@@ -51,6 +51,7 @@
       "properties": {
         "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
         "request_id": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "job_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 1024, "description": "Actual RPC execution job; null means unknown or unbound, never an inferred task identity. Optional only for older wire responses."},
         "state": {"enum": ["dispatch_boundary_unconfirmed", "outcome_unknown", "observed_executed", "observed_failed", "observed_blocked", "not_dispatched"]},
         "created_at_ms": {"type": "integer", "minimum": 0},
         "updated_at_ms": {"type": "integer", "minimum": 0},

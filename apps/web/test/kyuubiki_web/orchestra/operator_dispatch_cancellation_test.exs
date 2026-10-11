@@ -17,6 +17,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellationTest do
     request = %{
       "id" => "original-rpc",
       "params" => %{
+        "job_id" => "task",
         "task_ir" => %{
           "task_id" => "task",
           "integrity" => %{"task_digest" => String.duplicate("a", 64)},
@@ -168,12 +169,17 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellationTest do
                put_in(ctx.query, ~w(execution_target request_id), "another-request")
              )
 
+    assert {:error, :operator_task_dispatch_target_mismatch} =
+             cancel(ctx, never, put_in(ctx.query, ~w(execution_target job_id), "another-job"))
+
     invalid = [
       nil,
       %{},
       Map.put(ctx.query, "host", "untrusted"),
       Map.put(ctx.query, "attempt_id", "bad"),
       Map.put(ctx.query, "task_digest", String.duplicate("A", 64)),
+      Map.put(ctx.query, "task_id", ""),
+      Map.put(ctx.query, "task_id", String.duplicate("x", 1025)),
       Map.put(ctx.query, "execution_target", nil)
     ]
 
@@ -205,7 +211,6 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellationTest do
       invalid ++
         [
           put_in(ctx.query, ~w(execution_target process_instance_id), "unavailable"),
-          put_in(ctx.query, ~w(execution_target job_id), "another-job"),
           put_in(ctx.query, ["execution_target"], Map.put(ctx.target, "cancel_all", true))
         ]
 

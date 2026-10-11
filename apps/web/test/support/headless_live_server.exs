@@ -6,16 +6,27 @@ alias KyuubikiWeb.Playground.AgentPool
 
 scenario = System.get_env("KYUUBIKI_HEADLESS_LIVE_SCENARIO", "electrostatic_quad_summary")
 
-{:ok, _} = Application.ensure_all_started(:kyuubiki_web)
-
 # Only this owned live harness opts into a stable test journal. Ordinary test
 # runs ignore inherited production data roots and use their isolated directory.
 if root = System.get_env("KYUUBIKI_HEADLESS_LIVE_JOURNAL_ROOT") do
-  journal = KyuubikiWeb.Orchestra.OperatorDispatchJournal
-  :ok = Supervisor.terminate_child(KyuubikiWeb.Supervisor, journal)
-  :ok = Supervisor.delete_child(KyuubikiWeb.Supervisor, journal)
-  {:ok, _} = Supervisor.start_child(KyuubikiWeb.Supervisor, {journal, root: root})
+  Application.put_env(:kyuubiki_web, :operator_dispatch_journal_test_root, Path.dirname(root))
 end
+
+if scenario == "real_agent" do
+  Code.require_file("headless_live_agent_pool.exs", __DIR__)
+  KyuubikiWeb.TestSupport.HeadlessLiveAgentPool.configure()
+end
+
+if System.get_env("KYUUBIKI_HEADLESS_LIVE_NATIVE_GATE_ROOT") do
+  Code.require_file("headless_native_recovery_gate.exs", __DIR__)
+
+  Application.put_env(:kyuubiki_web, KyuubikiWeb.WorkflowNativeOperatorRuntime,
+    client: KyuubikiWeb.TestSupport.HeadlessNativeRecoveryGate
+  )
+end
+
+# The launcher uses --no-start so recovery never sees an empty temporary journal first.
+{:ok, _} = Application.ensure_all_started(:kyuubiki_web)
 
 case scenario do
   "electrostatic_quad_summary" ->
@@ -28,36 +39,6 @@ case scenario do
     {:ok, _pid} = WorkflowApi.start_guarded_quad_sessions(:continued)
 
   "real_agent" ->
-    port = System.fetch_env!("KYUUBIKI_HEADLESS_LIVE_AGENT_PORT") |> String.to_integer()
-    true = port in 1..65_535
-
-    # Static endpoints have unknown package readiness; do not invent a ready advertisement.
-    endpoints = [
-      %{id: "owned-live-agent", host: "127.0.0.1", port: port, tags: ["owned-live-owner"]}
-    ]
-
-    endpoints =
-      case System.get_env("KYUUBIKI_HEADLESS_LIVE_AGENT_PEER_PORT") do
-        nil ->
-          endpoints
-
-        peer ->
-          peer_port = String.to_integer(peer)
-          true = peer_port in 1..65_535 and peer_port != port
-
-          endpoints ++
-            [
-              %{
-                id: "owned-live-peer",
-                host: "127.0.0.1",
-                port: peer_port,
-                tags: ["owned-live-peer"]
-              }
-            ]
-      end
-
-    Application.put_env(:kyuubiki_web, AgentPool, endpoints: endpoints)
-
     AgentPool.reload()
 
   other ->
@@ -65,6 +46,10 @@ case scenario do
 end
 
 if System.get_env("KYUUBIKI_HEADLESS_LIVE_RESULT_FIXTURES") == "1" do
+  # Seed incomplete records only after startup recovery has scanned the empty fixture DB.
+  %{"lease" => %{"status" => "owner"}} =
+    KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator.snapshot()
+
   Code.require_file("headless_result_fixtures.exs", __DIR__)
 end
 

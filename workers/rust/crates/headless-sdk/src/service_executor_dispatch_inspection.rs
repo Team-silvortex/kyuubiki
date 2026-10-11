@@ -109,6 +109,14 @@ fn validate(
         {
             return Err(invalid("updated_at_ms"));
         }
+        let job_id = match attempt.get("job_id") {
+            None => Some(task_id),
+            Some(Value::Null) => None,
+            Some(Value::String(value)) if !value.is_empty() && value.len() <= 1024 => {
+                Some(value.as_str())
+            }
+            _ => return Err(invalid("dispatch job identity")),
+        };
         let observation = &attempt["observation"];
         if terminal {
             if observation["status"] != "retained_dispatch_observation"
@@ -152,7 +160,7 @@ fn validate(
                 .validate()
                 .map_err(|_| invalid("execution cancellation target"))?;
             if observation["status"] != "original_endpoint_reports_active_request"
-                || target.job_id != task_id
+                || job_id != Some(target.job_id.as_str())
                 || observation["process_instance_id"] != target.process_instance_id
                 || observation["generation"] != target.generation
                 || attempt["request_id"] != target.request_id

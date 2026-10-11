@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Orchestra.Engine do
   """
 
   alias KyuubikiWeb.AnalysisJobSupport
+  alias KyuubikiWeb.Playground.AgentRpcTransport
   alias KyuubikiWeb.WorkflowGraphPreflight
   alias KyuubikiWeb.WorkflowGraphResponse
   alias KyuubikiWeb.WorkflowGraphRunner
@@ -57,14 +58,15 @@ defmodule KyuubikiWeb.Orchestra.Engine do
     end
   end
 
-  @spec execute_workflow_graph(map(), map(), map(), progress_callback() | nil, map()) ::
+  @spec execute_workflow_graph(map(), map(), map(), progress_callback() | nil, map(), keyword()) ::
           {:ok, map()} | {:error, term()}
   def execute_workflow_graph(
         graph,
         input_artifacts,
         orchestration_context \\ %{},
         progress_callback \\ nil,
-        response_options \\ %{}
+        response_options \\ %{},
+        execution_options \\ []
       )
 
   def execute_workflow_graph(
@@ -72,11 +74,12 @@ defmodule KyuubikiWeb.Orchestra.Engine do
         input_artifacts,
         orchestration_context,
         progress_callback,
-        response_options
+        response_options,
+        execution_options
       )
       when is_map(input_artifacts) and is_map(orchestration_context) and
              (is_nil(progress_callback) or is_function(progress_callback, 1)) and
-             is_map(response_options) do
+             is_map(response_options) and is_list(execution_options) do
     WorkflowGraphRunner.run(
       graph,
       input_artifacts,
@@ -88,15 +91,8 @@ defmodule KyuubikiWeb.Orchestra.Engine do
           operator_id,
           payload,
           Map.put(node, "orchestration_context", orchestration_context),
-          fn activity ->
-            if is_function(progress_callback, 1) do
-              progress_callback.(%{
-                "event" => "operator_activity",
-                "node_id" => node["id"],
-                "activity" => activity
-              })
-            end
-          end
+          operator_activity_callback(node, progress_callback),
+          before_dispatch: operator_dispatch_callback(node, progress_callback)
         )
       end,
       execute_transform: fn id, payload, config, node ->
@@ -108,7 +104,11 @@ defmodule KyuubikiWeb.Orchestra.Engine do
               payload,
               config,
               node,
-              orchestration_context
+              orchestration_context,
+              on_progress: operator_activity_callback(node, progress_callback),
+              before_dispatch: operator_dispatch_callback(node, progress_callback),
+              recover_native_results:
+                Keyword.get(execution_options, :recover_native_results, false)
             ),
           else: WorkflowOperatorRuntime.run_transform_operator(id, payload, config)
       end,
@@ -121,7 +121,11 @@ defmodule KyuubikiWeb.Orchestra.Engine do
               payload,
               config,
               node,
-              orchestration_context
+              orchestration_context,
+              on_progress: operator_activity_callback(node, progress_callback),
+              before_dispatch: operator_dispatch_callback(node, progress_callback),
+              recover_native_results:
+                Keyword.get(execution_options, :recover_native_results, false)
             ),
           else: WorkflowOperatorRuntime.run_extract_operator(id, payload, config)
       end,
@@ -134,7 +138,32 @@ defmodule KyuubikiWeb.Orchestra.Engine do
         _input_artifacts,
         _orchestration_context,
         _progress_callback,
-        _response_options
+        _response_options,
+        _execution_options
       ),
       do: {:error, :invalid_workflow_graph}
+
+  defp operator_dispatch_callback(node, progress_callback) do
+    fn ->
+      if is_function(progress_callback, 1),
+        do:
+          AgentRpcTransport.emit_progress(progress_callback, %{
+            "event" => "operator_dispatch",
+            "node_id" => node["id"]
+          }),
+        else: :ok
+    end
+  end
+
+  defp operator_activity_callback(node, progress_callback) do
+    fn activity ->
+      if is_function(progress_callback, 1) do
+        progress_callback.(%{
+          "event" => "operator_activity",
+          "node_id" => node["id"],
+          "activity" => activity
+        })
+      end
+    end
+  end
 end

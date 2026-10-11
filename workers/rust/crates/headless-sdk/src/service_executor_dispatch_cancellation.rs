@@ -36,6 +36,7 @@ const AGENT_FIELDS: &[&str] = &[
 impl ServiceHeadlessExecutor {
     /// Request cancellation of an explicitly observed generation through its original endpoint.
     /// Inspect the returned status: registration is not termination; unknown never grants replay.
+    /// The target job is the retained RPC parent, which may differ from the TaskIR identity.
     pub fn cancel_operator_task_dispatch(
         &self,
         task_id: &str,
@@ -44,7 +45,8 @@ impl ServiceHeadlessExecutor {
         target: &CancelExecutionRequest,
     ) -> Result<Value, HeadlessExecutorError> {
         target.validate().map_err(|_| invalid("target identity"))?;
-        if target.job_id != task_id
+        if task_id.is_empty()
+            || task_id.len() > 1024
             || target.process_instance_id == "unavailable"
             || !hex(task_digest, 64)
             || !hex(attempt_id, 32)

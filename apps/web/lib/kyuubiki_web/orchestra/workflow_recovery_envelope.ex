@@ -4,6 +4,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
 
   Recovery is deliberately conservative: the first dispatch is always allowed, while a
   replay after Orchestra process loss requires an idempotent graph or a verified checkpoint.
+  The coordinator additionally fences retained ambiguous Agent dispatches; this envelope
+  alone cannot authorize redispatch after loss.
   """
 
   alias KyuubikiWeb.Storage.DurableJson

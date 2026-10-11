@@ -4,7 +4,8 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
   alias KyuubikiWeb.Orchestra.{
     OperatorTaskCompletion,
     OperatorTaskExecutionSummary,
-    OperatorTaskIR
+    OperatorTaskIR,
+    WorkflowNativeResultRecovery
   }
 
   alias KyuubikiWeb.Playground.AgentClient
@@ -24,6 +25,8 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
   }
 
   def supports?(kind, id), do: Map.get(@operators, id) == kind and is_binary(kind)
+
+  def task_id(context, node, id), do: "#{context["job_id"] || "workflow"}:#{node["id"]}:#{id}"
 
   def enrich_descriptor(%{"id" => id} = descriptor) when is_map_key(@operators, id) do
     Map.put(descriptor, "execution", %{
@@ -47,10 +50,19 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
   def run(kind, id, payload, config, node, context, opts)
       when is_map(payload) and (is_nil(config) or is_map(config)) and is_map(node) and
              is_map(context) and is_list(opts) do
-    if supports?(kind, id) do
-      execute(id, payload, if(is_nil(config), do: %{}, else: config), node, context, opts)
-    else
-      {:error, {:unsupported_native_workflow_operator, kind, id}}
+    on_progress = Keyword.get(opts, :on_progress, fn _ -> :ok end)
+    before_dispatch = Keyword.get(opts, :before_dispatch, fn -> :ok end)
+
+    cond do
+      not is_function(on_progress, 1) or not is_function(before_dispatch, 0) or
+          not is_boolean(Keyword.get(opts, :recover_native_results, false)) ->
+        {:error, :invalid_native_workflow_operator_request}
+
+      supports?(kind, id) ->
+        execute(id, payload, if(is_nil(config), do: %{}, else: config), node, context, opts)
+
+      true ->
+        {:error, {:unsupported_native_workflow_operator, kind, id}}
     end
   end
 
@@ -58,12 +70,14 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
     do: {:error, :invalid_native_workflow_operator_request}
 
   defp execute(id, payload, config, node, context, opts) do
-    client = Keyword.get(opts, :client, AgentClient)
+    configured = Application.get_env(:kyuubiki_web, __MODULE__, [])
+    client = Keyword.get(opts, :client, Keyword.get(configured, :client, AgentClient))
+    on_progress = Keyword.get(opts, :on_progress, fn _ -> :ok end)
 
     task_opts = [
       node: node,
       orchestration_context: context,
-      task_id: "#{context["job_id"] || "workflow"}:#{node["id"]}:#{id}",
+      task_id: task_id(context, node, id),
       placement_tags: Map.get(node, "placement_tags", []),
       required_capabilities: Map.get(node, "required_capabilities", [])
     ]
@@ -73,9 +87,19 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
         do: [mode: :execute, job_id: context["job_id"]],
         else: [mode: :execute]
 
+    rpc_opts = Keyword.merge(rpc_opts, Keyword.take(opts, [:before_dispatch]))
+
     with {:ok, task} <- OperatorTaskIR.build(id, payload, config, task_opts),
-         {:ok, summary} <- OperatorTaskExecutionSummary.build(task),
-         {:ok, result} <- client.run_operator_task_ir(task, rpc_opts),
+         {:ok, summary} <- OperatorTaskExecutionSummary.build(task) do
+      case WorkflowNativeResultRecovery.resolve(task, summary, context, opts) do
+        :execute -> dispatch(client, task, summary, rpc_opts, on_progress)
+        result -> result
+      end
+    end
+  end
+
+  defp dispatch(client, task, summary, rpc_opts, on_progress) do
+    with {:ok, result} <- client.run_operator_task_ir(task, rpc_opts, on_progress),
          {:ok, %{"status" => "executed", "result" => %{"result" => output}}} <-
            OperatorTaskCompletion.agent_receipt(summary, result) do
       {:ok, output}

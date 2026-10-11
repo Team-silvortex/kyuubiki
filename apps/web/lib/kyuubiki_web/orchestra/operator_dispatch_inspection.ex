@@ -26,6 +26,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchInspection do
           {observation, cache} = observe(record, endpoints, probe, cache)
 
           {Map.take(record, ~w(attempt_id request_id state created_at_ms updated_at_ms))
+           |> Map.put("job_id", Files.job_id(record))
            |> Map.put("observation", observation), cache}
         end)
 
@@ -138,7 +139,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchInspection do
       "job_id" => entry["job_id"]
     }
 
-    if entry["job_id"] == record["task_id"] and
+    if not is_nil(Files.job_id(record)) and entry["job_id"] == Files.job_id(record) and
          Enum.all?(~w(process_instance_id request_id job_id), fn field ->
            value = target[field]
 

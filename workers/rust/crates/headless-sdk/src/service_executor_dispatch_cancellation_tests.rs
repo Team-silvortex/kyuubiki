@@ -149,7 +149,7 @@ fn malformed_cancellation_queries_fail_before_any_connection_attempt() {
         variants.push(value);
     }
     let mut value = target.clone();
-    value.job_id = "another-job".into();
+    value.job_id = "".into();
     variants.push(value);
     for value in variants {
         let error = executor
@@ -173,9 +173,18 @@ fn malformed_cancellation_queries_fail_before_any_connection_attempt() {
                 .starts_with("invalid operator task dispatch cancellation")
         );
     }
+    for task_id in ["", &"x".repeat(1025)] {
+        assert!(
+            executor
+                .cancel_operator_task_dispatch(task_id, &"a".repeat(64), &"b".repeat(32), &target,)
+                .unwrap_err()
+                .message
+                .starts_with("invalid operator task dispatch cancellation")
+        );
+    }
 }
 
-fn server(bad_body: bool) -> (String, thread::JoinHandle<()>) {
+fn server(bad_body: bool, expected_query: Value) -> (String, thread::JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     listener.set_nonblocking(true).unwrap();
@@ -221,7 +230,7 @@ fn server(bad_body: bool) -> (String, thread::JoinHandle<()>) {
         let mut body = vec![0; length];
         stream.read_exact(&mut body).unwrap();
         let payload: Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(payload, query());
+        assert_eq!(payload, expected_query);
         let body = if bad_body {
             "not json".into()
         } else {
@@ -243,7 +252,7 @@ fn server(bad_body: bool) -> (String, thread::JoinHandle<()>) {
 
 #[test]
 fn public_executor_sends_exact_query_and_validates_registration_without_replay() {
-    let (url, server) = server(false);
+    let (url, server) = server(false, query());
     let executor = ServiceHeadlessExecutor::try_with_token(&url, Some("test-token")).unwrap();
     let query = query();
     let target = serde_json::from_value(query["execution_target"].clone()).unwrap();
@@ -257,7 +266,7 @@ fn public_executor_sends_exact_query_and_validates_registration_without_replay()
 
 #[test]
 fn malformed_http_reply_keeps_registration_unconfirmed_and_does_not_retry() {
-    let (url, server) = server(true);
+    let (url, server) = server(true, query());
     let executor = ServiceHeadlessExecutor::try_with_token(&url, Some("test-token")).unwrap();
     let target = serde_json::from_value(query()["execution_target"].clone()).unwrap();
     let error = executor
@@ -269,4 +278,24 @@ fn malformed_http_reply_keeps_registration_unconfirmed_and_does_not_retry() {
             .message
             .contains("registration is unconfirmed and automatic retry is not authorized")
     );
+}
+
+#[test]
+fn parent_bound_cancellation_preserves_separate_task_and_execution_identities() {
+    for task_id in [
+        "workflow:diagnose:extract.thermal_result_diagnostics",
+        &"node".repeat(200),
+    ] {
+        let mut query = query();
+        query["task_id"] = json!(task_id);
+        query["execution_target"]["job_id"] = json!("parent-workflow");
+        let (url, server) = server(false, query.clone());
+        let executor = ServiceHeadlessExecutor::try_with_token(&url, Some("test-token")).unwrap();
+        let target = serde_json::from_value(query["execution_target"].clone()).unwrap();
+        let result = executor
+            .cancel_operator_task_dispatch(task_id, &"a".repeat(64), &"b".repeat(32), &target)
+            .unwrap();
+        server.join().unwrap();
+        assert_eq!(result, receipt(&query, "requested"));
+    }
 }

@@ -94,7 +94,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
           input_artifacts,
           orchestration_context,
           fn progress -> apply_progress(job_id, claim, progress) end,
-          response_options
+          response_options,
+          recover_native_results: claim["generation"] > 1
         )
       end)
 
@@ -104,6 +105,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
 
       {:ok, {:error, {:workflow_cancelled, _node_id}}} ->
         if not cancelled?(job_id), do: fail_job(job_id, claim, "workflow execution was fenced")
+
+      {:ok, {:error, {:workflow_node_error, _node, {:native_workflow_recovery_blocked, reason}}}} ->
+        WorkflowRecoveryCoordinator.block_native_recovery(job_id, claim, reason)
 
       {:ok, {:error, reason}} ->
         if not cancelled?(job_id), do: fail_job(job_id, claim, inspect(reason))
@@ -138,8 +142,17 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
   defp apply_progress(job_id, claim, %{"node_id" => node_id} = progress)
        when is_binary(job_id) and is_binary(node_id) do
     case WorkflowRecoveryCoordinator.record_progress(job_id, claim, progress) do
-      :ok -> :ok
-      {:error, _reason} -> throw({:workflow_cancelled, node_id})
+      :ok ->
+        :ok
+
+      {:error, {:workflow_job_terminal, :cancelled}} ->
+        # Keep the dispatch owner alive until targeted cancellation and its receipt arrive.
+        if progress["event"] == "operator_activity",
+          do: :ok,
+          else: throw({:workflow_cancelled, node_id})
+
+      {:error, _reason} ->
+        throw({:workflow_cancelled, node_id})
     end
   end
 

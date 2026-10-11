@@ -63,6 +63,7 @@
           "schemas/operator-task-dispatch-cancellation.schema.json",
           "schemas/operator-task-dispatch-inspection.schema.json",
           "schemas/operator-task-dispatch-record.schema.json",
+          "schemas/operator-task-dispatch-record-v2.schema.json",
           "apps/web/lib/kyuubiki_web/orchestra/control_plane_surface.ex",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex",

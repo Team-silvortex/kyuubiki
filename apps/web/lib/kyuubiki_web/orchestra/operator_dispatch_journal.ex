@@ -21,6 +21,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchJournal do
       "attempt_id" => :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower),
       "request_id" => request["id"],
       "task_id" => task["task_id"],
+      "job_id" => request["params"]["job_id"],
       "task_digest" => identity(task, "integrity", "task_digest"),
       "operator_id" => identity(task, "operator", "id"),
       "program_id" => identity(task, "execution_program", "program_id"),
@@ -41,6 +42,13 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchJournal do
 
   def lookup(task_id, task_digest, server \\ __MODULE__),
     do: call(server, {:lookup, task_id, task_digest})
+
+  def lookup_task(task_id, server \\ __MODULE__),
+    do: call(server, {:lookup_task, task_id})
+
+  def workflow_replay_fence(job_id, task_ids, server \\ __MODULE__)
+      when is_binary(job_id) and is_list(task_ids),
+      do: call(server, {:workflow_replay_fence, job_id, MapSet.new(task_ids)})
 
   def policy do
     Files.limits()
@@ -117,6 +125,29 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchJournal do
       |> Enum.sort_by(&{&1["created_at_ms"], &1["attempt_id"]}, :desc)
 
     {:reply, {:ok, records}, state}
+  end
+
+  def handle_call({:lookup_task, task_id}, _from, state) do
+    records =
+      state.records
+      |> Map.values()
+      |> Enum.filter(&(&1["task_id"] == task_id))
+      |> Enum.sort_by(&{&1["created_at_ms"], &1["attempt_id"]}, :desc)
+
+    {:reply, {:ok, records}, state}
+  end
+
+  def handle_call({:workflow_replay_fence, job_id, task_ids}, _from, state) do
+    unresolved? =
+      Enum.any?(state.records, fn {_id, record} ->
+        record["state"] in ~w(dispatch_boundary_unconfirmed outcome_unknown) and
+          (Files.job_id(record) == job_id or
+             (is_nil(Files.job_id(record)) and MapSet.member?(task_ids, record["task_id"])))
+      end)
+
+    # Legacy task names can deny a replay, never authorize cancellation or execution.
+    reply = if unresolved?, do: {:error, :workflow_dispatch_outcome_unconfirmed}, else: :ok
+    {:reply, reply, state}
   end
 
   defp reserve(record, state) do

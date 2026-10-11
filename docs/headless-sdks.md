@@ -1289,9 +1289,9 @@ job-scoped. Evidence remains local, not remote or installed qualification.
 
 `POST /api/v1/operator-tasks/cancel-dispatch` requires write authorization and
 exactly `task_id`, `task_digest`, `attempt_id` and `execution_target`. The target
-contains the four native identities above; its job must equal the task id and
-its request must equal the selected retained dispatch. Callers cannot supply an
-endpoint, select the latest generation implicitly or request job-wide fallback.
+contains four native identities; its job must match the retained RPC job, not
+necessarily the TaskIR id, and its request must match the selected attempt.
+Callers cannot supply an endpoint, infer a generation or request job-wide fallback.
 The server sends one `cancel_execution` RPC only to that record's original
 currently configured endpoint/session fingerprint. Missing attempts, retained
 terminal observations, undispatched attempts and replaced or absent endpoints
@@ -1494,9 +1494,8 @@ Inspection resolves only the original fingerprint against currently configured
 or registered targets. A changed address/session is not probed; registry mode
 does not fall back to an unrelated default endpoint. At most four distinct
 targets are probed, with 1.5-second connection limits, 2-second RPC waits and
-1-MiB frames, and at most 128
-attempts are returned with explicit truncation metadata. SDK HTTP observation
-uses a separate 20-second deadline. Only `describe_agent` is sent; no broadcast,
+1-MiB frames and at most 128 attempts, with explicit truncation metadata.
+SDK HTTP observation uses a separate 20-second deadline. Only `describe_agent` is sent; no broadcast,
 cancel, package operation, replay, pool health mutation or result publication
 occurs. The descriptor is reduced to a matching active request's process ID,
 generation and cancellation flag; raw Agent diagnostics are not echoed.
@@ -1506,12 +1505,13 @@ of eventual completion. `request_not_observed_active`, unreachable/replaced
 targets and `no_retained_dispatch` do not prove cancellation or nonexecution.
 Process identity is observed at inspection time, not pinned before dispatch.
 All responses have `automatic_replay_authorized: false` and
-`terminal_result_available: false`; this is neither a result cache nor an
-exactly-once protocol. Existing explicitly chosen legacy idempotent routing
-is unchanged, and the journal never grants extra retry permission. Native
-budgeted requests keep their post-dispatch no-replay boundary. Confirmed old
-observations can age out, and this sidecar does not cover Orchestra-local
-operators, direct asynchronous solver submissions or external-package cleanup.
+`terminal_result_available: false`; inspection is not a result cache or replay
+authority. Native graph admission blocks ambiguous outcomes regardless of
+idempotent/checkpoint policy. A later authorized generation can reuse a bounded
+native node's observed-success receipt only with matching TaskIR, actual parent
+and original attempt. Missing/invalid receipts block with the envelope retained,
+never silently re-execute. Confirmed history can age out; typed solves, local
+operators and package cleanup remain outside this receipt-reuse sidecar.
 
 Local tests cover bounded retention, corruption and partial writes, owner death,
 read authentication, changed targets, probe/response limits, and a real two-Agent
@@ -1522,7 +1522,7 @@ independent axial-bar correctness checks; the first attempt is not rewritten as
 successful. Remote cancellation, authenticated deployed recovery and installed
 acceptance remain separate gaps. Original-result retrieval is a separate opt-in
 read below, not part of the inspection response. See
-`schemas/operator-task-dispatch-record.schema.json`,
+`schemas/operator-task-dispatch-record-v2.schema.json` (explicit nullable RPC job; legacy v1 remains readable without inferred cancellation),
 `schemas/operator-task-dispatch-inspection.schema.json` and its sample.
 
 #### Original TaskIR attempt result retrieval

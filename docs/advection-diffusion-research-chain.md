@@ -159,6 +159,38 @@ The separate native domain service verification above now establishes routing
 and standalone diagnostic cancellation for these five additional domains,
 without qualifying public whole-job cancellation or durable continuation.
 
+The [public graph-job follow-up](../reports/native-workflow-job-cancellation-20261011.md)
+now checks that separate route for these five domains under both default and
+skip-on-error policies. Ten cancelled graph diagnoses cannot dispatch scoring
+or complete a decision; ten explicit new jobs recover from caller-retained healthy raw
+results while old failures remain unchanged. Only the dispatch owner receives
+cancellation, and unrelated peer requests continue. Native activity keeps the
+workflow alive without advancing nodes or renewing execution deadlines;
+already-cancelled heartbeats retain the dispatch owner until targeted cancellation
+and its response, but do not update state or admit outputs. A cancelled graph's
+retained recovery record is diagnostic information, not successful computation.
+This is bounded source service evidence, not arbitrary parallel graph, durable
+or installed/remote cancellation qualification.
+
+The [queue and progress-fencing follow-up](../reports/native-workflow-queue-fencing-20261011.md)
+also covers five-domain diagnosis and scoring while waiting for Agent capacity.
+Twenty queued cancellations and twenty explicit recovery graphs require exactly
+one hundred Agent executions. Queued work creates no dispatch attempt, completed
+diagnosis remains observed, and old cancelled records survive capacity release
+and healthy recovery unchanged. Progress write throttling now still checks
+terminal status, execution claims and the Orchestra lease; controlled 300-node
+fan-out graphs cannot dispatch dependent scoring after a cancelled completion.
+These are source contract/recovery checks, not exhaustive admission races or scale evidence.
+
+The [dispatch-admission follow-up](../reports/native-workflow-dispatch-fencing-20261011.md)
+also fences the handoff before capacity acquisition and before dispatch. Typed
+solves and bounded native diagnostic/scoring nodes share the existing guard;
+TaskIR client options retain it without putting callbacks in the task envelope.
+Capacity retries recheck ownership. Cancelled activity can still drain an active
+receipt but cannot authorize new work, even with explicit `on_error: skip`.
+Checks do not write progress, refresh liveness or penalize healthy peers. These
+deterministic runner/TCP fixtures are not numerical or remote qualification.
+
 This covers shared `Samples::scan` reductions and Stokes loops, not every extraction operator,
 JSON decode/clone/digest, serialization, plugin execution or thread preemption.
 The 64-record polling cadence is not a wall-clock latency bound or a large-mesh

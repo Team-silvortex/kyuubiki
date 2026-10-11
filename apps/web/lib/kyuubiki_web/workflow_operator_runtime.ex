@@ -18,24 +18,34 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   alias KyuubikiWeb.WorkflowSummaryRuntime
   alias KyuubikiWeb.WorkflowThermalRuntime
 
-  def run_solve_operator(operator_id, payload, node \\ %{}, on_progress \\ fn _ -> :ok end)
+  def run_solve_operator(
+        operator_id,
+        payload,
+        node \\ %{},
+        on_progress \\ fn _ -> :ok end,
+        opts \\ []
+      )
 
-  def run_solve_operator(operator_id, payload, node, on_progress)
-      when is_map(payload) and is_map(node) and is_function(on_progress, 1) do
-    case WorkflowSolverRegistry.fetch(operator_id) do
-      {:ok, %{capability_tags: tags, method: method}} ->
-        if roadmap_operator_tags?(tags) do
-          {:error, {:roadmap_workflow_solve_operator, operator_id}}
-        else
-          dispatch_solve_operator(method, payload, node, on_progress)
-        end
+  def run_solve_operator(operator_id, payload, node, on_progress, opts)
+      when is_map(payload) and is_map(node) and is_function(on_progress, 1) and is_list(opts) do
+    if is_function(Keyword.get(opts, :before_dispatch, fn -> :ok end), 0) do
+      case WorkflowSolverRegistry.fetch(operator_id) do
+        {:ok, %{capability_tags: tags, method: method}} ->
+          if roadmap_operator_tags?(tags) do
+            {:error, {:roadmap_workflow_solve_operator, operator_id}}
+          else
+            dispatch_solve_operator(method, payload, node, on_progress, opts)
+          end
 
-      :error ->
-        {:error, {:unsupported_workflow_solve_operator, operator_id}}
+        :error ->
+          {:error, {:unsupported_workflow_solve_operator, operator_id}}
+      end
+    else
+      {:error, :invalid_workflow_dispatch_guard}
     end
   end
 
-  def run_solve_operator(operator_id, _payload, _node, _on_progress),
+  def run_solve_operator(operator_id, _payload, _node, _on_progress, _opts),
     do: {:error, {:unsupported_workflow_solve_operator, operator_id}}
 
   defp roadmap_operator_tags?(tags),
@@ -430,9 +440,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     |> Keyword.get(:solve_runtime_client, AgentClient)
   end
 
-  defp dispatch_solve_operator(method, payload, node, on_progress) when is_atom(method) do
+  defp dispatch_solve_operator(method, payload, node, on_progress, opts) when is_atom(method) do
     client = solve_runtime_client()
-    routing_opts = solve_routing_opts(node)
+    routing_opts = Keyword.merge(solve_routing_opts(node), Keyword.take(opts, [:before_dispatch]))
     _ = Code.ensure_loaded(client)
 
     cond do
@@ -440,7 +450,8 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
         client.request(Atom.to_string(method), payload, on_progress, routing_opts)
 
       function_exported?(client, method, 1) ->
-        apply(client, method, [payload])
+        with :ok <- Keyword.get(opts, :before_dispatch, fn -> :ok end).(),
+             do: apply(client, method, [payload])
 
       true ->
         {:error, {:unsupported_workflow_solve_method, Atom.to_string(method)}}

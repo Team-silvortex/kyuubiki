@@ -3,7 +3,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
 
   alias KyuubikiWeb.Storage.DurableJson
 
-  @schema "kyuubiki.operator-task-dispatch-record/v1"
+  @schema "kyuubiki.operator-task-dispatch-record/v2"
+  @legacy_schema "kyuubiki.operator-task-dispatch-record/v1"
   @max_records 512
   @max_file_bytes 4096
   @fields ~w(schema_version attempt_id request_id task_id task_digest operator_id program_id endpoint_fingerprint state created_at_ms updated_at_ms)
@@ -71,8 +72,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
   end
 
   def valid?(record) when is_map(record) do
-    Enum.sort(Map.keys(record)) == Enum.sort(@fields) and
-      record["schema_version"] == @schema and
+    valid_shape?(record) and
       hex?(record["attempt_id"], 32) and hex?(record["endpoint_fingerprint"], 64) and
       hex?(record["task_digest"], 64) and record["state"] in @states and
       Enum.all?(~w(request_id task_id operator_id program_id), &text?(record[&1])) and
@@ -84,6 +84,20 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
   def valid?(_record), do: false
 
   def schema, do: @schema
+
+  # A legacy task identity cannot establish the actual RPC execution job.
+  def job_id(%{"schema_version" => @schema} = record), do: record["job_id"]
+  def job_id(_record), do: nil
+
+  defp valid_shape?(%{"schema_version" => @schema} = record) do
+    Enum.sort(Map.keys(record)) == Enum.sort(["job_id" | @fields]) and
+      (is_nil(record["job_id"]) or text?(record["job_id"]))
+  end
+
+  defp valid_shape?(%{"schema_version" => @legacy_schema} = record),
+    do: Enum.sort(Map.keys(record)) == Enum.sort(@fields)
+
+  defp valid_shape?(_record), do: false
 
   def fingerprint(endpoint) do
     [endpoint[:id], endpoint[:host], endpoint[:port], endpoint[:agent_session_id]]

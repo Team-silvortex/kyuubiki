@@ -1,8 +1,200 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Source macOS service evidence extends a bounded native workflow TaskIR adapter to six diagnostics and five quality scores without duplicating Engine physics. Sixteen actual graph jobs require 33 Agent executions; corrupt evidence blocks dependent decisions while raw and independent outputs survive, and explicit reduction recovery avoids solving again. Five standalone diagnostic cancellations retain failed attempts through explicit same-task recovery in ten executions. Real Stokes chains also expose and repair quad/triangle solver RPC names and execution-program method derivation. This is contract and recovery evidence, not general TaskIR solver support, whole-job cancellation, numerical/scale/installed/remote qualification or durable continuation.",
+  "summary": "Source macOS service evidence extends a bounded native workflow TaskIR adapter to six diagnostics and five quality scores without duplicating Engine physics. Sixteen actual graph jobs require 33 Agent executions; corrupt evidence blocks decisions, while five standalone cancellations and explicit same-task recovery require ten executions. A public graph-job follow-up connects native activity to the existing watchdog and preserves dispatch ownership across cancelled heartbeats without renewing state or admitting outputs. Ten diagnostic-stage cancellations and ten explicit recovery graphs require sixty Agent executions. A queue follow-up adds twenty cancellations and twenty explicit recovery graphs in one hundred Agent executions without dispatching queued work or changing old observations. Throttled node progress now retains lease/job/claim fencing and controlled 300-node graphs cannot enter dependent scoring after cancellation. A separate dispatch guard now fences typed solves and bounded native diagnostics/scoring before admission and on capacity retries; twelve controlled public-cancellation runner cases and twenty-four actual-client TCP failure cases block new admission, peer retries and extra journal attempts without liveness writes or Agent health penalties. Stokes RPC/program names align through the registry. This is contract/recovery evidence, not exhaustive admission races, general TaskIR solver support, arbitrary parallel graph cancellation, numerical/scale/installed/remote qualification or durable continuation.",
   "evidence_claims": [
+    {
+      "id": "native-workflow-successful-receipt-assisted-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_native_result_recovery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_failure.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_journal.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+        "apps/web/lib/kyuubiki_web/workflow_native_operator_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_result_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_recovery_block_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_commit_sql_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_commit_memory_test.exs",
+        "apps/web/test/support/headless_live_server.exs",
+        "apps/web/test/support/headless_live_agent_pool.exs",
+        "apps/web/test/support/headless_native_recovery_gate.exs",
+        "workers/rust/crates/cli/tests/support/headless_live_server.rs",
+        "workers/rust/crates/cli/tests/support/headless_workflow_native_receipt_recovery.rs",
+        "docs/headless-sdks.md",
+        "docs/data-lifecycle.html",
+        "reports/native-workflow-success-receipt-recovery-20261011.md"
+      ],
+      "required_text": [
+        "recover_native_results: claim[\"generation\"] > 1",
+        "restore_original_native_receipt_or_explicit_resubmit",
+        "missing selected receipt never falls back to another historical success",
+        "on_error skip cannot turn an unavailable recovery receipt into a partial success",
+        "real_native_workflow_restart_reuses_original_success_receipt_without_duplicate_execution",
+        "real_native_workflow_restart_with_lost_agent_receipt_blocks_without_replay",
+        "The five successful rounds",
+        "require exactly ten Agent executions",
+        "not a general durable node"
+      ]
+    },
+    {
+      "id": "native-workflow-ambiguous-dispatch-restart-fence",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_dispatch_guard.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_journal.ex",
+        "apps/web/lib/kyuubiki_web/workflow_native_operator_runtime.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_dispatch_recovery_test.exs",
+        "apps/web/test/support/headless_live_server.exs",
+        "workers/rust/crates/cli/tests/support/headless_live_server.rs",
+        "workers/rust/crates/cli/tests/support/headless_workflow_dispatch_recovery.rs",
+        "docs/headless-sdks.md",
+        "docs/data-lifecycle.html",
+        "reports/native-workflow-dispatch-recovery-20261011.md"
+      ],
+      "required_text": [
+        "workflow_dispatch_outcome_unconfirmed",
+        "inspect_original_dispatch_before_explicit_resubmit",
+        "ordinary startup cannot bypass an ambiguous dispatch after a rollback to pending",
+        "an older ambiguous attempt is not erased by a newer terminal observation",
+        "real_native_workflow_process_restart_fences_unknown_dispatch_with_persisted_sqlite_and_journal",
+        "owned-live-restart-recovery",
+        "The launcher uses --no-start so recovery never sees an empty temporary journal first.",
+        "The five rounds require exactly 20 Agent executions"
+      ]
+    },
+    {
+      "id": "native-workflow-parent-dispatch-identity-and-exact-cancellation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["contracts", "runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "schemas/operator-task-dispatch-record.schema.json",
+        "schemas/operator-task-dispatch-record-v2.schema.json",
+        "schemas/operator-task-dispatch-inspection.schema.json",
+        "schemas/operator-task-dispatch-cancellation.schema.json",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_files.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_journal.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_inspection.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_cancellation.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_job_identity_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_dispatch_cancellation_api_test.exs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_inspection.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_inspection_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_cancellation.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_cancellation_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_workflow_dispatch_identity.rs",
+        "docs/headless-sdks.md",
+        "docs/data-lifecycle.html",
+        "reports/native-workflow-dispatch-identity-20261011.md"
+      ],
+      "required_text": [
+        "kyuubiki.operator-task-dispatch-record/v2",
+        "operator_task_dispatch_job_identity_unknown",
+        "legacy records remain byte-stable and recover receipts without guessed cancellation",
+        "record versions have closed field sets and cannot smuggle or omit execution identity",
+        "explicit_parent_identity_must_match_target_and_null_never_grants_cancellation",
+        "parent_bound_cancellation_preserves_separate_task_and_execution_identities",
+        "real_parent_bound_workflow_dispatch_inspection_and_exact_cancellation_preserve_same_job_peer",
+        "The five rounds require exactly 25 Agent executions."
+      ]
+    },
+    {
+      "id": "native-workflow-pre-dispatch-admission-fencing",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/workflow_operator_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_native_operator_runtime.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_dispatch_fencing_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_operator_activity_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_native_operator_runtime_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_operator_runtime_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_capacity_retry_test.exs",
+        "reports/native-workflow-dispatch-fencing-20261011.md"
+      ],
+      "required_text": [
+        "operator_dispatch",
+        "before_dispatch",
+        "dispatch admission checks ownership without recording progress or refreshing liveness",
+        "legacy one-arity solve clients cannot bypass a dispatch guard",
+        "native dispatch guards remain out of TaskIR and can block every supported operator",
+        "dispatch fence blocks TCP and journal admission with retry=",
+        "Forty-eight new regressions",
+        "These counts describe requests and observations, not Rust Agent"
+      ]
+    },
+    {
+      "id": "cross-domain-native-workflow-queue-cancellation-and-progress-fencing",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_progress_fencing_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_operator_activity_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_domain_workflow_queue.rs",
+        "reports/native-workflow-queue-fencing-20261011.md"
+      ],
+      "required_text": [
+        "Throttling persistence must not throttle execution fencing.",
+        "healthy throttled node progress checks its claim without writing or refreshing liveness",
+        "throttled node progress cannot bypass a revoked Orchestra lease",
+        "cancelled throttled node completion cannot enter dependent scoring",
+        "real_cross_domain_queued_diagnostic_cancellation_never_dispatches_and_recovers_explicitly",
+        "real_cross_domain_queued_quality_cancellation_retains_diagnosis_without_dispatch_or_replay",
+        "queued cancellation must not execute or replay",
+        "The twenty rounds require exactly one hundred Agent executions:"
+      ]
+    },
+    {
+      "id": "cross-domain-native-workflow-job-cancellation-and-activity",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_native_operator_runtime.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/test/kyuubiki_web/workflow_native_operator_runtime_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_operator_activity_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_domain_workflow_cancellation.rs",
+        "reports/native-workflow-job-cancellation-20261011.md"
+      ],
+      "required_text": [
+        "native diagnostics and scoring forward activity without changing the receipt",
+        "invalid activity consumers cannot dispatch a native task",
+        "Keep the dispatch owner alive until targeted cancellation and its receipt arrive.",
+        "real_cross_domain_workflow_job_cancellation_fences_scoring_and_preserves_peer_and_explicit_recovery",
+        "cancelled diagnosis must not dispatch scoring or replay",
+        "sixty executions must not replay",
+        "The ten rounds require exactly sixty Agent executions:"
+      ]
+    },
     {
       "id": "cross-domain-native-workflow-diagnostics-and-quality-dispatch",
       "status": "proven",

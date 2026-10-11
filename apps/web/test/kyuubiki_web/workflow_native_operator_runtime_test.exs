@@ -24,8 +24,15 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntimeTest do
   ]
 
   defmodule Client do
-    def run_operator_task_ir(task, opts) do
+    def run_operator_task_ir(task, opts, on_progress \\ fn _ -> :ok end) do
+      with :ok <- Keyword.get(opts, :before_dispatch, fn -> :ok end).() do
+        execute(task, opts, on_progress)
+      end
+    end
+
+    defp execute(task, opts, on_progress) do
       send(self(), {:task, task, opts})
+      on_progress.(%{"stage" => "result_diagnostics", "completed_steps" => 64})
       {:ok, summary} = OperatorTaskExecutionSummary.build(task)
 
       {:ok,
@@ -40,15 +47,15 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntimeTest do
   end
 
   defmodule WrongIdentity do
-    def run_operator_task_ir(task, opts) do
-      {:ok, receipt} = Client.run_operator_task_ir(task, opts)
+    def run_operator_task_ir(task, opts, on_progress) do
+      {:ok, receipt} = Client.run_operator_task_ir(task, opts, on_progress)
       {:ok, Map.put(receipt, "task_id", "different-task")}
     end
   end
 
   defmodule Pending do
-    def run_operator_task_ir(task, opts) do
-      {:ok, receipt} = Client.run_operator_task_ir(task, opts)
+    def run_operator_task_ir(task, opts, on_progress) do
+      {:ok, receipt} = Client.run_operator_task_ir(task, opts, on_progress)
 
       {:ok,
        receipt
@@ -57,7 +64,7 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntimeTest do
     end
   end
 
-  defp run(client, config, kind, id) do
+  defp run(client, config, kind, id, opts \\ []) do
     WorkflowNativeOperatorRuntime.run(
       kind,
       id,
@@ -73,7 +80,7 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntimeTest do
         "required_capabilities" => ["task_ir"]
       },
       %{"job_id" => "parent-job", "orch_id" => "orch-a", "control_mode" => "orch_managed"},
-      client: client
+      Keyword.put(opts, :client, client)
     )
   end
 
@@ -140,6 +147,56 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntimeTest do
              run(Client, false, "extract", "extract.transport_result_diagnostics")
 
     refute_receive {:task, _, _}
+  end
+
+  test "native diagnostics and scoring forward activity without changing the receipt" do
+    for {kind, id} <- @operators do
+      on_progress = fn activity -> send(self(), {:activity, id, activity}) end
+      assert {:ok, %{"ready" => true}} = run(Client, %{}, kind, id, on_progress: on_progress)
+      assert_receive {:task, _, _}
+      assert_receive {:activity, ^id, %{"stage" => "result_diagnostics", "completed_steps" => 64}}
+    end
+  end
+
+  test "invalid activity consumers cannot dispatch a native task" do
+    assert {:error, :invalid_native_workflow_operator_request} =
+             run(Client, %{}, "extract", "extract.transport_result_diagnostics", on_progress: nil)
+
+    refute_receive {:task, _, _}
+  end
+
+  test "native dispatch guards remain out of TaskIR and can block every supported operator" do
+    for {kind, id} <- @operators do
+      guard = fn ->
+        send(self(), {:authorized, id})
+        :ok
+      end
+
+      assert {:ok, %{"ready" => true}} = run(Client, %{}, kind, id, before_dispatch: guard)
+      assert_receive {:authorized, ^id}
+      assert_receive {:task, task, opts}
+      assert opts[:before_dispatch] == guard
+      assert {:ok, _} = Jason.encode(task)
+      assert :ok = OperatorTaskExecutionSummary.validate_digest(task)
+
+      assert {:error, :cancelled_before_dispatch} =
+               run(Client, %{}, kind, id,
+                 before_dispatch: fn -> {:error, :cancelled_before_dispatch} end
+               )
+
+      refute_receive {:task, _, _}, 0
+    end
+  end
+
+  test "malformed native dispatch guards cannot be silently ignored" do
+    for guard <- [nil, false, fn _ -> :ok end] do
+      assert {:error, :invalid_native_workflow_operator_request} =
+               run(Client, %{}, "extract", "extract.transport_result_diagnostics",
+                 before_dispatch: guard
+               )
+
+      refute_receive {:task, _, _}, 0
+    end
   end
 
   test "unsupported kinds and prefixed unknown IDs never reach the Agent client" do

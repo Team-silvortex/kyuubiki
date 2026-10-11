@@ -59,6 +59,7 @@ fn real_retained_incomplete_results_fail_sdk_and_cli_before_downstream_writes()
         Some(peer.port()),
         Some(&data.0),
         true,
+        None,
     )?;
     let base_url = format!("http://127.0.0.1:{}", server.port);
     let projects = http_json(server.port, "/api/v1/projects", None)?.1;

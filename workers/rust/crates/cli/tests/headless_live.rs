@@ -1,14 +1,18 @@
+use live_server::{
+    start_live_server, start_live_server_with_agent, start_live_server_with_agents,
+    start_live_server_with_native_gate, start_live_server_with_result_fixtures,
+    start_live_server_with_state,
+};
 use serde_json::{Value, json};
-use std::error::Error;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[path = "support/ack_loss_proxy.rs"]
 mod ack_loss_proxy;
@@ -33,6 +37,10 @@ mod diagnostic_domains;
 mod domain_diagnostic_cancellation;
 #[path = "support/headless_domain_diagnostics.rs"]
 mod domain_diagnostics;
+#[path = "support/headless_domain_workflow_cancellation.rs"]
+mod domain_workflow_cancellation;
+#[path = "support/headless_domain_workflow_queue.rs"]
+mod domain_workflow_queue;
 #[path = "support/headless_graph_entity_normalization.rs"]
 mod graph_entity_normalization;
 #[path = "support/headless_job_fetch_gates.rs"]
@@ -41,6 +49,8 @@ mod job_fetch_gates;
 mod job_read_gates;
 #[path = "support/headless_library_receipts.rs"]
 mod library_receipts;
+#[path = "support/headless_live_server.rs"]
+mod live_server;
 #[allow(dead_code)]
 #[path = "support/modal_agent.rs"]
 mod modal_support;
@@ -86,6 +96,12 @@ mod transport_output;
 mod transport_research;
 #[path = "support/headless_transport_upwind.rs"]
 mod transport_upwind;
+#[path = "support/headless_workflow_dispatch_identity.rs"]
+mod workflow_dispatch_identity;
+#[path = "support/headless_workflow_dispatch_recovery.rs"]
+mod workflow_dispatch_recovery;
+#[path = "support/headless_workflow_native_receipt_recovery.rs"]
+mod workflow_native_receipt_recovery;
 #[path = "support/headless_write_ack_loss.rs"]
 mod write_ack_loss;
 
@@ -215,120 +231,6 @@ fn spawn_log_reader(
             }
         }
     });
-}
-
-fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
-    start_live_server_with_agent(None)
-}
-
-fn start_live_server_with_agent(agent_port: Option<u16>) -> Result<LiveServer, Box<dyn Error>> {
-    start_live_server_with_agents(agent_port, None)
-}
-
-fn start_live_server_with_agents(
-    agent_port: Option<u16>,
-    peer_port: Option<u16>,
-) -> Result<LiveServer, Box<dyn Error>> {
-    start_live_server_with_state(agent_port, peer_port, None)
-}
-
-fn start_live_server_with_state(
-    agent_port: Option<u16>,
-    peer_port: Option<u16>,
-    data_dir: Option<&Path>,
-) -> Result<LiveServer, Box<dyn Error>> {
-    start_live_server_with_result_fixtures(agent_port, peer_port, data_dir, false)
-}
-
-fn start_live_server_with_result_fixtures(
-    agent_port: Option<u16>,
-    peer_port: Option<u16>,
-    data_dir: Option<&Path>,
-    result_fixtures: bool,
-) -> Result<LiveServer, Box<dyn Error>> {
-    let root = repo_root();
-    let web_root = root.join("apps/web");
-    let server_script = web_root.join("test/support/headless_live_server.exs");
-    let scratch = Scratch::new()?;
-    let sqlite_path = scratch.0.join("kyuubiki.sqlite3");
-
-    let mut command = Command::new("mix");
-    command
-        .arg("run")
-        .arg(server_script)
-        .current_dir(&web_root)
-        .env("MIX_ENV", "test")
-        // Concurrent owned servers must not each reserve every host scheduler.
-        // Keep explicit qualification-host settings when the caller provides them.
-        .env(
-            "ERL_FLAGS",
-            std::env::var_os("ERL_FLAGS").unwrap_or_else(|| "+S 2:2".into()),
-        )
-        .env("KYUUBIKI_STORAGE_BACKEND", "sqlite")
-        .env("SQLITE_DATABASE_PATH", sqlite_path)
-        .env(
-            "KYUUBIKI_DATA_DIR",
-            data_dir
-                .map(Path::to_path_buf)
-                .unwrap_or_else(|| scratch.0.join("data")),
-        )
-        .env("KYUUBIKI_DEPLOYMENT_MODE", "local")
-        .env(
-            "KYUUBIKI_HEADLESS_LIVE_RESULT_FIXTURES",
-            if result_fixtures { "1" } else { "0" },
-        )
-        .env(
-            "KYUUBIKI_HEADLESS_LIVE_JOURNAL_ROOT",
-            data_dir
-                .map(Path::to_path_buf)
-                .unwrap_or_else(|| scratch.0.join("data"))
-                .join("operator-task-dispatches"),
-        )
-        .env(
-            "KYUUBIKI_HEADLESS_LIVE_SCENARIO",
-            if agent_port.is_some() {
-                "real_agent"
-            } else {
-                "electrostatic_quad_summary"
-            },
-        )
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    if let Some(port) = agent_port {
-        command.env("KYUUBIKI_HEADLESS_LIVE_AGENT_PORT", port.to_string());
-    } else {
-        command.env_remove("KYUUBIKI_HEADLESS_LIVE_AGENT_PORT");
-    }
-    if let Some(port) = peer_port {
-        command.env("KYUUBIKI_HEADLESS_LIVE_AGENT_PEER_PORT", port.to_string());
-    } else {
-        command.env_remove("KYUUBIKI_HEADLESS_LIVE_AGENT_PEER_PORT");
-    }
-    let child = command.spawn()?;
-
-    let stdout_log = Arc::new(Mutex::new(String::new()));
-    let stderr_log = Arc::new(Mutex::new(String::new()));
-    // Own the child before readiness waiting, so every error path reaps it.
-    let mut server = LiveServer {
-        child,
-        _scratch: scratch,
-        stdout_log: Arc::clone(&stdout_log),
-        stderr_log: Arc::clone(&stderr_log),
-        port: 0,
-    };
-    let stdout = server.child.stdout.take().expect("stdout pipe");
-    let stderr = server.child.stderr.take().expect("stderr pipe");
-    let (ready_tx, ready_rx) = mpsc::channel();
-
-    spawn_log_reader(
-        BufReader::new(stdout),
-        Arc::clone(&stdout_log),
-        Some(ready_tx),
-    );
-    spawn_log_reader(BufReader::new(stderr), Arc::clone(&stderr_log), None);
-
-    server.port = ready_rx.recv_timeout(Duration::from_secs(60))?;
-    Ok(server)
 }
 
 fn run_headless_command(args: &[&str]) -> std::process::Output {
