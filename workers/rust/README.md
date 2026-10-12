@@ -87,6 +87,37 @@ ready/score/identity order, consistent rank positions and matching score copies.
 It is not silently repaired. See the
 [ranking consistency follow-up](../../reports/quality-ranking-consistency-recovery-20261012.md).
 
+Coupled-readiness admission rejects conflicting aliases and malformed nested
+reports. False readiness and blocked/missing domains cannot become a successful
+stop; warning evidence keeps review active. See the
+[coupled readiness recovery checks](../../reports/coupled-readiness-admission-recovery-20261012.md)
+for 56 shared cases, alias-placement controls and explicit fresh-run limits.
+
+Direct quality-sweep requests now check four readiness aliases and duplicate
+hints before stopped/incomplete branches. Blocked evidence requires explicit
+repair intent, while rejected candidates disable planning. See the
+[sweep request recovery checks](../../reports/quality-sweep-request-admission-recovery-20261012.md)
+for 74 shared cases, 625 alias placements and fail/skip recovery controls.
+
+Existing plans entering quality materialization now validate execution intent,
+repair metadata and declared axis counts using the same admission rules. See the
+[direct plan recovery checks](../../reports/quality-sweep-plan-admission-recovery-20261012.md)
+for shared cases, generated-plan mutations, fresh recovery and deferred-budget
+limits.
+
+Direct expansion now admits supplied quality case metadata before generating
+cases, including raw callers that bypass materialization. Metadata aliases cannot
+erase repair evidence; generic non-quality metadata keeps its prior behavior.
+See the [expansion recovery checks](../../reports/quality-sweep-expansion-admission-recovery-20261012.md)
+for 70 shared cases, 125 alias placements and corrected fresh task exports.
+
+Expansion now checks axis counts, deferred declarations and count mirrors before
+stopped or blocked returns, using the materializer's shared native counter. See
+the [count consistency checks](../../reports/sweep-expansion-count-recovery-20261012.md)
+for 85 shared cases, 125 count placements and 32 controlled graphs per runtime.
+Caller-authored execution batches and producer-side readiness retention remain
+separate audits; no new scale or physical qualification is claimed.
+
 For the currently retained thermal-quad matrix optimization set and its
 benchmark evidence, also read:
 

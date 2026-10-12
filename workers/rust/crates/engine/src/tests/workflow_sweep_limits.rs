@@ -130,16 +130,19 @@ fn interpolation_preserves_finite_extreme_endpoints_and_midpoints() {
 }
 
 #[test]
-fn materialization_uses_actual_axes_instead_of_stale_budget_claims() {
-    let expansion = materialize(
-        json!({
-            "sweep_enabled": true, "case_count_estimate": 1, "max_cases": 2,
-            "sweep_budget": {"case_budget_exceeded": false, "status": "ok"},
-            "base": direct()["base"], "axes": direct()["axes"]
-        }),
-        Value::Null,
-    )
-    .unwrap();
+fn materialization_rejects_stale_counts_and_corrected_plan_still_respects_budget() {
+    let mut payload = json!({
+        "sweep_enabled": true, "case_count_estimate": 1, "max_cases": 2,
+        "sweep_budget": {"case_budget_exceeded": false, "status": "ok"},
+        "base": direct()["base"], "axes": direct()["axes"]
+    });
+    assert!(
+        materialize(payload.clone(), Value::Null)
+            .unwrap_err()
+            .contains("case_count_estimate")
+    );
+    payload["case_count_estimate"] = json!(3);
+    let expansion = materialize(payload, Value::Null).unwrap();
     assert_eq!(expansion["case_count_estimate"], 3);
     assert_eq!(expansion["expansion_budget_ready"], false);
     assert_budget_block(expand(expansion, Value::Null).unwrap());

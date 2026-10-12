@@ -94,6 +94,50 @@ defmodule KyuubikiWeb.TestSupport.QualitySweepRecovery do
     }
   end
 
+  def expansion_graph(policy) do
+    graph = graph(policy)
+    nodes = Enum.reject(graph["nodes"], &(&1["id"] in ~w(plan materialize)))
+
+    edges =
+      graph["edges"]
+      |> Enum.reject(&(&1["to"]["node"] in ~w(plan materialize)))
+      |> Enum.map(fn edge ->
+        if edge["to"]["node"] == "expand",
+          do: Map.put(edge, "from", %{"node" => "input", "port" => "result"}),
+          else: edge
+      end)
+
+    %{graph | "nodes" => nodes, "edges" => edges}
+  end
+
+  def batch_graph(policy) do
+    graph = expansion_graph(policy)
+    nodes = Enum.reject(graph["nodes"], &(&1["id"] == "expand"))
+
+    edges =
+      graph["edges"]
+      |> Enum.reject(&(&1["to"]["node"] == "expand"))
+      |> Enum.map(fn edge ->
+        if edge["to"]["node"] == "batch",
+          do: Map.put(edge, "from", %{"node" => "input", "port" => "result"}),
+          else: edge
+      end)
+
+    %{graph | "nodes" => nodes, "edges" => edges}
+  end
+
+  def expanded_cases do
+    %{
+      "cases" =>
+        for {delta, index} <- Enum.with_index([120.0, 160.0]) do
+          %{
+            "id" => "case-#{index}",
+            "model" => Map.put(base(), "temperature_delta", delta)
+          }
+        end
+    }
+  end
+
   def assert_batch(batch) do
     assert batch["task_count"] == 2
     assert Enum.map(batch["tasks"], & &1["case_id"]) == ["quality_round_0", "quality_round_1"]

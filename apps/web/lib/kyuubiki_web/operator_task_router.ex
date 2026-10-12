@@ -148,6 +148,21 @@ defmodule KyuubikiWeb.OperatorTaskRouter do
     do: "operator_task_digest_invalid"
 
   defp operator_task_error_code(:invalid_operator_task_batch), do: "operator_task_batch_invalid"
+
+  defp operator_task_error_code({:operator_task_batch_quality_rejected, _reason}),
+    do: "operator_task_batch_quality_rejected"
+
+  defp operator_task_error_code({:operator_task_batch_identity_conflict, _details}),
+    do: "operator_task_batch_identity_conflict"
+
+  defp operator_task_error_code({:invalid_operator_task_batch_structure, _path, _reason}),
+    do: "operator_task_batch_structure_invalid"
+
+  defp operator_task_error_code(
+         {:invalid_operator_task_batch_checkpoint_structure, _path, _reason}
+       ),
+       do: "operator_task_batch_checkpoint_structure_invalid"
+
   defp operator_task_error_code(reason) when is_atom(reason), do: Atom.to_string(reason)
 
   defp operator_task_error_code({:operator_task_execution_receipt_invalid, _field}),

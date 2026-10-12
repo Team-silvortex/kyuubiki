@@ -346,7 +346,70 @@
             <code>repair_rejected_candidates</code> hint and retained rejection
             details. Even <code>require_ready: false</code> only permits an
             unready candidate to continue; it cannot satisfy the stop condition.</li>
-          <li>An incomplete ranking disables downstream quality-sweep planning
+          <li>Coupled-readiness reports in the row, objective and payload are
+            aliases: null cannot hide a supplied report, and non-null copies
+            must be structurally equal. Conflicting or malformed reports reject,
+            including malformed reports in lower-ranked candidates. A false
+            readiness flag or blocking/missing domains requires repair; warning
+            domains require review rather than successful completion. Repair
+            hints and sweep case metadata retain this intent. Reconcile reports
+            explicitly before a fresh run; the system does not merge them.</li>
+          <li>Direct quality-sweep requests validate aliases before stopped or
+            incomplete branches. The request report, selected report, top-level
+            report and <code>request_payload.seed_objective.coupled_readiness</code>
+            must agree; duplicate hint objects must also agree. A blocked report
+            requires <code>replan</code> and <code>fix_coupled_readiness</code>;
+            warnings require a non-stopped action with
+            <code>review_coupled_readiness</code>. Conflicting source, state,
+            recommendation, domain-list or count mirrors reject. Reconcile the
+            request explicitly rather than relying on field precedence.</li>
+          <li>Existing plans entering
+            <code>transform.materialize_quality_sweep_expansion</code> must keep
+            enablement, action, coupled evidence and repair hints consistent.
+            Supplied <code>repair_strategy</code> and <code>repair_focus</code>
+            mirrors must match their hint/report fields. Enabled stopped or
+            incomplete plans reject; disabled repair diagnostics produce no cases.
+            A missing action permits shorthand, but an explicitly contradictory
+            action never gets replaced.</li>
+          <li>Direct <code>transform.expand_parameter_sweep</code> also checks
+            supplied quality <code>case_metadata</code> before generating cases.
+            The payload, embedded config and caller config cannot carry different
+            metadata or use null to hide another quality alias. Readiness, repair
+            hints, strategy/focus and incomplete markers use the same plan rules;
+            disabled or budget-blocked metadata cannot authorize execution.
+            Ordinary raw scans retain custom JSON metadata when no reserved
+            quality fields are present. These checks do not authenticate evidence
+            or independently verify physical validity.</li>
+          <li>Direct <code>transform.compose_quality_execution_batch</code> cannot
+            bypass quality admission by supplying already expanded cases. Batch
+            and candidate quality fields, <code>metadata</code> and
+            <code>case_metadata</code> are checked independently before compiling
+            any TaskIR. Preparation and execution recheck compiled batches before
+            any task dispatch. A null metadata field does not erase evidence in
+            another scope. Reserved readiness, convergence, completeness, repair
+            and enablement fields follow the same plan rules. Explicit repair or
+            review intent is allowed; disabled or budget-blocked evidence is not.</li>
+          <li>Quality evidence survives batch composition and participates in the
+            batch digest, including top-level evidence. A changed admissible
+            repair declaration requires a new preparation/checkpoint rather than
+            reusing an old digest. Existing checkpoints whose batches used
+            previously unhashed top-level evidence require explicit regeneration;
+            there is no silent upgrade. Numerical TaskIR and Agent dispatch
+            contracts are unchanged. Generic JSON metadata remains caller-owned,
+            and ordinary per-task failures still isolate the failed case. This
+            does not authenticate caller evidence or qualify general durable
+            recovery.</li>
+          <li>Direct task batches require nonblank, unique case IDs and actual
+            TaskIR IDs. Malformed task containers reject before any dispatch,
+            including when the bad entry is last. Checkpoint creation and
+            verification reuse this gate, validate supplied recovery targets
+            against the batch and reject malformed or independently rewritten
+            resume policies. Public batch routes return HTTP 422 rather than
+            crashing or silently merging identities. Empty batches and optional
+            header shorthand remain supported. These are structural consistency
+            checks, not authenticated execution evidence; full summary counter
+            and receipt provenance validation remains separate.</li>
+          <li>An incomplete ranking or a nonempty rejected-candidate list disables downstream quality-sweep planning
             and expansion. The result contains zero cases, keeps
             <code>sweep_action: replan</code>, and exposes
             <code>sweep_blocking_reason: candidate_evaluation_incomplete</code>
@@ -386,6 +449,18 @@
             actual axis product against the effective limit. Stale estimates
             and a claimed ready flag cannot authorize excess cases. Lowering
             the limit in either stage takes effect before case generation.</li>
+          <li>Materialization and direct expansion reject supplied totals and per-axis counts that
+            disagree with the axis product. Deferred axes require a blocked
+            upstream budget and positive whole counts; the product is checked
+            for overflow without allocating samples. A stale declared count is
+            an error, not a request to normalize the plan silently.</li>
+          <li>Direct expansion checks count mirrors in the envelope, body, quality
+            metadata and their budgets before stopped or budget-blocked returns.
+            Deferred axes cannot also contain <code>values</code>, even null or an
+            empty array. Diagnostic-only envelopes may omit axes, but supplied
+            counts must still agree. A budget cannot claim unblocked if its known
+            count exceeds its own limit. Ordinary custom metadata without reserved
+            quality fields remains separate from these plan-count rules.</li>
           <li>A quality-sweep budget block returns zero cases with
             <code>expansion_budget_ready: false</code> and
             <code>expansion_blocking_reason: case_budget_exceeded</code>.

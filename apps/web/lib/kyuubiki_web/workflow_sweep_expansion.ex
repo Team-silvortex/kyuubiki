@@ -8,12 +8,14 @@ defmodule KyuubikiWeb.WorkflowSweepExpansion do
     Check.run("transform.expand_parameter_sweep", fn ->
       payload = Check.object(payload, "payload")
       config = Check.config(config)
+      size = KyuubikiWeb.WorkflowSweepExpansionAdmission.validate(payload, config)
 
       if Map.has_key?(payload, "quality_sweep_expansion_contract") do
         if payload["quality_sweep_expansion_contract"] != @contract,
           do: Check.fail("unsupported quality_sweep_expansion_contract")
 
-        {budget, blocked} = Sweep.budget(payload)
+        budget = Check.config(payload["sweep_budget"])
+        blocked = Sweep.flag(budget, "case_budget_exceeded", false)
         enabled = Sweep.flag(payload, "expansion_enabled")
         ready = Sweep.flag(payload, "expansion_budget_ready")
 
@@ -26,19 +28,18 @@ defmodule KyuubikiWeb.WorkflowSweepExpansion do
 
           true ->
             nested = Check.object(payload["payload"], "payload.payload")
-            nested_config = Check.object(Map.get(payload, "config", %{}), "payload.config")
-            expand(nested, Map.merge(nested_config, config), {payload, budget})
+            nested_config = Check.config(payload["config"])
+            expand(nested, Map.merge(nested_config, config), {payload, budget}, size)
         end
       else
-        expand(payload, config, nil)
+        expand(payload, config, nil, size)
       end
     end)
   end
 
-  defp expand(payload, config, quality_context) do
+  defp expand(payload, config, quality_context, size) do
     base = Sweep.object(Map.get(payload, "base", payload["model"]), "payload.base")
     raw_axes = Map.get(payload, "axes", config["axes"])
-    size = Sweep.axes_count(raw_axes)
     max_cases = Sweep.count(Map.get(config, "max_cases", 256), "config.max_cases")
     id_prefix = Sweep.text(config, "id_prefix", "case", "config")
 

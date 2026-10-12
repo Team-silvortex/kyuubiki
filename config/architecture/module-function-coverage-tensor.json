@@ -68,6 +68,7 @@
     "config/architecture/module-function-coverage-evidence/runtime-diagnostic-cancellation.json",
     "config/architecture/module-function-coverage-evidence/runtime-native-domain-diagnostics.json",
     "config/architecture/module-function-coverage-evidence/runtime-quality-ranking-integrity.json",
+    "config/architecture/module-function-coverage-evidence/runtime-coupled-readiness-admission.json",
     "config/architecture/module-function-coverage-evidence/runtime-beam-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-frame-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-modal-agent.json",

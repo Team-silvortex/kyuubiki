@@ -68,6 +68,7 @@ fn materialized_quality_sweep_preserves_coupled_readiness_metadata() {
             "source_candidate_id": "candidate_coupled_blocked",
             "optimization_hint": {
                 "action": "fix_coupled_readiness",
+                "focus_source": "coupled_readiness",
                 "focus_domain": "electrostatic"
             },
             "coupled_readiness": {
@@ -169,7 +170,8 @@ fn sweep_plan_repair_focus_uses_top_level_coupled_readiness() {
             "coupled_readiness": {
                 "coupled_readiness_contract": "kyuubiki.coupled_readiness/v1",
                 "coupled_readiness_state": "block",
-                "coupled_readiness_recommendation": "hold_and_repair_inputs"
+                "coupled_readiness_recommendation": "hold_and_repair_inputs",
+                "coupled_readiness_blocking_domains": ["electrostatic"]
             },
             "request_payload": {
                 "search_space": {

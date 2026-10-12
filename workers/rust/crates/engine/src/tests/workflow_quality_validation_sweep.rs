@@ -52,6 +52,8 @@ fn materialized_quality_sweep_preserves_validation_repair_metadata() {
             "source_candidate_id": "candidate_validation_blocked",
             "optimization_hint": {
                 "action": "fix_validation_failure",
+                "focus_source": "cross_check",
+                "focus_domain": "validation",
                 "focus_field": "max_temperature"
             },
             "focused_axis_path": "model.max_temperature",

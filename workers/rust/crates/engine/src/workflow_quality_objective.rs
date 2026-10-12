@@ -212,9 +212,11 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         .unwrap_or(Value::Null);
     let (objective_ready, selected_blocking_terms) = ranking_input::selected_evidence(selected)?;
     let has_blockers = !selected_blocking_terms.as_array().unwrap().is_empty();
-    let ready = admitted.ready && objective_ready && !has_blockers;
-    let selected_coupled_readiness = selected_coupled_readiness(&payload, selected);
-    ranking_input::coupled_readiness(&selected_coupled_readiness)?;
+    let selected_coupled_readiness = selected_coupled_readiness(&payload, selected)?;
+    let ready = admitted.ready
+        && objective_ready
+        && !has_blockers
+        && !coupled_readiness_blocks(&selected_coupled_readiness);
     let ranking_complete = admitted.complete;
     let rejected_candidates = admitted.rejected;
     let target_score = config_number(&config, "target_score", 3.0)?;
@@ -277,50 +279,46 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
     }))
 }
 
-fn selected_coupled_readiness(payload: &Value, selected: &serde_json::Map<String, Value>) -> Value {
-    selected
-        .get("coupled_readiness")
-        .or_else(|| {
+fn selected_coupled_readiness(
+    payload: &Value,
+    selected: &serde_json::Map<String, Value>,
+) -> Result<Value, String> {
+    crate::workflow_quality_readiness::resolve(&[
+        (
+            selected.get("coupled_readiness"),
+            "selected.coupled_readiness",
+        ),
+        (
             selected
                 .get("objective")
-                .and_then(|objective| objective.get("coupled_readiness"))
-        })
-        .or_else(|| payload.get("coupled_readiness"))
-        .cloned()
-        .unwrap_or(Value::Null)
+                .and_then(|v| v.get("coupled_readiness")),
+            "selected.objective.coupled_readiness",
+        ),
+        (
+            payload.get("coupled_readiness"),
+            "payload.coupled_readiness",
+        ),
+    ])
+    .map(|value| value.cloned().map(Value::Object).unwrap_or(Value::Null))
 }
 
 fn coupled_readiness_blocks(readiness: &Value) -> bool {
-    readiness
-        .get("coupled_readiness_recommendation")
-        .and_then(Value::as_str)
-        == Some("hold_and_repair_inputs")
-        || readiness
-            .get("coupled_readiness_state")
-            .and_then(Value::as_str)
-            == Some("block")
+    crate::workflow_quality_readiness::blocks(readiness)
 }
 
 fn coupled_readiness_requires_review(readiness: &Value) -> bool {
-    readiness
-        .get("coupled_readiness_recommendation")
-        .and_then(Value::as_str)
-        == Some("review_before_next_round")
-        || readiness
-            .get("coupled_readiness_state")
-            .and_then(Value::as_str)
-            == Some("warn")
+    crate::workflow_quality_readiness::requires_review(readiness)
 }
 
 fn coupled_readiness_iteration_hint(readiness: &Value) -> Option<Value> {
     let object = readiness.as_object()?;
-    let recommendation = object
-        .get("coupled_readiness_recommendation")
-        .and_then(Value::as_str)
-        .unwrap_or("continue_to_next_round");
-    if recommendation == "continue_to_next_round" {
+    let recommendation = if coupled_readiness_blocks(readiness) {
+        "hold_and_repair_inputs"
+    } else if coupled_readiness_requires_review(readiness) {
+        "review_before_next_round"
+    } else {
         return None;
-    }
+    };
     let blocking_domains = object
         .get("coupled_readiness_blocking_domains")
         .and_then(Value::as_array)

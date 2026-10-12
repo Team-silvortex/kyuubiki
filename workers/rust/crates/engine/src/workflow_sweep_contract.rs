@@ -55,19 +55,47 @@ pub(crate) fn checked_case_count(mut counts: impl Iterator<Item = usize>) -> Res
         .ok_or_else(|| "parameter sweep case count overflowed".to_string())
 }
 
-pub(crate) fn actual_case_count(axes: &[Value]) -> Result<usize, String> {
+pub(crate) fn declared_case_count(axes: &[Value], allow_deferred: bool) -> Result<usize, String> {
     if axes.is_empty() {
         return Err("parameter sweep axes must not be empty".to_string());
     }
     let mut count = 1usize;
     for (index, axis) in axes.iter().enumerate() {
-        let values = axis
-            .get("values")
-            .and_then(Value::as_array)
-            .filter(|values| !values.is_empty())
-            .ok_or_else(|| format!("parameter sweep axis {index} requires nonempty values"))?;
+        let context = format!("parameter sweep axis {index}");
+        let path = text_option(axis.get("path"), &format!("{context}.path"), "")?;
+        if path.split('.').any(|part| part.trim().is_empty()) {
+            return Err(format!("{context}.path has empty segments"));
+        }
+        let size = if bool_option(
+            axis.get("values_deferred"),
+            &format!("{context}.values_deferred"),
+            false,
+        )? {
+            if !allow_deferred {
+                return Err(format!(
+                    "{context}.values_deferred requires a blocked budget"
+                ));
+            }
+            if axis.get("values").is_some() {
+                return Err(format!(
+                    "{context} cannot declare both deferred and concrete values"
+                ));
+            }
+            let declared = axis
+                .get("value_count")
+                .ok_or_else(|| format!("{context}.value_count is required"))?;
+            count_option(Some(declared), &format!("{context}.value_count"), 0, 1)?
+        } else {
+            let values = axis
+                .get("values")
+                .and_then(Value::as_array)
+                .filter(|values| !values.is_empty())
+                .ok_or_else(|| format!("{context} requires nonempty values"))?;
+            require_count(axis, "value_count", values.len())?;
+            values.len()
+        };
         count = count
-            .checked_mul(values.len())
+            .checked_mul(size)
             .ok_or_else(|| "parameter sweep case count overflowed".to_string())?;
     }
     Ok(count)

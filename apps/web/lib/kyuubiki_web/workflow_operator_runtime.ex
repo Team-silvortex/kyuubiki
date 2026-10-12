@@ -158,6 +158,18 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
   def run_transform_operator("transform.first_available", payload, _config), do: {:ok, payload}
 
+  def run_transform_operator("transform.build_quality_parameter_sweep_plan", payload, config),
+    do: WorkflowQualityObjectiveRuntime.build_quality_parameter_sweep_plan(payload, config)
+
+  def run_transform_operator("transform.materialize_quality_sweep_expansion", payload, config),
+    do: WorkflowQualityObjectiveRuntime.materialize_quality_sweep_expansion(payload, config)
+
+  def run_transform_operator("transform.expand_parameter_sweep", payload, config),
+    do: WorkflowParameterSweepRuntime.expand_parameter_sweep(payload, config)
+
+  def run_transform_operator("transform.compose_quality_execution_batch", payload, config),
+    do: WorkflowQualityObjectiveRuntime.compose_quality_execution_batch(payload, config)
+
   def run_transform_operator(operator_id, payload, nil) when is_map(payload),
     do: run_transform_operator(operator_id, payload, %{})
 
@@ -186,18 +198,6 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
       "transform.prepare_quality_next_round_request" when is_map(config) ->
         WorkflowQualityObjectiveRuntime.prepare_quality_next_round_request(payload, config)
-
-      "transform.build_quality_parameter_sweep_plan" when is_map(config) ->
-        WorkflowQualityObjectiveRuntime.build_quality_parameter_sweep_plan(payload, config)
-
-      "transform.materialize_quality_sweep_expansion" when is_map(config) ->
-        WorkflowQualityObjectiveRuntime.materialize_quality_sweep_expansion(payload, config)
-
-      "transform.compose_quality_execution_batch" when is_map(config) ->
-        WorkflowQualityObjectiveRuntime.compose_quality_execution_batch(payload, config)
-
-      "transform.expand_parameter_sweep" when is_map(config) ->
-        WorkflowParameterSweepRuntime.expand_parameter_sweep(payload, config)
 
       "transform.join_parameter_sweep_results" when is_map(config) ->
         WorkflowParameterSweepRuntime.join_parameter_sweep_results(payload, config)

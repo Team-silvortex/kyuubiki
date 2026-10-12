@@ -48,6 +48,17 @@ pub(crate) fn admit(payload: &Value) -> Result<RankingInput<'_>, String> {
         }
         previous = Some(key);
         checked_objective(row, score, &path)?;
+        crate::workflow_quality_readiness::resolve(&[
+            (
+                row.get("coupled_readiness"),
+                &format!("{path}.coupled_readiness"),
+            ),
+            (
+                row.get("objective")
+                    .and_then(|v| v.get("coupled_readiness")),
+                &format!("{path}.objective.coupled_readiness"),
+            ),
+        ])?;
         ready_count += usize::from(ready);
         selected_row.get_or_insert((row, id, score, ready));
     }
@@ -140,31 +151,6 @@ pub(crate) fn selected_evidence(selected: &Map<String, Value>) -> Result<(bool, 
         }
     }
     Ok((objective_ready, Value::Array(blockers)))
-}
-
-pub(crate) fn coupled_readiness(value: &Value) -> Result<(), String> {
-    let Some(object) = check::optional_object(Some(value), "selected.coupled_readiness")? else {
-        return Ok(());
-    };
-    for (field, choices) in [
-        (
-            "coupled_readiness_state",
-            &["ready", "pass", "warn", "block"][..],
-        ),
-        (
-            "coupled_readiness_recommendation",
-            &[
-                "continue_to_next_round",
-                "review_before_next_round",
-                "hold_and_repair_inputs",
-            ][..],
-        ),
-    ] {
-        if check::text(object.get(field), field)?.is_some_and(|value| !choices.contains(&value)) {
-            return Err(format!("quality {field} has an unsupported value"));
-        }
-    }
-    Ok(())
 }
 
 fn required_text<'a>(

@@ -2,12 +2,25 @@ use serde_json::Value;
 
 use crate::workflow_sweep_axes::prepare_sweep_axes;
 use crate::workflow_sweep_contract::{
-    actual_case_count, bool_option, count_option, object_or_null, refreshed_budget,
+    bool_option, count_option, declared_case_count, object_or_null, refreshed_budget,
+    require_count, text_option,
 };
 
 pub fn materialize_quality_sweep_expansion(payload: Value, config: Value) -> Result<Value, String> {
     object_or_null(&config, "quality sweep expansion config")?;
-    if !bool_option(payload.get("sweep_enabled"), "sweep_enabled", true)? {
+    let enabled = crate::workflow_quality_sweep_admission::admit_plan(&payload)?;
+    let max_cases = count_option(
+        config.get("max_cases").or_else(|| payload.get("max_cases")),
+        "max_cases",
+        64,
+        0,
+    )?;
+    let id_prefix = text_option(
+        config.get("id_prefix").or_else(|| payload.get("id_prefix")),
+        "id_prefix",
+        "quality_round",
+    )?;
+    if !enabled {
         return Ok(serde_json::json!({
             "quality_sweep_expansion_contract": "kyuubiki.quality_sweep_expansion/v1",
             "expansion_enabled": false,
@@ -30,17 +43,6 @@ pub fn materialize_quality_sweep_expansion(payload: Value, config: Value) -> Res
         .get("base")
         .cloned()
         .unwrap_or_else(|| serde_json::json!({}));
-    let id_prefix = config
-        .get("id_prefix")
-        .or_else(|| payload.get("id_prefix"))
-        .and_then(Value::as_str)
-        .unwrap_or("quality_round");
-    let max_cases = count_option(
-        config.get("max_cases").or_else(|| payload.get("max_cases")),
-        "max_cases",
-        64,
-        0,
-    )?;
     let upstream_budget = payload.get("sweep_budget").unwrap_or(&Value::Null);
     object_or_null(upstream_budget, "sweep_budget")?;
     let upstream_blocked = bool_option(
@@ -49,16 +51,8 @@ pub fn materialize_quality_sweep_expansion(payload: Value, config: Value) -> Res
         false,
     )?;
     // Deferred plans cannot be made executable by increasing a downstream limit.
-    let case_count = if upstream_blocked && payload.get("case_count_estimate").is_some() {
-        count_option(
-            payload.get("case_count_estimate"),
-            "case_count_estimate",
-            0,
-            0,
-        )?
-    } else {
-        actual_case_count(axes)?
-    };
+    let case_count = declared_case_count(axes, upstream_blocked)?;
+    require_count(&payload, "case_count_estimate", case_count)?;
     let sweep_budget = refreshed_budget(upstream_budget, case_count, max_cases, upstream_blocked);
     let expansion_budget_ready = !upstream_blocked && case_count <= max_cases;
     if expansion_budget_ready {

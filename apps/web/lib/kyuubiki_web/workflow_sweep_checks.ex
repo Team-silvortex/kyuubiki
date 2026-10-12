@@ -83,6 +83,10 @@ defmodule KyuubikiWeb.WorkflowSweepChecks do
 
       if flag(axis, "values_deferred", false, path) do
         if !deferred, do: Check.fail("#{path}.values_deferred requires a blocked budget")
+
+        if Map.has_key?(axis, "values"),
+          do: Check.fail("#{path} cannot declare both deferred and concrete values")
+
         count(axis["value_count"], "#{path}.value_count", 1)
       else
         size = length(values(axis["values"], "#{path}.values"))

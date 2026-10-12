@@ -99,7 +99,8 @@ fn quality_sweep_materialization_marks_case_budget_as_not_ready() {
             "base": {"model": {"a": 1}},
             "axes": [{
                 "path": "model.a",
-                "values": [1, 2, 3]
+                "values_deferred": true,
+                "value_count": 27
             }]
         }),
         serde_json::json!({}),
@@ -119,32 +120,42 @@ fn quality_sweep_materialization_marks_case_budget_as_not_ready() {
 }
 
 #[test]
-fn quality_sweep_expansion_returns_structured_budget_block() {
+fn quality_sweep_expansion_rejects_stale_counts_before_structured_budget_block() {
+    let mut payload = serde_json::json!({
+        "quality_sweep_expansion_contract": "kyuubiki.quality_sweep_expansion/v1",
+        "expansion_enabled": true,
+        "expansion_budget_ready": false,
+        "expansion_blocking_reason": "case_budget_exceeded",
+        "source_candidate_id": "candidate_budget",
+        "case_count_estimate": 27,
+        "sweep_budget": {
+            "status": "case_budget_exceeded",
+            "recommendation": "reduce_axis_count",
+            "case_budget_exceeded": true
+        },
+        "payload": {
+            "base": {"model": {"a": 1}},
+            "axes": [{
+                "path": "model.a",
+                "values": [1, 2, 3]
+            }]
+        },
+        "config": {
+            "max_cases": 2
+        }
+    });
+    assert!(
+        run_transform_operator(
+            "transform.expand_parameter_sweep",
+            payload.clone(),
+            serde_json::json!({})
+        )
+        .is_err()
+    );
+    payload["case_count_estimate"] = serde_json::json!(3);
     let expanded = run_transform_operator(
         "transform.expand_parameter_sweep",
-        serde_json::json!({
-            "quality_sweep_expansion_contract": "kyuubiki.quality_sweep_expansion/v1",
-            "expansion_enabled": true,
-            "expansion_budget_ready": false,
-            "expansion_blocking_reason": "case_budget_exceeded",
-            "source_candidate_id": "candidate_budget",
-            "case_count_estimate": 27,
-            "sweep_budget": {
-                "status": "case_budget_exceeded",
-                "recommendation": "reduce_axis_count",
-                "case_budget_exceeded": true
-            },
-            "payload": {
-                "base": {"model": {"a": 1}},
-                "axes": [{
-                    "path": "model.a",
-                    "values": [1, 2, 3]
-                }]
-            },
-            "config": {
-                "max_cases": 2
-            }
-        }),
+        payload,
         serde_json::json!({}),
     )
     .expect("budget-blocked quality sweep should return structured result");

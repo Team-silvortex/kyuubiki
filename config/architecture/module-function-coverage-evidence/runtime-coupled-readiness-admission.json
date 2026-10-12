@@ -1,0 +1,243 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Scoped next-round, direct sweep-request, plan and expansion quality/count admission: Rust and Elixir share boundary fixtures and controlled recovery checks. Control-plane-only follow-ups validate direct batch quality evidence, structure, recovery identity uniqueness and checkpoint input/policy consistency. No physical accuracy, authenticated execution provenance, live Agent, installed, remote or durable-recovery qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-service-coupled-readiness-admission-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_quality_readiness.rs",
+        "workers/rust/crates/engine/src/workflow_quality_ranking_input.rs",
+        "workers/rust/crates/engine/src/workflow_quality_objective.rs",
+        "workers/rust/crates/engine/src/tests/workflow_coupled_readiness_admission.rs",
+        "workers/rust/crates/engine/src/tests/workflow_coupled_readiness_recovery.rs",
+        "apps/web/lib/kyuubiki_web/workflow_quality_readiness.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_next_round.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_sweep.ex",
+        "apps/web/test/kyuubiki_web/workflow_coupled_readiness_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_coupled_readiness_recovery_test.exs",
+        "tests/fixtures/workflow-coupled-readiness-admission.json",
+        "reports/coupled-readiness-admission-recovery-20261012.md"
+      ],
+      "required_text": [
+        "shared_coupled_readiness_cannot_be_masked_or_silently_replaced",
+        "coupled_readiness_alias_placement_and_json_exchange_preserve_decisions",
+        "conflicting_coupled_reports_stop_dependents_and_fresh_recovery_is_explicit",
+        "partial_coupled_evidence_keeps_repair_and_review_intent_through_sweep_expansion",
+        "alias placement and JSON exchange preserve coupled readiness decisions",
+        "conflicting coupled reports cannot export decisions and corrected fresh runs recover",
+        "56 shared cases: 30 invalid cases and 26 accepted",
+        "696 total, 695 passed, one ignored",
+        "2,209 total, 2,138 passed, 71 conditional skips",
+        "not new FEM"
+      ]
+    },
+    {
+      "id": "native-service-direct-sweep-request-admission-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_quality_sweep_admission.rs",
+        "workers/rust/crates/engine/src/workflow_quality_sweep_request.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_sweep_request_admission.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_sweep_request_recovery.rs",
+        "apps/web/lib/kyuubiki_web/workflow_quality_sweep_admission.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_sweep.ex",
+        "apps/web/lib/kyuubiki_web/workflow_operator_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_quality_sweep_request_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_sweep_request_recovery_test.exs",
+        "tests/fixtures/workflow-quality-sweep-request-admission.json",
+        "reports/quality-sweep-request-admission-recovery-20261012.md"
+      ],
+      "required_text": [
+        "shared_sweep_request_admission_rejects_masked_and_conflicting_intent",
+        "sweep_report_alias_matrix_retains_evidence_after_json_exchange",
+        "direct_sweep_failures_stop_dependents_and_explicit_repairs_recover",
+        "rejected_candidates_alone_disable_the_entire_sweep_chain",
+        "625 sweep alias placements preserve evidence through expansion",
+        "direct request conflicts stop task publication and fresh explicit repairs recover",
+        "74 shared cases: 56 invalid cases and 18 accepted controls",
+        "700 total, 699 passed, one ignored",
+        "2,285 total, 2,214 passed, 71 conditional skips",
+        "not physical"
+      ]
+    },
+    {
+      "id": "native-service-direct-sweep-plan-admission-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_quality_sweep_admission.rs",
+        "workers/rust/crates/engine/src/workflow_quality_sweep_plan.rs",
+        "workers/rust/crates/engine/src/workflow_quality_sweep_request.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_sweep_plan_admission.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_sweep_plan_recovery.rs",
+        "apps/web/lib/kyuubiki_web/workflow_quality_sweep_admission.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_sweep.ex",
+        "apps/web/lib/kyuubiki_web/workflow_operator_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_quality_sweep_plan_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_sweep_plan_recovery_test.exs",
+        "tests/fixtures/workflow-quality-sweep-plan-admission.json",
+        "reports/quality-sweep-plan-admission-recovery-20261012.md"
+      ],
+      "required_text": [
+        "shared_direct_plan_admission_rejects_incoherent_evidence_and_counts",
+        "direct_plan_errors_block_dependents_and_fresh_repairs_preserve_metadata",
+        "generated_plans_reject_single_field_corruption_without_losing_valid_repair_paths",
+        "disabled_and_billion_sample_deferred_plans_never_expand_cases",
+        "direct plan errors block task publication and fresh repairs preserve metadata",
+        "generated plans reject single field corruption and preserve valid repair paths",
+        "74 shared cases: 61 invalid cases and 13 accepted controls",
+        "704 total, 703 passed, one ignored",
+        "2,362 total, 2,291 passed, 71 conditional skips",
+        "not physical"
+      ]
+    },
+    {
+      "id": "native-service-direct-sweep-expansion-admission-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_sweep_expansion_admission.rs",
+        "workers/rust/crates/engine/src/workflow_parameter_sweep.rs",
+        "workers/rust/crates/engine/src/workflow_quality_sweep_admission.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_sweep_expansion_admission.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_sweep_expansion_recovery.rs",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_expansion_admission.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_expansion.ex",
+        "apps/web/lib/kyuubiki_web/workflow_operator_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_quality_sweep_expansion_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_sweep_expansion_recovery_test.exs",
+        "tests/fixtures/workflow-quality-sweep-expansion-admission.json",
+        "reports/quality-sweep-expansion-admission-recovery-20261012.md"
+      ],
+      "required_text": [
+        "shared_expansion_admission_preserves_quality_evidence_before_case_generation",
+        "expansion_errors_block_dependents_and_fresh_repairs_keep_quality_evidence",
+        "expansion_metadata_alias_matrix_cannot_mask_quality_evidence",
+        "generated_expansions_reject_corrupted_evidence_and_keep_valid_repair_controls",
+        "expansion errors block task publication and fresh repairs keep quality evidence",
+        "125 expansion metadata alias placements cannot mask quality evidence",
+        "70 shared cases: 56 invalid cases and 14 accepted controls",
+        "708 total, 707 passed, one ignored",
+        "2,435 total, 2,364 passed, 71 conditional skips",
+        "not physical"
+      ]
+    },
+    {
+      "id": "native-service-expansion-count-consistency-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_sweep_contract.rs",
+        "workers/rust/crates/engine/src/workflow_sweep_expansion_admission.rs",
+        "workers/rust/crates/engine/src/workflow_parameter_sweep.rs",
+        "workers/rust/crates/engine/src/workflow_quality_sweep_plan.rs",
+        "workers/rust/crates/engine/src/tests/workflow_sweep_expansion_counts.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_sweep_budget.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_sweep_expansion_recovery.rs",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_expansion_admission.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_expansion.ex",
+        "apps/web/test/support/quality_sweep_recovery.exs",
+        "apps/web/test/kyuubiki_web/workflow_sweep_expansion_counts_test.exs",
+        "tests/fixtures/workflow-sweep-expansion-counts.json",
+        "reports/sweep-expansion-count-recovery-20261012.md"
+      ],
+      "required_text": [
+        "shared_expansion_counts_reject_stale_and_ambiguous_declarations",
+        "count_mirror_placements_accept_integral_floats_but_not_stale_or_null_values",
+        "corrupt_expansion_counts_stop_dependents_and_corrected_fresh_runs_recover",
+        "generated_deferred_and_concrete_counts_stay_consistent_without_allocating_samples",
+        "corrupt counts stop task exports and corrected fresh runs recover",
+        "quality_sweep_expansion_rejects_stale_counts_before_structured_budget_block",
+        "85 shared cases: 71 invalid cases and 14 accepted controls",
+        "712 total, 711 passed, one ignored",
+        "2,523 total, 2,452 passed, 71 conditional skips",
+        "not physical"
+      ]
+    },
+    {
+      "id": "service-direct-execution-batch-quality-admission-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_quality_batch_admission.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_sweep_admission.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_execution_batch.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_run.ex",
+        "apps/web/lib/kyuubiki_web/operator_task_router.ex",
+        "apps/web/test/kyuubiki_web/workflow_quality_execution_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_execution_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_sweep_recovery_api_test.exs",
+        "schemas/operator-task-batch.schema.json",
+        "reports/quality-execution-batch-recovery-20261012.md"
+      ],
+      "required_text": [
+        "direct cases and compiled batches reject",
+        "125 scope placements cannot hide blocked evidence behind null or absent metadata",
+        "changed evidence invalidates the old checkpoint without changing numerical TaskIR",
+        "direct batch rejection stops exports and corrected fresh runs execute with evidence",
+        "a quality failure anywhere in the batch prevents every task dispatch",
+        "ordinary per-task numerical failure remains isolated and retryable by case",
+        "direct case jobs preserve failed history and HTTP batch gates reject changed evidence",
+        "2,558 total, 2,487 passed, 71 conditional skips",
+        "No new native Engine test coverage is claimed"
+      ]
+    },
+    {
+      "id": "service-direct-task-batch-structure-and-recovery-identity-admission",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_contract.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_checkpoint_admission.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_run.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_envelope.ex",
+        "apps/web/lib/kyuubiki_web/operator_task_router.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_batch_structure_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_executor_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_execution_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_task_batch_admission_api_test.exs",
+        "schemas/operator-task-batch.schema.json",
+        "reports/operator-task-batch-structure-recovery-20261012.md"
+      ],
+      "required_text": [
+        "duplicate case and task identities reject before execution and checkpoint creation",
+        "checkpoint summaries cannot target cases outside the batch or duplicate a target",
+        "rehashed well-shaped policy cannot contradict its checkpoint summaries",
+        "ordinary digest errors stay isolated and corrected batches keep unique retry targets",
+        "every public batch route rejects malformed structure and ambiguous identity with HTTP 422",
+        "checkpoint API returns actionable structural errors instead of HTTP 500 or dropped evidence",
+        "a quality failure anywhere in the batch prevents every task dispatch",
+        "2,583 total, 2,512 passed, 71 conditional skips",
+        "No new native Engine test coverage is claimed"
+      ]
+    }
+  ]
+}

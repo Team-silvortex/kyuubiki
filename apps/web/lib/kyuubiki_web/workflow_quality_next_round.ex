@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.WorkflowQualityNextRound do
 
   alias KyuubikiWeb.WorkflowQualityComposition, as: Quality
   alias KyuubikiWeb.WorkflowQualityRanking, as: Ranking
+  alias KyuubikiWeb.WorkflowQualityReadiness, as: Readiness
   alias KyuubikiWeb.WorkflowReportingChecks, as: Check
 
   def run(payload, config) do
@@ -71,35 +72,33 @@ defmodule KyuubikiWeb.WorkflowQualityNextRound do
           "selected.objective.composite_quality_ready"
         )
 
-      ready = selected["ready"] && objective_ready && blockers == []
       dominant = Map.get(selected, "dominant_term", objective["composite_quality_dominant_term"])
 
       coupled =
-        Map.get(
-          selected,
-          "coupled_readiness",
-          Map.get(objective, "coupled_readiness", payload["coupled_readiness"])
-        )
+        Readiness.resolve([
+          {selected["coupled_readiness"], "selected.coupled_readiness"},
+          {objective["coupled_readiness"], "selected.objective.coupled_readiness"},
+          {payload["coupled_readiness"], "payload.coupled_readiness"}
+        ])
 
-      coupled_map = optional_object(coupled, "selected.coupled_readiness")
+      coupled_map = coupled || %{}
+      blocked = Readiness.blocked?(coupled)
+      review = Readiness.review?(coupled)
+      ready = selected["ready"] && objective_ready && blockers == [] && !blocked
 
       state =
-        Check.choice(
-          coupled_map,
-          "coupled_readiness_state",
-          "ready",
-          ~w(ready pass warn block),
-          "selected.coupled_readiness"
-        )
+        cond do
+          blocked -> "block"
+          review -> "warn"
+          true -> "ready"
+        end
 
       recommendation =
-        Check.choice(
-          coupled_map,
-          "coupled_readiness_recommendation",
-          "continue_to_next_round",
-          ~w(continue_to_next_round review_before_next_round hold_and_repair_inputs),
-          "selected.coupled_readiness"
-        )
+        cond do
+          blocked -> "hold_and_repair_inputs"
+          review -> "review_before_next_round"
+          true -> "continue_to_next_round"
+        end
 
       target = Quality.nonnegative(Map.get(config, "target_score", 3), "config.target_score")
 
@@ -132,7 +131,7 @@ defmodule KyuubikiWeb.WorkflowQualityNextRound do
               "Complete failed candidate evaluations before accepting the research ranking."
           }
         else
-          iteration_hint(dominant, blockers, state, recommendation)
+          iteration_hint(dominant, blockers, coupled)
         end
 
       %{
@@ -183,6 +182,12 @@ defmodule KyuubikiWeb.WorkflowQualityNextRound do
       do: Check.fail("#{path}.rank disagrees with its position")
 
     checked_objective(entry["objective"], score, "#{path}.objective")
+
+    Readiness.resolve([
+      {entry["coupled_readiness"], "#{path}.coupled_readiness"},
+      {get_in(entry, ["objective", "coupled_readiness"]), "#{path}.objective.coupled_readiness"}
+    ])
+
     Map.merge(entry, %{"score" => score, "ready" => ready})
   end
 
@@ -253,19 +258,10 @@ defmodule KyuubikiWeb.WorkflowQualityNextRound do
   defp optional_object(nil, _path), do: %{}
   defp optional_object(value, path), do: Check.object(value, path)
 
-  defp iteration_hint(dominant, blockers, state, recommendation) do
+  defp iteration_hint(dominant, blockers, coupled) do
     cond do
-      state == "block" || recommendation == "hold_and_repair_inputs" ->
-        %{
-          "action" => "fix_coupled_readiness",
-          "reason" => "Repair coupled readiness before accepting the ranking."
-        }
-
-      state == "warn" || recommendation == "review_before_next_round" ->
-        %{
-          "action" => "review_coupled_readiness",
-          "reason" => "Review coupled readiness before stopping research."
-        }
+      Readiness.blocked?(coupled) || Readiness.review?(coupled) ->
+        Readiness.iteration_hint(coupled)
 
       blockers != [] ->
         blocker = Check.object(hd(blockers), "selected.blocking_terms[0]")

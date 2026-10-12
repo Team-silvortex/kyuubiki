@@ -24,7 +24,7 @@ This does not rebuild, install or publish binaries or SDK packages.
   row/objective scores. Corrected fresh runs are explicit; no sorting or replay
   silently repairs invalid evidence.
 
-The latest retained [ranking consistency report](../reports/quality-ranking-consistency-recovery-20261012.md)
+The retained [ranking consistency report](../reports/quality-ranking-consistency-recovery-20261012.md)
 records 31 shared cases, permutation/JSON-exchange controls and 16 controlled
 graphs per runtime. Its full Engine suite passed 690 tests with one ignored;
 the service selection passed 2,078 with 71 conditional skips. These are prior
@@ -33,8 +33,12 @@ remote or durable-recovery qualification. Earlier follow-ups below retain their
 original provenance and limitations.
 
 The tensor still records four maturity, 20 evidence-grade and 15 P0 gaps;
-release qualification remains blocked. The next recovery audits include
-conflicting nested readiness evidence and downstream request admission.
+release qualification remains blocked. Direct sweep-request, plan and expansion
+quality-metadata admission now have scoped follow-ups below. Expansion counts and
+direct execution-batch quality evidence also have bounded checks. Batch structure,
+unique recovery identities and checkpoint input/policy admission now have a scoped
+follow-up. Remaining audits include summary counter coherence, receipt provenance,
+standalone TaskIR boundaries and producer-side readiness preservation through ranking.
 See `releases/snapshots/3.6.0.json` for the source checkpoint and scope.
 
 ## Daji 3.5.0 Checkpoint
@@ -868,6 +872,95 @@ with one ignored; expanded service regressions pass 2,078 with 71 conditional
 skips. Canonical ordering is not independently recomputed physical optimality.
 Objective-term recomputation, conflicting coupled-readiness representations,
 downstream admission and durable recovery remain separate work.
+
+The [coupled readiness follow-up](../reports/coupled-readiness-admission-recovery-20261012.md)
+closes the next-round report masking gap. Null aliases cannot hide another report;
+conflicting copies and malformed reports reject, including lower-ranked inputs.
+False readiness or blocking/missing domains require repair, while warnings require
+review rather than a successful stop. Service plans now retain repair strategy
+and focus through expansion. Both runtimes pass 56 shared cases and 125 alias
+placements each; twenty native graphs and sixteen service graphs plus four service
+transform chains check rejection and explicit fresh recovery. The Engine suite
+passes 695 with one ignored; service regressions pass 2,138 with 71 skips.
+These are controlled source checks, not physical or durable-recovery qualification.
+Direct request admission is addressed by the following scoped check; producer-side
+readiness retention remains further work.
+
+The [direct sweep request follow-up](../reports/quality-sweep-request-admission-recovery-20261012.md)
+checks hint aliases and four readiness locations, including the seed objective,
+before stopped/incomplete shortcuts. Blocked evidence requires explicit repair
+intent; warning evidence requires review. Nonempty rejected-candidate lists also
+disable native planning. Both runtimes pass 74 shared cases and 625 alias placements
+each; 24 graph executions per runtime cover rejected requests and corrected fresh
+repair runs. The Engine suite passes 699 with one ignored; service regressions pass
+2,214 with 71 conditional skips. These are controlled source checks, not physical,
+installed or durable-recovery qualification.
+Direct plan materialization is addressed by the next scoped follow-up;
+producer-side readiness retention remains open.
+
+The [direct plan follow-up](../reports/quality-sweep-plan-admission-recovery-20261012.md)
+checks enabled/action/readiness consistency and repair metadata before materializing
+an existing plan. Explicit stale totals, per-axis counts and deferred-count overflow
+reject rather than being trusted or silently normalized. Both runtimes pass 74
+shared cases and 21 generated-plan mutations each; 24 graph executions per runtime
+verify rejection and corrected fresh repair, and deferred billion-sample controls
+expand no cases. Engine regressions pass 703 with one ignored; service regressions
+pass 2,291 with 71 conditional skips. These are local controlled checks, not physical
+or durable-recovery qualification. Direct expansion quality metadata is addressed
+by the next scoped follow-up; producer-side readiness retention remains open.
+
+The [direct expansion follow-up](../reports/quality-sweep-expansion-admission-recovery-20261012.md)
+validates supplied quality metadata before generating cases, including raw calls
+that bypass materialization. Payload and configuration aliases cannot erase or
+contradict repair evidence; ordinary non-quality custom metadata keeps its existing
+behavior. Both runtimes pass 70 shared cases, 125 alias placements and 18 generated
+expansion mutations each. Each also completes 24 controlled graph executions:
+rejection stops dependents, while corrected fresh runs preserve metadata through
+native cases and service task exports. Engine regressions pass 707 with one
+ignored; service regressions pass 2,364 with 71 conditional skips. These are local
+source checks, not physical or durable-recovery qualification. Count/deferred-axis
+consistency is addressed by the next follow-up; batch admission remains open.
+
+The [expansion count follow-up](../reports/sweep-expansion-count-recovery-20261012.md)
+checks supplied axis counts and count mirrors before stopped/budget-blocked returns.
+Deferred axes cannot also carry concrete values, and changing a downstream limit
+cannot release an upstream block. Both runtimes pass 85 shared cases and 125 count
+placements each. Each also completes 32 controlled graph executions with rejected
+counts and corrected fresh task exports. Generated-output mutations and a
+billion-sample deferred control exercise the same boundary without allocating
+samples. Engine regressions pass 711 with one ignored; service regressions pass
+2,452 with 71 conditional skips. This is local source admission evidence, not
+scale, physical or durable-recovery qualification. Caller-authored execution
+batches are addressed for quality evidence and bounded structural admission by the
+next scoped follow-ups; producer-side readiness retention remains separate work.
+
+The [direct batch quality follow-up](../reports/quality-execution-batch-recovery-20261012.md)
+checks evidence on the batch, each candidate and their metadata before compilation,
+preparation or any execution dispatch. Twenty-six invalid variants cover 130
+placements through the composer, executor and public envelope helpers. Explicit
+repair/review controls retain evidence and complete local analytic tasks; 32
+controlled fail/skip graphs check rejection and corrected fresh runs. Process-local
+call tracing verifies zero task dispatch for a rejected first or last candidate,
+with strict mode both on and off. Ordinary per-task calculation failures still
+produce isolated failure receipts and targeted retry plans. Top-level quality
+evidence now participates in the batch digest, without changing numerical TaskIR.
+This is control-plane source evidence, not new native Engine, live Agent, physical,
+installed or durable-recovery qualification. Expanded service regressions pass
+2,487 with 71 conditional skips; an additional asynchronous API pair preserves
+failed history and verifies corrected fresh execution. The next follow-up addresses
+the direct-batch structural boundary without relabeling these earlier results.
+
+The [batch structure and recovery identity follow-up](../reports/operator-task-batch-structure-recovery-20261012.md)
+adds shared pre-dispatch validation for malformed task containers and unique case
+and actual TaskIR IDs. Checkpoint entrypoints reject malformed summaries, foreign
+or duplicate recovery targets and unsupported or independently rewritten policies.
+Five public batch routes return actionable HTTP 422 errors; process-local tracing
+confirms that a late structural or identity failure cannot dispatch earlier tasks.
+Empty batches and optional-header shorthand remain supported, while ordinary
+per-task digest/semantic failures stay isolated. Expanded service regressions pass
+2,512 with 71 conditional skips. This is control-plane source evidence, not new
+native Engine, physical, installed or durable-recovery qualification. Full summary
+counter coherence and receipt provenance remain separate from structural validity.
 
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job

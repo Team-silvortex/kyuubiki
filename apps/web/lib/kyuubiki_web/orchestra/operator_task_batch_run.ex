@@ -8,14 +8,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
 
   alias KyuubikiWeb.CanonicalJson
   alias KyuubikiWeb.Orchestra.OperatorTaskBatchCompletion
+  alias KyuubikiWeb.Orchestra.OperatorTaskBatchContract
+  alias KyuubikiWeb.Orchestra.OperatorTaskCheckpointAdmission
+  alias KyuubikiWeb.WorkflowQualityBatchAdmission
 
-  @digest_fields [
-    "quality_execution_batch_contract",
-    "operator_id",
-    "task_count",
-    "case_index",
-    "tasks"
-  ]
+  @digest_fields ~w(quality_execution_batch_contract operator_id task_count case_index tasks) ++
+                   WorkflowQualityBatchAdmission.evidence_fields()
 
   @spec batch_digest(map()) :: String.t()
   def batch_digest(batch) when is_map(batch) do
@@ -56,8 +54,24 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
     |> Map.put("finished_at", finished_at)
   end
 
-  @spec checkpoint(map(), keyword()) :: map()
-  def checkpoint(batch, opts \\ []) when is_map(batch) and is_list(opts) do
+  @spec checkpoint(map(), keyword()) :: map() | {:error, term()}
+  def checkpoint(batch, opts \\ []) do
+    with {:ok, manifest} <- checkpoint_checked(batch, opts), do: manifest
+  end
+
+  @spec checkpoint_checked(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def checkpoint_checked(batch, opts \\ [])
+
+  def checkpoint_checked(batch, opts) when is_map(batch) and is_list(opts) do
+    with :ok <- OperatorTaskBatchContract.validate(batch),
+         :ok <- OperatorTaskCheckpointAdmission.options(batch, opts) do
+      {:ok, build_checkpoint(batch, opts)}
+    end
+  end
+
+  def checkpoint_checked(_batch, _opts), do: {:error, :invalid_operator_task_batch_checkpoint}
+
+  defp build_checkpoint(batch, opts) do
     preparation = Keyword.get(opts, :preparation)
     execution = Keyword.get(opts, :execution)
     created_at = timestamp(opts, :created_at)
@@ -84,14 +98,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
 
   @spec verify_checkpoint(map(), map()) :: {:ok, map()} | {:error, term()}
   def verify_checkpoint(batch, checkpoint) when is_map(batch) and is_map(checkpoint) do
-    expected_batch_digest = batch_digest(batch)
-    expected_checkpoint_digest = checkpoint_digest(checkpoint)
-
-    with :ok <- verify_checkpoint_contract(checkpoint),
+    with :ok <- OperatorTaskBatchContract.validate(batch),
+         :ok <- verify_checkpoint_contract(checkpoint),
+         :ok <- OperatorTaskCheckpointAdmission.manifest(batch, checkpoint),
+         expected_batch_digest = batch_digest(batch),
+         expected_checkpoint_digest = checkpoint_digest(checkpoint),
          :ok <- verify_field(checkpoint, "batch_digest", expected_batch_digest),
          :ok <- verify_field(checkpoint, "checkpoint_digest", expected_checkpoint_digest),
          :ok <- verify_field(checkpoint, "task_count", task_count(batch)),
-         :ok <- verify_field(checkpoint, "case_index", case_index(batch)) do
+         :ok <- verify_field(checkpoint, "case_index", case_index(batch)),
+         :ok <-
+           verify_field(
+             checkpoint,
+             "resume_policy",
+             resume_policy(checkpoint["preparation"], checkpoint["execution"])
+           ) do
       {:ok,
        %{
          "operator_task_batch_checkpoint_verification_contract" =>
@@ -186,23 +207,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
   defp task_count(%{"tasks" => tasks}) when is_list(tasks), do: length(tasks)
   defp task_count(_batch), do: 0
 
-  defp case_index(%{"case_index" => case_index}) when is_list(case_index), do: case_index
-
-  defp case_index(%{"tasks" => tasks}) when is_list(tasks) do
-    Enum.map(tasks, fn
-      %{"case_id" => case_id, "task_ir" => task_ir} when is_map(task_ir) ->
-        %{
-          "case_id" => case_id,
-          "task_id" => Map.get(task_ir, "task_id"),
-          "task_digest" => get_in(task_ir, ["integrity", "task_digest"])
-        }
-
-      entry when is_map(entry) ->
-        Map.take(entry, ["case_id", "task_id", "task_digest"])
-    end)
-  end
-
-  defp case_index(_batch), do: []
+  defp case_index(batch), do: OperatorTaskBatchContract.case_index(batch)
 
   defp checkpoint_summary(nil), do: nil
 

@@ -23,6 +23,12 @@
     "batch_summary": {
       "type": "string"
     },
+    "metadata": {
+      "description": "Caller-owned JSON. Reserved quality fields are validated before batch preparation/execution; top-level evidence participates in the batch digest."
+    },
+    "case_metadata": {
+      "description": "Optional shared caller-owned JSON evidence. Reserved quality fields are validated independently of per-task metadata; null does not suppress evidence in another scope."
+    },
     "case_index": {
       "type": "array",
       "items": {
@@ -40,12 +46,16 @@
     },
     "tasks": {
       "type": "array",
+      "description": "Runtime admission additionally requires unique nonblank case_id and actual task_ir.task_id values across entries. Whole-item JSON uniqueness is not a substitute for identity checks. Structural admission does not certify numerical validity or authenticated execution.",
       "items": {
         "type": "object",
         "required": ["case_id", "operator_id", "task_id", "task_digest", "task_ir"],
         "properties": {
           "case_id": { "type": "string", "minLength": 1 },
           "parameters": { "type": "object" },
+          "metadata": {
+            "description": "Caller-owned JSON retained from the candidate. Reserved quality fields must keep valid readiness, repair and enablement intent before any batch dispatch."
+          },
           "operator_id": { "type": "string", "minLength": 1 },
           "task_id": { "type": "string", "minLength": 1 },
           "task_digest": {

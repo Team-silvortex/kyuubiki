@@ -4,21 +4,11 @@ use crate::workflow_sweep_contract::{checked_case_count, count_option, object_or
 
 pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Result<Value, String> {
     object_or_null(&config, "quality sweep config")?;
-    let request = payload.get("request_payload").unwrap_or(&Value::Null);
-    object_or_null(request, "quality sweep request_payload")?;
-
-    let optimization_hint = request
-        .get("optimization_hint")
-        .or_else(|| payload.get("selected_iteration_hint"))
-        .cloned()
-        .unwrap_or(Value::Null);
-    if payload
-        .get("source_ranking_complete")
-        .and_then(Value::as_bool)
-        == Some(false)
-        || optimization_hint.get("action").and_then(Value::as_str)
-            == Some("repair_rejected_candidates")
-    {
+    let admitted = crate::workflow_quality_sweep_admission::admit(&payload)?;
+    let request = admitted.request;
+    let optimization_hint = admitted.hint;
+    let coupled_readiness = admitted.coupled;
+    if admitted.incomplete {
         return Ok(serde_json::json!({
             "quality_parameter_sweep_plan_contract": "kyuubiki.quality_parameter_sweep_plan/v1",
             "sweep_enabled": false,
@@ -33,7 +23,7 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         }));
     }
 
-    if payload.get("action").and_then(Value::as_str) == Some("stop") {
+    if admitted.action == "stop" {
         return Ok(serde_json::json!({
             "quality_parameter_sweep_plan_contract": "kyuubiki.quality_parameter_sweep_plan/v1",
             "sweep_enabled": false,
@@ -59,21 +49,12 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         .cloned()
         .unwrap_or_else(|| serde_json::json!({}));
     let samples = count_option(config.get("samples_per_axis"), "samples_per_axis", 3, 2)?;
-    let focus_field = request
-        .get("optimization_hint")
-        .or_else(|| payload.get("selected_iteration_hint"))
-        .and_then(|hint| hint.get("focus_field"))
-        .and_then(Value::as_str);
+    let focus_field = optimization_hint.get("focus_field").and_then(Value::as_str);
     let focus_domain = optimization_hint
         .get("focus_domain")
         .and_then(Value::as_str);
-    let coupled_readiness = request
-        .get("coupled_readiness")
-        .or_else(|| payload.get("selected_coupled_readiness"))
-        .or_else(|| payload.get("coupled_readiness"))
-        .cloned()
-        .unwrap_or(Value::Null);
-    let repair_strategy = repair_strategy_from_hint(&optimization_hint);
+    let repair_strategy =
+        crate::workflow_quality_sweep_admission::repair_strategy(&optimization_hint);
     let max_axes = count_option(config.get("max_axes"), "max_axes", search_space.len(), 1)?;
     let max_cases = count_option(
         config
@@ -110,7 +91,7 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
     Ok(serde_json::json!({
         "quality_parameter_sweep_plan_contract": "kyuubiki.quality_parameter_sweep_plan/v1",
         "sweep_enabled": true,
-        "sweep_action": payload.get("action").and_then(Value::as_str).unwrap_or("continue"),
+        "sweep_action": admitted.action,
         "source_candidate_id": payload.get("selected_candidate_id").cloned().unwrap_or(Value::Null),
         "seed_metadata": request
             .get("seed_metadata")
@@ -123,16 +104,12 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         "repair_strategy": repair_strategy,
         "repair_focus": {
             "field": focus_field.map(Value::from).unwrap_or(Value::Null),
-            "source": request
-                .get("optimization_hint")
-                .or_else(|| payload.get("selected_iteration_hint"))
-                .and_then(|hint| hint.get("focus_source"))
+            "source": optimization_hint
+                .get("focus_source")
                 .cloned()
                 .unwrap_or(Value::Null),
-            "domain": request
-                .get("optimization_hint")
-                .or_else(|| payload.get("selected_iteration_hint"))
-                .and_then(|hint| hint.get("focus_domain"))
+            "domain": optimization_hint
+                .get("focus_domain")
                 .cloned()
                 .unwrap_or(Value::Null),
             "readiness_state": coupled_readiness
@@ -159,17 +136,6 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
             axes.len()
         ),
     }))
-}
-
-fn repair_strategy_from_hint(optimization_hint: &Value) -> &'static str {
-    match optimization_hint.get("action").and_then(Value::as_str) {
-        Some("fix_validation_failure") => "rerun_validation_focused_sweep",
-        Some("fix_coupled_readiness") => "repair_coupled_readiness_sweep",
-        Some("review_coupled_readiness") => "review_coupled_readiness_sweep",
-        Some("fix_blocking_term") => "repair_blocking_term_sweep",
-        Some("reduce_dominant_term") => "reduce_dominant_term_sweep",
-        _ => "general_quality_sweep",
-    }
 }
 
 fn search_space_axes(

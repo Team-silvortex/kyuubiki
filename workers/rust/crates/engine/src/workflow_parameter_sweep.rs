@@ -1,9 +1,7 @@
 use serde_json::{Map, Value};
 
 use crate::workflow_sweep_axes::{expand_sweep_cases, prepare_sweep_axes};
-use crate::workflow_sweep_contract::{
-    actual_case_count, bool_option, count_option, object_or_null, refreshed_budget,
-};
+use crate::workflow_sweep_contract::{bool_option, count_option, object_or_null, refreshed_budget};
 
 pub use crate::workflow_parameter_sweep_results::{
     join_parameter_sweep_results, map_parameter_sweep_scores_to_quality_candidates,
@@ -12,6 +10,7 @@ pub use crate::workflow_parameter_sweep_results::{
 pub use crate::workflow_sweep_summary::summarize_parameter_sweep;
 
 pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, String> {
+    let admitted_count = crate::workflow_sweep_expansion_admission::validate(&payload, &config)?;
     object_or_null(&config, "parameter sweep config")?;
     let quality_context = if let Some(contract) = payload.get("quality_sweep_expansion_contract") {
         if contract.as_str() != Some("kyuubiki.quality_sweep_expansion/v1") {
@@ -53,7 +52,7 @@ pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, St
         .or_else(|| config.get("axes"))
         .and_then(Value::as_array)
         .ok_or_else(|| "transform.expand_parameter_sweep requires axes".to_string())?;
-    let case_count = actual_case_count(axes_value)?;
+    let case_count = admitted_count.ok_or("transform.expand_parameter_sweep requires axes")?;
     let max_cases = count_option(config.get("max_cases"), "max_cases", 256, 0)?;
     if case_count > max_cases {
         if let Some(mut context) = quality_context {

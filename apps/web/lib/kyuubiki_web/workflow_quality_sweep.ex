@@ -2,23 +2,17 @@ defmodule KyuubikiWeb.WorkflowQualitySweep do
   @moduledoc false
   alias KyuubikiWeb.WorkflowReportingChecks, as: Check
   alias KyuubikiWeb.WorkflowSweepChecks, as: Sweep
+  alias KyuubikiWeb.WorkflowQualitySweepAdmission, as: Admission
 
   def plan(payload, config) do
     Check.run("transform.build_quality_parameter_sweep_plan", fn ->
       payload = Check.object(payload, "payload")
       config = Check.config(config)
-      request = Check.object(Map.get(payload, "request_payload", %{}), "payload.request_payload")
-      action = Check.choice(payload, "action", "continue", ~w(continue replan stop), "payload")
-      complete = Sweep.flag(payload, "source_ranking_complete")
-
-      rejected =
-        Check.list(
-          Map.get(payload, "source_rejected_candidates", []),
-          "payload.source_rejected_candidates"
-        )
-
-      hint = Map.get(request, "optimization_hint", payload["selected_iteration_hint"])
-      hint = if is_nil(hint), do: %{}, else: Sweep.object(hint, "payload.optimization_hint")
+      admitted = Admission.admit(payload)
+      request = admitted.request
+      action = admitted.action
+      hint = admitted.hint
+      coupled = admitted.coupled
 
       base =
         Sweep.object(
@@ -37,11 +31,11 @@ defmodule KyuubikiWeb.WorkflowQualitySweep do
       prefix = Sweep.text(config, "id_prefix", "quality_round", "config")
 
       cond do
-        !complete || rejected != [] || hint["action"] == "repair_rejected_candidates" ->
+        admitted.incomplete ->
           disabled(base, "replan")
           |> Map.merge(%{
             "sweep_blocking_reason" => "candidate_evaluation_incomplete",
-            "source_rejected_candidates" => rejected,
+            "source_rejected_candidates" => admitted.rejected,
             "optimization_hint" => hint
           })
 
@@ -91,6 +85,8 @@ defmodule KyuubikiWeb.WorkflowQualitySweep do
               end
           }
 
+          coupled_map = coupled || %{}
+
           %{
             "quality_parameter_sweep_plan_contract" => "kyuubiki.quality_parameter_sweep_plan/v1",
             "sweep_enabled" => true,
@@ -109,8 +105,15 @@ defmodule KyuubikiWeb.WorkflowQualitySweep do
                 Map.get(request, "seed_metadata", payload["selected_candidate_metadata"]),
                 "payload.seed_metadata"
               ),
-            "coupled_readiness" =>
-              Map.get(request, "coupled_readiness", payload["selected_coupled_readiness"]),
+            "coupled_readiness" => coupled,
+            "repair_strategy" => Admission.repair_strategy(hint["action"]),
+            "repair_focus" => %{
+              "field" => hint["focus_field"],
+              "source" => hint["focus_source"],
+              "domain" => hint["focus_domain"],
+              "readiness_state" => coupled_map["coupled_readiness_state"],
+              "readiness_recommendation" => coupled_map["coupled_readiness_recommendation"]
+            },
             "focused_axis_path" => hd(selected).path,
             "plan_summary" =>
               "Quality parameter sweep planned with #{length(axes)} axis/axes and #{size} estimated cases."
@@ -123,7 +126,7 @@ defmodule KyuubikiWeb.WorkflowQualitySweep do
     Check.run("transform.materialize_quality_sweep_expansion", fn ->
       payload = Check.object(payload, "payload")
       config = Check.config(config)
-      enabled = Sweep.flag(payload, "sweep_enabled")
+      enabled = Admission.admit_plan(payload)
 
       max_cases =
         Sweep.count(

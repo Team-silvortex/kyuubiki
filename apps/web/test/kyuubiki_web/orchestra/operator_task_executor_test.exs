@@ -348,9 +348,10 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
 
   test "records task batch failures without hiding the failed case" do
     assert {:ok, task_a} = material_shock_task("case-a", 120.0)
+    assert {:ok, task_b} = material_shock_task("case-b", 160.0)
 
     bad_task =
-      task_a
+      task_b
       |> put_in(["input_artifact", "temperature_delta"], 999.0)
 
     batch = %{

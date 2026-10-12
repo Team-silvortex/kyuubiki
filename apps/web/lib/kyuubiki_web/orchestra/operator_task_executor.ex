@@ -7,12 +7,14 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   """
 
   alias KyuubikiWeb.Orchestra.OperatorTaskBatchRun
+  alias KyuubikiWeb.Orchestra.OperatorTaskBatchContract
   alias KyuubikiWeb.Orchestra.OperatorTaskCompletion
   alias KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary
   alias KyuubikiWeb.Orchestra.OperatorTaskFailure
   alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.WorkflowOperatorRuntime
+  alias KyuubikiWeb.WorkflowQualityBatchAdmission
 
   @schema_version "kyuubiki.operator-task-ir/v1"
   @batch_contract "kyuubiki.quality_execution_batch/v1"
@@ -100,7 +102,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
         opts
       )
       when is_list(tasks) and is_list(opts) do
-    with :ok <- validate_batch_contract(batch, tasks) do
+    with :ok <- OperatorTaskBatchContract.validate(batch),
+         :ok <- WorkflowQualityBatchAdmission.check_batch(batch) do
       strict = Keyword.get(opts, :strict, false)
       run = OperatorTaskBatchRun.start(batch, "execute", opts)
 
@@ -129,7 +132,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   @spec prepare_batch(map()) :: {:ok, map()} | {:error, term()}
   def prepare_batch(%{"quality_execution_batch_contract" => _contract, "tasks" => tasks} = batch)
       when is_list(tasks) do
-    with :ok <- validate_batch_contract(batch, tasks) do
+    with :ok <- OperatorTaskBatchContract.validate(batch),
+         :ok <- WorkflowQualityBatchAdmission.check_batch(batch) do
       run = OperatorTaskBatchRun.start(batch, "prepare")
 
       summaries =
@@ -483,73 +487,6 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
     do: Map.put_new(node, "operator_id", operator_id)
 
   defp execution_node(_task_ir, operator_id), do: %{"operator_id" => operator_id}
-
-  defp validate_batch_contract(
-         %{"quality_execution_batch_contract" => @batch_contract} = batch,
-         tasks
-       ) do
-    with :ok <- validate_declared_task_count(batch, tasks),
-         :ok <- validate_declared_agent_rpc_method(batch),
-         :ok <- validate_declared_operator_id(batch, tasks),
-         :ok <- validate_declared_case_index(batch, tasks) do
-      :ok
-    end
-  end
-
-  defp validate_batch_contract(%{"quality_execution_batch_contract" => contract}, _tasks),
-    do: {:error, {:invalid_operator_task_batch_contract, contract}}
-
-  defp validate_declared_task_count(%{"task_count" => count}, tasks) when count != length(tasks),
-    do: {:error, {:operator_task_batch_count_mismatch, %{declared: count, actual: length(tasks)}}}
-
-  defp validate_declared_task_count(_batch, _tasks), do: :ok
-
-  defp validate_declared_agent_rpc_method(%{"agent_rpc_method" => method})
-       when method != @agent_rpc_method,
-       do: {:error, {:operator_task_batch_rpc_method_mismatch, method}}
-
-  defp validate_declared_agent_rpc_method(_batch), do: :ok
-
-  defp validate_declared_operator_id(%{"operator_id" => operator_id}, tasks) do
-    tasks
-    |> Enum.find(fn
-      %{"task_ir" => task_ir} -> get_in(task_ir, ["operator", "id"]) != operator_id
-      _entry -> false
-    end)
-    |> case do
-      nil -> :ok
-      entry -> {:error, {:operator_task_batch_operator_mismatch, Map.get(entry, "case_id")}}
-    end
-  end
-
-  defp validate_declared_operator_id(_batch, _tasks), do: :ok
-
-  defp validate_declared_case_index(%{"case_index" => case_index}, tasks)
-       when is_list(case_index) do
-    expected = Enum.map(tasks, &batch_index_entry/1)
-
-    if case_index == expected do
-      :ok
-    else
-      {:error, :operator_task_batch_case_index_mismatch}
-    end
-  end
-
-  defp validate_declared_case_index(%{"case_index" => _case_index}, _tasks),
-    do: {:error, :invalid_operator_task_batch_case_index}
-
-  defp validate_declared_case_index(_batch, _tasks), do: :ok
-
-  defp batch_index_entry(%{"case_id" => case_id, "task_ir" => task_ir}) when is_map(task_ir) do
-    %{
-      "case_id" => case_id,
-      "task_id" => Map.get(task_ir, "task_id"),
-      "task_digest" => get_in(task_ir, ["integrity", "task_digest"])
-    }
-  end
-
-  defp batch_index_entry(entry) when is_map(entry),
-    do: Map.take(entry, ["case_id", "task_id", "task_digest"])
 
   defp validate_batch_entry_contract(entry, task_ir) do
     with :ok <- validate_entry_field(entry, "task_id", Map.get(task_ir, "task_id")),

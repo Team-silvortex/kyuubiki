@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.WorkflowQualityExecutionBatch do
   alias KyuubikiWeb.WorkflowReportingChecks, as: Check
   alias KyuubikiWeb.WorkflowSweepChecks, as: Sweep
   alias KyuubikiWeb.WorkflowSweepExpansion
+  alias KyuubikiWeb.WorkflowQualityBatchAdmission, as: Admission
 
   def run(payload, config) do
     Check.run("transform.compose_quality_execution_batch", fn ->
@@ -45,6 +46,7 @@ defmodule KyuubikiWeb.WorkflowQualityExecutionBatch do
       cases = Sweep.values(payload["cases"], "payload.cases")
       Sweep.require_count(payload, "case_count", length(cases))
       ids = Sweep.case_ids(cases)
+      Admission.validate(payload, "cases")
 
       prepared =
         Enum.zip(cases, ids)
@@ -63,11 +65,11 @@ defmodule KyuubikiWeb.WorkflowQualityExecutionBatch do
 
           {id, input, parameters,
            if(merge, do: Map.merge(operator_config, local), else: operator_config),
-           entry["metadata"]}
+           Map.put_new(Admission.evidence(entry), "metadata", nil)}
         end)
 
       tasks =
-        Enum.map(prepared, fn {id, input, parameters, task_config, metadata} ->
+        Enum.map(prepared, fn {id, input, parameters, task_config, evidence} ->
           case OperatorTaskIR.build(operator, input, task_config,
                  task_id: "#{prefix}:#{id}",
                  orchestration_context: context,
@@ -79,7 +81,6 @@ defmodule KyuubikiWeb.WorkflowQualityExecutionBatch do
               %{
                 "case_id" => id,
                 "parameters" => parameters,
-                "metadata" => metadata,
                 "operator_id" => operator,
                 "task_id" => task["task_id"],
                 "task_digest" => task["integrity"]["task_digest"],
@@ -93,6 +94,7 @@ defmodule KyuubikiWeb.WorkflowQualityExecutionBatch do
                     end)
                 }
               }
+              |> Map.merge(evidence)
 
             {:error, reason} ->
               Check.fail("case #{id}: #{inspect(reason)}")
@@ -108,6 +110,7 @@ defmodule KyuubikiWeb.WorkflowQualityExecutionBatch do
         "case_index" => Enum.map(tasks, &Map.take(&1, ~w(case_id task_id task_digest))),
         "batch_summary" => "Prepared #{length(tasks)} quality execution task(s) for #{operator}."
       }
+      |> Map.merge(Admission.evidence(payload))
     end)
   end
 

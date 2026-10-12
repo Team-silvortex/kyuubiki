@@ -65,7 +65,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskEnvelope do
       |> maybe_put_checkpoint_opt(:checkpoint_id, Map.get(payload, "checkpoint_id"))
       |> maybe_put_checkpoint_opt(:created_at, Map.get(payload, "created_at"))
 
-    {:ok, OperatorTaskBatchRun.checkpoint(batch, opts)}
+    OperatorTaskBatchRun.checkpoint_checked(batch, opts)
   end
 
   def checkpoint_batch(%{"batch" => batch}) when is_map(batch),
