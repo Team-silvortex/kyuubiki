@@ -95,20 +95,36 @@ export function createProjectLibraryBackendService(
       }
       return response;
     }),
-    createProject: transport.createProject,
-    deleteModel: transport.deleteModel,
-    deleteModelVersion: transport.deleteModelVersion,
-    deleteProject: transport.deleteProject,
+    createProject: async (input) => validateLibraryMutation(await transport.createProject(input), "project"),
+    deleteModel: async (id) => validateLibraryMutation(await transport.deleteModel(id), "model", id),
+    deleteModelVersion: async (id) => validateLibraryMutation(await transport.deleteModelVersion(id), "version", id),
+    deleteProject: async (id) => validateLibraryMutation(await transport.deleteProject(id), "project", id),
     fetchModel: transport.fetchModel,
     fetchModelVersion: transport.fetchModelVersion,
     fetchModelVersions: transport.fetchModelVersions,
     fetchProjects: transport.fetchProjects,
-    updateModel: transport.updateModel,
-    updateModelVersion: transport.updateModelVersion,
-    updateProject: transport.updateProject,
+    updateModel: async (id, input) => validateLibraryMutation(await transport.updateModel(id, input), "model", id),
+    updateModelVersion: async (id, input) => validateLibraryMutation(await transport.updateModelVersion(id, input), "version", id),
+    updateProject: async (id, input) => validateLibraryMutation(await transport.updateProject(id, input), "project", id),
   };
 }
 
 function validId(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validateLibraryMutation<T>(payload: T, kind: "project" | "model" | "version", id?: string): T {
+  const record = isRecord(payload) ? payload[kind] : null;
+  if (!isRecord(record) || !validId(record[`${kind}_id`]) || !validId(record.name) ||
+      (id !== undefined && record[`${kind}_id`] !== id) ||
+      (kind !== "project" && (!validId(record.project_id) || !isRecord(record.payload))) ||
+      (kind === "version" && (!validId(record.model_id) || !Number.isInteger(record.version_number) || Number(record.version_number) < 1))) {
+    throw new Error("LIBRARY_RECORD_MUTATION_UNCONFIRMED: refresh records before retrying this write.");
+  }
+  // Library DELETE returns the removed record, not a separate boolean deletion flag.
+  return payload;
 }

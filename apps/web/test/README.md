@@ -123,3 +123,18 @@ Use isolated JSON data or the test runner's disposable SQLite database. These
 are real API/storage controls, not the source browser's mock backend, installed
 GUI, remote, power-loss or exactly-once acceptance. See the
 [result record recovery results](../../../reports/workbench-result-record-recovery-20261011.md).
+
+## Library Record Mutation Controls
+
+`kyuubiki_web/api/library_record_recovery_api_test.exs` checks real project creation,
+metadata edits and project/model/version deletion receipts. Removed identities
+return 404 on read, repeated deletion and attempted metadata edits; remaining
+parents, unrelated models/projects and execution records stay unchanged. Confirmed
+deletion is checked before actual storage loss; the subsequent catalog returns
+opaque 503 instead of empty successful data. JSON's library restart is volatile,
+so these outage controls do not claim durable memory-store recovery.
+
+Use isolated JSON data or the test runner's disposable SQLite database. These
+controls are separate from mocked-service source browser tests and do not qualify
+installed GUIs, remote execution, power-loss recovery or exactly-once behavior.
+See the [library record recovery results](../../../reports/workbench-library-record-recovery-20261011.md).

@@ -107,6 +107,10 @@ export function WorkbenchSystemSidebarMount({
   handleSystemDataTabChange,
   adminJobRows,
   selectedAdminJobId,
+  adminJobWritePending,
+  adminResultWritePending,
+  adminJobSourceCurrent,
+  adminResultSourceCurrent,
   handleSelectAdminJob,
   selectedAdminJob,
   adminJobMessage,
@@ -146,9 +150,7 @@ export function WorkbenchSystemSidebarMount({
   applySelectedAdminJobContext,
   openSelectedAdminJobProject,
   openSelectedAdminJobVersion,
-  jobId,
-  cancelCurrentJob,
-  cancelJob,
+  cancelSelectedAdminJob,
   setMessage,
   refreshJobHistory,
 }: WorkbenchSystemSidebarMountProps) {
@@ -286,8 +288,8 @@ export function WorkbenchSystemSidebarMount({
             language={language}
             frontendRuntimeMode={frontendRuntimeMode}
             backendApiBaseUrl={backendApiBaseUrl}
-            backendTargetSource={backendTargetCopy.sources[backendTarget.source]}
-            backendTargetEffectiveUrl={backendTarget.baseUrl}
+            backendTargetSource={backendTarget.source === "unavailable" ? t.offline : backendTargetCopy.sources[backendTarget.source]}
+            backendTargetEffectiveUrl={backendTarget.source === "unavailable" ? t.offline : backendTarget.baseUrl}
             directMeshSelectionMode={directMeshSelectionMode}
             directMeshEndpointsText={directMeshEndpointsText}
             controlPlaneApiToken={controlPlaneApiToken}
@@ -458,6 +460,7 @@ export function WorkbenchSystemSidebarMount({
       dataContent={
         <WorkbenchSystemDataMount
           t={t}
+          language={language}
           adminJobRows={adminJobRows}
           adminResultRows={adminResultRows}
           resultReadPending={resultReadPending}
@@ -475,15 +478,16 @@ export function WorkbenchSystemSidebarMount({
           useCurrentVersionAsAdminFilter={useCurrentVersionAsAdminFilter}
           clearAdminFilters={clearAdminFilters}
           selectedAdminJobId={selectedAdminJobId}
+          adminJobWritePending={adminJobWritePending}
+          adminResultWritePending={adminResultWritePending}
+          adminJobSourceCurrent={adminJobSourceCurrent}
+          adminResultSourceCurrent={adminResultSourceCurrent}
           handleSelectAdminJob={handleSelectAdminJob}
           selectedAdminJob={selectedAdminJob}
           applySelectedAdminJobContext={applySelectedAdminJobContext}
           openSelectedAdminJobProject={openSelectedAdminJobProject}
           openSelectedAdminJobVersion={openSelectedAdminJobVersion}
-          jobId={jobId}
-          cancelCurrentJob={cancelCurrentJob}
-          cancelJob={cancelJob}
-          setMessage={setMessage}
+          cancelSelectedAdminJob={cancelSelectedAdminJob}
           refreshJobHistory={refreshJobHistory}
           adminJobMessage={adminJobMessage}
           setAdminJobMessage={setAdminJobMessage}

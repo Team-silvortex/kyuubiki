@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { createWorkbenchProjectContext, type WorkbenchProjectRefresh } from "@/lib/workbench/project-context";
+import { removeConfirmedWorkbenchLibraryRecord, type RemoveConfirmedWorkbenchLibraryRecord } from "./workbench-library-record-recovery";
 import type {
   DirectMeshSelectionMode,
   FrontendRuntimeMode,
@@ -17,6 +18,8 @@ import {
   type WorkbenchRuntimeRecoveryState,
 } from "@/components/workbench/workbench-runtime-recovery";
 import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
+import { captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
+import { workbenchLibraryRecordSources, workbenchLibraryVersionSources } from "./workbench-library-record-source";
 import {
   workbenchRuntimeStatusBackendService,
   type WorkbenchRuntimeStatusBackendService,
@@ -44,8 +47,8 @@ type UseWorkbenchDataRefreshControllerArgs = {
   selectedVersionId: string | null;
   versionHistoryLabel: string;
   setHealth: (value: HealthPayload | null) => void;
-  setModelVersions: (value: ModelVersionRecord[]) => void;
-  setProjects: (value: ProjectRecord[]) => void;
+  setModelVersions: Dispatch<SetStateAction<ModelVersionRecord[]>>;
+  setProjects: Dispatch<SetStateAction<ProjectRecord[]>>;
   setProtocolAgents: (value: ProtocolAgentDescriptor[]) => void;
   setRuntimeRecovery: Dispatch<SetStateAction<WorkbenchRuntimeRecoveryState>>;
   setSecurityEventRecords: (value: SecurityEventRecord[]) => void;
@@ -156,10 +159,17 @@ export function useWorkbenchDataRefreshController({
   const refreshProjects: WorkbenchProjectRefresh = async (bootstrap = false, preferredProjectId, options) => {
     const refreshSeq = ++projectRefreshSeqRef.current;
     const isCurrent = projectContext.capture();
+    let ownsAuthority = () => false;
+    const currentAuthority = () => { try { return ownsAuthority(); } catch { return false; } };
 
     try {
+      ownsAuthority = captureWorkbenchApiAuthority("/api/v1/projects");
       const payload = await projectLibraryBackendService.fetchProjects();
       let nextProjects = payload.projects;
+      if (refreshSeq !== projectRefreshSeqRef.current || !currentAuthority()) return;
+      if (!Array.isArray(nextProjects) || nextProjects.some((project) => !project || typeof project.project_id !== "string" || !project.project_id.trim())) {
+        throw new Error("WORKBENCH_PROJECT_CATALOG_INVALID: expected identified project records.");
+      }
 
       if (bootstrap && nextProjects.length === 0) {
         const created = await projectLibraryBackendService.createProject({
@@ -169,8 +179,9 @@ export function useWorkbenchDataRefreshController({
         nextProjects = [created.project];
       }
 
-      if (refreshSeq !== projectRefreshSeqRef.current) return;
+      if (refreshSeq !== projectRefreshSeqRef.current || !currentAuthority()) return;
 
+      workbenchLibraryRecordSources.mark(nextProjects);
       setProjects(nextProjects);
       clearRecovery("projects");
       if (options?.preserveSelection || !isCurrent()) return;
@@ -199,7 +210,7 @@ export function useWorkbenchDataRefreshController({
       // Catalog/recovery refresh is read-only; it also repairs a stale checkpoint list.
       if (nextModelId && nextModelId === selection.modelId) await refreshVersions(nextModelId);
     } catch (error) {
-      if (refreshSeq !== projectRefreshSeqRef.current) return;
+      if (refreshSeq !== projectRefreshSeqRef.current || !currentAuthority()) return;
       // A refresh failure must not discard the last usable project catalog.
       pushRecovery("projects", error, "Project library");
     }
@@ -241,19 +252,34 @@ export function useWorkbenchDataRefreshController({
     clearRecovery("model_versions");
   }
 
+  const removeConfirmedLibraryRecord: RemoveConfirmedWorkbenchLibraryRecord = (kind, id, modelId) => {
+    removeConfirmedWorkbenchLibraryRecord({ kind, id, modelId, projectContext, projectRefreshSeqRef,
+      versionsRefreshSeqRef, versionListModelIdRef, setProjects, setModelVersions });
+  };
+
   async function refreshVersions(modelId: string) {
     if (!projectContext.hasModel(modelId)) return;
     syncVersionListScope(modelId);
     const refreshSeq = ++versionsRefreshSeqRef.current;
     const isCurrent = projectContext.capture();
+    let ownsAuthority = () => false;
+    const currentAuthority = () => { try { return ownsAuthority(); } catch { return false; } };
 
     try {
+      ownsAuthority = captureWorkbenchApiAuthority(`/api/v1/models/${encodeURIComponent(modelId)}/versions`);
       const payload = await projectLibraryBackendService.fetchModelVersions(modelId);
-      if (refreshSeq !== versionsRefreshSeqRef.current || !isCurrent()) return;
+      if (refreshSeq !== versionsRefreshSeqRef.current || !isCurrent() || !currentAuthority()) return;
+      const projectId = projectContext.current().projectId;
+      if (!Array.isArray(payload.versions) || payload.versions.some((version) => !version
+        || typeof version.version_id !== "string" || !version.version_id.trim()
+        || version.model_id !== modelId || version.project_id !== projectId)) {
+        throw new Error("WORKBENCH_VERSION_CATALOG_INVALID: version history does not match the selected model and project.");
+      }
+      workbenchLibraryVersionSources.mark(payload.versions);
       setModelVersions(payload.versions);
       clearRecovery("model_versions");
     } catch (error) {
-      if (refreshSeq !== versionsRefreshSeqRef.current || !isCurrent()) return;
+      if (refreshSeq !== versionsRefreshSeqRef.current || !isCurrent() || !currentAuthority()) return;
       // Preserve known history for this model; a failed read is not an empty history.
       pushRecovery("model_versions", error, versionHistoryLabel);
     }
@@ -312,6 +338,7 @@ export function useWorkbenchDataRefreshController({
 
   return {
     projectContext,
+    removeConfirmedLibraryRecord,
     refreshHealth,
     refreshProjects,
     refreshSecurityEvents,

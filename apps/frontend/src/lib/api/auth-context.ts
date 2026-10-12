@@ -1,6 +1,7 @@
 import type { FrontendRuntimeMode } from "@/lib/api/runtime-types";
 import { buildWorkbenchGovernedAuthHeaders } from "@/lib/workbench/governance";
 import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/workbench-secrets";
+import { resolveWorkbenchApiUrl } from "./backend-target";
 
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
@@ -44,4 +45,11 @@ export function buildWorkbenchApiAuthHeaders(url: string) {
     frontendRuntimeMode: readFrontendRuntimeModeFromWindow(),
     secrets,
   });
+}
+
+export function captureWorkbenchApiAuthority(...urls: string[]) {
+  const scope = () => JSON.stringify(urls.map((url) => [resolveWorkbenchApiUrl(url), buildWorkbenchApiAuthHeaders(url)]));
+  // Kept only for this request's lifetime; never persisted or included in diagnostics.
+  const captured = scope();
+  return () => captured === scope();
 }

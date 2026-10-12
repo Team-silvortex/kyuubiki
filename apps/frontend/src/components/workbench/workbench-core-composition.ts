@@ -113,6 +113,8 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
   }
 
   const sessionComposition = useWorkbenchSessionComposition({
+    language: rootState.language,
+    feedback: rootState.feedback,
     t: rootState.t,
     job: rootState.job,
     jobIsActive: rootState.jobIsActive,
@@ -243,6 +245,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     adminSecurityState,
     workflowController,
     selectedAdminJob,
+    selectedAdminResult,
     selectedProjectModels,
     deferredProjectModels,
     deferredModelVersions,
@@ -377,6 +380,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     deferredJobHistory,
     deferredResultRecords,
     resultWindowMaxTotal,
+    jobHistory: jobHistoryController.jobHistory,
     round,
     handleCanvasStageScroll,
     refreshHealth,
@@ -393,6 +397,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     selectedAdminJobId: jobHistoryController.selectedAdminJobId,
     setSelectedAdminJobId: jobHistoryController.setSelectedAdminJobId,
     selectedAdminJob,
+    selectedAdminResult,
     adminFilterProjectId: adminSecurityState.adminFilterProjectId,
     setAdminFilterProjectId: adminSecurityState.setAdminFilterProjectId,
     adminFilterModelVersionId: adminSecurityState.adminFilterModelVersionId,
@@ -411,6 +416,10 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     scriptRecordingMode: adminSecurityState.scriptRecordingMode,
     setScriptRecordingMode: adminSecurityState.setScriptRecordingMode,
     selectedAdminResultJobId: adminSecurityState.selectedAdminResultJobId,
+    adminRecordMutations: adminSecurityState.adminRecordMutations,
+    pendingAdminRecordIds: adminSecurityState.pendingAdminRecordIds,
+    adminJobDraftSource: adminSecurityState.adminJobDraftSource,
+    adminResultDraftSource: adminSecurityState.adminResultDraftSource,
     setSelectedAdminResultJobId: adminSecurityState.setSelectedAdminResultJobId,
     adminJobMessage: adminSecurityState.adminJobMessage,
     setAdminJobMessage: adminSecurityState.setAdminJobMessage,

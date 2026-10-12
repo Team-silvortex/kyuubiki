@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef } from "react";
+import { withWorkbenchFeedbackInvalidation } from "./workbench-feedback";
+import { workbenchAdminRecordSources } from "./workbench-admin-record-source";
 import type { ModelBatchDraftCache } from "./model/workbench-model-batch-draft";
 import { useWorkbenchEditControllers } from "@/components/workbench/workbench-edit-controllers";
 import { useWorkbenchFlowControllers } from "@/components/workbench/workbench-flow-controllers";
@@ -27,6 +29,8 @@ type WorkbenchMainCompositionProps = Record<string, any> & {
 
 export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps) {
   const modelBatchDraftCache = useRef<ModelBatchDraftCache>(null);
+  const adminJobRecordSource = props.selectedAdminJob ? workbenchAdminRecordSources.sourceOf(props.jobHistory) : null;
+  const adminResultRecordSource = props.selectedAdminResult ? workbenchAdminRecordSources.sourceOf(props.workspaceState.resultRecords) : null;
   const {
     createProjectRecord,
     deleteProjectRecord,
@@ -233,8 +237,8 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     setSystemDataTab: props.setSystemDataTab,
     setAdminFilterProjectId: props.setAdminFilterProjectId,
     setAdminFilterModelVersionId: props.setAdminFilterModelVersionId,
-    setSelectedAdminJobId: props.setSelectedAdminJobId,
-    setSelectedAdminResultJobId: props.setSelectedAdminResultJobId,
+    setSelectedAdminJobId: withWorkbenchFeedbackInvalidation(props.feedback, props.setSelectedAdminJobId),
+    setSelectedAdminResultJobId: withWorkbenchFeedbackInvalidation(props.feedback, props.setSelectedAdminResultJobId),
     setTruss3dViewPreset: props.setTruss3dViewPreset,
     setTruss3dProjectionMode: props.setTruss3dProjectionMode,
     setTruss3dBoxSelectMode: props.setTruss3dBoxSelectMode,
@@ -324,6 +328,8 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
       recordHistory,
       startTransition: props.startTransition,
       adminDataBackendService: props.adminDataBackendService,
+      adminRecordMutations: props.adminRecordMutations,
+      cancelJob: props.cancelJob,
       storeBackendService: props.storeBackendService,
       resultRefreshSeqRef: props.resultRefreshSeqRef,
       setRuntimeRecovery: props.setRuntimeRecovery,
@@ -357,6 +363,10 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
       setAdminFilterModelVersionId: props.setAdminFilterModelVersionId,
       setSelectedAdminJobId: props.setSelectedAdminJobId,
       selectedAdminJobId: props.selectedAdminJobId,
+      adminJobRecordSource,
+      adminJobDraftSource: props.adminJobDraftSource,
+      adminResultRecordSource,
+      adminResultDraftSource: props.adminResultDraftSource,
       adminJobMessage: props.adminJobMessage,
       adminJobProjectId: props.adminJobProjectId,
       adminJobModelVersionId: props.adminJobModelVersionId,
@@ -467,6 +477,11 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     setScriptRecordingMode: props.setScriptRecordingMode,
     selectedAdminJobId: props.selectedAdminJobId,
     selectedAdminJob: props.selectedAdminJob,
+    selectedAdminResult: props.selectedAdminResult,
+    adminJobRecordSource,
+    adminResultRecordSource,
+    adminJobDraftSource: props.adminJobDraftSource,
+    adminResultDraftSource: props.adminResultDraftSource,
     adminJobMessage: props.adminJobMessage,
     setAdminJobMessage: props.setAdminJobMessage,
     adminJobProjectId: props.adminJobProjectId,
@@ -476,6 +491,7 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     adminJobCaseId: props.adminJobCaseId,
     setAdminJobCaseId: props.setAdminJobCaseId,
     saveAdminJobRecord: primaryActionsController.saveAdminJobRecord,
+    pendingAdminRecordIds: props.pendingAdminRecordIds,
     deleteAdminJobRecord: primaryActionsController.deleteAdminJobRecord,
     selectedAdminResultJobId: props.selectedAdminResultJobId,
     adminResultDraft: props.adminResultDraft,
@@ -492,7 +508,7 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     openSelectedAdminJobProject: primaryActionsController.openSelectedAdminJobProject,
     openSelectedAdminJobVersion: primaryActionsController.openSelectedAdminJobVersion,
     cancelCurrentJob: props.cancelCurrentJob,
-    cancelJob: props.cancelJob,
+    cancelSelectedAdminJob: primaryActionsController.cancelSelectedAdminJob,
     setMessage: props.setMessage,
   });
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
-import { usingWorkbench, invoke, openWorkbench, runtime, holdRequest,
+import { usingWorkbench, invoke, openWorkbench, runtime, holdRequest, waitForGuiTransition,
   installProjectWorkbenchTestHooks } from "./workbench-ui-project-fixture.shared.mjs";
 
 installProjectWorkbenchTestHooks();
@@ -162,9 +162,11 @@ for (const other of [false, true]) {
         await held.received;
         if (other) await openEditor(page, "other-result");
         await draft(page).fill('{"metric":99}');
+        const newerMessage = await page.evaluate(() => window.__kyuubikiPwdt.state().message);
         held.release();
         assert.equal((await response).status(), 200);
-        await page.waitForFunction(() => window.__kyuubikiPwdt.state().message === "Result record updated.");
+        await waitForGuiTransition(page);
+        assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().message), other ? newerMessage : "Result record updated.");
         assert.equal(await draft(page).inputValue(), '{"metric":99}');
         assert.equal((await page.evaluate(() => window.__kyuubikiPwdt.state())).selectedAdminResultJobId, other ? "other-result" : ID);
         assert.deepEqual(runtime.state.resultRecordMutations[0].body, { result: { metric: 42 } });
@@ -185,9 +187,11 @@ test("Workbench delayed result deletion preserves another selection and its unsa
       await held.received;
       await openEditor(page, "other-result");
       await draft(page).fill('{"metric":99}');
+      const newerMessage = await page.evaluate(() => window.__kyuubikiPwdt.state().message);
       held.release();
       assert.equal((await response).status(), 200);
-      await page.waitForFunction(() => window.__kyuubikiPwdt.state().message === "Result record deleted.");
+      await waitForGuiTransition(page);
+      assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().message), newerMessage);
       assert.equal(await draft(page).inputValue(), '{"metric":99}');
       assert.equal((await page.evaluate(() => window.__kyuubikiPwdt.state())).selectedAdminResultJobId, "other-result");
       assertWrites(library, 1);

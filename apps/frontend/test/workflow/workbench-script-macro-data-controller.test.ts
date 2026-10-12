@@ -2,22 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { handleWorkbenchScriptMacroDataAction } from "../../src/components/workbench/workbench-script-macro-data-controller.ts";
-import type { JobState } from "../../src/lib/api/fem-shared.ts";
 
 type MacroDataArgs = Parameters<typeof handleWorkbenchScriptMacroDataAction>[0];
 
 function baseArgs(): MacroDataArgs {
   return {
     action: "data/exportDatabase",
-    applyJobContextToWorkbench: async () => ({ ok: true }),
     downloadDatabaseSnapshot: async () => ({ ok: true }),
     getScriptSnapshot: () => ({} as ReturnType<MacroDataArgs["getScriptSnapshot"]>),
     invokeScriptAction: async () => ({}),
     language: "en",
-    openModelVersionById: async () => ({ ok: true }),
-    openProjectContextById: async () => ({ ok: true }),
+    openLinkedContext: async () => ({ ok: true, jobId: "job-linked", projectId: "project-linked", modelVersionId: "version-linked" }),
     payload: {},
-    resolveScriptLinkedJob: () => null,
     setAdminFilterModelVersionId: () => {},
     setAdminFilterProjectId: () => {},
     setSelectedAdminJobId: () => {},
@@ -47,18 +43,6 @@ test("script database export propagates download failures", async () => {
   );
 });
 
-function linkedJob(): JobState {
-  return {
-    has_result: true,
-    job_id: "job-linked",
-    model_version_id: "version-linked",
-    progress: 1,
-    project_id: "project-linked",
-    status: "completed",
-    worker_id: "worker-linked",
-  };
-}
-
 test("script linked-context navigation waits for version loading", async () => {
   let release!: () => void;
   let settled = false;
@@ -66,12 +50,11 @@ test("script linked-context navigation waits for version loading", async () => {
   const operation = handleWorkbenchScriptMacroDataAction({
     ...baseArgs(),
     action: "data/openLinkedContext",
-    openModelVersionById: async () => {
+    openLinkedContext: async () => {
       await gate;
-      return { ok: true };
+      return { ok: true, jobId: "job-linked", projectId: "project-linked", modelVersionId: "version-linked" };
     },
     payload: { mode: "version" },
-    resolveScriptLinkedJob: linkedJob,
   });
   void operation.then(() => { settled = true; });
 
@@ -89,9 +72,8 @@ test("script linked-context navigation propagates version loading failures", asy
     handleWorkbenchScriptMacroDataAction({
       ...baseArgs(),
       action: "data/openLinkedContext",
-      openModelVersionById: async () => ({ ok: false, error: failure }),
+      openLinkedContext: async () => ({ ok: false, error: failure }),
       payload: { mode: "version" },
-      resolveScriptLinkedJob: linkedJob,
     }),
     failure,
   );
@@ -108,3 +90,16 @@ test("script macros stop remaining steps after an operation reports a changed wo
   }), /WORKBENCH_CONTEXT_CHANGED/u);
   assert.deepEqual(calls, ["nav/setSidebarSection"]);
 });
+
+for (const mode of ["project", "version", "apply"]) {
+  test(`PWDT linked ${mode} forwards original record identity to the single guarded service`, async () => {
+    const payload = { target: "result", resultJobId: "authoritative-result", mode };
+    const calls: Record<string, unknown>[] = [];
+    const result = await handleWorkbenchScriptMacroDataAction({ ...baseArgs(), action: "data/openLinkedContext", payload,
+      openLinkedContext: async (input) => { calls.push(input); return { ok: true, jobId: "authoritative-result", projectId: "project-a", modelVersionId: "version-a" }; },
+    });
+    assert.deepEqual(calls, [payload]);
+    assert.equal(result?.jobId, "authoritative-result");
+    assert.equal(result?.projectId, "project-a");
+  });
+}

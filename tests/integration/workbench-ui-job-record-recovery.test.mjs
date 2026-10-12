@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { usingWorkbench, invoke, openWorkbench, runtime, holdRequest,
+import { usingWorkbench, invoke, openWorkbench, runtime, holdRequest, waitForGuiTransition,
   installProjectWorkbenchTestHooks } from "./workbench-ui-project-fixture.shared.mjs";
 
 installProjectWorkbenchTestHooks();
@@ -119,9 +119,11 @@ test("Workbench delayed job deletion preserves another selected job and result's
       await page.locator('[data-workbench-data-field="result-payload"]').fill('{"metric":42}');
       await openData(page, "job", "other-job");
       await draft(page).fill("other unsaved message");
+      const newerMessage = await page.evaluate(() => window.__kyuubikiPwdt.state().message);
       held.release();
       assert.equal((await response).status(), 200);
-      await page.waitForFunction(() => window.__kyuubikiPwdt.state().message === "Job record deleted.");
+      await waitForGuiTransition(page);
+      assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().message), newerMessage);
       assert.equal(await draft(page).inputValue(), "other unsaved message");
       const state = await page.evaluate(() => window.__kyuubikiPwdt.state());
       assert.equal(state.selectedAdminJobId, "other-job");
@@ -175,8 +177,10 @@ for (const oldJobFails of [false, true]) for (const oldResultFails of [false, tr
         assert.equal(await row(page, "result").count(), 0);
         assert.equal(await row(page, "result", "other-job").count(), 1);
         assert.match(await page.locator('[data-workbench-results="read-error"]').innerText(), /post-delete results unavailable/u);
+        const newerMessage = await page.evaluate(() => window.__kyuubikiPwdt.state().message);
         followupJobRead.release();
-        await page.waitForFunction(() => window.__kyuubikiPwdt.state().message === "Job record deleted.");
+        await waitForGuiTransition(page);
+        assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().message), newerMessage);
         await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ systemDataTab: "jobs" }));
         assert.equal(await row(page, "job").count(), 0);
         assert.equal(await row(page, "job", "other-job").count(), 1);

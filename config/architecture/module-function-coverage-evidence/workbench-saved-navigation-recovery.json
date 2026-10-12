@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench ordinary project selection and direct saved-model/version opening enforce verified canonical catalog admission and exact returned identities before workspace application. GUI project selection routes through PWDT's shared project action; explicit null deselects, accepted selection synchronously invalidates older intents and detaches saved bindings without loading geometry. Version lists validate parent identity and carry weak collection source metadata outside JSON, preserved by confirmed-removal filters. Payload/list loads fence effective API authority, source, workspace intent and feedback; metadata edits supersede older reads and rejected source selection shows existing translated guidance. Pure frontend and mocked Chromium controls qualify source-client contracts/recovery/UX only, not authenticated provenance, continuous authority or membership history, cross-client locks, other administrative write admission, installed WebView, remote execution or scientific accuracy. No operational-grade promotion, snapshots, backups, write replay or production Node dependency.",
+  "evidence_claims": [
+    {
+      "id": "workbench-saved-navigation-source-identity-and-intent",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-library-record-source.ts",
+        "apps/frontend/src/components/workbench/workbench-library-record-recovery.ts",
+        "apps/frontend/src/components/workbench/workbench-data-refresh-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-project-storage-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-persisted-model-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-project-flows.ts",
+        "apps/frontend/src/components/workbench/workbench-session-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-library-section-mount.tsx",
+        "apps/frontend/src/components/workbench/workbench-script-project-model-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-script-invoker.ts",
+        "apps/frontend/src/components/workbench/workbench-workspace-state.ts",
+        "apps/frontend/test/workflow/workbench-saved-navigation-recovery.test.ts",
+        "apps/frontend/test/workflow/workbench-project-storage-controller.test.ts",
+        "apps/frontend/test/workflow/workbench-script-project-model-controller.test.ts",
+        "tests/integration/workbench-ui-saved-navigation-recovery.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-saved-navigation-recovery-20261012.md"
+      ],
+      "required_text": [
+        "workbenchLibraryVersionSources",
+        "WORKBENCH_SAVED_MODEL_INVALID",
+        "WORKBENCH_SAVED_VERSION_INVALID",
+        "WORKBENCH_VERSION_CATALOG_INVALID",
+        "project.models?.includes(model)",
+        "versions.includes(version)",
+        "invokeScriptAction(\"project/select\", { projectId })",
+        "Choosing a project does not load geometry",
+        "synchronously supersedes an older intent before React commits",
+        "no undo entry",
+        "1,534 tests with zero failures or skips",
+        "30 tests with zero failures or skips"
+      ]
+    }
+  ]
+}

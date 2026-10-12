@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench GUI and PWDT linked project/version/apply navigation use one guarded service. Verified current task source, and actual result membership with matching collection source for result links, are required before reads or selection/filter mutation. Returned linked versions must match the version ID and supplied project association before payload application. Version loading carries source/feedback ownership through application and checks workspace/API scope after final version-list refresh so superseded PWDT sequences cannot continue dependent writes. Project-only navigation detaches saved-model/version bindings without loading geometry or an arbitrary version list. Project catalog source metadata is weak, outside JSON and preserved by confirmed-removal filters/maps; project/version-list reads fence old-authority success and failure. Pure frontend and mocked Chromium controls exercise these source-client boundaries, not authenticated provenance, continuous record/authority history, cross-client locking, generic saved-model/project selection admission, installed WebView, remote or scientific qualification. No snapshot, backup, write replay, production Node dependency or operational-grade promotion is added.",
+  "evidence_claims": [
+    {
+      "id": "workbench-linked-context-source-and-load-ownership",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-admin-data-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-context.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-record-source.ts",
+        "apps/frontend/src/components/workbench/workbench-library-record-source.ts",
+        "apps/frontend/src/components/workbench/workbench-library-record-recovery.ts",
+        "apps/frontend/src/components/workbench/workbench-data-refresh-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-persisted-model-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-project-storage-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-project-flows.ts",
+        "apps/frontend/src/components/workbench/workbench-core-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-session-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controller-props.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controllers.ts",
+        "apps/frontend/src/components/workbench/workbench-script-invoker.ts",
+        "apps/frontend/src/components/workbench/workbench-script-macro-data-controller.ts",
+        "apps/frontend/src/components/workbench/system/workbench-data-admin-panel.tsx",
+        "apps/frontend/test/workflow/workbench-admin-data-controller.test.ts",
+        "apps/frontend/test/workflow/workbench-admin-record-source.test.ts",
+        "apps/frontend/test/workflow/workbench-script-macro-data-controller.test.ts",
+        "apps/frontend/test/workflow/workbench-project-store-bundle-roundtrip.test.ts",
+        "tests/integration/workbench-ui-linked-context-recovery.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-linked-context-recovery-20261012.md"
+      ],
+      "required_text": [
+        "openWorkbenchLinkedContext",
+        "WORKBENCH_LINKED_VERSION_INVALID",
+        "WORKBENCH_RECORD_SOURCE_CHANGED",
+        "isWorkbenchAdminRecordSourceCurrent(source, resultSource)",
+        "scope?.onApplied();",
+        "Commit context with the validated payload",
+        "Project navigation does not load geometry",
+        "retained task links cannot authorize a new backend read",
+        "dependent SaveAs cannot follow a superseded context load",
+        "a same-ID task when",
+        "obsolete read cannot clear the live preview",
+        "source-preserving catalog maps retain the original scope",
+        "late completion cannot repeat context setters over newer editing",
+        "1,491 tests with zero failures",
+        "93 tests with zero failures or skips"
+      ]
+    }
+  ]
+}

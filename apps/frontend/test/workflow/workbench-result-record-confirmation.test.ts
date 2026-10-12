@@ -6,6 +6,7 @@ import { EMPTY_WORKBENCH_RUNTIME_RECOVERY_STATE } from "../../src/components/wor
 import type { WorkbenchRuntimeRecoveryState } from "../../src/components/workbench/workbench-runtime-recovery.ts";
 import type { ResultRecord } from "../../src/lib/api/security-results-types.ts";
 import { downloadBlobFile } from "../../src/components/workbench/workbench-file-helpers.ts";
+import { createWorkbenchFeedback } from "../../src/components/workbench/workbench-feedback.ts";
 
 function fixture() {
   const initial = { job_id: "result", result: { metric: 1 } };
@@ -26,7 +27,10 @@ function fixture() {
     updateJob: async () => { throw new Error("unexpected job write"); },
     deleteJob: async () => { throw new Error("unexpected job deletion"); },
   } as WorkbenchAdminDataBackendTransport;
+  const source = { isCurrent: () => true };
   const deps = {
+    recordSource: source, draftSource: source,
+    feedback: createWorkbenchFeedback(),
     adminDataBackendService: createAdminDataBackendService(transport), resultRefreshSeqRef: { current: 7 },
     setResultRecords: (next: ResultRecord[] | ((current: ResultRecord[]) => ResultRecord[])) => {
       state.records = typeof next === "function" ? next(state.records) : next;
@@ -41,7 +45,7 @@ function fixture() {
     selectedAdminResultJobId: "result" as string | null, adminResultDraft: '{"metric":42}',
     downloadTextFile: (name: string, contents: string) => { state.downloads.push([name, contents]); },
     setMessage: (message: string) => { state.messages.push(message); }, resultScopeLabel: "Results",
-    labels: { resultSaved: "saved", resultDeleted: "deleted", resultJsonDownloaded: "exported", invalidJson: "invalid", initialFailed: "failed" },
+    labels: { resultSaved: "saved", resultDeleted: "deleted", resultJsonDownloaded: "exported", invalidJson: "invalid", initialFailed: "failed", sourceChanged: "source changed" },
   };
   return { state, deps, initial, setReceipt: (value: unknown) => { receipt = value; }, setFailure: (value: unknown) => { failure = value; } };
 }

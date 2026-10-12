@@ -79,6 +79,7 @@
           "tests/integration/workbench-ui-pwdt-projection-fixture.shared.mjs",
           "tests/integration/workbench-ui-history-observation.test.mjs",
           "apps/frontend/src/components/workbench/workbench-job-history-controller.ts",
+          "apps/frontend/src/components/workbench/workbench-job-cancellation-receipt.ts",
           "apps/frontend/src/components/workbench/workbench-runtime-recovery.ts",
           "apps/frontend/src/components/workbench/workbench-session-composition.ts",
           "apps/frontend/src/components/workbench/workbench-main-composition.ts",

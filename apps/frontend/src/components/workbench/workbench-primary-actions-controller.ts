@@ -15,7 +15,12 @@ import {
   saveWorkbenchAdminResultRecord,
 } from "@/components/workbench/workbench-admin-result-controller";
 import { resetActiveResult } from "@/components/workbench/workbench-file-helpers";
-import { deleteWorkbenchAdminJobRecord, saveWorkbenchAdminJobRecord } from "./workbench-admin-job-controller";
+import { cancelWorkbenchAdminJobRecord, deleteWorkbenchAdminJobRecord, saveWorkbenchAdminJobRecord } from "./workbench-admin-job-controller";
+import type { JobEnvelope } from "@/lib/api/fem-shared";
+import type { WorkbenchAdminRecordMutations } from "./workbench-admin-record-mutations";
+import type { WorkbenchFeedback } from "./workbench-feedback";
+import type { WorkbenchAdminRecordSource } from "./workbench-admin-record-source";
+import { getWorkbenchAdminRecordSourceChangedLabel } from "./workbench-admin-record-source-copy";
 import type { WorkbenchRuntimeRecoveryState } from "./workbench-runtime-recovery";
 import {
   applyHistoryJobPayload,
@@ -58,6 +63,14 @@ type PrimaryActionsControllerDeps = {
   setPanelParametric: (value: any) => void;
   startTransition: (callback: () => void) => void;
   adminDataBackendService: WorkbenchAdminDataBackendService;
+  adminRecordMutations: WorkbenchAdminRecordMutations;
+  cancelJob: (jobId: string) => Promise<JobEnvelope>;
+  feedback: WorkbenchFeedback;
+  language: string;
+  adminJobRecordSource: WorkbenchAdminRecordSource | null;
+  adminJobDraftSource: WorkbenchAdminRecordSource | null;
+  adminResultRecordSource: WorkbenchAdminRecordSource | null;
+  adminResultDraftSource: WorkbenchAdminRecordSource | null;
   resultRefreshSeqRef: { current: number };
   setResultReadPending: (value: boolean) => void;
   setRuntimeRecovery: (value: WorkbenchRuntimeRecoveryState | ((current: WorkbenchRuntimeRecoveryState) => WorkbenchRuntimeRecoveryState)) => void;
@@ -475,19 +488,32 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     deps.setMessage(deps.t.modelDownloaded);
   };
 
-  const saveAdminJobRecord = () => {
-    deps.startTransition(() => {
-      void saveWorkbenchAdminJobRecord({ ...deps, labels: deps.t });
+  const mutateAdminRecord = (jobId: string | null, action: (ownsFeedback: () => boolean) => Promise<void>) => {
+    if (!jobId) return;
+    // Publish the reservation urgently; transition updates can wait for the async action.
+    let ownsFeedback = () => false;
+    const operation = deps.adminRecordMutations.run(jobId, () => action(ownsFeedback), () => { ownsFeedback = deps.feedback.begin(); });
+    deps.startTransition(async () => {
+      await operation;
     });
   };
 
-  const deleteAdminJobRecord = () => {
-    deps.startTransition(() => {
-      void deleteWorkbenchAdminJobRecord({ ...deps, refreshResults, labels: deps.t });
-    });
-  };
+  const sourceChanged = getWorkbenchAdminRecordSourceChangedLabel(deps.language);
+  const cancelSelectedAdminJob = () => mutateAdminRecord(deps.selectedAdminJobId,
+    (ownsFeedback) => cancelWorkbenchAdminJobRecord({ ...deps, ownsFeedback, recordSource: deps.adminJobRecordSource,
+      labels: { jobCancelled: deps.t.jobCancelled, initialFailed: deps.t.initialFailed,
+        requestTimedOut: deps.t.requestTimedOut, sourceChanged } }));
+  const adminJobLabels = { jobSaved: deps.t.jobSaved, jobDeleted: deps.t.jobDeleted, initialFailed: deps.t.initialFailed, sourceChanged };
+  const saveAdminJobRecord = () => mutateAdminRecord(deps.selectedAdminJobId,
+    (ownsFeedback) => saveWorkbenchAdminJobRecord({ ...deps, ownsFeedback, recordSource: deps.adminJobRecordSource,
+      draftSource: deps.adminJobDraftSource, labels: adminJobLabels }));
+
+  const deleteAdminJobRecord = () => mutateAdminRecord(deps.selectedAdminJobId,
+    (ownsFeedback) => deleteWorkbenchAdminJobRecord({ ...deps, ownsFeedback, refreshResults, recordSource: deps.adminJobRecordSource,
+      draftSource: deps.adminJobDraftSource, labels: adminJobLabels }));
 
   const adminResultLabels = {
+    sourceChanged,
     resultSaved: deps.t.resultSaved,
     resultDeleted: deps.t.resultDeleted,
     resultJsonDownloaded: deps.t.resultJsonDownloaded,
@@ -497,8 +523,12 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
 
   const saveAdminResultRecord = () => {
     if (!deps.selectedAdminResultJobId) return;
-    deps.startTransition(() => {
-      void saveWorkbenchAdminResultRecord({
+    mutateAdminRecord(deps.selectedAdminResultJobId, (ownsFeedback) =>
+      saveWorkbenchAdminResultRecord({
+        ownsFeedback,
+        feedback: deps.feedback,
+        recordSource: deps.adminResultRecordSource,
+        draftSource: deps.adminResultDraftSource,
         setResultReadPending: deps.setResultReadPending,
         setRuntimeRecovery: deps.setRuntimeRecovery,
         resultScopeLabel: deps.t.results,
@@ -511,14 +541,17 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
         downloadTextFile: deps.downloadTextFile,
         setMessage: deps.setMessage,
         labels: adminResultLabels,
-      });
-    });
+      }));
   };
 
   const deleteAdminResultRecord = () => {
     if (!deps.selectedAdminResultJobId) return;
-    deps.startTransition(() => {
-      void deleteWorkbenchAdminResultRecord({
+    mutateAdminRecord(deps.selectedAdminResultJobId, (ownsFeedback) =>
+      deleteWorkbenchAdminResultRecord({
+        ownsFeedback,
+        feedback: deps.feedback,
+        recordSource: deps.adminResultRecordSource,
+        draftSource: deps.adminResultDraftSource,
         setResultReadPending: deps.setResultReadPending,
         setRuntimeRecovery: deps.setRuntimeRecovery,
         resultScopeLabel: deps.t.results,
@@ -531,12 +564,14 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
         downloadTextFile: deps.downloadTextFile,
         setMessage: deps.setMessage,
         labels: adminResultLabels,
-      });
-    });
+      }));
   };
 
   const exportAdminResultRecord = () => {
     exportWorkbenchAdminResultRecord({
+      feedback: deps.feedback,
+      recordSource: deps.adminResultRecordSource,
+      draftSource: deps.adminResultDraftSource,
       setResultReadPending: deps.setResultReadPending,
       setRuntimeRecovery: deps.setRuntimeRecovery,
       resultScopeLabel: deps.t.results,
@@ -589,6 +624,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     generatePanelModel,
     downloadModel,
     saveAdminJobRecord,
+    cancelSelectedAdminJob,
     deleteAdminJobRecord,
     saveAdminResultRecord,
     deleteAdminResultRecord,

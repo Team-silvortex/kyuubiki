@@ -53,3 +53,14 @@ test("confirmed save cleans only the submitted value, never later typing", () =>
   assert.equal(reconcileWorkbenchAdminDraft("newer typing", old, committed), "newer typing");
   assert.equal(reconcileWorkbenchAdminDraft("newer typing", committed, baseline("subsequent")), "newer typing");
 });
+
+for (const contents of ["working message", "", '{"metric":42}']) {
+  test(`same-ID source changes replace the old draft ${JSON.stringify(contents)} only after a verified new read`, () => {
+    const oldSource = { isCurrent: () => false };
+    const newSource = { isCurrent: () => true };
+    assert.equal(reconcileWorkbenchAdminDraft(contents, { ...baseline("old"), source: oldSource },
+      { ...baseline("new source"), source: newSource }), "new source");
+    assert.equal(reconcileWorkbenchAdminDraft(contents, { ...baseline("old"), source: newSource },
+      { ...baseline("refreshed"), source: newSource }), contents);
+  });
+}

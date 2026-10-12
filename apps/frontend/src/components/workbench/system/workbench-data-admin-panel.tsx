@@ -72,6 +72,12 @@ type WorkbenchDataAdminPanelProps = {
   onTabChange: (tab: DataTab) => void;
   jobRows: AdminJobRow[];
   selectedAdminJobId: string | null;
+  adminJobWritePending?: boolean;
+  adminResultWritePending?: boolean;
+  adminJobSourceCurrent?: boolean;
+  adminResultSourceCurrent?: boolean;
+  sourceChangedLabel: string;
+  onRefreshRecordSource: () => void;
   onSelectAdminJob: (jobId: string) => void;
   selectedAdminJob: boolean;
   selectedAdminJobHasVersion: boolean;
@@ -155,6 +161,12 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   onTabChange,
   jobRows,
   selectedAdminJobId,
+  adminJobWritePending = false,
+  adminResultWritePending = false,
+  adminJobSourceCurrent = false,
+  adminResultSourceCurrent = false,
+  sourceChangedLabel,
+  onRefreshRecordSource,
   onSelectAdminJob,
   selectedAdminJob,
   selectedAdminJobHasVersion,
@@ -217,6 +229,16 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           <div className="button-row">
             <button className="ghost-button ghost-button--compact" data-workbench-data-action="refresh-results" onClick={onRefreshResults} type="button">
               {refreshLabel} · {resultsTabLabel}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {(activeTab === "jobs" ? selectedAdminJobId && !adminJobSourceCurrent : selectedAdminResultJobId && !adminResultSourceCurrent) ? (
+        <div className="sidebar-stack" data-workbench-admin-source="stale">
+          <p className="card-copy" role="status">{sourceChangedLabel}</p>
+          <div className="button-row">
+            <button className="ghost-button ghost-button--compact" data-workbench-data-action="refresh-record-source" onClick={onRefreshRecordSource} type="button">
+              {refreshLabel} · {jobsTabLabel} / {resultsTabLabel}
             </button>
           </div>
         </div>
@@ -357,13 +379,13 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           {dataPage === "edit" && selectedAdminJob ? (
             <>
               <div className="button-row">
-                <button className="ghost-button" data-workbench-data-action="cancel-job" disabled={!canCancelSelectedJob} onClick={onCancelSelectedJob} type="button">
+                <button className="ghost-button" data-workbench-data-action="cancel-job" disabled={!canCancelSelectedJob || adminJobWritePending || !adminJobSourceCurrent} onClick={onCancelSelectedJob} type="button">
                   {cancelJobLabel}
                 </button>
                 <button
                   className="ghost-button"
                   data-workbench-data-action="apply-job-context"
-                  disabled={!selectedAdminJobHasContext}
+                  disabled={!selectedAdminJobHasContext || !adminJobSourceCurrent}
                   onClick={onApplySelectedJobContext}
                   type="button"
                 >
@@ -372,7 +394,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 <button
                   className="ghost-button"
                   data-workbench-data-action="open-job-project"
-                  disabled={!selectedAdminJobHasProject}
+                  disabled={!selectedAdminJobHasProject || !adminJobSourceCurrent}
                   onClick={onOpenSelectedJobProject}
                   type="button"
                 >
@@ -381,7 +403,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 <button
                   className="ghost-button"
                   data-workbench-data-action="open-job-version"
-                  disabled={!selectedAdminJobHasVersion}
+                  disabled={!selectedAdminJobHasVersion || !adminJobSourceCurrent}
                   onClick={onOpenSelectedJobVersion}
                   type="button"
                 >
@@ -407,13 +429,14 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </label>
               </div>
               <div className="button-row">
-                <button className="ghost-button" data-workbench-data-action="save-job" onClick={onSaveAdminJob} type="button">
+                <button className="ghost-button" data-workbench-data-action="save-job" disabled={adminJobWritePending || !adminJobSourceCurrent} onClick={onSaveAdminJob} type="button">
                   {saveRecordLabel}
                 </button>
-                <button className="ghost-button" data-workbench-data-action="delete-job" onClick={onDeleteAdminJob} type="button">
+                <button className="ghost-button" data-workbench-data-action="delete-job" disabled={adminJobWritePending || !adminJobSourceCurrent} onClick={onDeleteAdminJob} type="button">
                   {deleteRecordLabel}
                 </button>
               </div>
+              {adminJobWritePending ? <p className="card-copy" role="status" data-workbench-admin-record="write-pending">{busyLabel}</p> : null}
             </>
           ) : dataPage === "edit" ? (
             <p className="card-copy">{selectRecordLabel}</p>
@@ -462,13 +485,13 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </label>
               </div>
               <div className="button-row">
-                <button className="ghost-button" data-workbench-data-action="save-result" onClick={onSaveAdminResult} type="button">
+                <button className="ghost-button" data-workbench-data-action="save-result" disabled={adminResultWritePending || !adminResultSourceCurrent} onClick={onSaveAdminResult} type="button">
                   {saveRecordLabel}
                 </button>
                 <button
                   className="ghost-button"
                   data-workbench-data-action="apply-result-context"
-                  disabled={!selectedAdminResultHasContext}
+                  disabled={!selectedAdminResultHasContext || !adminResultSourceCurrent}
                   onClick={onApplySelectedResultContext}
                   type="button"
                 >
@@ -477,7 +500,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 <button
                   className="ghost-button"
                   data-workbench-data-action="open-result-project"
-                  disabled={!selectedAdminResultHasProject}
+                  disabled={!selectedAdminResultHasProject || !adminResultSourceCurrent}
                   onClick={onOpenSelectedResultProject}
                   type="button"
                 >
@@ -486,7 +509,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 <button
                   className="ghost-button"
                   data-workbench-data-action="open-result-version"
-                  disabled={!selectedAdminResultHasVersion}
+                  disabled={!selectedAdminResultHasVersion || !adminResultSourceCurrent}
                   onClick={onOpenSelectedResultVersion}
                   type="button"
                 >
@@ -495,10 +518,11 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 <button className="ghost-button" data-workbench-data-action="export-result" onClick={onExportAdminResult} type="button">
                   {exportRecordLabel}
                 </button>
-                <button className="ghost-button" data-workbench-data-action="delete-result" onClick={onDeleteAdminResult} type="button">
+                <button className="ghost-button" data-workbench-data-action="delete-result" disabled={adminResultWritePending || !adminResultSourceCurrent} onClick={onDeleteAdminResult} type="button">
                   {deleteRecordLabel}
                 </button>
               </div>
+              {adminResultWritePending ? <p className="card-copy" role="status" data-workbench-admin-record="write-pending">{busyLabel}</p> : null}
             </>
           ) : dataPage === "edit" ? (
             <p className="card-copy">{selectRecordLabel}</p>

@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import { createWorkbenchProjectStorageController } from "../../src/components/workbench/workbench-project-storage-controller.ts";
 import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-context.ts";
+import { createWorkbenchFeedback } from "../../src/components/workbench/workbench-feedback.ts";
+import { workbenchLibraryRecordSources, workbenchLibraryVersionSources } from "../../src/components/workbench/workbench-library-record-source.ts";
 import type { JobEnvelope, JobState } from "../../src/lib/api/fem-shared.ts";
 import type { ProjectRecord } from "../../src/lib/api/project-types.ts";
 import type { WorkbenchAdminDataBackendService } from "../../src/lib/workbench/admin-data-backend-service-core.ts";
@@ -108,8 +110,15 @@ function baseController(
   getSelectedProject: () => ProjectRecord | null = projectRecord,
   overrides: Partial<Parameters<typeof createWorkbenchProjectStorageController>[0]> = {},
 ) {
+  const projects = [projectRecord()];
+  projects[0].models = [{ model_id: "model-a", project_id: "project-a" } as any];
+  const versions = [{ model_id: "model-a", project_id: "project-a", version_id: "version-a" } as any];
+  workbenchLibraryRecordSources.mark(projects); workbenchLibraryVersionSources.mark(versions);
   return createWorkbenchProjectStorageController({
     projectContext: createWorkbenchProjectContext({ projectId: "project-a", modelId: "model-a", versionId: null }),
+    feedback: createWorkbenchFeedback(), sourceChangedLabel: "Refresh the record source",
+    getProjects: () => projects, getModelVersions: () => versions,
+    removeConfirmedLibraryRecord: () => {},
     activeMaterial: "steel",
     adminDataBackendService: adminDataService(calls),
     axialForm: {},
@@ -159,6 +168,64 @@ function baseController(
     truss3dModel: {},
     trussModel: {},
     ...overrides,
+  });
+}
+
+for (const kind of ["model", "version"] as const) for (const admission of ["unmarked", "copied", "foreign", "stale", "disposed"]) {
+  test(`saved ${kind} navigation rejects ${admission} catalog admission without a payload read`, async () => {
+    const calls: string[] = [];
+    const record = { model_id: "model-a", project_id: "project-a", version_id: "version-a" } as any;
+    const projects = [{ ...projectRecord(), models: [record] }], versions = [record];
+    const context = createWorkbenchProjectContext({ projectId: "project-a", modelId: "model-a", versionId: "version-a" });
+    const feedback = createWorkbenchFeedback();
+    const registry = kind === "model" ? workbenchLibraryRecordSources : workbenchLibraryVersionSources;
+    const catalog = kind === "model" ? projects : versions;
+    if (admission !== "unmarked") registry.mark(catalog);
+    const source = registry.sourceOf(catalog), original = source?.isCurrent;
+    if (admission === "stale" && source) source.isCurrent = () => false;
+    if (admission === "disposed") { context.dispose(); feedback.dispose(); }
+    try {
+      const controller = baseController(calls, projectRecord, { projectContext: context, feedback,
+        getProjects: () => projects, getModelVersions: () => versions,
+        getPersistedModelEffects: () => assert.fail("rejected navigation cannot access payload effects"),
+        setMessage: (message) => { calls.push(message); } });
+      const input = admission === "copied" ? { ...record } : admission === "foreign" ? { ...record, project_id: "other" } : record;
+      assert.equal((await (kind === "model" ? controller.openSavedModel(input) : controller.openSavedVersion(input))).ok, false);
+      assert.equal(calls.length, admission === "disposed" ? 0 : 1);
+      if (calls.length) assert.match(calls[0], /WORKBENCH_RECORD_SOURCE_CHANGED/);
+    } finally { if (source && original) source.isCurrent = original; }
+  });
+}
+
+for (const action of ["updateProjectRecord", "deleteProjectRecord", "saveModelVersion", "deleteSavedModelRecord",
+  "renameSelectedVersion", "deleteSelectedVersion"] as const) for (const failed of [false, true]) {
+  test(`GUI ${action} suppresses late ${failed ? "failure" : "confirmation"} from an old source`, async () => {
+    const calls: string[] = [], projects = [projectRecord()];
+    const version = { project_id: "project-a", model_id: "model-a", version_id: "version-a" } as any;
+    projects[0].models = [{ ...version }];
+    const versions = [version];
+    workbenchLibraryRecordSources.mark(projects); workbenchLibraryVersionSources.mark(versions);
+    const context = createWorkbenchProjectContext({ projectId: "project-a", modelId: "model-a", versionId: "version-a" });
+    const source = action.includes("Version") && action !== "saveModelVersion"
+      ? workbenchLibraryVersionSources.sourceOf(versions)! : workbenchLibraryRecordSources.sourceOf(projects)!;
+    const original = source.isCurrent, service = projectLibraryService(calls);
+    const write = async () => { calls.push("write"); source.isCurrent = () => false;
+      if (failed) throw new Error("obsolete failure"); return { project: projects[0], model: projects[0].models![0], version }; };
+    for (const method of ["updateProject", "deleteProject", "createModelVersion", "deleteModel", "updateModelVersion", "deleteModelVersion"] as const) service[method] = write as never;
+    let completed = Promise.resolve();
+    try {
+      const controller = baseController(calls, projectRecord, { projectContext: context, selectedVersionId: "version-a",
+        getProjects: () => projects, getModelVersions: () => versions, projectLibraryBackendService: service,
+        removeConfirmedLibraryRecord: () => { calls.push("remove"); },
+        refreshProjects: async () => { calls.push("refresh"); }, refreshVersions: async () => { calls.push("refresh"); },
+        setSelectedProjectId: () => { calls.push("apply"); }, setSelectedModelId: () => { calls.push("apply"); },
+        setSelectedVersionId: () => { calls.push("apply"); }, setModelVersions: () => { calls.push("apply"); },
+        setMessage: () => { calls.push("message"); }, startTransition: (callback) => { completed = Promise.resolve(callback()); } });
+      if (action === "saveModelVersion") controller.saveModelVersion(false); else controller[action]();
+      await completed;
+      assert.deepEqual(calls, ["write"]);
+      assert.deepEqual(context.current(), { projectId: "project-a", modelId: "model-a", versionId: "version-a" });
+    } finally { source.isCurrent = original; }
   });
 }
 

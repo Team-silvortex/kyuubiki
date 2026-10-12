@@ -2,6 +2,7 @@
 
 export function bindWorkbenchWorkspaceState(workspaceState: Record<string, any>) {
   const {
+    feedback,
     importNotice,
     setImportNotice,
     studyKind,
@@ -129,6 +130,7 @@ export function bindWorkbenchWorkspaceState(workspaceState: Record<string, any>)
   } = workspaceState;
 
   return {
+    feedback,
     importNotice,
     setImportNotice,
     studyKind,

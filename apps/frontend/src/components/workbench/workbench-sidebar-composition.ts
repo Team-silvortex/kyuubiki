@@ -1,6 +1,7 @@
 "use client";
 
 import { createElement } from "react";
+import { isWorkbenchAdminRecordSourceCurrent } from "./workbench-admin-record-source";
 import { buildWorkbenchSidebarMountProps } from "@/components/workbench/workbench-sidebar-mount-props";
 import { WorkbenchRuntimeRecoveryCard } from "@/components/workbench/system/workbench-runtime-recovery-card";
 import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
@@ -19,6 +20,7 @@ export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarComposit
     props;
   const { topLevelActions, assistantAudit, uiActionController } = interactionControllers;
   const { primaryActionsController, invokeScriptAction } = flowControllers;
+  const adminDataVisible = workspaceState.sidebarSection === "system" && workspaceState.systemPanelTab === "data";
 
   return buildWorkbenchSidebarMountProps({
     t: props.t,
@@ -190,6 +192,10 @@ export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarComposit
     handleSystemDataTabChange: uiActionController.handleSystemDataTabChange,
     adminJobRows: studyResultDerived.adminJobRows,
     selectedAdminJobId: props.selectedAdminJobId,
+    adminJobWritePending: props.pendingAdminRecordIds?.includes(props.selectedAdminJobId) ?? false,
+    adminResultWritePending: props.pendingAdminRecordIds?.includes(props.selectedAdminResultJobId) ?? false,
+    adminJobSourceCurrent: adminDataVisible && isWorkbenchAdminRecordSourceCurrent(props.adminJobRecordSource ?? null, props.adminJobDraftSource ?? null),
+    adminResultSourceCurrent: adminDataVisible && isWorkbenchAdminRecordSourceCurrent(props.adminResultRecordSource ?? null, props.adminResultDraftSource ?? null),
     handleSelectAdminJob: uiActionController.handleSelectAdminJob,
     selectedAdminJob: props.selectedAdminJob,
     adminJobMessage: props.adminJobMessage,
@@ -227,7 +233,7 @@ export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarComposit
     openSelectedAdminJobProject: props.openSelectedAdminJobProject,
     openSelectedAdminJobVersion: props.openSelectedAdminJobVersion,
     cancelCurrentJob: props.cancelCurrentJob,
-    cancelJob: props.cancelJob,
+    cancelSelectedAdminJob: props.cancelSelectedAdminJob,
     setMessage: workspaceState.setMessage,
   });
 }

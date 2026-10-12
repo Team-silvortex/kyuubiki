@@ -5,9 +5,16 @@ import { createWorkbenchPrimaryActionsController } from "../../src/components/wo
 import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-context.ts";
 import { historyEffects, historyResult } from "../support/history-result-fixture.ts";
 import { cancelWorkbenchJob } from "../../src/components/workbench/workbench-job-history-controller.ts";
+import { createWorkbenchAdminRecordMutations } from "../../src/components/workbench/workbench-admin-record-mutations.ts";
+import { createWorkbenchFeedback, withWorkbenchFeedbackInvalidation } from "../../src/components/workbench/workbench-feedback.ts";
 
 function controllerDeps(overrides: Record<string, unknown> = {}) {
+  const source = { isCurrent: () => true };
   return {
+    language: "en",
+    adminJobRecordSource: source, adminJobDraftSource: source,
+    adminResultRecordSource: source, adminResultDraftSource: source,
+    feedback: createWorkbenchFeedback(),
     projectContext: createWorkbenchProjectContext({ projectId: "project", modelId: "model", versionId: "version" }),
     directMeshEndpointsText: "agent:5001",
     directMeshSelectionMode: "healthiest",
@@ -19,6 +26,8 @@ function controllerDeps(overrides: Record<string, unknown> = {}) {
     setResultRecords: () => {},
     setSelectedAdminResultJobId: () => {},
     adminDataBackendService: { fetchResults: async () => ({ results: [] }) },
+    adminRecordMutations: createWorkbenchAdminRecordMutations(() => {}),
+    cancelJob: async () => ({ job: { job_id: "selected", status: "cancelled", progress: 0 } }),
     refreshJobHistory: async () => {},
     runBackendService: {
       fetchJob: async () => { throw new Error("not used"); },
@@ -57,6 +66,162 @@ function controllerDeps(overrides: Record<string, unknown> = {}) {
   } as unknown as Parameters<typeof createWorkbenchPrimaryActionsController>[0];
 }
 
+test("selected cancellation needs the verified record, not an editor draft or live observation", async () => {
+  const calls: string[] = [], transitions: Promise<void>[] = [];
+  const controller = createWorkbenchPrimaryActionsController(controllerDeps({
+    selectedAdminJobId: "selected", adminJobDraftSource: null,
+    cancelJob: async (id: string) => { calls.push(id); return { job: { job_id: id, status: "cancelled", progress: 0 } }; },
+    setJob: () => assert.fail("a historical record does not own the live job"),
+    setResult: () => assert.fail("a historical record does not own the live preview"),
+    refreshJobHistory: async () => { calls.push("history"); },
+    startTransition: (callback: () => Promise<void>) => { transitions.push(callback()); },
+  }));
+  controller.cancelSelectedAdminJob();
+  await Promise.all(transitions);
+  assert.deepEqual(calls, ["selected", "history"]);
+});
+
+for (const blockedAction of ["cancelSelectedAdminJob", "saveAdminJobRecord", "deleteAdminJobRecord", "saveAdminResultRecord", "deleteAdminResultRecord"] as const) {
+  test(`pending selected cancellation suppresses ${blockedAction} for its shared parent through refresh`, async () => {
+    const writes: string[] = [], messages: string[] = [], transitions: Promise<void>[] = [], pending: string[][] = [];
+    const feedback = createWorkbenchFeedback();
+    let release!: () => void, reached!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const reading = new Promise<void>((resolve) => { reached = resolve; });
+    const forbidden = async () => { assert.fail("same-parent writes cannot bypass pending cancellation"); };
+    const controller = createWorkbenchPrimaryActionsController(controllerDeps({
+      selectedAdminJobId: "selected", selectedAdminResultJobId: "selected", adminResultDraft: "{}", feedback,
+      adminRecordMutations: createWorkbenchAdminRecordMutations((ids) => pending.push(ids)),
+      cancelJob: async (id: string) => { writes.push(id); return { job: { job_id: id, status: "cancelled", progress: 0 } }; },
+      refreshJobHistory: async () => { reached(); await gate; },
+      adminDataBackendService: { updateJob: forbidden, deleteJob: forbidden, updateResult: forbidden, deleteResult: forbidden },
+      setMessage: withWorkbenchFeedbackInvalidation(feedback, (value: string) => messages.push(value)),
+      startTransition: (callback: () => Promise<void>) => { transitions.push(callback()); },
+      t: { jobCancelled: "cancelled", initialFailed: "failed" },
+    }));
+    controller.cancelSelectedAdminJob();
+    await reading;
+    controller[blockedAction]();
+    assert.deepEqual(pending.at(-1), ["selected"]);
+    release();
+    await Promise.all(transitions);
+    assert.deepEqual(writes, ["selected"]);
+    assert.deepEqual(messages, ["cancelled"], "a suppressed duplicate must not invalidate accepted feedback");
+    assert.deepEqual(pending.at(-1), []);
+  });
+}
+
+test("selected cancellation captures feedback before its queued write", async () => {
+  const feedback = createWorkbenchFeedback(), messages: string[] = [], transitions: Promise<void>[] = [];
+  let writes = 0;
+  const setMessage = withWorkbenchFeedbackInvalidation(feedback, (value: string) => messages.push(value));
+  const controller = createWorkbenchPrimaryActionsController(controllerDeps({
+    feedback, setMessage, selectedAdminJobId: "selected",
+    cancelJob: async () => { writes += 1; return { job: { job_id: "selected", status: "cancelled", progress: 0 } }; },
+    startTransition: (callback: () => Promise<void>) => { transitions.push(callback()); },
+  }));
+  controller.cancelSelectedAdminJob();
+  setMessage("newer feedback before cancellation starts");
+  await Promise.all(transitions);
+  assert.equal(writes, 1);
+  assert.deepEqual(messages, ["newer feedback before cancellation starts"]);
+});
+
+for (const action of ["saveAdminJobRecord", "deleteAdminJobRecord", "saveAdminResultRecord", "deleteAdminResultRecord"] as const) {
+  for (const failure of ["record-missing", "draft-missing", "draft-mismatch", "stale-authority", "unreadable-source"] as const) {
+    test(`${action} blocks ${failure} before every backend write or follow-up read`, async () => {
+      const messages: string[] = [], transitions: Promise<void>[] = [];
+      const reject = async () => { assert.fail("unverified origin cannot authorize backend work"); };
+      const deps = controllerDeps({
+        selectedAdminJobId: "selected", selectedAdminResultJobId: "selected", adminResultDraft: "{}",
+        setMessage: (message: string) => messages.push(message),
+        startTransition: (callback: () => Promise<void>) => { transitions.push(callback()); },
+        refreshJobHistory: reject,
+        removeConfirmedJobRecord: () => assert.fail("no deletion was confirmed"),
+        adminDataBackendService: { updateJob: reject, deleteJob: reject, updateResult: reject, deleteResult: reject, fetchResults: reject },
+      });
+      const recordKey = action.includes("Job") ? "adminJobRecordSource" : "adminResultRecordSource";
+      const draftKey = action.includes("Job") ? "adminJobDraftSource" : "adminResultDraftSource";
+      if (failure === "record-missing") deps[recordKey] = null;
+      if (failure === "draft-missing") deps[draftKey] = null;
+      if (failure === "draft-mismatch") deps[draftKey] = { isCurrent: () => true };
+      if (failure === "stale-authority") deps[recordKey]!.isCurrent = () => false;
+      if (failure === "unreadable-source") deps[recordKey]!.isCurrent = () => { throw new Error("source unreadable"); };
+      createWorkbenchPrimaryActionsController(deps)[action]();
+      await Promise.all(transitions);
+      assert.deepEqual(messages, ["The record source changed. Refresh before changing this record. Refresh replaces drafts from the previous source."]);
+    });
+  }
+  test(`${action} captures feedback at acceptance before its queued write starts`, async () => {
+    const feedback = createWorkbenchFeedback();
+    const messages: string[] = [];
+    const transitions: Promise<void>[] = [];
+    let writes = 0;
+    const write = async () => { writes += 1; };
+    const setMessage = withWorkbenchFeedbackInvalidation(feedback, (message: string) => messages.push(message));
+    const controller = createWorkbenchPrimaryActionsController(controllerDeps({
+      feedback, setMessage,
+      selectedAdminJobId: "selected", selectedAdminResultJobId: "selected", adminResultDraft: "{}",
+      removeConfirmedJobRecord: () => {}, downloadTextFile: () => {},
+      adminDataBackendService: { updateJob: write, deleteJob: write, updateResult: write, deleteResult: write,
+        fetchResults: async () => ({ results: [] }) },
+      startTransition: (callback: () => Promise<void>) => { transitions.push(callback()); },
+      t: { jobSaved: "saved", jobDeleted: "deleted", resultSaved: "saved", resultDeleted: "deleted", initialFailed: "failed" },
+    }));
+    controller[action]();
+    setMessage("new feedback before the queued write starts");
+    await Promise.all(transitions);
+    assert.equal(writes, 1, "feedback invalidation does not cancel an accepted write");
+    assert.deepEqual(messages, ["new feedback before the queued write starts"]);
+  });
+  for (const failed of [false, true]) {
+    test(`${action} tracks one shared async transition through ${failed ? "write rejection" : "follow-up reads"}`, async () => {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const transitions: Promise<void>[] = [], pending: string[][] = [];
+      const writes: string[] = [], messages: string[] = [];
+      const scope = createWorkbenchAdminRecordMutations((ids) => pending.push(ids));
+      const write = async () => { writes.push(action); if (failed) { await gate; throw new Error("write unavailable"); } };
+      const deps = controllerDeps({
+        adminRecordMutations: scope,
+        selectedAdminJobId: "selected", selectedAdminResultJobId: "selected",
+        adminJobMessage: "reviewed", adminJobProjectId: "project", adminJobModelVersionId: "version", adminJobCaseId: "case",
+        adminResultDraft: "{}", downloadTextFile: () => {}, removeConfirmedJobRecord: () => {},
+        adminDataBackendService: { updateJob: write, deleteJob: write, updateResult: write, deleteResult: write,
+          fetchResults: async () => { await gate; return { results: [] }; } },
+        refreshJobHistory: async () => { await gate; },
+        setMessage: (message: string) => messages.push(message),
+        startTransition: (callback: () => Promise<void>) => {
+          assert.deepEqual(pending[0], ["selected"], "the reservation must publish before React starts a transition");
+          const operation = callback();
+          assert.ok(operation instanceof Promise, "React must receive the async operation, not a discarded promise");
+          transitions.push(operation);
+        },
+        t: { jobSaved: "saved", jobDeleted: "deleted", resultSaved: "saved", resultDeleted: "deleted", initialFailed: "failed" },
+      });
+      const controller = createWorkbenchPrimaryActionsController(deps);
+      controller[action]();
+      controller[action]();
+      // Recreating the controller or switching Job/Result preserves the workspace reservation.
+      const replacement = createWorkbenchPrimaryActionsController(deps);
+      replacement[action.includes("Job") ? "deleteAdminResultRecord" : "deleteAdminJobRecord"]();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.deepEqual(writes, [action]);
+      assert.deepEqual(pending, [["selected"]]);
+      assert.deepEqual(messages, []);
+      release();
+      await Promise.all(transitions);
+      assert.deepEqual(writes, [action]);
+      assert.deepEqual(messages, [failed ? "write unavailable" : action.startsWith("save") ? "saved" : "deleted"]);
+      assert.deepEqual(pending.at(-1), []);
+    });
+  }
+  test(`${action} without selection starts no transition or mutation`, () => {
+    createWorkbenchPrimaryActionsController(controllerDeps({ selectedAdminJobId: null, selectedAdminResultJobId: null,
+      startTransition: () => { assert.fail("nothing selected"); } }))[action]();
+  });
+}
+
 test("primary run action remains awaitable through a React transition", async () => {
   let release!: () => void;
   let settled = false;
@@ -80,6 +245,23 @@ test("primary run action remains awaitable through a React transition", async ()
   assert.equal(result.ok, true);
   if (!("jobId" in result)) assert.fail("run outcome must expose its job id");
   assert.equal(result.jobId, "job-primary");
+});
+
+test("queued invalid result draft cannot replace feedback published after acceptance", async () => {
+  const feedback = createWorkbenchFeedback();
+  const messages: string[] = [];
+  const transitions: Promise<void>[] = [];
+  const setMessage = withWorkbenchFeedbackInvalidation(feedback, (message: string) => messages.push(message));
+  const controller = createWorkbenchPrimaryActionsController(controllerDeps({
+    feedback, setMessage, selectedAdminResultJobId: "selected", adminResultDraft: "{",
+    t: { invalidJson: "invalid JSON" },
+    adminDataBackendService: { updateResult: async () => assert.fail("invalid draft must not write") },
+    startTransition: (callback: () => Promise<void>) => { transitions.push(callback()); },
+  }));
+  controller.saveAdminResultRecord();
+  setMessage("newer feedback");
+  await Promise.all(transitions);
+  assert.deepEqual(messages, ["newer feedback"]);
 });
 
 test("primary run action converts backend errors into explicit failures", async () => {

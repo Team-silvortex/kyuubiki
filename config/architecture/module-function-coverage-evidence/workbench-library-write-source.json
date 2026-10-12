@@ -1,0 +1,45 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench GUI and PWDT Library writes share canonical source/membership and selection admission for project update/deletion, model save/save-as/deletion and version rename/deletion. Fresh project creation is authority-fenced without requiring an existing catalog. Late old-source confirmations cannot reconcile same-ID new-source records, refresh the new backend or continue dependent PWDT writes; confirmed original outcomes remain contextChanged and same-source deletion cleanup stays independent of newer workspace ownership. Version history is passed canonically through composition and the typed invoker. GUI serialization follows admission, old-source errors suppress publication, verified history can recover independently of a blocked project catalog, and read recovery does not replay writes. Pure frontend and mocked Chromium evidence qualifies source-client contract/recovery/UX, not authenticated identity, continuous authority/membership or payload provenance, write exclusion, audit-routing ownership, installed WebView, remote execution, numerical accuracy or exactly-once. No operational-grade promotion, backup, snapshot or production Node dependency.",
+  "evidence_claims": [
+    {
+      "id": "workbench-library-write-source-admission-and-receipt-fencing",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-library-write-source.ts",
+        "apps/frontend/src/components/workbench/workbench-project-storage-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-script-project-model-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-script-invoker.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controller-props.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controllers.ts",
+        "apps/frontend/test/workflow/workbench-library-write-source.test.ts",
+        "apps/frontend/test/workflow/workbench-project-storage-controller.test.ts",
+        "apps/frontend/test/workflow/workbench-script-project-model-controller.test.ts",
+        "apps/frontend/test/workflow/workbench-flow-composition.test.ts",
+        "tests/integration/workbench-ui-library-write-source.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-library-write-source-20261012.md"
+      ],
+      "required_text": [
+        "captureWorkbenchLibraryWriteSource",
+        "WORKBENCH_RECORD_SOURCE_CHANGED",
+        "Keep receipt cleanup separate from workspace ownership",
+        "contextChanged: true",
+        "modelVersions: props.modelVersions",
+        "canonical version history for real version write admission",
+        "independent security audit posts are not library mutations",
+        "same-ID B catalog",
+        "GUI model serialization occurs only after this admission",
+        "1,586 tests with zero failures or skips",
+        "125 tests with zero failures"
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { WorkbenchDataAdminPanel } from "@/components/workbench/system/workbench-data-admin-panel";
+import { getWorkbenchAdminRecordSourceChangedLabel } from "./workbench-admin-record-source-copy";
 
 type AdminJobRecord = {
   job_id?: string;
@@ -10,6 +11,7 @@ type AdminJobRecord = {
 };
 
 type WorkbenchSystemDataMountProps = {
+  language: string;
   t: {
     dataAdmin: string;
     databaseRecordCount: string;
@@ -75,15 +77,16 @@ type WorkbenchSystemDataMountProps = {
   useCurrentVersionAsAdminFilter: () => void;
   clearAdminFilters: () => void;
   selectedAdminJobId: string | null;
+  adminJobWritePending?: boolean;
+  adminResultWritePending?: boolean;
+  adminJobSourceCurrent?: boolean;
+  adminResultSourceCurrent?: boolean;
   handleSelectAdminJob: (jobId: string) => void;
   selectedAdminJob: AdminJobRecord | null;
   applySelectedAdminJobContext: () => void;
   openSelectedAdminJobProject: () => void;
   openSelectedAdminJobVersion: () => void;
-  jobId: string | null;
-  cancelCurrentJob: () => void;
-  cancelJob: (jobId: string) => Promise<unknown>;
-  setMessage: (value: string) => void;
+  cancelSelectedAdminJob: () => void;
   refreshJobHistory: () => Promise<void>;
   adminJobMessage: string;
   setAdminJobMessage: (value: string) => void;
@@ -115,6 +118,7 @@ type WorkbenchSystemDataMountProps = {
 
 export function WorkbenchSystemDataMount({
   t,
+  language,
   adminJobRows,
   adminResultRows,
   systemDataTab,
@@ -132,15 +136,16 @@ export function WorkbenchSystemDataMount({
   useCurrentVersionAsAdminFilter,
   clearAdminFilters,
   selectedAdminJobId,
+  adminJobWritePending,
+  adminResultWritePending,
+  adminJobSourceCurrent,
+  adminResultSourceCurrent,
   handleSelectAdminJob,
   selectedAdminJob,
   applySelectedAdminJobContext,
   openSelectedAdminJobProject,
   openSelectedAdminJobVersion,
-  jobId,
-  cancelCurrentJob,
-  cancelJob,
-  setMessage,
+  cancelSelectedAdminJob,
   refreshJobHistory,
   adminJobMessage,
   setAdminJobMessage,
@@ -211,6 +216,12 @@ export function WorkbenchSystemDataMount({
       onTabChange={handleSystemDataTabChange}
       jobRows={adminJobRows}
       selectedAdminJobId={selectedAdminJobId}
+      adminJobWritePending={adminJobWritePending}
+      adminResultWritePending={adminResultWritePending}
+      adminJobSourceCurrent={adminJobSourceCurrent}
+      adminResultSourceCurrent={adminResultSourceCurrent}
+      sourceChangedLabel={getWorkbenchAdminRecordSourceChangedLabel(language)}
+      onRefreshRecordSource={() => { void Promise.allSettled([refreshJobHistory(), refreshResults()]); }}
       onSelectAdminJob={handleSelectAdminJob}
       selectedAdminJob={Boolean(selectedAdminJob)}
       selectedAdminJobHasVersion={Boolean(selectedAdminJob?.model_version_id)}
@@ -225,24 +236,7 @@ export function WorkbenchSystemDataMount({
       onApplySelectedJobContext={applySelectedAdminJobContext}
       onOpenSelectedJobProject={openSelectedAdminJobProject}
       onOpenSelectedJobVersion={openSelectedAdminJobVersion}
-      onCancelSelectedJob={() => {
-        if (!selectedAdminJob) return;
-        if (selectedAdminJob.job_id === jobId) {
-          cancelCurrentJob();
-          return;
-        }
-        void (async () => {
-          try {
-            if (selectedAdminJob.job_id) {
-              await cancelJob(selectedAdminJob.job_id);
-            }
-            setMessage(t.jobCancelled);
-            await refreshJobHistory();
-          } catch (error) {
-            setMessage(error instanceof Error ? error.message : t.initialFailed);
-          }
-        })();
-      }}
+      onCancelSelectedJob={cancelSelectedAdminJob}
       adminJobMessage={adminJobMessage}
       onAdminJobMessageChange={setAdminJobMessage}
       adminJobProjectId={adminJobProjectId}

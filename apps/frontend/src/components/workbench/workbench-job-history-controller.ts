@@ -4,6 +4,9 @@ import { useCallback, useRef, useState, type Dispatch, type MutableRefObject, ty
 import type { JobEnvelope, JobHistoryPayload, JobState } from "@/lib/api/fem-shared";
 import { isWorkflowJobStatusContractValid } from "@/lib/api/job-status";
 import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
+import { captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
+import { workbenchAdminRecordSources } from "./workbench-admin-record-source";
+import { readWorkbenchCancellationReceipt } from "./workbench-job-cancellation-receipt";
 import {
   clearWorkbenchRuntimeRecoveryIssue, upsertWorkbenchRuntimeRecoveryIssue,
   type WorkbenchRuntimeRecoveryState,
@@ -60,7 +63,7 @@ export function removeConfirmedWorkbenchJobRecord(jobId: string, deps: {
 }) {
   // Reads started before confirmation cannot resurrect a deleted record.
   deps.jobHistoryRefreshSeqRef.current += 1;
-  deps.setJobHistory((current) => current.filter((entry) => entry.job_id !== jobId));
+  deps.setJobHistory((current) => workbenchAdminRecordSources.filter(current, (entry) => entry.job_id !== jobId));
   deps.setSelectedAdminJobId((current) => current === jobId ? null : current);
 }
 
@@ -90,17 +93,10 @@ export async function cancelWorkbenchJob({
 }: CancelWorkbenchJobArgs): Promise<WorkbenchCancellationResult> {
   let observation = jobPollTokenRef.current;
   try {
-    const payload = await jobHistoryBackendService.cancelJob(jobId);
-    if (payload.job?.job_id !== jobId) throw new Error("Cancellation response belongs to a different job.");
-    if (!isWorkflowJobStatusContractValid({
-      status: payload.job.status, progress: payload.job.progress, statusDetail: payload.job.status_detail,
-    })) throw new Error("JOB_CANCELLATION_INVALID: invalid job status contract.");
-    if (payload.job.status !== "cancelled") {
-      throw new Error(`JOB_CANCELLATION_NOT_CONFIRMED: backend reported ${payload.job.status}; job observation remains active.`);
-    }
+    const cancelledJob = readWorkbenchCancellationReceipt(await jobHistoryBackendService.cancelJob(jobId), jobId);
     if (observation === jobPollTokenRef.current) {
       observation = ++jobPollTokenRef.current;
-      setJob(payload.job);
+      setJob(cancelledJob);
       setResult(null);
       setMessage(labels.jobCancelled);
     }
@@ -142,18 +138,20 @@ export function useWorkbenchJobHistoryController({
 
   const refreshJobHistory = useCallback(async () => {
     const refreshSeq = ++jobHistoryRefreshSeqRef.current;
+    const ownsAuthority = captureWorkbenchApiAuthority("/api/v1/jobs");
 
     try {
       const payload = await jobHistoryBackendService.fetchHistory();
-      if (refreshSeq !== jobHistoryRefreshSeqRef.current) return;
+      if (refreshSeq !== jobHistoryRefreshSeqRef.current || !ownsAuthority()) return;
       const jobs = readWorkbenchJobHistory(payload);
+      workbenchAdminRecordSources.mark(jobs);
       setJobHistory(jobs);
       setSelectedAdminJobId((current) =>
         current && jobs.some((entry) => entry.job_id === current) ? current : jobs[0]?.job_id ?? null,
       );
       setRuntimeRecovery((current) => clearWorkbenchRuntimeRecoveryIssue(current, "job_history"));
     } catch (error) {
-      if (refreshSeq !== jobHistoryRefreshSeqRef.current) return;
+      if (refreshSeq !== jobHistoryRefreshSeqRef.current || !ownsAuthority()) return;
       setRuntimeRecovery((current) => upsertWorkbenchRuntimeRecoveryIssue({
         current, channel: "job_history", scopeLabel: historyScopeLabel,
         error: normalizeWorkbenchRequestError(error, "/api/v1/jobs"),

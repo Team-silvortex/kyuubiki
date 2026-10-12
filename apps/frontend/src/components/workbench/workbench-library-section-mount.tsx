@@ -24,8 +24,6 @@ type WorkbenchLibrarySectionMountProps = {
   workflowCatalogBusy: boolean;
   projects: ProjectRecord[];
   selectedProjectId: string | null;
-  setSelectedProjectId: (projectId: string | null) => void;
-  setSelectedModelId: (modelId: string | null) => void;
   projectNameDraft: string;
   setProjectNameDraft: (value: string) => void;
   projectDescriptionDraft: string;
@@ -73,8 +71,6 @@ export function WorkbenchLibrarySectionMount({
   workflowCatalogBusy,
   projects,
   selectedProjectId,
-  setSelectedProjectId,
-  setSelectedModelId,
   projectNameDraft,
   setProjectNameDraft,
   projectDescriptionDraft,
@@ -123,8 +119,7 @@ export function WorkbenchLibrarySectionMount({
       projects={projects}
       selectedProjectId={selectedProjectId}
       onSelectedProjectChange={(projectId) => {
-        setSelectedProjectId(projectId);
-        setSelectedModelId(null);
+        void invokeScriptAction("project/select", { projectId }).catch(() => {});
       }}
       projectNameDraft={projectNameDraft}
       onProjectNameDraftChange={setProjectNameDraft}

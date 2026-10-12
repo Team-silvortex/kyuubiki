@@ -4,6 +4,7 @@ import {
   persistWorkbenchApiBaseUrl,
   readPersistedWorkbenchApiBaseUrl,
   resolveWorkbenchApiUrl,
+  resolveWorkbenchBackendTarget,
   sanitizeWorkbenchApiBaseUrl,
   WORKBENCH_API_BASE_URL_STORAGE_KEY,
 } from "@/lib/api/backend-target";
@@ -81,4 +82,54 @@ test("requestJson can run outside a browser window while honoring backend target
     globalThis.fetch = previousFetch;
     globalThis.window = previousWindow;
   }
+});
+
+for (const failure of ["storage-access", "target-read", "settings-read"] as const) {
+  test(`unreadable ${failure} is safe to display but blocks HTTP without selecting a fallback`, async () => {
+    const previousWindow = globalThis.window;
+    const previousFetch = globalThis.fetch;
+    const previousEnvironment = process.env.NEXT_PUBLIC_KYUUBIKI_API_BASE_URL;
+    process.env.NEXT_PUBLIC_KYUUBIKI_API_BASE_URL = "https://must-not-fall-back.invalid";
+    let unavailable = true;
+    const storage = {
+      getItem: (key: string) => {
+        if (unavailable && ((failure === "target-read" && key === WORKBENCH_API_BASE_URL_STORAGE_KEY)
+          || (failure === "settings-read" && key === "kyuubiki-workbench-settings"))) throw new Error("private diagnostic must not escape");
+        return null;
+      },
+    };
+    globalThis.window = { location: { search: "" }, get localStorage() {
+      if (unavailable && failure === "storage-access") throw new Error("private diagnostic must not escape");
+      return storage;
+    } } as unknown as Window & typeof globalThis;
+    globalThis.fetch = (async () => { assert.fail("unresolved target must not reach fetch"); }) as typeof fetch;
+    try {
+      assert.deepEqual(resolveWorkbenchBackendTarget(), { baseUrl: "", source: "unavailable" });
+      if (failure !== "settings-read") assert.equal(readPersistedWorkbenchApiBaseUrl(), "");
+      assert.throws(() => resolveWorkbenchApiUrl("/api/v1/jobs"), /BACKEND_TARGET_UNAVAILABLE/u);
+      await assert.rejects(requestJson("/api/v1/jobs", { method: "PATCH" }), (error: Error) => {
+        assert.match(error.message, /BACKEND_TARGET_UNAVAILABLE/u);
+        assert.doesNotMatch(error.message, /private diagnostic/u);
+        return true;
+      });
+      unavailable = false;
+      assert.equal(resolveWorkbenchBackendTarget().source, "environment");
+    } finally {
+      globalThis.fetch = previousFetch;
+      globalThis.window = previousWindow;
+      if (previousEnvironment === undefined) delete process.env.NEXT_PUBLIC_KYUUBIKI_API_BASE_URL;
+      else process.env.NEXT_PUBLIC_KYUUBIKI_API_BASE_URL = previousEnvironment;
+    }
+  });
+}
+
+test("an explicit query target remains usable when lower-priority storage is unreadable", () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = { location: { search: "?apiBaseUrl=https%3A%2F%2Fquery.invalid" },
+    get localStorage() { throw new Error("unavailable storage"); } } as unknown as Window & typeof globalThis;
+  try {
+    assert.deepEqual(resolveWorkbenchBackendTarget(), { baseUrl: "https://query.invalid", source: "query" });
+    assert.equal(resolveWorkbenchApiUrl("/api/v1/jobs"), "https://query.invalid/api/v1/jobs");
+    assert.equal(readPersistedWorkbenchApiBaseUrl(), "");
+  } finally { globalThis.window = previousWindow; }
 });

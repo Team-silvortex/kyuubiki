@@ -107,6 +107,10 @@ export type WorkbenchSystemSidebarMountProps = {
   handleSystemDataTabChange: (tab: "jobs" | "results") => void;
   adminJobRows: Array<{ id: string; status: string; projectId: string | null; heartbeatTone: string; heartbeatLabel: string; statusDetail?: string | null; detail: string }>;
   selectedAdminJobId: string | null;
+  adminJobWritePending?: boolean;
+  adminResultWritePending?: boolean;
+  adminJobSourceCurrent?: boolean;
+  adminResultSourceCurrent?: boolean;
   handleSelectAdminJob: (jobId: string) => void;
   selectedAdminJob: { job_id?: string; project_id?: string | null; model_version_id?: string | null; status?: string } | null;
   adminJobMessage: string;
@@ -158,9 +162,7 @@ export type WorkbenchSystemSidebarMountProps = {
   applySelectedAdminJobContext: () => void;
   openSelectedAdminJobProject: () => void;
   openSelectedAdminJobVersion: () => void;
-  jobId: string | null;
-  cancelCurrentJob: () => void;
-  cancelJob: (jobId: string) => Promise<unknown>;
+  cancelSelectedAdminJob: () => void;
   setMessage: (value: string) => void;
   refreshJobHistory: () => Promise<void>;
 };

@@ -321,3 +321,28 @@ for (const navigation of ["stay", "switch", "away-and-back", "new-intent"]) {
   });
 }
 }
+
+for (const scopeChange of ["source", "unreadable", "feedback"] as const) for (const failed of [false, true]) {
+  test(`linked version scope ${scopeChange} suppresses late ${failed ? "failure" : "payload"} before any workspace application`, async () => {
+    const state = { selectedProjectId: "project-a" as string | null, messages: [] as string[], alerts: [] as Array<{ id: string; message: string }> };
+    const effects = importEffects(state);
+    let sourceCurrent = true, feedbackCurrent = true, release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    effects.fetchModelVersion = async () => { await gate; if (failed) throw new Error("old read failed"); return { version: {} }; };
+    effects.recordHistory = () => assert.fail("obsolete read cannot create an undo entry");
+    effects.resetActiveResult = () => assert.fail("obsolete read cannot clear the live preview");
+    effects.refreshVersions = async () => assert.fail("obsolete read cannot start a version-list read");
+    const pending = openPersistedWorkbenchVersionById("version-a", effects, () => assert.fail("obsolete scope must be rejected before validation"), {
+      isCurrent: () => { if (!sourceCurrent && scopeChange === "unreadable") throw new Error("scope unreadable"); return sourceCurrent; },
+      ownsFeedback: () => feedbackCurrent,
+      onApplied: () => assert.fail("obsolete scope cannot be applied"),
+    });
+    if (scopeChange === "feedback") feedbackCurrent = false;
+    else sourceCurrent = false;
+    release();
+    assert.equal((await pending).ok, false);
+    assert.deepEqual(state.messages, []);
+    assert.deepEqual(state.alerts, []);
+    assert.equal(state.selectedProjectId, "project-a");
+  });
+}

@@ -9,6 +9,7 @@ import { createAdminDataBackendService } from "../../src/lib/workbench/admin-dat
 import { EMPTY_WORKBENCH_RUNTIME_RECOVERY_STATE } from "../../src/components/workbench/workbench-runtime-recovery.ts";
 import type { ResultRecord, ResultListPayload } from "../../src/lib/api/security-results-types.ts";
 import type { WorkbenchRuntimeRecoveryState } from "../../src/components/workbench/workbench-runtime-recovery.ts";
+import { createWorkbenchFeedback } from "../../src/components/workbench/workbench-feedback.ts";
 
 function fixture() {
   const known = { job_id: "known-result", result: { metric: 1 } };
@@ -18,7 +19,10 @@ function fixture() {
     reads: 0, writes: 0, messages: [] as string[],
   };
   let read: () => Promise<ResultListPayload> = async () => ({ results: [known] });
+  const source = { isCurrent: () => true };
   const deps = {
+    recordSource: source, draftSource: source,
+    feedback: createWorkbenchFeedback(),
     adminDataBackendService: createAdminDataBackendService({
       fetchResults: async () => { state.reads += 1; return read(); },
       updateResult: async (job_id, result) => { state.writes += 1; return { job_id, result }; },
@@ -42,7 +46,7 @@ function fixture() {
     adminResultDraft: '{"metric":42}',
     downloadTextFile: () => {},
     setMessage: (value: string) => { state.messages.push(value); },
-    labels: { resultSaved: "saved", resultDeleted: "deleted", resultJsonDownloaded: "exported", invalidJson: "invalid", initialFailed: "failed" },
+    labels: { resultSaved: "saved", resultDeleted: "deleted", resultJsonDownloaded: "exported", invalidJson: "invalid", initialFailed: "failed", sourceChanged: "source changed" },
     resultScopeLabel: "Results",
   };
   return { deps, state, known, setRead: (next: typeof read) => { read = next; } };

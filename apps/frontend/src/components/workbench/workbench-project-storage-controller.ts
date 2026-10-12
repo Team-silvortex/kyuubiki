@@ -16,6 +16,13 @@ import { exportProjectBundle } from "@/lib/models/modeler";
 import { listWorkbenchMacroPresets, listWorkbenchSnippetPresets } from "@/lib/scripting/workbench-script-runtime";
 import { readWorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
 import type { WorkbenchProjectContext, WorkbenchProjectRefresh } from "@/lib/workbench/project-context";
+import type { RemoveConfirmedWorkbenchLibraryRecord } from "./workbench-library-record-recovery";
+import type { ModelRecord, ModelVersionRecord, ProjectRecord } from "@/lib/api/project-types";
+import { workbenchOperationFailure } from "@/lib/workbench/operation-result";
+import type { WorkbenchFeedback } from "./workbench-feedback";
+import { isWorkbenchAdminRecordSourceCurrent, type WorkbenchAdminRecordSource } from "./workbench-admin-record-source";
+import { workbenchLibraryRecordSources, workbenchLibraryVersionSources } from "./workbench-library-record-source";
+import { captureWorkbenchLibraryWriteSource, type WorkbenchLibraryWriteKind } from "./workbench-library-write-source";
 import type {
   WorkbenchProjectLibraryBackendService,
 } from "@/lib/workbench/project-library-backend-service-core";
@@ -25,6 +32,11 @@ import type {
 
 type ProjectStorageControllerDeps = {
   projectContext: WorkbenchProjectContext;
+  feedback: WorkbenchFeedback;
+  sourceChangedLabel: string;
+  getProjects: () => ProjectRecord[];
+  getModelVersions: () => ModelVersionRecord[];
+  removeConfirmedLibraryRecord: RemoveConfirmedWorkbenchLibraryRecord;
   t: any;
   getSelectedProject: () => any;
   selectedProjectId: string | null;
@@ -72,6 +84,11 @@ type ProjectStorageControllerDeps = {
 
 export function createWorkbenchProjectStorageController({
   projectContext,
+  feedback,
+  sourceChangedLabel,
+  getProjects,
+  getModelVersions,
+  removeConfirmedLibraryRecord,
   t,
   getSelectedProject,
   selectedProjectId,
@@ -116,6 +133,15 @@ export function createWorkbenchProjectStorageController({
   serializeCurrentModel,
   getPersistedModelEffects,
 }: ProjectStorageControllerDeps) {
+  const captureWriteSource = (kind: WorkbenchLibraryWriteKind) => {
+    try {
+      return captureWorkbenchLibraryWriteSource({ kind, projectId: selectedProjectId, modelId: selectedModelId,
+        versionId: selectedVersionId, projects: getProjects(), versions: getModelVersions(), projectContext, sourceChangedLabel });
+    } catch (error) {
+      if (projectContext.capture()()) setMessage(error instanceof Error ? error.message : t.initialFailed);
+      throw error;
+    }
+  };
   const buildProjectBundleJson = async () => {
     const selectedProject = getSelectedProject();
     const selectedProjectModels = getSelectedProjectModels();
@@ -223,21 +249,24 @@ export function createWorkbenchProjectStorageController({
 
   const createProjectRecord = () => {
     const isCurrent = projectContext.begin();
+    let ownsSource = () => false;
     startTransition(async () => {
       try {
+        ownsSource = captureWriteSource("createProject");
         const payload = await projectLibraryBackendService.createProject({
           name: projectNameDraft || t.defaultProject,
           description: projectDescriptionDraft,
         });
+        if (!ownsSource()) return;
         await refreshProjects(false, undefined, { preserveSelection: true });
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setSelectedProjectId(payload.project.project_id);
         setSelectedModelId(null);
         setSelectedVersionId(null);
         setModelVersions([]);
         setMessage(t.projectCreated);
       } catch (error) {
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -246,18 +275,21 @@ export function createWorkbenchProjectStorageController({
   const updateProjectRecord = () => {
     if (!selectedProjectId) return;
     const isCurrent = projectContext.begin();
+    let ownsSource = () => false;
 
     startTransition(async () => {
       try {
+        ownsSource = captureWriteSource("project");
         await projectLibraryBackendService.updateProject(selectedProjectId, {
           name: projectNameDraft || t.defaultProject,
           description: projectDescriptionDraft,
         });
+        if (!ownsSource()) return;
         await refreshProjects(false, undefined, { preserveSelection: true });
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(t.projectUpdated);
       } catch (error) {
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -267,21 +299,26 @@ export function createWorkbenchProjectStorageController({
     if (!selectedProjectId) return;
     if (typeof window !== "undefined" && !window.confirm(projectNameDraft)) return;
     const isCurrent = projectContext.begin();
+    let ownsSource = () => false;
 
     startTransition(async () => {
       try {
+        ownsSource = captureWriteSource("project");
         await projectLibraryBackendService.deleteProject(selectedProjectId);
-        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (!ownsSource()) return;
         const contextChanged = !isCurrent();
+        removeConfirmedLibraryRecord("projectId", selectedProjectId);
         if (projectContext.detachDeleted("projectId", selectedProjectId)) {
           setSelectedProjectId(null);
           setSelectedModelId(null);
           setSelectedVersionId(null);
           setModelVersions([]);
         }
-        if (!contextChanged) setMessage(t.projectDeleted);
+        const ownsFeedback = projectContext.capture();
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (!contextChanged && ownsFeedback() && ownsSource()) setMessage(t.projectDeleted);
       } catch (error) {
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -293,11 +330,13 @@ export function createWorkbenchProjectStorageController({
       return;
     }
 
-    const payload = serializeCurrentModel() as Record<string, unknown> & { model_schema_version?: string };
     let isCurrent = projectContext.begin();
+    let ownsSource = () => false;
 
     startTransition(async () => {
       try {
+        ownsSource = captureWriteSource(!selectedModelId || saveAs ? "project" : "model");
+        const payload = serializeCurrentModel() as Record<string, unknown> & { model_schema_version?: string };
         const modelPayload = {
           name: loadedModelName,
           kind: studyKind,
@@ -308,8 +347,9 @@ export function createWorkbenchProjectStorageController({
 
         if (!selectedModelId || saveAs) {
           const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
+          if (!ownsSource()) return;
           await refreshProjects(false, undefined, { preserveSelection: true });
-          if (!isCurrent()) return;
+          if (!isCurrent() || !ownsSource()) return;
           isCurrent = projectContext.update({ projectId: selectedProjectId, modelId: created.model.model_id,
             versionId: created.model.latest_version_id ?? null });
           setSelectedModelId(created.model.model_id);
@@ -321,45 +361,68 @@ export function createWorkbenchProjectStorageController({
 
         // The backend checkpoint updates model metadata and geometry in the same transaction.
         const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
-
+        if (!ownsSource()) return;
         await refreshProjects(false, undefined, { preserveSelection: true });
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         isCurrent = projectContext.update({ projectId: selectedProjectId, modelId: selectedModelId,
           versionId: version.version.version_id });
         setSelectedVersionId(version.version.version_id);
         setMessage(t.modelSaved);
         await refreshVersions(selectedModelId);
       } catch (error) {
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
   };
 
-  const openSavedModel = (model: any) => {
-    return openPersistedWorkbenchModel(model, getPersistedModelEffects());
+  const navigationScope = (source: WorkbenchAdminRecordSource | null) => {
+    let ownsFeedback = feedback.begin();
+    return { isCurrent: () => isWorkbenchAdminRecordSourceCurrent(source, source),
+      ownsFeedback: () => ownsFeedback(), onApplied: () => { ownsFeedback = feedback.begin(); } };
+  };
+  const rejectNavigation = () => {
+    const message = `WORKBENCH_RECORD_SOURCE_CHANGED: ${sourceChangedLabel}`;
+    if (feedback.begin()() && projectContext.capture()()) setMessage(message);
+    return Promise.resolve(workbenchOperationFailure(new Error(message), message));
+  };
+  const openSavedModel = (model: ModelRecord) => {
+    const projects = getProjects(), selection = projectContext.current();
+    const scope = navigationScope(workbenchLibraryRecordSources.sourceOf(projects));
+    if (!projectContext.capture()() || !scope.isCurrent() || !scope.ownsFeedback()
+      || model.project_id !== selection.projectId
+      || !projects.some((project) => project.project_id === model.project_id && project.models?.includes(model))) return rejectNavigation();
+    return openPersistedWorkbenchModel(model, getPersistedModelEffects(), scope);
   };
 
-  const openSavedVersion = (version: any) => {
-    return openPersistedWorkbenchVersion(version, getPersistedModelEffects());
+  const openSavedVersion = (version: ModelVersionRecord) => {
+    const versions = getModelVersions(), selection = projectContext.current();
+    const scope = navigationScope(workbenchLibraryVersionSources.sourceOf(versions));
+    if (!projectContext.capture()() || !scope.isCurrent() || !scope.ownsFeedback() || !versions.includes(version)
+      || version.model_id !== selection.modelId || version.project_id !== selection.projectId) return rejectNavigation();
+    return openPersistedWorkbenchVersion(version, getPersistedModelEffects(), scope);
   };
 
-  const openModelVersionById = (versionId: string, validate?: import("@/lib/workbench/checkpoint-recovery").CheckpointVersionGuard) => {
-    return openPersistedWorkbenchVersionById(versionId, getPersistedModelEffects(), validate);
+  const openModelVersionById = (versionId: string, validate?: import("@/lib/workbench/checkpoint-recovery").CheckpointVersionGuard,
+    scope?: import("./workbench-persisted-model-controller").WorkbenchVersionLoadScope) => {
+    return openPersistedWorkbenchVersionById(versionId, getPersistedModelEffects(), validate, scope);
   };
 
   const renameSelectedVersion = () => {
     if (!selectedVersionId) return;
     const isCurrent = projectContext.begin();
+    let ownsSource = () => false;
 
     startTransition(async () => {
       try {
+        ownsSource = captureWriteSource("version");
         await projectLibraryBackendService.updateModelVersion(selectedVersionId, { name: loadedModelName });
+        if (!ownsSource()) return;
         if (selectedModelId && projectContext.hasModel(selectedModelId)) await refreshVersions(selectedModelId);
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(t.versionRenamed);
       } catch (error) {
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -368,17 +431,22 @@ export function createWorkbenchProjectStorageController({
   const deleteSelectedVersion = () => {
     if (!selectedVersionId) return;
     const isCurrent = projectContext.begin();
+    let ownsSource = () => false;
 
     startTransition(async () => {
       try {
-        await projectLibraryBackendService.deleteModelVersion(selectedVersionId);
-        await refreshProjects(false, undefined, { preserveSelection: true });
-        if (selectedModelId && projectContext.hasModel(selectedModelId)) await refreshVersions(selectedModelId);
+        ownsSource = captureWriteSource("version");
+        const removed = await projectLibraryBackendService.deleteModelVersion(selectedVersionId);
+        if (!ownsSource()) return;
         const contextChanged = !isCurrent();
+        removeConfirmedLibraryRecord("versionId", selectedVersionId, removed.version.model_id);
         if (projectContext.detachDeleted("versionId", selectedVersionId)) setSelectedVersionId(null);
-        if (!contextChanged) setMessage(t.versionDeleted);
+        const ownsFeedback = projectContext.capture();
+        await Promise.all([refreshProjects(false, undefined, { preserveSelection: true }),
+          selectedModelId && projectContext.hasModel(selectedModelId) ? refreshVersions(selectedModelId) : Promise.resolve()]);
+        if (!contextChanged && ownsFeedback() && ownsSource()) setMessage(t.versionDeleted);
       } catch (error) {
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -387,20 +455,25 @@ export function createWorkbenchProjectStorageController({
   const deleteSavedModelRecord = () => {
     if (!selectedModelId) return;
     const isCurrent = projectContext.begin();
+    let ownsSource = () => false;
 
     startTransition(async () => {
       try {
+        ownsSource = captureWriteSource("model");
         await projectLibraryBackendService.deleteModel(selectedModelId);
-        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (!ownsSource()) return;
         const contextChanged = !isCurrent();
+        removeConfirmedLibraryRecord("modelId", selectedModelId);
         if (projectContext.detachDeleted("modelId", selectedModelId)) {
           setSelectedModelId(null);
           setSelectedVersionId(null);
           setModelVersions([]);
         }
-        if (!contextChanged) setMessage(t.modelDeletedStored);
+        const ownsFeedback = projectContext.capture();
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (!contextChanged && ownsFeedback() && ownsSource()) setMessage(t.modelDeletedStored);
       } catch (error) {
-        if (!isCurrent()) return;
+        if (!isCurrent() || !ownsSource()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });

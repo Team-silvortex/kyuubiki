@@ -1,0 +1,54 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench administrative Job/Result Save and Delete share a session-owned in-flight reservation by parent job ID, published before the React transition and retained through follow-up reads. Duplicate or conflicting callbacks are not queued. Paired-record views and sidebar remount retain protection while other records, editing, navigation and export remain available. Deferred task/result rows filter against current identities so confirmed deletion cannot remain visible while refresh waits. Fourteen added mocked-service Chromium controls and 21 added frontend controls verify scoped behavior. This is not backend locking, cross-client serialization, late-message ownership, installed WebView, remote, power-loss, ambiguous-write, authenticated provenance or exactly-once qualification. No persistent cache, snapshot, backup, retry queue, production Node dependency or operational-grade promotion is added.",
+  "evidence_claims": [
+    {
+      "id": "workbench-admin-record-write-flight-and-deferred-membership",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-admin-record-mutations.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-security-state.ts",
+        "apps/frontend/src/components/workbench/workbench-primary-actions-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-context.ts",
+        "apps/frontend/src/components/workbench/workbench-core-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controller-props.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controllers.ts",
+        "apps/frontend/src/components/workbench/workbench-main-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-session-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-sidebar-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-sidebar-mount-props.tsx",
+        "apps/frontend/src/components/workbench/workbench-system-sidebar-mount.tsx",
+        "apps/frontend/src/components/workbench/workbench-system-data-mount.tsx",
+        "apps/frontend/src/components/workbench/system/workbench-data-admin-panel.tsx",
+        "apps/frontend/test/workflow/workbench-admin-record-mutations.test.ts",
+        "apps/frontend/test/workflow/workbench-primary-actions-controller.test.ts",
+        "apps/frontend/test/workflow/workbench-flow-composition.test.ts",
+        "apps/frontend/test/workflow/workbench-library-record-recovery.test.ts",
+        "tests/integration/workbench-ui-admin-record-flight.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-admin-record-flight-20261011.md"
+      ],
+      "required_text": [
+        "createWorkbenchAdminRecordMutations",
+        "const operation = deps.adminRecordMutations.run(jobId,",
+        "the reservation must publish before React starts a transition",
+        "disabled={adminJobWritePending || !adminJobSourceCurrent}",
+        "disabled={adminResultWritePending || !adminResultSourceCurrent}",
+        "retainCurrentWorkbenchRecords",
+        "synchronous duplicate activation must not replay a record write",
+        "remount cannot replay a pending write",
+        "Effect remount restores pending identities without starting another operation.",
+        "This change does not add late-message ownership fencing",
+        "1,319 passed, zero failures or skips",
+        "139 passed, zero failures or skips"
+      ]
+    }
+  ]
+}

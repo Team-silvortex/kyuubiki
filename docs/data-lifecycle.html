@@ -240,6 +240,93 @@
             JSON/SQLite API controls do not qualify installed, remote, power-loss
             or ambiguous-write outcome reconciliation. See the
             <a href="../reports/workbench-result-record-recovery-20261011.md">result record controls</a>.</li>
+          <li><strong>Library record confirmation:</strong> ordinary project/model/version
+            writes require matching usable records before success or follow-up reads.
+            Library DELETE returns the removed record, not a boolean deletion flag.
+            Confirmed deletion removes only matching local records before refresh,
+            invalidates older reads and retains the live modeling copy. Other selection
+            and newer workspace feedback survive; only affected version reads are
+            invalidated. Deferred model/version lists filter against current identities,
+            so blocked refresh cannot keep removed rows visible. Version and catalog
+            refresh start independently. Removing the
+            latest version clears its local latest pointer without guessing a replacement
+            from a partial list. Read recovery never repeats ordinary writes; checkpoint
+            save/retry is unchanged. No persistent tombstone, backup or draft archive
+            is added. Source-browser and real JSON/SQLite API tests have distinct scope;
+            ambiguous-write reconciliation, installed and remote acceptance remain open.
+            See the <a href="../reports/workbench-library-record-recovery-20261011.md">library record controls</a>.</li>
+          <li><strong>Task/result write coordination:</strong> Workbench administrative
+            Save/Delete reserves the parent job ID before the async UI transition and
+            retains it through follow-up reads. Duplicate or conflicting callbacks are
+            not queued; paired-record views and sidebar remount share protection.
+            Other records, draft editing, navigation and export remain available.
+            Deferred task/result rows filter against current identities so confirmed
+            deletion stays visible as removal even while refresh waits. No persistent
+            queue, snapshot or backup is added. This is source-client protection, not
+            cross-client locking, late-message ownership or installed acceptance.
+            See the <a href="../reports/workbench-admin-record-flight-20261011.md">write recovery controls</a>.</li>
+          <li><strong>Task/result feedback and backend ownership:</strong> accepted
+            Save/Delete intent captures a workspace feedback revision before its queued
+            write. New messages, navigation, manual selection and disposal suppress
+            obsolete messages without cancelling confirmed writes or same-backend cleanup.
+            Effective URL and governed-header comparison prevents old confirmations from
+            deleting same-ID records or starting reads on another backend. Job/result reads
+            discard old-authority replies independently of latest-read sequencing.
+            This adds no persistent snapshot, backup or write replay, and does not
+            establish continuous authority-history fencing or authenticated deployment.
+            See the <a href="../reports/workbench-admin-feedback-recovery-20261011.md">feedback and backend controls</a>.</li>
+          <li><strong>Task/result record and draft sources:</strong> Save/Delete
+            requires matching verified collection and editor sources in the current
+            API scope. Old-backend records or drafts cannot authorize writes to same-ID
+            records on another backend. Failed refresh keeps old editing read-only
+            for those writes; verified new-source reads replace prior-source fields.
+            Same-source reads retain dirty editing. An explicit read-only refresh
+            warns about draft replacement; local result export remains available while
+            that old result stays selected. One weak metadata entry per collection
+            stays outside JSON and deletion filters retain its source. This is not
+            authenticated provenance or backend authorization. Unreadable connection
+            settings remain safe to display, but HTTP rejects the unresolved target
+            rather than silently selecting another backend. See the
+            <a href="../reports/workbench-admin-record-source-20261012.md">record and draft source controls</a>.</li>
+          <li><strong>Selected task cancellation:</strong> System/Data checks the
+            saved record source and an exact valid cancelled receipt before read
+            recovery. Cancellation shares the administrative parent Save/Delete
+            reservation through refresh. Failed reads do not revoke confirmation
+            or replay the request; stale-source replies cannot start reads on a
+            new backend. Historical cancellation does not take over the live
+            calculation by matching its job ID. This is source-client recovery,
+            not backend locking or a unified current-job cancellation flight.
+            See the <a href="../reports/workbench-admin-job-cancellation-20261012.md">selected cancellation controls</a>.</li>
+          <li><strong>Linked record navigation:</strong> GUI and PWDT share task/result
+            membership and current-source admission. Linked versions are checked
+            against their version ID and supplied project association before geometry
+            is applied. A superseded payload or final list read cannot continue a
+            dependent save. Project-only navigation preserves working geometry but
+            detaches saved-model/version bindings; verified project catalog sources
+            stay outside JSON and survive confirmed removal transforms. This is not
+            authenticated provenance or general saved-model admission. See the
+            <a href="../reports/workbench-linked-context-recovery-20261012.md">linked-context controls</a>.</li>
+          <li><strong>Ordinary project and saved model navigation:</strong> the GUI
+            project selector uses the same action as PWDT. Explicit selection or
+            deselection supersedes older intents and detaches saved bindings while
+            retaining working geometry. Saved model/version opening requires current
+            canonical catalog membership and exact returned identities and parents.
+            Version lists retain known rows on invalid reads and preserve weak source
+            metadata through removal. Metadata and GUI name/material edits prevent
+            old loads or errors from replacing newer work. This is source-client
+            recovery, not authenticated provenance or continuous authority history.
+            See the <a href="../reports/workbench-saved-navigation-recovery-20261012.md">saved navigation controls</a>.</li>
+          <li><strong>Library write sources:</strong> GUI and PWDT project update/deletion,
+            model save/save-as/deletion and version rename/deletion require verified
+            canonical catalog membership and current selection before dispatch.
+            New-project creation is authority-fenced without an existing catalog.
+            An old-source receipt cannot prune same-ID new-source records or refresh
+            the new backend. Confirmed original outcomes remain context-changed;
+            same-source deletion still reconciles its record despite failed reads.
+            Version history can recover independently of a blocked project catalog.
+            Independent security audit POSTs are not Library mutations. These are
+            client guards, not authorization, write locks or working-payload provenance.
+            See the <a href="../reports/workbench-library-write-source-20261012.md">Library write source controls</a>.</li>
           <li><strong>Workflow branch decisions:</strong> the same private recovery record
             additionally retains at most 64 successful condition decisions and 64 KiB
             encoded bytes per active parent. Entries contain node/input-context digests,

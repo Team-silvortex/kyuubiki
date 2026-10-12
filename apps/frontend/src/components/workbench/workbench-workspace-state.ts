@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createWorkbenchFeedback, withWorkbenchFeedbackInvalidation } from "./workbench-feedback";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import type { WorkbenchNoticeItem } from "@/components/workbench/workbench-notice-state";
 import {
@@ -127,6 +128,8 @@ export function useWorkbenchWorkspaceState(params: {
   defaultProjectLabel: string;
 }) {
   const { defaultLoadedModelName, defaultMessage, defaultProjectLabel } = params;
+  const [feedback] = useState(createWorkbenchFeedback);
+  useEffect(() => { feedback.mount(); return () => feedback.dispose(); }, [feedback]);
   const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
   const [heatBarModel, setHeatBarModel] = useState<HeatBarStudyJobInput>(defaultHeatBar1d);
@@ -148,7 +151,8 @@ export function useWorkbenchWorkspaceState(params: {
   const [spring3dModel, setSpring3dModel] = useState<Spring3dStudyJobInput>(defaultSpring3d);
   const [parametric, setParametric] = useState<ParametricTrussConfig>(defaultParametric);
   const [panelParametric, setPanelParametric] = useState<ParametricPanelConfig>(defaultPanelParametric);
-  const [activeMaterial, setActiveMaterial] = useState("210");
+  const [activeMaterial, setRawActiveMaterial] = useState("210");
+  const [setActiveMaterial] = useState(() => withWorkbenchFeedbackInvalidation(feedback, setRawActiveMaterial));
   const [planeResultField, setPlaneResultField] = useState<PlaneResultField>("von_mises");
   const [frameResultField, setFrameResultField] = useState<FrameResultField>("max_combined_stress");
   const [beamResultField, setBeamResultField] = useState<BeamResultField>("max_bending_stress");
@@ -171,8 +175,10 @@ export function useWorkbenchWorkspaceState(params: {
   const [modelVersions, setModelVersions] = useState<ModelVersionRecord[]>([]);
   const [projectNameDraft, setProjectNameDraft] = useState(defaultProjectLabel);
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState("");
-  const [loadedModelName, setLoadedModelName] = useState(defaultLoadedModelName);
-  const [message, setMessage] = useState(defaultMessage);
+  const [loadedModelName, setRawLoadedModelName] = useState(defaultLoadedModelName);
+  const [setLoadedModelName] = useState(() => withWorkbenchFeedbackInvalidation(feedback, setRawLoadedModelName));
+  const [message, setRawMessage] = useState(defaultMessage);
+  const [setMessage] = useState(() => withWorkbenchFeedbackInvalidation(feedback, setRawMessage));
   const [importNotice, setImportNotice] = useState<WorkbenchNoticeItem | null>(null);
   const [systemAlerts, setSystemAlerts] = useState<WorkbenchAlertItem[]>([]);
   const [hiddenMaterials, setHiddenMaterials] = useState<Record<StudyKind, string[]>>({
@@ -200,13 +206,16 @@ export function useWorkbenchWorkspaceState(params: {
     plane_quad_2d: [],
     frame_2d: [],
   });
-  const [sidebarSection, setSidebarSection] = useState<SidebarSection>("model");
+  const [sidebarSection, setRawSidebarSection] = useState<SidebarSection>("model");
+  const [setSidebarSection] = useState(() => withWorkbenchFeedbackInvalidation(feedback, setRawSidebarSection));
   const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
   const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
   const [modelToolsPage, setModelToolsPage] = useState<ModelToolsPage>("overview");
   const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("jobs");
-  const [systemDataTab, setSystemDataTab] = useState<SystemDataTab>("jobs");
-  const [systemPanelTab, setSystemPanelTab] = useState<SystemPanelTab>("overview");
+  const [systemDataTab, setRawSystemDataTab] = useState<SystemDataTab>("jobs");
+  const [setSystemDataTab] = useState(() => withWorkbenchFeedbackInvalidation(feedback, setRawSystemDataTab));
+  const [systemPanelTab, setRawSystemPanelTab] = useState<SystemPanelTab>("overview");
+  const [setSystemPanelTab] = useState(() => withWorkbenchFeedbackInvalidation(feedback, setRawSystemPanelTab));
   const [draggingNode, setDraggingNode] = useState<number | null>(null);
   const [truss3dLinkMode, setTruss3dLinkMode] = useState(false);
   const [selectedTruss3dNodes, setSelectedTruss3dNodes] = useState<number[]>([]);
@@ -217,6 +226,7 @@ export function useWorkbenchWorkspaceState(params: {
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
 
   return {
+    feedback,
     studyKind,
     setStudyKind,
     axialForm,

@@ -2,8 +2,10 @@
 
 import { useDeferredValue } from "react";
 import type { ModelVersionRecord } from "@/lib/api/project-types";
+import type { WorkbenchFeedback } from "./workbench-feedback";
 import {
   buildWorkbenchAdminSelections,
+  retainCurrentWorkbenchRecords,
 } from "@/components/workbench/workbench-admin-context";
 import { useWorkbenchAdminSecurityState } from "@/components/workbench/workbench-admin-security-state";
 import { useWorkbenchDataRefreshController } from "@/components/workbench/workbench-data-refresh-controller";
@@ -13,7 +15,7 @@ import {
   useWorkbenchWorkflowController,
 } from "@/components/workbench/workflow/workbench-workflow-controller";
 
-type WorkbenchSessionCompositionProps = Record<string, any> & Pick<
+type WorkbenchSessionCompositionProps = Record<string, any> & { language: string; feedback: WorkbenchFeedback } & Pick<
   Parameters<typeof useWorkbenchJobHistoryController>[0], "setResult" | "setRuntimeRecovery"
 >;
 
@@ -99,15 +101,20 @@ export function useWorkbenchSessionComposition(props: WorkbenchSessionCompositio
     selectedAdminJobId,
     selectedAdminResultJobId,
   });
-  const deferredProjectModels = useDeferredValue(selectedProjectModels);
+  const deferredProjectModels = retainCurrentWorkbenchRecords(useDeferredValue(selectedProjectModels), selectedProjectModels,
+    (model) => model.model_id);
   const deferredVersions = useDeferredValue(props.modelVersions as ModelVersionRecord[]);
-  // A deferred render must never offer a previous model's versions after navigation.
-  const deferredModelVersions = deferredVersions.filter((version) => version.model_id === props.selectedModelId);
-  const deferredJobHistory = useDeferredValue(jobHistory);
-  const deferredResultRecords = useDeferredValue(props.resultRecords);
+  // A deferred render cannot offer removed versions or versions from a previous model.
+  const deferredModelVersions = retainCurrentWorkbenchRecords(deferredVersions, props.modelVersions as ModelVersionRecord[],
+    (version) => version.version_id).filter((version) => version.model_id === props.selectedModelId);
+  const deferredJobHistory = retainCurrentWorkbenchRecords(useDeferredValue(jobHistory), jobHistory,
+    (record) => record.job_id);
+  const deferredResultRecords = retainCurrentWorkbenchRecords(useDeferredValue(props.resultRecords), props.resultRecords,
+    (record: { job_id: string }) => record.job_id);
 
   const {
     projectContext,
+    removeConfirmedLibraryRecord,
     securityEventReadPending,
     refreshHealth,
     refreshProjects,
@@ -142,13 +149,17 @@ export function useWorkbenchSessionComposition(props: WorkbenchSessionCompositio
   });
 
   const projectFlows = buildWorkbenchProjectFlows({
+    feedback: props.feedback,
+    resultRecords: props.resultRecords,
     projectContext,
+    removeConfirmedLibraryRecord,
     selectedAdminJob,
     selectedAdminJobId,
     selectedAdminResultJobId,
     jobHistory,
     projects: props.projects,
     refreshVersions,
+    modelVersions: props.modelVersions,
     setAdminFilterProjectId: adminSecurityState.setAdminFilterProjectId,
     setAdminFilterModelVersionId: adminSecurityState.setAdminFilterModelVersionId,
     setAdminJobCaseId: adminSecurityState.setAdminJobCaseId,

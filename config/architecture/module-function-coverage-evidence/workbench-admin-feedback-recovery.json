@@ -1,0 +1,54 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench administrative Job/Result Save and Delete publish late success or failure feedback only while their workspace revision and effective API authority remain current. Accepted intent is captured synchronously before the queued write; suppressed duplicates do not supersede it. Message publication, navigation, manual record selection and workspace disposal invalidate feedback, while confirmed same-authority cleanup and read recovery remain independent. Effective URL and governed auth-header comparison prevents an old write from modifying same-ID records or starting follow-up reads on another backend; job/result reads discard old-authority replies even without a newer read. Twenty-four mocked-service Chromium controls and sixteen added frontend controls verify this bounded source-client behavior. This is not installed WebView acceptance, authenticated remote deployment, continuous authority-history fencing, ambiguous-write reconciliation, cancellation, cross-client locking, exactly-once execution or operational-grade qualification. No persistent snapshot, backup, write replay or production Node dependency is introduced.",
+  "evidence_claims": [
+    {
+      "id": "workbench-admin-feedback-and-api-authority-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-feedback.ts",
+        "apps/frontend/src/components/workbench/workbench-workspace-state.ts",
+        "apps/frontend/src/components/workbench/workbench-shell-bindings.ts",
+        "apps/frontend/src/components/workbench/workbench-main-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controller-props.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controllers.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-record-mutations.ts",
+        "apps/frontend/src/components/workbench/workbench-primary-actions-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-job-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-result-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-job-history-controller.ts",
+        "apps/frontend/src/lib/api/auth-context.ts",
+        "apps/frontend/test/workflow/workbench-feedback.test.ts",
+        "apps/frontend/test/workflow/workbench-api-auth-context.test.ts",
+        "apps/frontend/test/workflow/workbench-admin-record-mutations.test.ts",
+        "apps/frontend/test/workflow/workbench-primary-actions-controller.test.ts",
+        "apps/frontend/test/workflow/workbench-flow-composition.test.ts",
+        "tests/integration/workbench-ui-admin-feedback-recovery.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-admin-feedback-recovery-20261011.md"
+      ],
+      "required_text": [
+        "createWorkbenchFeedback",
+        "withWorkbenchFeedbackInvalidation",
+        "onAccepted?.();",
+        "captureWorkbenchApiAuthority",
+        "if (!ownsAuthority()) return;",
+        "captures feedback at acceptance before its queued write starts",
+        "manual selection ABA cannot revive an old feedback owner",
+        "old write confirmation must not start follow-up reads on another authority",
+        "the same record ID on the new authority must remain visible",
+        "without a newer read",
+        "1,335 passed, zero failures or skips",
+        "163 passed, zero failures or skips",
+        "does not cancel or roll back a backend write"
+      ]
+    }
+  ]
+}

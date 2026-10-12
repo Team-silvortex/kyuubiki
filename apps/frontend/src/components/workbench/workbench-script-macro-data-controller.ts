@@ -1,6 +1,6 @@
 "use client";
 
-import type { JobState } from "@/lib/api";
+import type { WorkbenchLinkedContext } from "./workbench-admin-data-controller";
 import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 import type { WorkbenchOperationResult } from "@/lib/workbench/operation-result";
 import { workbenchProjectContextChangedError } from "@/lib/workbench/project-context";
@@ -33,10 +33,7 @@ type ScriptMacroDataControllerDeps = {
   setSelectedAdminResultJobId: (value: string) => void;
   setSidebarSection: (value: "study" | "model" | "workflow" | "library" | "system") => void;
   setSystemPanelTab: (value: "overview" | "config" | "scripts" | "runtime" | "data") => void;
-  resolveScriptLinkedJob: (payload: Record<string, unknown>) => JobState | null;
-  openModelVersionById: (modelVersionId: string) => Promise<WorkbenchOperationResult>;
-  openProjectContextById: (projectId: string) => Promise<WorkbenchOperationResult>;
-  applyJobContextToWorkbench: (linkedJob: JobState) => Promise<WorkbenchOperationResult>;
+  openLinkedContext: (payload: Record<string, unknown>) => Promise<WorkbenchOperationResult<WorkbenchLinkedContext>>;
   downloadDatabaseSnapshot: () => Promise<WorkbenchDownloadResult>;
 };
 
@@ -55,10 +52,7 @@ export async function handleWorkbenchScriptMacroDataAction({
   setSelectedAdminResultJobId,
   setSidebarSection,
   setSystemPanelTab,
-  resolveScriptLinkedJob,
-  openModelVersionById,
-  openProjectContextById,
-  applyJobContextToWorkbench,
+  openLinkedContext,
   downloadDatabaseSnapshot,
 }: ScriptMacroDataControllerDeps): Promise<Record<string, unknown> | null> {
   const copy = getWorkbenchScriptErrorCopy(language);
@@ -113,37 +107,9 @@ export async function handleWorkbenchScriptMacroDataAction({
     case "data/openLinkedContext": {
       const mode =
         payload.mode === "apply" || payload.mode === "project" || payload.mode === "version" ? payload.mode : "apply";
-      const linkedJob = resolveScriptLinkedJob(payload);
-
-      if (!linkedJob) {
-        throw new Error(copy.linkedContextMissing);
-      }
-
-      if (mode === "version") {
-        if (!linkedJob.model_version_id) {
-          throw new Error(copy.linkedVersionMissing);
-        }
-        const result = await openModelVersionById(linkedJob.model_version_id);
-        if (!result.ok) throw result.error;
-      } else if (mode === "project") {
-        if (!linkedJob.project_id) {
-          throw new Error(copy.linkedProjectMissing);
-        }
-        const result = await openProjectContextById(linkedJob.project_id);
-        if (!result.ok) throw result.error;
-      } else {
-        const result = await applyJobContextToWorkbench(linkedJob);
-        if (!result.ok) throw result.error;
-      }
-
-      return {
-        ok: true,
-        action,
-        mode,
-        jobId: linkedJob.job_id,
-        projectId: linkedJob.project_id ?? null,
-        modelVersionId: linkedJob.model_version_id ?? null,
-      };
+      const result = await openLinkedContext({ ...payload, mode });
+      if (!result.ok) throw result.error;
+      return { ...result, action, mode };
     }
     case "data/exportDatabase": {
       const download = await downloadDatabaseSnapshot();

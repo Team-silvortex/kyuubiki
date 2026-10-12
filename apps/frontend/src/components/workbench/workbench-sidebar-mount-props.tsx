@@ -179,8 +179,6 @@ export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSour
         workflowCatalogBusy={props.workflowCatalogBusy}
         projects={props.projects}
         selectedProjectId={props.selectedProjectId}
-        setSelectedProjectId={props.setSelectedProjectId}
-        setSelectedModelId={props.setSelectedModelId}
         projectNameDraft={props.projectNameDraft}
         setProjectNameDraft={props.setProjectNameDraft}
         projectDescriptionDraft={props.projectDescriptionDraft}
@@ -303,6 +301,10 @@ export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSour
         handleSystemDataTabChange={props.handleSystemDataTabChange}
         adminJobRows={props.adminJobRows}
         selectedAdminJobId={props.selectedAdminJobId}
+        adminJobWritePending={props.adminJobWritePending}
+        adminResultWritePending={props.adminResultWritePending}
+        adminJobSourceCurrent={props.adminJobSourceCurrent}
+        adminResultSourceCurrent={props.adminResultSourceCurrent}
         handleSelectAdminJob={props.handleSelectAdminJob}
         selectedAdminJob={props.selectedAdminJob}
         adminJobMessage={props.adminJobMessage}
@@ -342,9 +344,7 @@ export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSour
         applySelectedAdminJobContext={props.applySelectedAdminJobContext}
         openSelectedAdminJobProject={props.openSelectedAdminJobProject}
         openSelectedAdminJobVersion={props.openSelectedAdminJobVersion}
-        jobId={props.job?.job_id ?? null}
-        cancelCurrentJob={props.cancelCurrentJob}
-        cancelJob={props.cancelJob}
+        cancelSelectedAdminJob={props.cancelSelectedAdminJob}
         setMessage={props.setMessage}
         refreshJobHistory={props.refreshJobHistory}
       />

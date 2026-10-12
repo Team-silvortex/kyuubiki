@@ -1,7 +1,13 @@
 "use client";
 
 import type { JobState, ProjectRecord, ResultRecord } from "@/lib/api";
-import type { WorkbenchOperationResult } from "@/lib/workbench/operation-result";
+import type { AdminDataControllerDeps } from "./workbench-admin-data-controller";
+
+export function retainCurrentWorkbenchRecords<T>(deferred: T[], current: T[], identity: (record: T) => string): T[] {
+  const currentIds = new Set(current.map(identity));
+  // Deferred additions may wait, but removed records must not survive a pending transition.
+  return deferred.filter((record) => currentIds.has(identity(record)));
+}
 
 type AdminContextLabels = {
   noJobVersion: string;
@@ -14,16 +20,20 @@ type AdminContextLabels = {
   selectJobFirst: string;
   missingResultJob: string;
   recordContextApplied: string;
+  sourceChanged: string;
 };
 
 type BuildAdminContextEffectsArgs = {
+  projectContext: AdminDataControllerDeps["projectContext"];
+  feedback: AdminDataControllerDeps["feedback"];
+  resultRecords: ResultRecord[];
   selectedAdminJob: JobState | null;
   selectedAdminJobId: string | null;
   selectedAdminResultJobId: string | null;
   jobHistory: JobState[];
   projects: ProjectRecord[];
   refreshVersions: (modelId: string) => Promise<void>;
-  openModelVersionById: (versionId: string) => Promise<WorkbenchOperationResult>;
+  openModelVersionById: AdminDataControllerDeps["openModelVersionById"];
   setAdminFilterProjectId: (value: string) => void;
   setAdminFilterModelVersionId: (value: string) => void;
   setAdminJobCaseId: (value: string) => void;
@@ -69,6 +79,9 @@ export function buildWorkbenchAdminSelections({
 
 export function buildWorkbenchAdminDataEffects(args: BuildAdminContextEffectsArgs) {
   return {
+    projectContext: args.projectContext,
+    feedback: args.feedback,
+    resultRecords: args.resultRecords,
     selectedAdminJob: args.selectedAdminJob,
     selectedAdminJobId: args.selectedAdminJobId,
     selectedAdminResultJobId: args.selectedAdminResultJobId,

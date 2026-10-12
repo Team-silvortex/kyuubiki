@@ -3,6 +3,10 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { ResultRecord } from "@/lib/api/security-results-types";
 import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
+import { captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
+import type { WorkbenchFeedback } from "./workbench-feedback";
+import { isWorkbenchAdminRecordSourceCurrent, workbenchAdminRecordSources,
+  type WorkbenchAdminRecordSource } from "./workbench-admin-record-source";
 import { clearWorkbenchRuntimeRecoveryIssue, upsertWorkbenchRuntimeRecoveryIssue,
   type WorkbenchRuntimeRecoveryState } from "./workbench-runtime-recovery";
 import type {
@@ -24,12 +28,17 @@ type AdminResultMutationDeps = RefreshWorkbenchResultsDeps & {
   adminResultDraft: string;
   downloadTextFile: (name: string, contents: string) => void;
   setMessage: (value: string) => void;
+  feedback: WorkbenchFeedback;
+  ownsFeedback?: () => boolean;
+  recordSource: WorkbenchAdminRecordSource | null;
+  draftSource: WorkbenchAdminRecordSource | null;
   labels: {
     resultSaved: string;
     resultDeleted: string;
     resultJsonDownloaded: string;
     invalidJson: string;
     initialFailed: string;
+    sourceChanged: string;
   };
 };
 
@@ -55,11 +64,14 @@ export async function refreshWorkbenchResults({
   resultScopeLabel,
 }: RefreshWorkbenchResultsDeps) {
   const refreshSeq = ++resultRefreshSeqRef.current;
+  const ownsAuthority = captureWorkbenchApiAuthority("/api/v1/results");
   setResultReadPending(true);
 
   try {
     const payload = await adminDataBackendService.fetchResults();
     if (refreshSeq !== resultRefreshSeqRef.current) return;
+    if (!ownsAuthority()) { setResultReadPending(false); return; }
+    workbenchAdminRecordSources.mark(payload.results);
     setResultRecords(payload.results);
     setSelectedAdminResultJobId((current) =>
       current && payload.results.some((entry) => entry.job_id === current) ? current : payload.results[0]?.job_id ?? null,
@@ -68,6 +80,7 @@ export async function refreshWorkbenchResults({
     setRuntimeRecovery((current) => clearWorkbenchRuntimeRecoveryIssue(current, "results"));
   } catch (error) {
     if (refreshSeq !== resultRefreshSeqRef.current) return;
+    if (!ownsAuthority()) { setResultReadPending(false); return; }
     setResultReadPending(false);
     const requestError = normalizeWorkbenchRequestError(error, resultScopeLabel);
     setRuntimeRecovery((current) => upsertWorkbenchRuntimeRecoveryIssue({
@@ -80,44 +93,66 @@ export async function saveWorkbenchAdminResultRecord({
   selectedAdminResultJobId,
   adminResultDraft,
   setMessage,
+  feedback,
+  ownsFeedback: capturedFeedback,
+  recordSource,
+  draftSource,
   labels,
   ...refreshDeps
 }: AdminResultMutationDeps) {
   if (!selectedAdminResultJobId) return;
+  const ownsFeedback = capturedFeedback ?? feedback.begin();
+  if (!isWorkbenchAdminRecordSourceCurrent(recordSource, draftSource)) {
+    if (ownsFeedback()) setMessage(labels.sourceChanged);
+    return;
+  }
+  const ownsAuthority = captureWorkbenchApiAuthority(`/api/v1/results/${encodeURIComponent(selectedAdminResultJobId)}`, "/api/v1/results");
 
   let parsed: Record<string, unknown>;
   try {
     parsed = parseResultDraft(adminResultDraft);
   } catch {
-    setMessage(labels.invalidJson);
+    if (ownsAuthority() && ownsFeedback()) setMessage(labels.invalidJson);
     return;
   }
   try {
     await refreshDeps.adminDataBackendService.updateResult(selectedAdminResultJobId, parsed);
+    if (!ownsAuthority()) return;
     await refreshWorkbenchResults(refreshDeps);
-    setMessage(labels.resultSaved);
+    if (ownsAuthority() && ownsFeedback()) setMessage(labels.resultSaved);
   } catch (error) {
-    setMessage(error instanceof Error ? error.message : labels.initialFailed);
+    if (ownsAuthority() && ownsFeedback()) setMessage(error instanceof Error ? error.message : labels.initialFailed);
   }
 }
 
 export async function deleteWorkbenchAdminResultRecord({
   selectedAdminResultJobId,
   setMessage,
+  feedback,
+  ownsFeedback: capturedFeedback,
+  recordSource,
+  draftSource,
   labels,
   ...refreshDeps
 }: AdminResultMutationDeps) {
   if (!selectedAdminResultJobId) return;
+  const ownsFeedback = capturedFeedback ?? feedback.begin();
+  if (!isWorkbenchAdminRecordSourceCurrent(recordSource, draftSource)) {
+    if (ownsFeedback()) setMessage(labels.sourceChanged);
+    return;
+  }
+  const ownsAuthority = captureWorkbenchApiAuthority(`/api/v1/results/${encodeURIComponent(selectedAdminResultJobId)}`, "/api/v1/results");
 
   try {
     await refreshDeps.adminDataBackendService.deleteResult(selectedAdminResultJobId);
+    if (!ownsAuthority()) return;
     // A confirmed deletion must not reappear locally when the follow-up read fails.
-    refreshDeps.setResultRecords((current) => current.filter((entry) => entry.job_id !== selectedAdminResultJobId));
+    refreshDeps.setResultRecords((current) => workbenchAdminRecordSources.filter(current, (entry) => entry.job_id !== selectedAdminResultJobId));
     refreshDeps.setSelectedAdminResultJobId((current) => current === selectedAdminResultJobId ? null : current);
     await refreshWorkbenchResults(refreshDeps);
-    setMessage(labels.resultDeleted);
+    if (ownsAuthority() && ownsFeedback()) setMessage(labels.resultDeleted);
   } catch (error) {
-    setMessage(error instanceof Error ? error.message : labels.initialFailed);
+    if (ownsAuthority() && ownsFeedback()) setMessage(error instanceof Error ? error.message : labels.initialFailed);
   }
 }
 

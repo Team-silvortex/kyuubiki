@@ -6,6 +6,7 @@ import { createAdminDataBackendService } from "../../src/lib/workbench/admin-dat
 import type { WorkbenchJobRecordPatch } from "../../src/lib/workbench/admin-data-backend-service-core.ts";
 import type { JobState } from "../../src/lib/api/fem-shared.ts";
 import type { ResultRecord } from "../../src/lib/api/security-results-types.ts";
+import { createWorkbenchFeedback } from "../../src/components/workbench/workbench-feedback.ts";
 
 function fixture() {
   const job = { job_id: "selected", status: "completed", progress: 1 } as JobState;
@@ -19,10 +20,13 @@ function fixture() {
   const resultSeq = { current: 7 };
   let save = async (jobId: string, patch: WorkbenchJobRecordPatch) => ({ job: { ...job, job_id: jobId, ...patch } });
   let remove = async (jobId: string) => ({ job: { ...job, job_id: jobId }, deleted: true });
+  const source = { isCurrent: () => true };
   const deps = {
+    recordSource: source, draftSource: source,
+    feedback: createWorkbenchFeedback(),
     selectedAdminJobId: "selected" as string | null,
     adminJobMessage: "reviewed", adminJobProjectId: "project", adminJobModelVersionId: "", adminJobCaseId: "case",
-    labels: { jobSaved: "saved", jobDeleted: "deleted", initialFailed: "failed" },
+    labels: { jobSaved: "saved", jobDeleted: "deleted", initialFailed: "failed", sourceChanged: "source changed" },
     adminDataBackendService: createAdminDataBackendService({
       updateJob: async (id, patch) => { state.patches.push(patch); return save(id, patch); },
       deleteJob: async (id) => { state.deletions.push(id); return remove(id); },

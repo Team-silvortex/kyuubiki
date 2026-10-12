@@ -2,6 +2,8 @@
 
 import { buildWorkbenchAdminDataEffects } from "@/components/workbench/workbench-admin-context";
 import { getWorkbenchProjectFlowCopy } from "@/components/workbench/workbench-extended-language-copy";
+import { getWorkbenchAdminRecordSourceChangedLabel } from "./workbench-admin-record-source-copy";
+import type { AdminDataControllerDeps } from "./workbench-admin-data-controller";
 import { createWorkbenchProjectStorageController } from "@/components/workbench/workbench-project-storage-controller";
 import type { WorkbenchNoticeItem } from "@/components/workbench/workbench-notice-state";
 import {
@@ -11,19 +13,22 @@ import {
 
 export function buildWorkbenchProjectFlows(props: Record<string, any>) {
   let projectStorageControllerRef: {
-    openModelVersionById?: (versionId: string) => Promise<WorkbenchOperationResult>;
+    openModelVersionById?: AdminDataControllerDeps["openModelVersionById"];
   } | null = null;
   const projectFlowCopy = getWorkbenchProjectFlowCopy(props.language);
 
   const adminDataEffects = buildWorkbenchAdminDataEffects({
+    projectContext: props.projectContext,
+    feedback: props.feedback,
+    resultRecords: props.resultRecords,
     selectedAdminJob: props.selectedAdminJob,
     selectedAdminJobId: props.selectedAdminJobId,
     selectedAdminResultJobId: props.selectedAdminResultJobId,
     jobHistory: props.jobHistory,
     projects: props.projects,
     refreshVersions: props.refreshVersions,
-    openModelVersionById: (versionId: string) =>
-      projectStorageControllerRef?.openModelVersionById?.(versionId) ??
+    openModelVersionById: (versionId, validate, scope) =>
+      projectStorageControllerRef?.openModelVersionById?.(versionId, validate, scope) ??
       Promise.resolve(workbenchOperationFailure(
         new Error("project storage controller is unavailable"),
         "project storage controller is unavailable",
@@ -49,6 +54,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
       selectJobFirst: projectFlowCopy.selectJobFirst,
       missingResultJob: projectFlowCopy.missingResultJob,
       recordContextApplied: props.t.recordContextApplied,
+      sourceChanged: getWorkbenchAdminRecordSourceChangedLabel(props.language),
     },
   });
 
@@ -112,6 +118,11 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
 
   const projectStorageController = createWorkbenchProjectStorageController({
     projectContext: props.projectContext,
+    feedback: props.feedback,
+    sourceChangedLabel: getWorkbenchAdminRecordSourceChangedLabel(props.language),
+    getProjects: () => props.projects,
+    getModelVersions: () => props.modelVersions,
+    removeConfirmedLibraryRecord: props.removeConfirmedLibraryRecord,
     t: props.t,
     getSelectedProject: () => props.selectedProject,
     selectedProjectId: props.selectedProjectId,
@@ -160,6 +171,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
 
   return {
     projectContext: props.projectContext,
+    removeConfirmedLibraryRecord: props.removeConfirmedLibraryRecord,
     adminDataEffects,
     projectStorageController,
   };

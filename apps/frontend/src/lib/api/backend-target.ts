@@ -1,7 +1,7 @@
 export const WORKBENCH_API_BASE_URL_STORAGE_KEY = "kyuubiki-workbench-api-base-url";
 export const WORKBENCH_API_BASE_URL_QUERY_KEYS = ["kyuubikiApiBaseUrl", "apiBaseUrl"] as const;
 
-type BackendTargetSource = "query" | "local_storage" | "settings" | "environment" | "default";
+type BackendTargetSource = "query" | "local_storage" | "settings" | "environment" | "default" | "unavailable";
 
 export type WorkbenchBackendTarget = {
   baseUrl: string;
@@ -27,6 +27,15 @@ export function sanitizeWorkbenchApiBaseUrl(value: string | null | undefined): s
 }
 
 export function resolveWorkbenchBackendTarget(): WorkbenchBackendTarget {
+  try {
+    return readWorkbenchBackendTarget();
+  } catch {
+    // Rendering may inspect an unavailable target; network resolution must not fall back.
+    return { baseUrl: "", source: "unavailable" };
+  }
+}
+
+function readWorkbenchBackendTarget(): WorkbenchBackendTarget {
   const queryBaseUrl = readQueryApiBaseUrl();
   if (queryBaseUrl) return { baseUrl: queryBaseUrl, source: "query" };
 
@@ -43,9 +52,13 @@ export function resolveWorkbenchBackendTarget(): WorkbenchBackendTarget {
 }
 
 export function readPersistedWorkbenchApiBaseUrl(): string {
-  const storage = getBrowserLocalStorage();
-  if (!storage) return "";
-  return sanitizeWorkbenchApiBaseUrl(storage.getItem(WORKBENCH_API_BASE_URL_STORAGE_KEY));
+  try {
+    const storage = getBrowserLocalStorage();
+    if (!storage) return "";
+    return sanitizeWorkbenchApiBaseUrl(storage.getItem(WORKBENCH_API_BASE_URL_STORAGE_KEY));
+  } catch {
+    return "";
+  }
 }
 
 export function persistWorkbenchApiBaseUrl(value: string): string {
@@ -62,6 +75,7 @@ export function persistWorkbenchApiBaseUrl(value: string): string {
 }
 
 export function resolveWorkbenchApiUrl(url: string, target = resolveWorkbenchBackendTarget()): string {
+  if (target.source === "unavailable") throw new Error("BACKEND_TARGET_UNAVAILABLE: backend connection settings are unreadable.");
   if (!target.baseUrl || isAbsoluteHttpUrl(url) || !url.startsWith("/")) return url;
   return `${target.baseUrl}${url}`;
 }
@@ -91,9 +105,9 @@ function readStoredApiBaseUrl() {
 function readSettingsApiBaseUrl() {
   const storage = getBrowserLocalStorage();
   if (!storage) return "";
+  const raw = storage.getItem("kyuubiki-workbench-settings");
 
   try {
-    const raw = storage.getItem("kyuubiki-workbench-settings");
     const settings = raw ? (JSON.parse(raw) as WorkbenchSettingsWithBackendTarget) : {};
     return sanitizeWorkbenchApiBaseUrl(settings.backendApiBaseUrl);
   } catch {

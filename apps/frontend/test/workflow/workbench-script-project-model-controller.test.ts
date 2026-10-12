@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { handleWorkbenchScriptProjectModelAction } from "../../src/components/workbench/workbench-script-project-model-controller.ts";
+import { createWorkbenchScriptInvoker } from "../../src/components/workbench/workbench-script-invoker.ts";
 import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-context.ts";
+import { workbenchLibraryRecordSources, workbenchLibraryVersionSources } from "../../src/components/workbench/workbench-library-record-source.ts";
 import type { WorkbenchProjectLibraryBackendService } from "../../src/lib/workbench/project-library-backend-service-core.ts";
 import type {
   ModelEnvelope,
@@ -104,8 +106,14 @@ function projectLibraryService(calls: string[]): WorkbenchProjectLibraryBackendS
 }
 
 function baseArgs(calls: string[]) {
+  const projects = [projectEnvelope("project-a").project, projectEnvelope("project-b", "Second project").project];
+  projects[0].models = [modelEnvelope("model-a").model];
+  const modelVersions = [versionEnvelope("version-a").version];
+  workbenchLibraryRecordSources.mark(projects);
+  workbenchLibraryVersionSources.mark(modelVersions);
   return {
-    projectContext: createWorkbenchProjectContext({ projectId: null, modelId: null, versionId: null }),
+    projectContext: createWorkbenchProjectContext({ projectId: "project-a", modelId: "model-a", versionId: "version-a" }),
+    removeConfirmedLibraryRecord: () => {},
     action: "",
     activeMaterial: "steel",
     defaultProjectLabel: "Default Project",
@@ -121,7 +129,8 @@ function baseArgs(calls: string[]) {
     noSavedModelsLabel: "no models",
     noVersionsLabel: "no versions",
     payload: {},
-    projects: [projectEnvelope("project-a").project, projectEnvelope("project-b", "Second project").project],
+    projects,
+    modelVersions,
     projectCreatedLabel: "project created",
     projectDeletedLabel: "project deleted",
     projectDescriptionDraft: "",
@@ -162,6 +171,14 @@ function baseArgs(calls: string[]) {
     versionRenamedLabel: "version renamed",
   };
 }
+
+test("PWDT invoker preserves the canonical version history for real version write admission", async () => {
+  const calls: string[] = [], args = baseArgs(calls);
+  const invoke = createWorkbenchScriptInvoker({ ...args, selectedProjectId: "project-a", selectedModelId: "model-a",
+    selectedVersionId: "version-a", recordSecurityAuditEvent: () => {}, appendScriptActionLog: () => {} });
+  assert.equal((await invoke("model/renameSelectedVersion")).ok, true);
+  assert.deepEqual(calls, ["update-version:version-a:model-a", "refresh-versions:model-a", "message:version renamed"]);
+});
 
 test("script project action creates projects through project library service", async () => {
   const calls: string[] = [];
@@ -318,17 +335,55 @@ test("script project exports propagate download failures instead of reporting fa
   );
 });
 
-test("script project selection clears saved associations only when the project changes", async () => {
+test("script project selection detaches saved associations without pretending to load geometry", async () => {
   const calls: string[] = [];
   const args = { ...baseArgs(calls), action: "project/select", selectedProjectId: "project-a", selectedModelId: "model-a" };
   await handleWorkbenchScriptProjectModelAction({ ...args, payload: { projectId: "project-a" } });
-  assert.deepEqual(calls, ["set-project:project-a"]);
+  assert.deepEqual(calls, ["set-model:", "set-version:", "set-project:project-a"]);
   calls.length = 0;
   await handleWorkbenchScriptProjectModelAction({ ...args, payload: { projectId: "project-b" } });
   assert.deepEqual(calls, ["set-model:", "set-version:", "set-project:project-b"]);
 });
 
-for (const projectId of ["missing-project", "", null, 17]) {
+for (const admission of ["unmarked", "stale", "unreadable", "disposed"]) {
+  test(`project selection refuses ${admission} catalog without changing selection or drafts`, async () => {
+    const calls: string[] = [], args = baseArgs(calls);
+    const source = workbenchLibraryRecordSources.sourceOf(args.projects)!, original = source.isCurrent;
+    if (admission === "unmarked") args.projects = [...args.projects];
+    if (admission === "stale") source.isCurrent = () => false;
+    if (admission === "unreadable") source.isCurrent = () => { throw new Error("unreadable"); };
+    if (admission === "disposed") args.projectContext.dispose();
+    try {
+      await assert.rejects(handleWorkbenchScriptProjectModelAction({ ...args, action: "project/select", payload: { projectId: "project-a" } }),
+        admission === "disposed" ? /WORKBENCH_CONTEXT_CHANGED/ : /WORKBENCH_RECORD_SOURCE_CHANGED/);
+      assert.equal(calls.length, admission === "disposed" ? 0 : 1);
+      if (calls.length) assert.match(calls[0], /message:WORKBENCH_RECORD_SOURCE_CHANGED/);
+    } finally { source.isCurrent = original; }
+  });
+}
+
+for (const projectId of ["project-a", null]) {
+  test(`project selection ${projectId ?? "none"} synchronously supersedes an older intent before React commits`, async () => {
+    const calls: string[] = [], args = baseArgs(calls);
+    args.projectContext.update({ projectId: "project-a", modelId: "model-a", versionId: "version-a" });
+    const previous = args.projectContext.begin();
+    const pending = handleWorkbenchScriptProjectModelAction({ ...args, action: "project/select", payload: { projectId } });
+    assert.equal(previous(), false);
+    assert.deepEqual(args.projectContext.current(), { projectId, modelId: null, versionId: null });
+    assert.equal((await pending)?.ok, true);
+  });
+}
+
+for (const payload of [{ loadedModelName: "Newer edit" }, { activeMaterial: "copper" }]) {
+  test(`workspace metadata ${Object.keys(payload)[0]} supersedes a saved load synchronously`, async () => {
+    const args = baseArgs([]), old = args.projectContext.begin();
+    const result = handleWorkbenchScriptProjectModelAction({ ...args, action: "model/setWorkspaceMeta", payload });
+    assert.equal(old(), false);
+    assert.equal((await result)?.ok, true);
+  });
+}
+
+for (const projectId of ["missing-project", "", 17]) {
   test(`script project selection rejects invalid project ${JSON.stringify(projectId)} without mutations`, async () => {
     const calls: string[] = [];
     await assert.rejects(handleWorkbenchScriptProjectModelAction({
@@ -408,6 +463,18 @@ for (const action of ["project/create", "project/updateSelected", "project/delet
       changeWorkspace();
       return response;
     };
+    const deleteProject = args.projectLibraryBackendService.deleteProject;
+    args.projectLibraryBackendService.deleteProject = async (id) => {
+      const response = await deleteProject(id); changeWorkspace(); return response;
+    };
+    const deleteModel = args.projectLibraryBackendService.deleteModel;
+    args.projectLibraryBackendService.deleteModel = async (id) => {
+      const response = await deleteModel(id); changeWorkspace(); return response;
+    };
+    const deleteVersion = args.projectLibraryBackendService.deleteModelVersion;
+    args.projectLibraryBackendService.deleteModelVersion = async (id) => {
+      const response = await deleteVersion(id); changeWorkspace(); return response;
+    };
     const result = await handleWorkbenchScriptProjectModelAction({
       ...args, action, selectedProjectId: "project-a", selectedModelId: "model-a", selectedVersionId: "version-a",
       setProjectNameDraft: () => { calls.push("set-name"); },
@@ -422,6 +489,51 @@ for (const action of ["project/create", "project/updateSelected", "project/delet
     assert.equal(result?.contextChanged, true);
     assert.equal(calls.filter((entry) => /^(create-|update-|delete-)/u.test(entry)).length, 1);
     assert.deepEqual(calls.filter((entry) => /^(set-|message:|refresh-versions:)/u.test(entry)), []);
+  });
+}
+
+for (const action of ["project/deleteSelected", "model/deleteSelected", "model/deleteSelectedVersion"]) {
+  test(`script ${action} detaches on confirmation but cannot replace feedback after navigation during refresh`, async () => {
+    const calls: string[] = [];
+    const args = baseArgs(calls);
+    args.projectContext.update(savedSelection);
+    let afterConfirmation: string[] = [];
+    const newer = { projectId: "project-b", modelId: "model-b", versionId: "version-b" };
+    const result = await handleWorkbenchScriptProjectModelAction({
+      ...args, action, selectedProjectId: "project-a", selectedModelId: "model-a", selectedVersionId: "version-a",
+      refreshProjects: async () => {
+        afterConfirmation = [...calls];
+        assert.equal(args.projectContext.current().versionId, null);
+        args.projectContext.update(newer);
+      },
+    });
+    assert.equal(result?.ok, true);
+    assert.equal(result?.contextChanged, true);
+    assert.deepEqual(args.projectContext.current(), newer);
+    assert.deepEqual(calls, afterConfirmation, "confirmation cleanup precedes the read; nothing overwrites the newer workspace afterward");
+    assert.equal(calls.some((entry) => entry.startsWith("message:")), false);
+  });
+}
+
+for (const action of ["project/updateSelected", "project/deleteSelected", "model/save", "model/saveAs",
+  "model/deleteSelected", "model/renameSelectedVersion", "model/deleteSelectedVersion"]) {
+  test(`PWDT ${action} stops after confirmation if the catalog source changed, without cleanup or recovery reads`, async () => {
+    const calls: string[] = [], args = baseArgs(calls);
+    const source = action.includes("Version") ? workbenchLibraryVersionSources.sourceOf(args.modelVersions)!
+      : workbenchLibraryRecordSources.sourceOf(args.projects)!;
+    const original = source.isCurrent;
+    const service = args.projectLibraryBackendService;
+    for (const method of ["updateProject", "deleteProject", "createModel", "createModelVersion", "deleteModel", "updateModelVersion", "deleteModelVersion"] as const) {
+      const write = service[method] as (...args: any[]) => Promise<any>;
+      service[method] = (async (...inputs: any[]) => { const response = await write(...inputs); source.isCurrent = () => false; return response; }) as never;
+    }
+    try {
+      const result = await handleWorkbenchScriptProjectModelAction({ ...args, action, selectedProjectId: "project-a",
+        selectedModelId: "model-a", selectedVersionId: "version-a", removeConfirmedLibraryRecord: () => assert.fail("new-source records must not be removed") });
+      assert.equal(result?.ok, true); assert.equal(result?.contextChanged, true);
+      assert.equal(calls.length, 1); assert.match(calls[0], /^(create|delete|update)-/);
+      assert.deepEqual(args.projectContext.current(), savedSelection);
+    } finally { source.isCurrent = original; }
   });
 }
 

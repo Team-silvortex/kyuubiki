@@ -12,6 +12,7 @@ import {
 } from "@/components/workbench/workbench-notice-state";
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api/project-types";
 import type { CheckpointVersionGuard } from "@/lib/workbench/checkpoint-recovery";
+import { captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
 import { parsePlaygroundModel } from "@/lib/models/model-import";
 import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
 import { isSensitivePresetSaveError } from "@/lib/scripting/workbench-script-preset-security";
@@ -255,14 +256,26 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
   }
 }
 
-export function openPersistedWorkbenchModel(model: ModelRecord, effects: PersistedModelControllerDeps) {
+export function openPersistedWorkbenchModel(model: ModelRecord, effects: PersistedModelControllerDeps,
+  scope?: WorkbenchVersionLoadScope) {
   let isCurrent = effects.projectContext.begin();
+  let ownsAuthority = () => true;
+  const safely = (check?: () => boolean) => { try { return check?.() ?? true; } catch { return false; } };
+  const current = () => isCurrent() && safely(ownsAuthority) && safely(scope?.isCurrent);
   const run = async (): Promise<WorkbenchOperationResult> => {
     try {
+      if (!current() || !safely(scope?.ownsFeedback)) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
+      ownsAuthority = captureWorkbenchApiAuthority(`/api/v1/models/${encodeURIComponent(model.model_id)}`);
       dismissWorkbenchAlert(effects.setSystemAlerts, "persisted-model-open-error");
       dismissWorkbenchNotice(effects.setImportNotice);
       const payload = await effects.fetchModel(model.model_id);
-      if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
+      if (!current() || !safely(scope?.ownsFeedback)) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
+      if (payload?.model?.model_id !== model.model_id || payload.model.project_id !== model.project_id
+        || typeof model.project_id !== "string" || !model.project_id.trim()
+        || (payload.model.latest_version_id != null && (typeof payload.model.latest_version_id !== "string"
+          || !payload.model.latest_version_id.trim()))) {
+        throw new Error("WORKBENCH_SAVED_MODEL_INVALID: the returned model does not match the selected saved record.");
+      }
       effects.recordHistory(effects.historyActionLabel);
       applyPersistedWorkbenchPayload(payload.model.payload, payload.model.name, effects);
       isCurrent = effects.projectContext.update({ projectId: payload.model.project_id, modelId: payload.model.model_id,
@@ -271,12 +284,14 @@ export function openPersistedWorkbenchModel(model: ModelRecord, effects: Persist
       effects.setSelectedModelId(payload.model.model_id);
       effects.setSelectedVersionId(payload.model.latest_version_id ?? null);
       effects.setMessage(effects.importedModelLabel);
+      scope?.onApplied();
+      if (!current()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       await effects.refreshVersions(payload.model.model_id);
-      if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
+      if (!current()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       return { ok: true };
     } catch (error) {
       const failure = workbenchOperationFailure(error, effects.importFailedLabel);
-      if (!isCurrent()) return failure;
+      if (!current() || !safely(scope?.ownsFeedback)) return failure;
       upsertWorkbenchAlert(effects.setSystemAlerts, {
         id: "persisted-model-open-error",
         message: failure.error.message,
@@ -290,19 +305,42 @@ export function openPersistedWorkbenchModel(model: ModelRecord, effects: Persist
   return runWorkbenchTransitionOperation(effects.startTransition, run);
 }
 
-export function openPersistedWorkbenchVersion(version: ModelVersionRecord, effects: PersistedModelControllerDeps) {
-  return openPersistedWorkbenchVersionById(version.version_id, effects);
+export function openPersistedWorkbenchVersion(version: ModelVersionRecord, effects: PersistedModelControllerDeps,
+  scope?: WorkbenchVersionLoadScope) {
+  return openPersistedWorkbenchVersionById(version.version_id, effects, (loaded) => {
+    if (loaded?.version_id !== version.version_id || loaded.model_id !== version.model_id
+      || loaded.project_id !== version.project_id) {
+      throw new Error("WORKBENCH_SAVED_VERSION_INVALID: the returned version does not match the selected saved record.");
+    }
+  }, scope);
 }
 
-export function openPersistedWorkbenchVersionById(versionId: string, effects: PersistedModelControllerDeps, validate?: CheckpointVersionGuard) {
+export type WorkbenchVersionLoadScope = {
+  isCurrent: () => boolean;
+  ownsFeedback: () => boolean;
+  onApplied: () => void;
+};
+
+export function openPersistedWorkbenchVersionById(versionId: string, effects: PersistedModelControllerDeps,
+  validate?: CheckpointVersionGuard, scope?: WorkbenchVersionLoadScope) {
   let isCurrent = effects.projectContext.begin();
+  let ownsAuthority = () => true;
+  const safely = (check?: () => boolean) => { try { return check?.() ?? true; } catch { return false; } };
+  const current = () => isCurrent() && safely(ownsAuthority) && safely(scope?.isCurrent);
   const run = async (): Promise<WorkbenchOperationResult> => {
     try {
+      if (!current() || !safely(scope?.ownsFeedback)) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
+      ownsAuthority = captureWorkbenchApiAuthority(`/api/v1/model-versions/${encodeURIComponent(versionId)}`);
       dismissWorkbenchAlert(effects.setSystemAlerts, "persisted-version-open-error");
       dismissWorkbenchNotice(effects.setImportNotice);
       const payload = await effects.fetchModelVersion(versionId);
-      if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
+      if (!current() || !safely(scope?.ownsFeedback)) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       validate?.(payload.version);
+      if (payload?.version?.version_id !== versionId || typeof payload.version.model_id !== "string"
+        || !payload.version.model_id.trim() || typeof payload.version.project_id !== "string"
+        || !payload.version.project_id.trim()) {
+        throw new Error("WORKBENCH_SAVED_VERSION_INVALID: expected the requested version with identified model and project.");
+      }
       effects.recordHistory(effects.historyActionLabel);
       applyPersistedWorkbenchPayload(payload.version.payload, payload.version.name, effects);
       isCurrent = effects.projectContext.update({ projectId: payload.version.project_id, modelId: payload.version.model_id,
@@ -312,12 +350,14 @@ export function openPersistedWorkbenchVersionById(versionId: string, effects: Pe
       effects.setSelectedVersionId(payload.version.version_id);
       effects.setMessage(effects.importedVersionLabel);
       effects.setSidebarSection?.("model");
+      scope?.onApplied();
+      if (!current()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       await effects.refreshVersions(payload.version.model_id);
-      if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
+      if (!current()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       return { ok: true };
     } catch (error) {
       const failure = workbenchOperationFailure(error, effects.importFailedLabel);
-      if (!isCurrent()) return failure;
+      if (!current() || !safely(scope?.ownsFeedback)) return failure;
       upsertWorkbenchAlert(effects.setSystemAlerts, {
         id: "persisted-version-open-error",
         message: failure.error.message,

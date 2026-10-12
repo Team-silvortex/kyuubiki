@@ -545,6 +545,96 @@ not necessarily the saved result. Slow-response and stale-read controls protect
 other selection and newer typing. Real JSON/SQLite result APIs remain separate
 from mocked-service source Chromium, installed WebViews and remote acceptance.
 
+The [Workbench library-record follow-up](../reports/workbench-library-record-recovery-20261011.md)
+requires a matching project/model/version identity and usable record before ordinary
+writes can report success or refresh lists. Library deletion confirms the removed
+record, not a separate boolean flag. Confirmed deletions remove only their local
+records and invalidate older reads before any follow-up refresh; failed or delayed
+reads cannot resurrect them. Deferred model/version lists filter against current
+record identities, so a pending GUI operation cannot keep deleted rows visible
+while catalog reads wait; new rows may still render later. The live modeling copy
+and unrelated selection remain
+intact, and late feedback cannot replace a newer workspace's message. Version and
+catalog refresh start independently. Removing the latest version clears its local
+latest pointer until a verified read identifies the replacement. GUI/PWDT read
+recovery never replays ordinary writes; existing idempotent checkpoint saves are
+unchanged. Source-browser controls with mocked services and real JSON/SQLite API
+tests do not qualify installed WebViews, remote outages or ambiguous-write outcome
+reconciliation.
+
+The [Workbench task/result write follow-up](../reports/workbench-admin-record-flight-20261011.md)
+adds one session-owned in-flight reservation per parent job ID to administrative
+GUI Save/Delete. It starts before the async React transition and lasts through
+follow-up reads. Duplicate or conflicting callbacks are not queued; paired-record
+views and sidebar remount retain protection. Other records, draft editing,
+navigation and result export remain available. Deferred task/result lists reuse
+the current-identity membership filter so confirmed deletion cannot leave obsolete
+rows visible while reads wait. This adds no persistent queue, backup or snapshot,
+and does not establish cross-client serialization, late-message ownership,
+backend-authority transitions or installed WebView acceptance.
+
+The [Workbench administrative feedback follow-up](../reports/workbench-admin-feedback-recovery-20261011.md)
+adds workspace revision ownership to Job/Result Save/Delete messages. Accepted
+intent is captured before its queued write; duplicate callbacks cannot replace
+it. New messages, navigation, manual selection and disposal invalidate old
+feedback without cancelling confirmed writes or same-backend read recovery.
+Effective endpoint URL and governed header comparison prevents old write replies
+from removing same-ID records or starting reads on a newly selected backend.
+Job/result reads discard old-authority replies even without a newer read. This is
+source-client equality fencing, not continuous authority-history tracking,
+authenticated deployment, ambiguous-write reconciliation or installed acceptance.
+
+The [Workbench record-source follow-up](../reports/workbench-admin-record-source-20261012.md)
+blocks task/result Save/Delete when the selected collection and working draft do
+not share a verified current source. Retained old-backend data cannot authorize
+a new write to a same-ID record elsewhere. Explicit GUI/PWDT refresh replaces
+prior-source fields only after a valid new-source read; same-source refresh keeps
+dirty editing. Weak metadata is per collection and stays outside serialized data.
+The four-write warning and read-only refresh are localized for four built-in and
+thirty catalogued languages. Unreadable connection settings display as unavailable
+without crashing the retained-record GUI; HTTP rejects the unresolved target
+instead of silently falling back to another backend. This is client admission,
+not backend authorization,
+signed provenance, general storage-fault recovery or installed acceptance.
+
+The [selected-task cancellation follow-up](../reports/workbench-admin-job-cancellation-20261012.md)
+closes the raw System/Data cancellation branch. It checks record source and a
+matching valid cancelled receipt, shares the parent Save/Delete reservation
+through history recovery, and suppresses old feedback or reads after a backend
+change. A failed follow-up read does not revoke confirmed cancellation or replay
+the request. Historical records never clear a live preview merely by matching
+its job ID; the current observer independently polls backend status. This is
+source-client recovery, not a cross-client lock, unified current-job cancel flight
+or authenticated deployment acceptance.
+
+The [linked-context recovery follow-up](../reports/workbench-linked-context-recovery-20261012.md)
+unifies GUI and PWDT project/version/Apply Context routing. It requires current
+task provenance and actual result membership for result links, checks linked
+version/project association before loading geometry, and prevents superseded
+payload/list reads from continuing dependent saves. Project-only navigation
+preserves geometry but clears saved-model/version bindings instead of attaching
+an unloaded model. Weak project-catalog source metadata survives confirmed
+deletion transforms, and catalog/list reads discard obsolete backend replies.
+This is bounded source-client recovery, not authenticated or installed acceptance.
+
+The [saved navigation follow-up](../reports/workbench-saved-navigation-recovery-20261012.md)
+extends source admission to ordinary project selection and direct saved-model/version
+opening. GUI project selection now uses the same action as PWDT; explicit selection
+detaches saved bindings, even for a reused project ID, while preserving geometry.
+Canonical catalog membership and exact returned parent identities are checked before
+loading, and version history retains known rows on malformed reads. Metadata/name
+edits supersede older loads and errors. These are source-client controls, not
+authenticated provenance, continuous authority history or installed acceptance.
+
+The [Library write source follow-up](../reports/workbench-library-write-source-20261012.md)
+guards GUI/PWDT project updates/deletion, model save/save-as/deletion and version
+rename/deletion before dispatch. Verified canonical membership and current
+selection are required. Old-backend receipts cannot prune same-ID new-backend
+records or begin new-backend recovery reads; confirmed original writes remain
+context-changed instead of being replayed. Version history now reaches the PWDT
+gate canonically. This is client admission, not authorization, a revision lock
+or proof that working geometry originated from the selected backend.
+
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job
 identities and ties fixed candidate reports to their own completed waits/results.

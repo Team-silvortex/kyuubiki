@@ -8,7 +8,9 @@ import { handleWorkbenchScriptStateAction } from "@/components/workbench/workben
 import { handleWorkbenchScriptStoreAction } from "@/components/workbench/workbench-script-store-controller";
 import { workbenchCheckpointRecovery } from "@/lib/workbench/project-library-backend-service";
 
-export function createWorkbenchScriptInvoker(options: Record<string, any>) {
+export function createWorkbenchScriptInvoker(options: Record<string, any> & Pick<
+  Parameters<typeof handleWorkbenchScriptProjectModelAction>[0], "projects" | "modelVersions" | "projectContext"
+>) {
   return async (
     action: string,
     payload: Record<string, unknown> = {},
@@ -62,12 +64,15 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         refreshSecurityEvents: options.refreshSecurityEvents,
       } satisfies Parameters<typeof handleWorkbenchScriptNavAction>[0],
       projectModelArgs: {
+        language: options.language,
         checkpointRecovery: workbenchCheckpointRecovery,
         openModelVersionById: options.openModelVersionById,
         projectContext: options.projectContext,
+        removeConfirmedLibraryRecord: options.removeConfirmedLibraryRecord,
         action,
         payload,
         projects: options.projects,
+        modelVersions: options.modelVersions,
         selectedProjectId: options.selectedProjectId,
         selectedModelId: options.selectedModelId,
         selectedVersionId: options.selectedVersionId,
@@ -178,10 +183,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         setSelectedAdminResultJobId: options.setSelectedAdminResultJobId,
         setSidebarSection: options.setSidebarSection,
         setSystemPanelTab: options.setSystemPanelTab,
-        resolveScriptLinkedJob: options.resolveScriptLinkedJob,
-        openModelVersionById: options.openModelVersionById,
-        openProjectContextById: options.openProjectContextById,
-        applyJobContextToWorkbench: options.applyJobContextToWorkbench,
+        openLinkedContext: options.openLinkedContext,
         downloadDatabaseSnapshot: options.downloadDatabaseSnapshot,
       },
     });

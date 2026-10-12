@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { usingWorkbench, invoke, openWorkbench, runtime, holdRequest,
+import { usingWorkbench, invoke, openWorkbench, runtime, holdRequest, waitForGuiTransition,
   installProjectWorkbenchTestHooks } from "./workbench-ui-project-fixture.shared.mjs";
 
 installProjectWorkbenchTestHooks();
@@ -219,9 +219,11 @@ for (const switchRecord of [false, true]) {
         }
         await fillDraft(page, "newer");
         runtime.state.adminJobs.push(record("post-save-marker"));
+        const newerMessage = await page.evaluate(() => window.__kyuubikiPwdt.state().message);
         held.release();
-        await page.waitForFunction(() => window.__kyuubikiPwdt.state().message === "Job record updated.");
         await observePublishedHistory(page, "post-save-marker");
+        await waitForGuiTransition(page);
+        assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().message), switchRecord ? newerMessage : "Job record updated.");
         await assertDraft(page, working("newer"));
         assert.equal((await page.evaluate(() => window.__kyuubikiPwdt.state())).selectedAdminJobId, switchRecord ? "other-job" : ID);
         assert.equal(runtime.state.adminJobs[0].message, "submitted-message", "the write uses the submitted snapshot, not later input");

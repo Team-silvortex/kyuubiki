@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench administrative Job/Result Save and Delete require matching verified collection and draft source identities with a current effective API authority. Missing, stale, mismatched or unreadable source checks block before backend work; the GUI disables the four writes and offers explicit read-only refresh with translated draft-replacement guidance for four built-in and thirty catalogued languages. Same-source reads retain dirty editing; verified new-source reads replace prior-source fields even when record IDs match. Weak metadata attaches once per collection and deletion filters retain its original source without retagging; serialized payloads and public schemas remain unchanged. Source-client mocked Chromium controls and pure frontend controls verify this bounded behavior. This is not backend authorization, authenticated provenance, cross-client locking, continuous authority-history fencing, installed WebView, remote deployment, power-loss, cold-start storage-fault or scientific qualification. No persistent snapshot, archive, backup, write replay, production Node dependency or operational-grade promotion is introduced.",
+  "evidence_claims": [
+    {
+      "id": "workbench-admin-record-and-draft-source-admission",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-admin-record-source.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-record-source-copy.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-security-state.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-job-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-admin-result-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-job-history-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-primary-actions-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-core-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-main-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controller-props.ts",
+        "apps/frontend/src/components/workbench/workbench-flow-controllers.ts",
+        "apps/frontend/src/components/workbench/workbench-sidebar-composition.ts",
+        "apps/frontend/src/components/workbench/workbench-sidebar-mount-props.tsx",
+        "apps/frontend/src/components/workbench/workbench-system-sidebar-mount.tsx",
+        "apps/frontend/src/components/workbench/workbench-system-data-mount.tsx",
+        "apps/frontend/src/components/workbench/system/workbench-data-admin-panel.tsx",
+        "apps/frontend/src/lib/api/backend-target.ts",
+        "apps/frontend/test/workflow/workbench-backend-target.test.ts",
+        "apps/frontend/test/workflow/workbench-admin-record-source.test.ts",
+        "apps/frontend/test/workflow/workbench-admin-security-state.test.ts",
+        "apps/frontend/test/workflow/workbench-primary-actions-controller.test.ts",
+        "apps/frontend/test/workflow/workbench-flow-composition.test.ts",
+        "tests/integration/workbench-ui-admin-record-source.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-admin-record-source-20261012.md"
+      ],
+      "required_text": [
+        "createWorkbenchAdminRecordSources",
+        "sources.set(records, latest);",
+        "previous.source === incoming.source",
+        "isWorkbenchAdminRecordSourceCurrent",
+        "disabled={adminJobWritePending || !adminJobSourceCurrent}",
+        "disabled={adminResultWritePending || !adminResultSourceCurrent}",
+        "refresh-record-source",
+        "an old record or draft must not authorize a write on the new backend",
+        "a copied collection is not automatically verified",
+        "source-preserving deletion filters never retag an old collection as the current backend",
+        "unreadable record-source checks fail closed without throwing through UI rendering",
+        "is safe to display but blocks HTTP without selecting a fallback",
+        "BACKEND_TARGET_UNAVAILABLE",
+        "1,405 passed, zero failures or skips"
+      ]
+    }
+  ]
+}

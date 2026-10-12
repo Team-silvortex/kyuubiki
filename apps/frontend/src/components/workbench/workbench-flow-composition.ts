@@ -2,11 +2,8 @@
 
 import { buildWorkbenchFlowControllerProps } from "@/components/workbench/workbench-flow-controller-props";
 import {
-  applyJobContextToWorkbench as applyJobContextToWorkbenchWithDeps,
-  openProjectContextById as openProjectContextByIdWithDeps,
-  resolveScriptLinkedJob as resolveScriptLinkedJobWithDeps,
+  openWorkbenchLinkedContext,
 } from "@/components/workbench/workbench-admin-data-controller";
-import type { JobState } from "@/lib/api";
 
 export function buildWorkbenchFlowComposition(props: Record<string, any>) {
   const { shellState, workspaceState, studyResultDerived, interactionControllers, projectFlows } = props;
@@ -14,8 +11,10 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
 
   return buildWorkbenchFlowControllerProps({
     projectContext: projectFlows.projectContext,
+    removeConfirmedLibraryRecord: projectFlows.removeConfirmedLibraryRecord,
     t: props.t,
     setMessage: workspaceState.setMessage,
+    feedback: workspaceState.feedback,
     setSystemAlerts: workspaceState.setSystemAlerts,
     recordHistory: props.recordHistory,
     setAxialForm: workspaceState.setAxialForm,
@@ -23,6 +22,8 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
     setPanelParametric: workspaceState.setPanelParametric,
     startTransition: props.startTransition,
     adminDataBackendService: props.adminDataBackendService,
+    adminRecordMutations: props.adminRecordMutations,
+    cancelJob: props.cancelJob,
     storeBackendService: props.storeBackendService,
     projectLibraryBackendService: props.projectLibraryBackendService,
     resultRefreshSeqRef: props.resultRefreshSeqRef,
@@ -40,6 +41,7 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
     jobPollTokenRef: props.jobPollTokenRef,
     selectedProjectId: workspaceState.selectedProjectId,
     projects: workspaceState.projects,
+    modelVersions: workspaceState.modelVersions,
     selectedModelId: workspaceState.selectedModelId,
     selectedVersionId: workspaceState.selectedVersionId,
     setSelectedProjectId: workspaceState.setSelectedProjectId,
@@ -107,6 +109,10 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
     panelParametric: workspaceState.panelParametric,
     loadedModelName: workspaceState.loadedModelName,
     selectedAdminJobId: props.selectedAdminJobId,
+    adminJobRecordSource: props.adminJobRecordSource,
+    adminJobDraftSource: props.adminJobDraftSource,
+    adminResultRecordSource: props.adminResultRecordSource,
+    adminResultDraftSource: props.adminResultDraftSource,
     adminJobMessage: props.adminJobMessage,
     adminJobProjectId: props.adminJobProjectId,
     adminJobModelVersionId: props.adminJobModelVersionId,
@@ -182,12 +188,9 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
     setAdminFilterProjectId: props.setAdminFilterProjectId,
     setAdminFilterModelVersionId: props.setAdminFilterModelVersionId,
     setSelectedAdminJobId: props.setSelectedAdminJobId,
-    resolveScriptLinkedJob: (nextPayload: Record<string, unknown>) =>
-      resolveScriptLinkedJobWithDeps(nextPayload, projectFlows.adminDataEffects),
+    openLinkedContext: (nextPayload: Record<string, unknown>) =>
+      openWorkbenchLinkedContext(nextPayload, projectFlows.adminDataEffects),
     openModelVersionById: projectFlows.projectStorageController.openModelVersionById,
-    openProjectContextById: (projectId: string) => openProjectContextByIdWithDeps(projectId, projectFlows.adminDataEffects),
-    applyJobContextToWorkbench: (linkedJob: JobState) =>
-      applyJobContextToWorkbenchWithDeps(linkedJob, projectFlows.adminDataEffects),
     downloadDatabaseSnapshot: props.downloadDatabaseSnapshot,
     recordSecurityAuditEvent: assistantAudit.recordSecurityAuditEvent,
     appendScriptActionLog: assistantAudit.appendScriptActionLog,

@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildWorkbenchFlowComposition } from "../../src/components/workbench/workbench-flow-composition.ts";
+import { createWorkbenchAdminRecordMutations } from "../../src/components/workbench/workbench-admin-record-mutations.ts";
+import { createWorkbenchFeedback } from "../../src/components/workbench/workbench-feedback.ts";
 
 test("flow composition wires project exports from the project storage controller", () => {
   const downloadProjectBundleJson = async () => {};
@@ -32,7 +34,15 @@ test("flow composition wires project exports from the project storage controller
 });
 
 test("flow composition preserves selected admin records and editing drafts", () => {
+  const adminRecordMutations = createWorkbenchAdminRecordMutations(() => {});
+  const feedback = createWorkbenchFeedback();
+  const cancelJob = async () => ({ job: { job_id: "selected", status: "cancelled", progress: 0 } });
+  const source = { isCurrent: () => true };
   const composition = buildWorkbenchFlowComposition({
+    adminRecordMutations,
+    cancelJob,
+    adminJobRecordSource: source, adminJobDraftSource: source,
+    adminResultRecordSource: source, adminResultDraftSource: source,
     interactionControllers: {
       assistantAudit: {},
       topLevelActions: {},
@@ -46,7 +56,7 @@ test("flow composition preserves selected admin records and editing drafts", () 
     shellState: { languagePacks: [] },
     studyResultDerived: {},
     workflowController: {},
-    workspaceState: {},
+    workspaceState: { feedback },
     selectedAdminJobId: "job-qualification",
     adminJobMessage: "job message",
     adminJobProjectId: "project-qualification",
@@ -63,11 +73,19 @@ test("flow composition preserves selected admin records and editing drafts", () 
   assert.equal(composition.adminJobCaseId, "case-qualification");
   assert.equal(composition.selectedAdminResultJobId, "result-qualification");
   assert.equal(composition.adminResultDraft, '{"metric":42}');
+  assert.equal(composition.adminRecordMutations, adminRecordMutations);
+  assert.equal(composition.cancelJob, cancelJob);
+  assert.equal(composition.feedback, feedback);
+  assert.equal(composition.adminJobRecordSource, source);
+  assert.equal(composition.adminJobDraftSource, source);
+  assert.equal(composition.adminResultRecordSource, source);
+  assert.equal(composition.adminResultDraftSource, source);
 });
 
 test("flow composition connects project, model, selection and recovery dependencies to PWDT", () => {
   const workspaceState = {
     projects: [{ project_id: "project-a" }],
+    modelVersions: [{ version_id: "version-a", project_id: "project-a", model_id: "model-a" }],
     selectedModelId: "model-a",
     setSelectedProjectId: () => {},
     setSelectedTruss3dNodes: () => {},
