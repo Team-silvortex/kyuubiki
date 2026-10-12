@@ -1,7 +1,9 @@
+use crate::workflow_quality_checks::{finite_quality_value, ranking_order};
+use crate::workflow_quality_ranking_input as ranking_input;
 use crate::workflow_quality_terms::{
     CandidateRank, QualityTerm, candidate_entries, composite_blocking_terms, composite_grade,
-    config_number, dominant_composite_term, finite_quality_value, next_round_action,
-    quality_entries, quality_iteration_hint, quality_term, validate_quality_config,
+    config_number, dominant_composite_term, next_round_action, quality_entries,
+    quality_iteration_hint, quality_term, validate_quality_config,
 };
 use crate::workflow_result_admission::require_converged_result;
 use serde_json::Value;
@@ -89,6 +91,9 @@ pub fn rank_quality_candidates(payload: Value, config: Value) -> Result<Value, S
     let object = payload
         .as_object()
         .ok_or_else(|| "transform.rank_quality_candidates expects an object payload".to_string())?;
+    if object.contains_key("candidates") {
+        require_converged_result(object, "transform.rank_quality_candidates", "payload")?;
+    }
     validate_quality_config(&config)?;
     let objective_config = config.get("objective").cloned().unwrap_or(config);
     validate_quality_config(&objective_config)?;
@@ -148,11 +153,10 @@ pub fn rank_quality_candidates(payload: Value, config: Value) -> Result<Value, S
     }
 
     ranking.sort_by(|left, right| {
-        right
-            .ready
-            .cmp(&left.ready)
-            .then_with(|| left.score.total_cmp(&right.score))
-            .then_with(|| left.candidate_id.cmp(&right.candidate_id))
+        ranking_order(
+            (left.ready, left.score, &left.candidate_id),
+            (right.ready, right.score, &right.candidate_id),
+        )
     });
 
     let ready_candidate_count = ranking.iter().filter(|entry| entry.ready).count();
@@ -193,30 +197,10 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
     {
         return Err("quality config.require_ready must be a boolean".to_string());
     }
-    let selected = payload
-        .get("ranking")
-        .and_then(Value::as_array)
-        .and_then(|ranking| ranking.first())
-        .and_then(Value::as_object)
-        .ok_or_else(|| {
-            "transform.prepare_quality_next_round_request expects a quality ranking".to_string()
-        })?;
-    let candidate_id = selected
-        .get("candidate_id")
-        .or_else(|| payload.get("best_candidate_id"))
-        .and_then(Value::as_str)
-        .unwrap_or("candidate");
-    let score = selected
-        .get("score")
-        .or_else(|| payload.get("best_candidate_score"))
-        .and_then(Value::as_f64)
-        .ok_or_else(|| "quality next round selected score must be numeric".to_string())?;
-    let score = finite_quality_value(score, candidate_id, "selected score")?;
-    let ready = selected
-        .get("ready")
-        .or_else(|| payload.get("best_candidate_ready"))
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
+    let admitted = ranking_input::admit(&payload)?;
+    let selected = admitted.selected;
+    let candidate_id = admitted.candidate_id;
+    let score = admitted.score;
     let selected_dominant_term = selected
         .get("dominant_term")
         .or_else(|| {
@@ -226,24 +210,16 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         })
         .cloned()
         .unwrap_or(Value::Null);
-    let selected_blocking_terms = selected
-        .get("blocking_terms")
-        .or_else(|| {
-            selected
-                .get("objective")
-                .and_then(|objective| objective.get("composite_quality_blocking_terms"))
-        })
-        .cloned()
-        .unwrap_or_else(|| Value::Array(Vec::new()));
-    let has_blockers = !selected_blocking_terms
-        .as_array()
-        .ok_or_else(|| "quality next round blocking_terms must be an array".to_string())?
-        .is_empty();
-    let ready = ready && !has_blockers;
+    let (objective_ready, selected_blocking_terms) = ranking_input::selected_evidence(selected)?;
+    let has_blockers = !selected_blocking_terms.as_array().unwrap().is_empty();
+    let ready = admitted.ready && objective_ready && !has_blockers;
     let selected_coupled_readiness = selected_coupled_readiness(&payload, selected);
-    let (ranking_complete, rejected_candidates) = ranking_completeness(&payload)?;
+    ranking_input::coupled_readiness(&selected_coupled_readiness)?;
+    let ranking_complete = admitted.complete;
+    let rejected_candidates = admitted.rejected;
     let target_score = config_number(&config, "target_score", 3.0)?;
     let action = if !ranking_complete
+        || !objective_ready
         || coupled_readiness_blocks(&selected_coupled_readiness)
         || has_blockers
     {
@@ -299,54 +275,6 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
             "Quality exploration {action}: selected={candidate_id}, score={score}, target={target_score}."
         ),
     }))
-}
-
-fn ranking_completeness(payload: &Value) -> Result<(bool, Vec<Value>), String> {
-    let rejected = match payload.get("rejected_candidates") {
-        None => Vec::new(),
-        Some(value) => value
-            .as_array()
-            .ok_or_else(|| "quality ranking rejected_candidates must be an array".to_string())?
-            .clone(),
-    };
-    let ranked_count = payload
-        .get("ranking")
-        .and_then(Value::as_array)
-        .map_or(0, Vec::len);
-    let input_count = ranked_count
-        .checked_add(rejected.len())
-        .ok_or_else(|| "quality ranking candidate count overflow".to_string())?;
-    for (field, actual) in [
-        ("candidate_count", ranked_count),
-        ("input_candidate_count", input_count),
-    ] {
-        if payload
-            .get(field)
-            .is_some_and(|value| value.as_u64() != Some(actual as u64))
-        {
-            return Err(format!(
-                "quality ranking {field} disagrees with candidate details"
-            ));
-        }
-    }
-    if let Some(count) = payload.get("rejected_candidate_count") {
-        if count.as_u64() != Some(rejected.len() as u64) {
-            return Err(
-                "quality ranking rejected_candidate_count disagrees with rejection details"
-                    .to_string(),
-            );
-        }
-    }
-    let complete = match payload.get("ranking_complete") {
-        None => rejected.is_empty(),
-        Some(value) => value
-            .as_bool()
-            .ok_or_else(|| "quality ranking ranking_complete must be a boolean".to_string())?,
-    };
-    if complete && !rejected.is_empty() {
-        return Err("quality ranking cannot be complete with rejected candidates".to_string());
-    }
-    Ok((complete, rejected))
 }
 
 fn selected_coupled_readiness(payload: &Value, selected: &serde_json::Map<String, Value>) -> Value {

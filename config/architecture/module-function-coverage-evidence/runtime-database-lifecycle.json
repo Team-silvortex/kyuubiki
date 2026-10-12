@@ -1,8 +1,42 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Scoped SQLite/PostgreSQL baseline ledger and startup gate, SQLite copy lifecycle and revision-2 checkpoint retry receipts, including controlled installed-macOS migration and native PWDT replay after a clean managed-runtime/WebView restart. Revision-2 PostgreSQL execution, whole-system restore, online activation and power-loss qualification remain open.",
+  "summary": "Scoped baseline ledger/startup gate, SQLite copy lifecycle and revision-2 model receipts, plus opt-in revision-3 project creation receipts qualified on SQLite and volatile memory. The thermal catalog follow-up corrects three diagnostic fixtures and native metric/decision gaps; the expanded selection passes 550 tests with 47 skips. Concurrent project-receipt controls use runtime WAL with initialization before pool startup, not offline DELETE mode. Earlier installed-macOS proof applies to revision 2 only. Revision-3 GUI identity allocation, PostgreSQL execution, installed activation, whole-system restore and power-loss qualification remain open.",
   "evidence_claims": [
+    {
+      "id": "project-creation-receipts-and-revision-three-upgrade",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "verification-evidence"],
+      "paradigms": ["persistence_provenance", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/library/project_request.ex",
+        "apps/web/lib/kyuubiki_web/library/project_request_sql.ex",
+        "apps/web/lib/kyuubiki_web/library/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/library/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/storage/project_request_schema.ex",
+        "apps/web/lib/kyuubiki_web/storage/project_request_record.ex",
+        "apps/web/lib/kyuubiki_web/storage/database_migrations.ex",
+        "apps/web/test/kyuubiki_web/library/project_request_test.exs",
+        "apps/web/test/kyuubiki_web/library/project_request_transaction_test.exs",
+        "apps/web/test/kyuubiki_web/storage/project_request_migration_test.exs",
+        "apps/web/test/kyuubiki_web/storage/sqlite_lifecycle_test.exs",
+        "schemas/database-lifecycle.schema.json",
+        "reports/project-create-receipts-20261012.md"
+      ],
+      "required_text": [
+        "runtime-project-requests-0003",
+        "project_request_conflict",
+        "project_result_deleted",
+        "creation and replay both require write authentication",
+        "independent SQLite connections serialize the same project request",
+        "a failed revision-three addition leaves the schema and ledger unchanged",
+        "revision-two snapshot receipts remain verifiable after upgrading a separate candidate",
+        "73 tests, zero failures or skips",
+        "an explicit GUI re-import still creates a new project"
+      ]
+    },
     {
       "id": "runtime-database-baseline-and-sqlite-copy-lifecycle",
       "status": "proven",

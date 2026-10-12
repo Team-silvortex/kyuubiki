@@ -58,6 +58,16 @@ test("project API client routes model CRUD through injected request", async () =
   ]);
 });
 
+test("project API client preserves an explicit creation request identity without inventing retries", async () => {
+  const { client, seen } = createRecordingClient();
+  const input = { name: "Recovery study", request_id: "project-create-request-0001" };
+  await client.createProject(input);
+  await client.createProject(input);
+  assert.equal(seen.length, 2);
+  assert.deepEqual(seen[0], { body: input, method: "POST", url: "/api/v1/projects" });
+  assert.deepEqual(seen[1], seen[0]);
+});
+
 test("project API client routes model version CRUD through injected request", async () => {
   const { client, seen } = createRecordingClient();
 

@@ -75,7 +75,11 @@
                 }
               },
               "routing_opts": {
-                "type": "array"
+                "description": "JSON routing hints. Producers emit an object; legacy pair arrays remain readable. Execution derives authoritative routing from the verified TaskIR.",
+                "anyOf": [
+                  { "type": "object" },
+                  { "type": "array", "items": { "type": "array", "minItems": 2, "maxItems": 2 } }
+                ]
               }
             }
           }

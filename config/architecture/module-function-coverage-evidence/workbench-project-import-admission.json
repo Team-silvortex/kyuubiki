@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Workbench project import reuses the workspace/effective-API-scope Library reservation registry. A distinct import slot rejects overlapping files before parsing or intent changes; confirmed project creation additionally reserves that project and its model/version writes through recovery. GUI and PWDT conflicts reject without queuing or merged success, settlement permits explicit later operations, and unrelated project work/manual creation remain independent. Pure and isolated Chromium controls qualify client contract/recovery/UX only, not backend or cross-client locking, transactions, durable deduplication, continuous authority history, installed/mobile acceptance or scientific accuracy. No operational promotion, backup, persistent import payload or production Node dependency.",
+  "evidence_claims": [
+    {
+      "id": "workbench-project-import-admission-and-child-write-reservation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-persisted-model-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-library-mutations.ts",
+        "apps/frontend/src/components/workbench/workbench-library-mutation-copy.ts",
+        "apps/frontend/src/components/workbench/workbench-project-flows.ts",
+        "apps/frontend/test/workflow/workbench-project-store-bundle-roundtrip.test.ts",
+        "apps/frontend/test/workflow/workbench-library-mutations.test.ts",
+        "tests/integration/workbench-ui-import-mutation-flight.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-project-import-admission-20261012.md"
+      ],
+      "required_text": [
+        "importProject",
+        "The import slot excludes overlapping files",
+        "overlapping import is rejected before parsing or changing intent",
+        "only an explicit later import creates another project",
+        "import admission localizes busy feedback without replacing newer",
+        "blocked import is not queued behind the first",
+        "import owns its project until final recovery settles",
+        "explicit catalog discovery",
+        "first isolated Chromium run passed all 17 cases",
+        "1,735 tests with zero failures or skips",
+        "105 tests with zero failures or skips"
+      ]
+    }
+  ]
+}

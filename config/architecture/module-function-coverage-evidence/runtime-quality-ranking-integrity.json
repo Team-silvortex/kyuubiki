@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded source ranking consistency: native Engine and service share 31 fixtures, canonical permutation/JSON-exchange controls and sixteen controlled graphs per runtime. Order, rank positions and score copies are checked without silently repairing rankings. Corrected fresh execution is not physical optimality, live Agent, installed acceptance or durable recovery.",
+  "evidence_claims": [
+    {
+      "id": "native-service-quality-ranking-consistency-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_quality_checks.rs",
+        "workers/rust/crates/engine/src/workflow_quality_objective.rs",
+        "workers/rust/crates/engine/src/workflow_quality_ranking_input.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_ranking_integrity.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_ranking_recovery.rs",
+        "apps/web/lib/kyuubiki_web/workflow_quality_ranking.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_next_round.ex",
+        "apps/web/test/kyuubiki_web/workflow_quality_ranking_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_ranking_recovery_test.exs",
+        "tests/fixtures/workflow-quality-ranking-integrity.json",
+        "reports/quality-ranking-consistency-recovery-20261012.md"
+      ],
+      "required_text": [
+        "next_round_checks_shared_ranking_order_and_nested_score_contract",
+        "generated_rankings_round_trip_and_only_canonical_permutations_are_admitted",
+        "incoherent_rankings_cannot_publish_sweeps_and_corrected_fresh_runs_recover",
+        "shared ranking integrity:",
+        "generated rankings survive JSON exchange and reject noncanonical permutations",
+        "incoherent rankings cannot export decisions and corrected fresh runs recover",
+        "31 cases: 21 rejection cases",
+        "Sixteen controlled native graph executions and sixteen controlled service graph",
+        "691 total, 690 passed, one ignored",
+        "2,149 total, 2,078 passed, 71 conditional skips",
+        "not proof that a candidate is physically optimal"
+      ]
+    }
+  ]
+}

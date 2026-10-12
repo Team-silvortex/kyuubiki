@@ -23,6 +23,9 @@ import type { WorkbenchFeedback } from "./workbench-feedback";
 import { isWorkbenchAdminRecordSourceCurrent, type WorkbenchAdminRecordSource } from "./workbench-admin-record-source";
 import { workbenchLibraryRecordSources, workbenchLibraryVersionSources } from "./workbench-library-record-source";
 import { captureWorkbenchLibraryWriteSource, type WorkbenchLibraryWriteKind } from "./workbench-library-write-source";
+import { getWorkbenchLibraryMutations, resolveWorkbenchLibraryMutationTarget, runWorkbenchLibraryTransition,
+  WorkbenchLibraryWritePendingError } from "./workbench-library-mutations";
+import { getWorkbenchLibraryMutationPendingLabel } from "./workbench-library-mutation-copy";
 import type {
   WorkbenchProjectLibraryBackendService,
 } from "@/lib/workbench/project-library-backend-service-core";
@@ -31,6 +34,7 @@ import type {
 } from "@/lib/workbench/admin-data-backend-service-core";
 
 type ProjectStorageControllerDeps = {
+  language?: string;
   projectContext: WorkbenchProjectContext;
   feedback: WorkbenchFeedback;
   sourceChangedLabel: string;
@@ -83,6 +87,7 @@ type ProjectStorageControllerDeps = {
 };
 
 export function createWorkbenchProjectStorageController({
+  language = "en",
   projectContext,
   feedback,
   sourceChangedLabel,
@@ -133,6 +138,17 @@ export function createWorkbenchProjectStorageController({
   serializeCurrentModel,
   getPersistedModelEffects,
 }: ProjectStorageControllerDeps) {
+  const runMutation = (action: string, run: () => Promise<void> | void) => {
+    const target = resolveWorkbenchLibraryMutationTarget(action, selectedProjectId, selectedModelId);
+    if (!target) return Promise.resolve(run());
+    const ownsIntent = projectContext.capture();
+    return getWorkbenchLibraryMutations(projectContext).run(target, () => Promise.resolve(run()),
+      getWorkbenchLibraryMutationPendingLabel(language)).catch((error) => {
+      if (ownsIntent() && (!(error instanceof WorkbenchLibraryWritePendingError) || error.isCurrent())) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
   const captureWriteSource = (kind: WorkbenchLibraryWriteKind) => {
     try {
       return captureWorkbenchLibraryWriteSource({ kind, projectId: selectedProjectId, modelId: selectedModelId,
@@ -250,7 +266,7 @@ export function createWorkbenchProjectStorageController({
   const createProjectRecord = () => {
     const isCurrent = projectContext.begin();
     let ownsSource = () => false;
-    startTransition(async () => {
+    return runWorkbenchLibraryTransition(startTransition, async () => {
       try {
         ownsSource = captureWriteSource("createProject");
         const payload = await projectLibraryBackendService.createProject({
@@ -277,7 +293,7 @@ export function createWorkbenchProjectStorageController({
     const isCurrent = projectContext.begin();
     let ownsSource = () => false;
 
-    startTransition(async () => {
+    return runWorkbenchLibraryTransition(startTransition, async () => {
       try {
         ownsSource = captureWriteSource("project");
         await projectLibraryBackendService.updateProject(selectedProjectId, {
@@ -301,7 +317,7 @@ export function createWorkbenchProjectStorageController({
     const isCurrent = projectContext.begin();
     let ownsSource = () => false;
 
-    startTransition(async () => {
+    return runWorkbenchLibraryTransition(startTransition, async () => {
       try {
         ownsSource = captureWriteSource("project");
         await projectLibraryBackendService.deleteProject(selectedProjectId);
@@ -333,7 +349,7 @@ export function createWorkbenchProjectStorageController({
     let isCurrent = projectContext.begin();
     let ownsSource = () => false;
 
-    startTransition(async () => {
+    return runWorkbenchLibraryTransition(startTransition, async () => {
       try {
         ownsSource = captureWriteSource(!selectedModelId || saveAs ? "project" : "model");
         const payload = serializeCurrentModel() as Record<string, unknown> & { model_schema_version?: string };
@@ -413,7 +429,7 @@ export function createWorkbenchProjectStorageController({
     const isCurrent = projectContext.begin();
     let ownsSource = () => false;
 
-    startTransition(async () => {
+    return runWorkbenchLibraryTransition(startTransition, async () => {
       try {
         ownsSource = captureWriteSource("version");
         await projectLibraryBackendService.updateModelVersion(selectedVersionId, { name: loadedModelName });
@@ -433,7 +449,7 @@ export function createWorkbenchProjectStorageController({
     const isCurrent = projectContext.begin();
     let ownsSource = () => false;
 
-    startTransition(async () => {
+    return runWorkbenchLibraryTransition(startTransition, async () => {
       try {
         ownsSource = captureWriteSource("version");
         const removed = await projectLibraryBackendService.deleteModelVersion(selectedVersionId);
@@ -457,7 +473,7 @@ export function createWorkbenchProjectStorageController({
     const isCurrent = projectContext.begin();
     let ownsSource = () => false;
 
-    startTransition(async () => {
+    return runWorkbenchLibraryTransition(startTransition, async () => {
       try {
         ownsSource = captureWriteSource("model");
         await projectLibraryBackendService.deleteModel(selectedModelId);
@@ -481,10 +497,10 @@ export function createWorkbenchProjectStorageController({
 
   return {
     buildProjectBundleJson,
-    createProjectRecord,
-    deleteProjectRecord,
-    deleteSavedModelRecord,
-    deleteSelectedVersion,
+    createProjectRecord: () => runMutation("project/create", createProjectRecord),
+    deleteProjectRecord: () => runMutation("project/deleteSelected", deleteProjectRecord),
+    deleteSavedModelRecord: () => runMutation("model/deleteSelected", deleteSavedModelRecord),
+    deleteSelectedVersion: () => runMutation("model/deleteSelectedVersion", deleteSelectedVersion),
     downloadDatabaseSnapshot,
     downloadProjectBundleJson,
     downloadProjectBundleZip,
@@ -492,8 +508,8 @@ export function createWorkbenchProjectStorageController({
     openModelVersionById,
     openSavedModel,
     openSavedVersion,
-    renameSelectedVersion,
-    saveModelVersion,
-    updateProjectRecord,
+    renameSelectedVersion: () => runMutation("model/renameSelectedVersion", renameSelectedVersion),
+    saveModelVersion: (saveAs: boolean) => runMutation(saveAs ? "model/saveAs" : "model/save", () => saveModelVersion(saveAs)),
+    updateProjectRecord: () => runMutation("project/updateSelected", updateProjectRecord),
   };
 }

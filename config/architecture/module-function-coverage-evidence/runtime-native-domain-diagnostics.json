@@ -4,6 +4,420 @@
   "summary": "Source macOS service evidence extends a bounded native workflow TaskIR adapter to six diagnostics and five quality scores without duplicating Engine physics. Sixteen actual graph jobs require 33 Agent executions; corrupt evidence blocks decisions, while five standalone cancellations and explicit same-task recovery require ten executions. A public graph-job follow-up connects native activity to the existing watchdog and preserves dispatch ownership across cancelled heartbeats without renewing state or admitting outputs. Ten diagnostic-stage cancellations and ten explicit recovery graphs require sixty Agent executions. A queue follow-up adds twenty cancellations and twenty explicit recovery graphs in one hundred Agent executions without dispatching queued work or changing old observations. Throttled node progress now retains lease/job/claim fencing and controlled 300-node graphs cannot enter dependent scoring after cancellation. A separate dispatch guard now fences typed solves and bounded native diagnostics/scoring before admission and on capacity retries; twelve controlled public-cancellation runner cases and twenty-four actual-client TCP failure cases block new admission, peer retries and extra journal attempts without liveness writes or Agent health penalties. Stokes RPC/program names align through the registry. This is contract/recovery evidence, not exhaustive admission races, general TaskIR solver support, arbitrary parallel graph cancellation, numerical/scale/installed/remote qualification or durable continuation.",
   "evidence_claims": [
     {
+      "id": "native-quality-decision-admission-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_quality_checks.rs",
+        "workers/rust/crates/engine/src/workflow_quality_ranking_input.rs",
+        "workers/rust/crates/engine/src/workflow_quality_terms.rs",
+        "workers/rust/crates/engine/src/workflow_quality_objective.rs",
+        "workers/rust/crates/engine/src/tests/workflow_quality_decision_recovery.rs",
+        "workers/rust/crates/engine/src/tests/workflow_sweep_selection_recovery.rs",
+        "reports/native-quality-decision-recovery-20261012.md"
+      ],
+      "required_text": [
+        "invalid_quality_decisions_stop_dependents_and_fresh_inputs_recover",
+        "partial_rankings_pause_while_known_quality_blocks_replan_repairs",
+        "native_fixed_reference_maximization_continues_until_absolute_policy_is_met",
+        "Thirty controlled native graph executions",
+        "688 total, 687 passed, one ignored",
+        "not durable resume"
+      ]
+    },
+    {
+      "id": "shared-native-service-quality-decision-admission-fixtures",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "tests/fixtures/workflow-quality-decision-contract.json",
+        "workers/rust/crates/engine/src/tests/workflow_quality_decision_contract.rs",
+        "apps/web/test/kyuubiki_web/workflow_quality_decision_contract_test.exs",
+        "reports/native-quality-decision-recovery-20261012.md"
+      ],
+      "required_text": [
+        "native_quality_composition_matches_shared_contract",
+        "native_quality_ranking_matches_shared_contract",
+        "native_quality_next_round_matches_shared_contract",
+        "shared quality decision contract:",
+        "49-case JSON fixture: 39 rejection cases",
+        "2,116 total, 2,045 passed, 71 conditional skips",
+        "not an exhaustive Rust/Elixir equivalence proof"
+      ]
+    },
+    {
+      "id": "native-service-sweep-collection-final-state-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_sweep_join.rs",
+        "workers/rust/crates/engine/src/workflow_sweep_summary.rs",
+        "workers/rust/crates/engine/src/tests/workflow_sweep_collection_contract.rs",
+        "workers/rust/crates/engine/src/tests/workflow_sweep_collection_recovery.rs",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_join.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_summary.ex",
+        "apps/web/test/kyuubiki_web/workflow_sweep_collection_contract_test.exs",
+        "tests/fixtures/workflow-sweep-collection-contract.json",
+        "reports/native-sweep-collection-recovery-20261012.md"
+      ],
+      "required_text": [
+        "native_collection_obeys_shared_service_contract_fixtures",
+        "fresh_join_clears_prior_custom_summary_without_changing_the_input",
+        "native_collection_rejects_every_reserved_metric_even_when_selected_explicitly",
+        "collection_failures_cannot_publish_rankings_and_explicit_fresh_graphs_recover",
+        "metadata cannot enter collection scoring and fresh graphs recover without solver replay",
+        "683 total, 682 passed, one ignored",
+        "Sixteen controlled native graph executions",
+        "Four controlled service graph executions",
+        "not new physical calculations"
+      ]
+    },
+    {
+      "id": "native-sweep-scoring-candidate-admission-and-fresh-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_sweep_contract.rs",
+        "workers/rust/crates/engine/src/workflow_sweep_score.rs",
+        "workers/rust/crates/engine/src/workflow_sweep_quality.rs",
+        "workers/rust/crates/engine/src/tests/workflow_sweep_candidate_admission.rs",
+        "workers/rust/crates/engine/src/tests/workflow_sweep_selection_recovery.rs",
+        "reports/native-sweep-selection-recovery-20261012.md"
+      ],
+      "required_text": [
+        "candidate_mapping_preserves_all_blockers_not_just_largest_objective",
+        "candidate_mapping_validates_present_breakdown_and_aggregate_consistency",
+        "candidate_mapping_accepts_scoring_json_exchange_with_fractional_weights",
+        "native_scoring_and_mapping_failures_isolate_downstream_and_fresh_runs_recover",
+        "native_all_infeasible_graph_retains_blockers_and_replans_instead_of_stopping",
+        "native_fixed_reference_maximization_continues_until_absolute_policy_is_met",
+        "Three new native graph tests execute fourteen controlled graphs.",
+        "678 total, 677 passed, one ignored",
+        "not new physical solves, live Agent jobs, installed GUI, remote acceptance"
+      ]
+    },
+    {
+      "id": "shared-native-service-sweep-scoring-contract-fixtures",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "tests/fixtures/workflow-sweep-score-contract.json",
+        "workers/rust/crates/engine/src/workflow_sweep_score.rs",
+        "workers/rust/crates/engine/src/tests/workflow_sweep_scoring_admission.rs",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_score.ex",
+        "apps/web/test/kyuubiki_web/workflow_sweep_score_contract_test.exs",
+        "reports/native-sweep-selection-recovery-20261012.md"
+      ],
+      "required_text": [
+        "native_sweep_scoring_obeys_shared_service_contract_fixtures",
+        "native_score_normalizes_signed_zero_ties_by_exact_identity",
+        "shared sweep score contract:",
+        "JSON fixture contains 25 cases: six valid scoring controls and nineteen invalid",
+        "2,024 total, 1,953 passed, 71 conditional skips",
+        "This is not an exhaustive equivalence proof or a"
+      ]
+    },
+    {
+      "id": "service-sweep-result-admission-and-explicit-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_sweep_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_result_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_join.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_summary.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_score.ex",
+        "apps/web/test/kyuubiki_web/workflow_sweep_result_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_sweep_evaluation_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_sweep_result_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_sweep_result_recovery_api_test.exs",
+        "apps/web/test/support/sweep_result_recovery.exs",
+        "reports/sweep-result-selection-recovery-20261012.md"
+      ],
+      "required_text": [
+        "keyed results never borrow another case position or stale summaries",
+        "feasible candidates outrank arbitrarily large infeasible scores",
+        "damaged result evidence cannot export a winner and fresh runs recover",
+        "failed result collection retains history while fresh jobs publish corrected winners",
+        "1,999 total, 1,928 passed, 71 conditional skips",
+        "Native direct scoring and score-to-quality-candidate mapping still require"
+      ]
+    },
+    {
+      "id": "service-quality-sweep-batch-exchange-and-fresh-execution",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_sweep_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_sweep.ex",
+        "apps/web/lib/kyuubiki_web/workflow_sweep_expansion.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_execution_batch.ex",
+        "apps/web/test/kyuubiki_web/workflow_sweep_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_batch_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_sweep_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_sweep_recovery_api_test.exs",
+        "apps/web/test/support/quality_sweep_recovery.exs",
+        "schemas/operator-task-batch.schema.json",
+        "reports/quality-sweep-batch-recovery-20261012.md"
+      ],
+      "required_text": [
+        "case budget is checked before allocating range samples and cannot be bypassed downstream",
+        "generated batch is a JSON exchange artifact not an Elixir keyword structure",
+        "invalid planning or batch configuration cannot export, corrected chain executes",
+        "fresh corrected sweep reaches public batch execution without changing failed history",
+        "1,943 total, 1,872 passed, 71 conditional skips",
+        "Result joining, sweep summarization and sweep scoring remain separate audit work."
+      ]
+    },
+    {
+      "id": "service-quality-objective-ranking-and-next-round-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_quality_objective_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_composition.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_ranking.ex",
+        "apps/web/lib/kyuubiki_web/workflow_quality_next_round.ex",
+        "apps/web/test/kyuubiki_web/workflow_objective_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_round_admission_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_objective_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_objective_recovery_api_test.exs",
+        "apps/web/test/support/quality_recovery.exs",
+        "reports/quality-objective-ranking-recovery-20261012.md"
+      ],
+      "required_text": [
+        "partial rankings account for every original candidate without renumbering",
+        "unready low-score candidates never stop research",
+        "admission failures cannot export and fresh runs recover",
+        "partial ranking is a completed job but not a completed research conclusion",
+        "1,840 total, 1,769 passed, 71 conditional skips",
+        "Parameter-sweep planning, expansion and execution-batch admission remain separate"
+      ]
+    },
+    {
+      "id": "service-quality-admission-and-thermal-decision-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_domain_quality_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_thermal_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_decision_checks.ex",
+        "apps/web/test/kyuubiki_web/workflow_quality_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_quality_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_domain_decision_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_decision_recovery_api_test.exs",
+        "reports/quality-and-thermal-decision-integrity-20261012.md"
+      ],
+      "required_text": [
+        "selected terms cannot be dropped defaulted or duplicated",
+        "damaged metrics are errors but truly absent metrics remain blocking reports",
+        "invalid quality cannot reach objective or export and fresh execution recovers",
+        "bad evidence cannot export, and explicit fresh submission recovers",
+        "not automatic durable continuation",
+        "Composite-objective and candidate-ranking admission remain separate audit work"
+      ]
+    },
+    {
+      "id": "thermal-sample-integrity-and-fresh-run-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_diagnostic_samples.ex",
+        "apps/web/lib/kyuubiki_web/workflow_thermal_diagnostics.ex",
+        "apps/web/lib/kyuubiki_web/workflow_thermal_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_operator_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_thermal_diagnostic_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_thermal_diagnostic_recovery_test.exs",
+        "reports/thermal-diagnostic-integrity-20261012.md"
+      ],
+      "required_text": [
+        "metadata and nonconvergence are not diagnostic evidence",
+        "stress and strain component peaks compare every selected axis and preserve sign",
+        "heat loads cannot be filtered out beside otherwise healthy temperatures",
+        "invalid samples stop downstream work; fresh runs recover",
+        "not automatic resumption of the same interrupted job"
+      ]
+    },
+    {
+      "id": "native-thermo-displacement-mapping-precedence",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/thermo_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_thermo_integrity.rs",
+        "reports/thermal-diagnostic-integrity-20261012.md"
+      ],
+      "required_text": [
+        "legacy_displacement_mappings_select_complete_custom_vectors",
+        "displacement_mapping_precedence_is_presence_based_not_validity_based",
+        "selected_scalar_strain_peak_is_signed_maximum_not_absolute_component_peak",
+        "This does not add native recovery evidence"
+      ]
+    },
+    {
+      "id": "electromagnetic-sample-integrity-and-fresh-run-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_diagnostic_samples.ex",
+        "apps/web/lib/kyuubiki_web/workflow_electrostatic_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_magnetostatic_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_operator_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_electromagnetic_diagnostic_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_electromagnetic_diagnostic_recovery_test.exs",
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/electrostatic_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_diagnostics_integrity.rs",
+        "reports/electromagnetic-diagnostic-integrity-20261012.md"
+      ],
+      "required_text": [
+        "metadata alone is not measurement evidence",
+        "incomplete scalar groups cannot shrink sample counts",
+        "corrupt diagnostics cannot reach decisions or export; fresh runs recover",
+        "electrostatic_charge_source_selects_the_requested_collection_without_fallback",
+        "1,556 passed, 71 conditional skips",
+        "Legacy thermal/thermo raw reducers and service quality scoring still need audit"
+      ]
+    },
+    {
+      "id": "native-electrostatic-charge-source-selection",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/electrostatic_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_diagnostics_integrity.rs",
+        "reports/electromagnetic-diagnostic-integrity-20261012.md"
+      ],
+      "required_text": [
+        "electrostatic_charge_source_selects_the_requested_collection_without_fallback",
+        "config.charge_density_source must be nodes or elements",
+        "Native Engine tests likewise exercise controlled diagnostic inputs"
+      ]
+    },
+    {
+      "id": "checked-service-metric-derivation-and-cfd-integrity",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_domain_metric_resolver.ex",
+        "apps/web/lib/kyuubiki_web/workflow_decision_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_cfd_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_metric_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_cfd_diagnostic_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_decision_recovery_api_test.exs",
+        "reports/checked-metric-cfd-recovery-20261012.md"
+      ],
+      "required_text": [
+        "checked_metric_value",
+        "empty selected samples cannot fall through to an unrelated source",
+        "mixed aliases participate in both peaks and means, with last ties matching native",
+        "damaged aliases and derived samples cannot publish a report",
+        "1,518 passed, 71 conditional skips",
+        "Other legacy raw diagnostic reducers still need review"
+      ]
+    },
+    {
+      "id": "cross-domain-service-decision-integrity-and-explicit-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_decision_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_domain_decision_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_electrostatic_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_magnetostatic_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_cfd_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_domain_decision_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_decision_recovery_api_test.exs",
+        "reports/domain-decision-integrity-20261012.md"
+      ],
+      "required_text": [
+        "missing guard evidence cannot pass or downgrade a decision",
+        "partial pair evidence never shrinks the scoring denominator",
+        "domain label normalization must not collapse distinct candidates",
+        "bad evidence cannot export, and explicit fresh submission recovers",
+        "1,466 passed, 71 conditional skips",
+        "not automatic resume of the same job",
+        "Legacy metric alias/sample derivation remains best-effort"
+      ]
+    },
+    {
+      "id": "thermal-catalog-native-metrics-and-fail-closed-decisions",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/thermal_diagnostics.rs",
+        "workers/rust/crates/engine/src/thermo_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_thermal_catalog_contract.rs",
+        "apps/web/lib/kyuubiki_web/workflow_thermal_runtime.ex",
+        "apps/web/test/support/workflow_diagnostic_agent.exs",
+        "apps/web/test/kyuubiki_web/workflow_thermal_decision_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_catalog_thermal_job_api_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_coupled_diagnostics_template_api_test.exs",
+        "reports/thermal-catalog-native-recovery-20261012.md"
+      ],
+      "required_text": [
+        "thermal_catalog_metrics_preserve_vector_aliases_and_signed_nonzero_load_counts",
+        "corrupt_selected_displacement_does_not_fall_back_to_an_alias",
+        "config.rules[1]: payload.flux",
+        "config.criteria[1]: payload.",
+        "an executed but incomplete diagnostic cannot downgrade a blocking guard to a warning",
+        "KYUUBIKI_WORKFLOW_DIAGNOSTIC_AGENT_PORT",
+        "solver frames",
+        "automatic resume of the same interrupted job"
+      ]
+    },
+    {
       "id": "bounded-workflow-successful-branch-decision-recovery",
       "status": "proven",
       "grade": "verified",

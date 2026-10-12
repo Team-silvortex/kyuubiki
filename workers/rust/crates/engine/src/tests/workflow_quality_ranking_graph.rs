@@ -200,7 +200,7 @@ fn case_budget_limits_remain_enforced_across_the_entire_sweep_graph() {
     }
 }
 
-fn quality_ranking_to_sweep_graph(target_score: f64) -> WorkflowGraph {
+pub(super) fn quality_ranking_to_sweep_graph(target_score: f64) -> WorkflowGraph {
     WorkflowGraph {
         schema_version: "kyuubiki.workflow-graph/v1".to_string(),
         id: "workflow.quality-ranking-to-sweep".to_string(),

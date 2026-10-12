@@ -10,7 +10,8 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
     CheckpointRequestRecord,
     ModelRecord,
     ModelVersionRecord,
-    ProjectRecord
+    ProjectRecord,
+    ProjectRequestRecord
   }
 
   def list_projects do
@@ -41,6 +42,12 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def create_project(attrs) do
+    transaction(fn ->
+      KyuubikiWeb.Library.ProjectRequestSql.create(attrs, fn -> insert_project(attrs) end)
+    end)
+  end
+
+  defp insert_project(attrs) do
     record =
       %ProjectRecord{}
       |> Ecto.Changeset.change(%{
@@ -324,6 +331,7 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def reset do
+    repo_delete_all(ProjectRequestRecord)
     repo_delete_all(CheckpointRequestRecord)
     repo_delete_all(ModelVersionRecord)
     repo_delete_all(ModelRecord)

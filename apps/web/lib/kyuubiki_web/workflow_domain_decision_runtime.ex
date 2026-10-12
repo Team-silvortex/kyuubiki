@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
   @moduledoc false
 
   alias KyuubikiWeb.WorkflowDomainMetricResolver
+  alias KyuubikiWeb.WorkflowDecisionChecks
 
   @guard_domains %{
     "transform.evaluate_structural_guard" => "structural",
@@ -22,7 +23,18 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
   def supported_guard_operator_ids, do: Map.keys(@guard_domains)
   def supported_benchmark_operator_ids, do: Map.keys(@benchmark_domains)
 
-  def evaluate_guard(operator_id, payload, config) when is_map(payload) and is_map(config) do
+  def evaluate_guard(operator_id, payload, config) do
+    with {:ok, _domain} <- fetch_domain(@guard_domains, operator_id) do
+      WorkflowDecisionChecks.guard(
+        operator_id,
+        payload,
+        config,
+        &do_evaluate_guard(operator_id, &1, &2)
+      )
+    end
+  end
+
+  defp do_evaluate_guard(operator_id, payload, config) do
     with {:ok, domain} <- fetch_domain(@guard_domains, operator_id),
          rules when rules != [] <- config_list(config, "rules") do
       triggers = Enum.flat_map(rules, &evaluate_guard_rule(payload, &1))
@@ -48,11 +60,19 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
     end
   end
 
-  def evaluate_guard(operator_id, _payload, _config),
-    do: {:error, {:unsupported_domain_guard_operator, operator_id}}
+  def benchmark_pair(operator_id, payload, config) do
+    with {:ok, _domain} <- fetch_domain(@benchmark_domains, operator_id) do
+      WorkflowDecisionChecks.pair(
+        operator_id,
+        payload,
+        config,
+        &do_benchmark_pair(operator_id, &1, &2),
+        &normalize_label(&1, "")
+      )
+    end
+  end
 
-  def benchmark_pair(operator_id, %{"left" => left, "right" => right}, config)
-      when is_map(left) and is_map(right) and is_map(config) do
+  defp do_benchmark_pair(operator_id, %{"left" => left, "right" => right}, config) do
     with {:ok, _domain} <- fetch_domain(@benchmark_domains, operator_id),
          criteria when criteria != [] <- config_list(config, "criteria") do
       left_label = normalize_label(Map.get(config, "left_label"), "left")
@@ -71,9 +91,6 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
       {:error, reason} -> {:error, reason}
     end
   end
-
-  def benchmark_pair(operator_id, _payload, _config),
-    do: {:error, {:unsupported_domain_benchmark_operator, operator_id}}
 
   defp fetch_domain(domains, operator_id) do
     case Map.fetch(domains, operator_id) do

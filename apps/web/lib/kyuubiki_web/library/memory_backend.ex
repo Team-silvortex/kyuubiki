@@ -2,12 +2,12 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   @moduledoc false
 
   use Agent
-  alias KyuubikiWeb.Library.CheckpointRequest
+  alias KyuubikiWeb.Library.{CheckpointRequest, ProjectRequest}
   alias KyuubikiWeb.Storage.MemorySnapshot
 
   def start_link(_opts) do
     MemorySnapshot.start_link(
-      fn -> %{projects: %{}, models: %{}, versions: %{}, requests: %{}} end,
+      &empty_state/0,
       name: __MODULE__
     )
   end
@@ -49,13 +49,39 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
 
   def create_project(attrs) do
     timestamp = DateTime.utc_now(:second)
-    project = attrs |> Map.put("inserted_at", timestamp) |> Map.put("updated_at", timestamp)
 
-    MemorySnapshot.update(__MODULE__, fn state ->
-      put_in(state, [:projects, project["project_id"]], project)
+    project =
+      attrs
+      |> Map.delete("request_id")
+      |> Map.put("inserted_at", timestamp)
+      |> Map.put("updated_at", timestamp)
+
+    MemorySnapshot.get_and_update(__MODULE__, fn state ->
+      identity = ProjectRequest.identify(attrs)
+      receipt = identity && Map.get(state.project_requests, identity.request_key)
+
+      if receipt do
+        {ProjectRequest.replay(
+           receipt,
+           identity,
+           Map.has_key?(state.projects, receipt.project_id)
+         ), state}
+      else
+        next = put_in(state, [:projects, project["project_id"]], project)
+
+        next =
+          if identity,
+            do:
+              put_in(
+                next,
+                [:project_requests, identity.request_key],
+                ProjectRequest.receipt(identity, project)
+              ),
+            else: next
+
+        {{:ok, project}, next}
+      end
     end)
-
-    {:ok, project}
   end
 
   def update_project(project_id, attrs) do
@@ -312,11 +338,14 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
 
   def reset do
     MemorySnapshot.update(__MODULE__, fn _ ->
-      %{projects: %{}, models: %{}, versions: %{}, requests: %{}}
+      empty_state()
     end)
 
     :ok
   end
+
+  defp empty_state,
+    do: %{projects: %{}, models: %{}, versions: %{}, requests: %{}, project_requests: %{}}
 
   defp list_models_for_state(state, project_id) do
     state.models

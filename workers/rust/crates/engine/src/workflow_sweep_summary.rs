@@ -1,22 +1,15 @@
 use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::workflow_result_admission::require_converged_result;
 use crate::workflow_sweep_contract::{
-    bool_option, case_ids, object_or_null, require_complete, require_count, require_success,
-    text_option,
+    bool_option, case_ids, metric_field, object_or_null, require_count, require_evaluated_row,
+    require_evaluation_complete, text_option,
 };
 
 pub fn summarize_parameter_sweep(payload: Value, config: Value) -> Result<Value, String> {
     object_or_null(&config, "parameter sweep summary config")?;
-    require_complete(
-        &payload,
-        "join_complete",
-        &[
-            ("missing_summary_count", "missing_case_ids"),
-            ("unmatched_result_count", "unmatched_result_ids"),
-            ("rejected_result_count", "rejected_results"),
-        ],
-    )?;
+    require_evaluation_complete(&payload)?;
     let cases = payload
         .get("cases")
         .and_then(Value::as_array)
@@ -33,6 +26,12 @@ pub fn summarize_parameter_sweep(payload: Value, config: Value) -> Result<Value,
         "summary",
     )?;
     let summary_field = text_option(config.get("summary_field"), "summary_field", joined_field)?;
+    for (path, field) in [
+        ("joined_summary_field", joined_field),
+        ("summary_field", summary_field),
+    ] {
+        metric_field(field).map_err(|error| format!("{path}: {error}"))?;
+    }
     if payload.get("joined_summary_field").is_some() && summary_field != joined_field {
         return Err("summary_field disagrees with joined_summary_field".to_string());
     }
@@ -44,12 +43,7 @@ pub fn summarize_parameter_sweep(payload: Value, config: Value) -> Result<Value,
         .iter()
         .zip(&ids)
         .map(|(case, id)| {
-            require_success(
-                case,
-                "result_status",
-                "result_error",
-                &format!("parameter sweep case {id:?}"),
-            )?;
+            require_evaluated_row(case, &format!("parameter sweep case {id:?}"))?;
             let summary = case.get(summary_field).or_else(|| {
                 if config.get("summary_field").is_none()
                     && payload.get("joined_summary_field").is_none()
@@ -59,13 +53,20 @@ pub fn summarize_parameter_sweep(payload: Value, config: Value) -> Result<Value,
                     None
                 }
             });
-            summary.and_then(Value::as_object).ok_or_else(|| {
+            let summary = summary.and_then(Value::as_object).ok_or_else(|| {
                 format!(
                     "parameter sweep case {id:?} requires object summary field {summary_field:?}"
                 )
-            })
+            })?;
+            // Validate final solver state before a selected field list can discard it.
+            require_converged_result(
+                summary,
+                "parameter sweep summary",
+                &format!("case {id:?}.{summary_field}"),
+            )?;
+            Ok(summary)
         })
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, String>>()?;
     let fields = summary_fields(&summaries, &config)?;
     let numeric_fields = summaries
         .iter()
@@ -171,14 +172,7 @@ fn summary_fields(
         return Err("parameter sweep summaries contain no selected fields".to_string());
     }
     for field in &fields {
-        if field.trim().is_empty() {
-            return Err("summary fields must be nonblank strings".to_string());
-        }
-        if matches!(field.as_str(), "case_id" | "parameters" | "metadata") {
-            return Err(format!(
-                "summary field {field:?} is reserved for case identity or provenance"
-            ));
-        }
+        metric_field(field)?;
     }
     Ok(fields)
 }

@@ -369,7 +369,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "extract.electrostatic_result_diagnostics" ->
         WorkflowElectrostaticRuntime.extract_electrostatic_result_diagnostics(
           payload,
-          config || %{}
+          config
         )
 
       "extract.electrostatic_peak_field" ->
@@ -378,7 +378,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "extract.magnetostatic_result_diagnostics" ->
         KyuubikiWeb.WorkflowMagnetostaticRuntime.extract_magnetostatic_result_diagnostics(
           payload,
-          config || %{}
+          config
         )
 
       "extract.magnetostatic_peak_field" ->
@@ -388,13 +388,13 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
         WorkflowCfdRuntime.extract_stokes_flow_result_diagnostics(payload, config || %{})
 
       "extract.thermal_result_diagnostics" ->
-        WorkflowReportingRuntime.extract_thermal_result_diagnostics(payload, config || %{})
+        WorkflowReportingRuntime.extract_thermal_result_diagnostics(payload, config)
 
       "extract.heat_peak_flux" ->
         WorkflowReportingRuntime.extract_heat_peak_flux(payload, config || %{})
 
       "extract.thermo_result_diagnostics" ->
-        WorkflowReportingRuntime.extract_thermo_result_diagnostics(payload, config || %{})
+        WorkflowReportingRuntime.extract_thermo_result_diagnostics(payload, config)
 
       "extract.thermo_peak_response" ->
         WorkflowReportingRuntime.extract_thermo_peak_response(payload, config || %{})

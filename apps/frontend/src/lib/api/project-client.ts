@@ -11,7 +11,7 @@ import { requestJson } from "./core.ts";
 
 type ProjectRequestJson = <T>(url: string, init?: RequestInit, timeoutMs?: number) => Promise<T>;
 
-export type ProjectCreateInput = { name: string; description?: string };
+export type ProjectCreateInput = { name: string; description?: string; request_id?: string };
 export type ProjectUpdateInput = { name?: string; description?: string };
 export type ModelCreateInput = {
   request_id?: string;

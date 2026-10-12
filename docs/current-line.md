@@ -635,6 +635,210 @@ context-changed instead of being replayed. Version history now reaches the PWDT
 gate canonically. This is client admission, not authorization, a revision lock
 or proof that working geometry originated from the selected backend.
 
+The [Library write coordination follow-up](../reports/workbench-library-mutation-flight-20261012.md)
+adds a shared GUI/PWDT reservation for the same project or model, including
+post-write catalog and version reads. Project mutations exclude their model
+children; version mutations share their parent model's reservation. Conflicts
+reject without queuing, merging success or advancing the first write's intent.
+Completion or failure releases the reservation for an explicit new request;
+different models, projects and client backend scopes remain independent. This
+is one mounted Workbench context's coordination, not a backend, cross-window
+or durable lock. Import integration is covered below; checkpoint-journal actions remain separate.
+
+The [project import source follow-up](../reports/workbench-project-import-source-20261012.md)
+captures the import's effective API and authentication scope before parsing.
+Changed scope or a disposed owner stops subsequent project/model/version writes,
+local preset/Store persistence, recovery reads and late feedback. Confirmed records
+remain in the original backend. Same-source navigation still lets an accepted
+import finish while preserving the newer workspace. Import now participates in
+the existing GUI busy state through final version-history recovery, after synchronously
+handing off the remapped project/model/version context. Success feedback waits for
+that read; network idle alone does not identify completion. Import transactions
+and resumption remain separate work.
+
+The [project import admission follow-up](../reports/workbench-project-import-admission-20261012.md)
+reuses that shared registry: one import per Workbench context and effective API
+scope is admitted before parsing or changing intent. Overlapping file selections
+reject with localized pending guidance, without queuing or borrowing success.
+After creation, the new project and its model/version writes stay reserved through
+final recovery, including when the user discovers the partial project via refresh.
+Unrelated project editing, manual project creation and other backend scopes remain
+available. Completion or failure releases both reservations for an explicit later
+action. This is not persistent deduplication, cross-window locking or exactly-once
+import; an explicit later re-import still creates a new project.
+
+The [project creation receipt foundation](../reports/project-create-receipts-20261012.md)
+adds opt-in `request_id` support to project creation. Same identity and normalized
+content return the original receipt; changed content and deleted results reject
+without creating another project. SQLite commits project and receipt atomically,
+including concurrent connections, and retains the receipt across database reopen.
+The data ledger advances to revision 3 through explicit candidate upgrade only;
+revision-1/2 recipes and snapshot verification remain supported. No installed
+database was modified. GUI import still needs durable identity allocation and
+partial-import reconciliation, so this is not yet end-to-end import recovery.
+The three diagnostic-task fixture failures from that sweep are addressed by the
+[native thermal catalog follow-up](../reports/thermal-catalog-native-recovery-20261012.md).
+Actual Rust diagnostic execution also exposed missing legacy metrics and unsafe
+partial guard/benchmark decisions. Native metrics now align; missing required
+evidence fails closed. Nine live diagnostic catalog controls pass, including stale
+receipts, pending acknowledgements, missing flux and explicit fresh-job recovery.
+The expanded service selection passes 550 tests with 47 conditional skips; its
+project-receipt concurrency fixture now uses runtime WAL, not offline DELETE mode.
+Solver frames in these catalog tests remain fixtures, not fresh numerical solves.
+
+The [cross-domain decision follow-up](../reports/domain-decision-integrity-20261012.md)
+extends fail-closed admission to structural, acoustic, modal, dynamic, transport,
+electrostatic, magnetostatic and CFD guard/pair decisions. Missing required metrics,
+malformed declarations, explicit nonconvergence, invalid choices and colliding
+candidate labels cannot publish partial success. The 99 new controls include 64
+small asynchronous jobs that reject bad evidence and recover through explicit fresh
+submission without rewriting the old failure. Expanded service tests pass 1,466
+with 71 conditional skips. This is not numerical or live-Agent qualification.
+
+The [checked metric and CFD follow-up](../reports/checked-metric-cfd-recovery-20261012.md)
+closes the selected-alias and partial-sample gaps in service decision resolution.
+Corrupt earlier aliases, frequency/mode/transient rows and required CFD samples
+cannot become favorable fallback values or fabricated zero summaries. CFD peaks
+and means now resolve the same aliases, with stable means and checked totals/spans.
+The expanded selection passes 1,518 tests with 71 conditional skips; the complete
+API decision suite checks 128 rejected/corrected jobs across eight domains without
+rewriting old failures. Existing native integrity controls pass 22 tests. These
+remain controlled-data source tests, not new physical solves, installed acceptance
+or general durable recovery. Other legacy raw diagnostic reducers and thermal
+decision admission still require review.
+
+The [electromagnetic diagnostic follow-up](../reports/electromagnetic-diagnostic-integrity-20261012.md)
+replaces the permissive static electric/magnetic service reducers with shared
+checked sample admission. Entirely absent optional groups remain absent, while
+partial groups, invalid aliases, explicit nonconvergence and missing configured
+fields cannot publish diagnostics. Native and service charge-density source
+selection now agree for nodes/elements; no silent collection fallback remains.
+Thirty-two controlled graph runs check failure isolation and corrected fresh runs
+under both fail/skip policies. Expanded service tests pass 1,556 with 71 conditional
+skips; the native diagnostic selection passes 69. These are controlled-data source
+checks, not fresh physical solves, live Agent or durable recovery qualification.
+Thermal/thermo raw reductions are covered by the subsequent follow-up below;
+service quality scoring remains separate work.
+
+The [thermal diagnostic follow-up](../reports/thermal-diagnostic-integrity-20261012.md)
+removes permissive thermal/thermo service reductions. Missing selected samples,
+invalid magnitudes, malformed configuration and explicit nonconvergence cannot
+be hidden by healthy neighboring data. Component stress/strain peaks now compare
+all axes; scalar strain follows the native signed-maximum contract rather than
+the old service absolute maximum. Native displacement config honors legacy names
+without falling through invalid primary mappings. The expanded service selection
+passes 1,587 tests with 71 conditional skips, including 32 controlled graph runs
+for rejected evidence and corrected fresh runs under both error policies.
+Native thermo integrity passes 22 tests. These are raw-data contract and bounded
+fresh-run recovery checks, not new physical solves or automatic durable recovery.
+The subsequent quality/decision follow-up below addresses those admission gaps.
+
+The [quality and thermal decision follow-up](../reports/quality-and-thermal-decision-integrity-20261012.md)
+aligns all nine service domain scorers with strict native term/configuration
+admission. Invalid or repeated selections, damaged metrics, explicit
+nonconvergence and arithmetic overflow cannot publish scores. Truly absent
+metrics still produce a blocking assessment; zero weights and small positive
+targets remain explicit. Thermal guards/pairs now use shared decision checks
+instead of permissive defaults, with field-context errors and unchanged normal
+scoring formulas. Expanded service tests pass 1,693 with 71 conditional skips.
+The quality graph suite exercises 162 controlled runs under fail/skip; the full
+nine-domain API decision suite covers 144 rejected/corrected jobs. These are
+source controlled-data checks, not fresh physics, installed acceptance or
+automatic durable continuation. The bounded composition/ranking follow-up below
+addresses independently supplied quality evidence.
+
+The [objective and ranking follow-up](../reports/quality-objective-ranking-recovery-20261012.md)
+rejects malformed summaries and configuration without filtering or defaulting,
+preserves blockers, and accounts for every rejected candidate. Partial rankings
+cannot stop research merely because the surviving best score meets the target;
+unready low-score candidates also cannot stop. Next-round checks retain actionable
+failure fields and distinguish completed jobs from complete research decisions.
+76 new controls include 16 direct graph executions and eight actual asynchronous
+service jobs using controlled summaries. The expanded suite passes 1,769 tests
+with 71 conditional skips; 53 existing native quality tests pass unchanged.
+This is explicit fresh-submission recovery, not physical accuracy or automatic
+durable continuation. The bounded sweep/batch follow-up below extends admission
+to the subsequent pre-execution chain.
+
+The [sweep and execution-batch follow-up](../reports/quality-sweep-batch-recovery-20261012.md)
+rejects malformed axes, counts, paths, case identities and configuration without
+silent filtering. Budget blocks survive downstream limit changes; stopped or
+incomplete research cannot issue executable batches. Mixed-radix expansion keeps
+metadata and avoids intermediate Cartesian model lists. Batch routing hints now
+serialize as JSON objects while verified TaskIR remains execution authority.
+56 new controls include 14 direct graph runs and three asynchronous service jobs.
+Exported batches round-trip through JSON and public batch preparation/execution;
+six actual local thermal-shock assessments match independent formulas. Expanded
+service tests pass 1,872 with 71 conditional skips; 75 existing native sweep tests
+pass unchanged. These are bounded local analytic calculations and explicit fresh
+submissions, not FEM accuracy, live Agent or automatic durable recovery evidence.
+The result-collection follow-up below extends the service-side evidence.
+
+The [sweep result-selection follow-up](../reports/sweep-result-selection-recovery-20261012.md)
+removes positional fallback after keyed result misses, discards stale summaries
+and preserves missing/rejected/unmatched diagnostics. Incomplete joins and metric
+tables cannot enter scoring. Hard feasibility limits take precedence over score;
+all-infeasible evaluations retain diagnostics without returning a best candidate.
+56 new tests cover 29 direct graph runs and 16 asynchronous service jobs. Two
+actual local batches supply four analytic assessments, shuffled before result
+matching and independently checked before selection. Expanded service tests pass
+1,928 with 71 conditional skips; 62 native sweep reference tests pass unchanged.
+This is explicit fresh submission, not authenticated attempt provenance, physical
+accuracy or durable continuation. The bounded native follow-up below extends
+the scoring and score-to-quality mapping checks.
+
+The [native sweep selection follow-up](../reports/native-sweep-selection-recovery-20261012.md)
+rejects malformed, incomplete and contradictory scoring evidence before native
+selection. Hard feasibility outranks score; all-infeasible results retain their
+blockers and replan rather than stop. Positive objectives require an explicit
+fixed mapping reference instead of becoming negative quality costs or being
+rebased against the batch winner. 18 new Rust tests cover fourteen controlled
+native graph executions and 100 fractional-weight JSON exchanges; 25 shared
+scoring fixtures also run independently in Elixir. Expanded service regressions
+pass 1,953 with 71 conditional skips; the full native Engine suite passes 677
+with one ignored. These are source controlled-data checks,
+not live Agent, physical accuracy, installed acceptance or durable continuation.
+The collection follow-up below addresses identified native join/summary gaps;
+broader quality admission and authenticated provenance remain separate work.
+
+The [native collection follow-up](../reports/native-sweep-collection-recovery-20261012.md)
+checks final convergence before selected-field reduction can hide it, rejects
+contradictory incomplete-summary evidence and aligns reserved metric fields.
+Both runtimes now prevent provenance fields from being used as summary
+containers. Fresh native joins remove declared old custom summaries without
+deep-cloning the discarded trees. Five new Rust tests and 43 Elixir tests include
+41 shared fixture cases, sixteen controlled native graphs and four controlled
+service graphs. The full native Engine suite passes 682 with one ignored;
+expanded service regressions pass 1,996 with 71 conditional skips.
+These are source contract and explicit fresh-run controls, not new physical
+calculations, live Agent, installed, remote or durable-recovery qualification.
+The following quality-decision audit extends native admission evidence.
+
+The [native quality-decision follow-up](../reports/native-quality-decision-recovery-20261012.md)
+requires same-domain score companions, rejects malformed present validation
+fields and candidate identities, and validates all ranking entries, rejection
+records, counts and best-candidate claims before the next round. Inner objective
+blockers and readiness cannot be hidden by outer fields. Both runtimes pass 49
+shared fixture cases; thirty new controlled native graphs distinguish malformed
+input rejection, incomplete-evaluation pause and valid repair replanning, with
+corrected fresh graphs expanding four cases. The full Engine suite passes 687
+with one ignored; expanded service regressions pass 2,045 with 71 conditional
+skips. These are source contract and explicit fresh-run controls, not physical
+accuracy, live Agent or durable recovery. The next audit covers ranking order
+and score-copy consistency; maturity grades are unchanged.
+
+The [ranking consistency follow-up](../reports/quality-ranking-consistency-recovery-20261012.md)
+checks ready-first/score/identity order without silently re-sorting, validates
+optional one-based rank positions and requires present row/objective scores to
+agree. Every nested objective is checked, including lower-ranked rows. Both
+runtimes pass 31 shared fixture cases and permutation/JSON-exchange controls;
+sixteen native and sixteen service graph executions reject incoherent decisions
+and recover through corrected fresh inputs. The full Engine suite passes 690
+with one ignored; expanded service regressions pass 2,078 with 71 conditional
+skips. Canonical ordering is not independently recomputed physical optimality.
+Objective-term recomputation, conflicting coupled-readiness representations,
+downstream admission and durable recovery remain separate work.
+
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job
 identities and ties fixed candidate reports to their own completed waits/results.
@@ -666,7 +870,7 @@ headers instead of racing delayed clients.
 See `releases/snapshots/3.5.0.json`. Package, update, language-pack and book
 targets are aligned, without changing protocol/schema versions, translation
 content or historical grades. The installed baseline remains 3.4.0. The tensor
-continues to have four maturity gaps, 19 evidence-grade gaps and 14 P0 gaps;
+continues to have four maturity gaps, 20 evidence-grade gaps and 15 P0 gaps;
 release qualification remains blocked. The 3.5.x mainline continues reliable
 research execution and recovery under the existing Engine/Solver split.
 

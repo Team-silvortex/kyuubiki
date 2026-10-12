@@ -1,8 +1,18 @@
 defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
   use KyuubikiWeb.TestSupport.ApiRouterCase
 
+  alias KyuubikiWeb.TestSupport.WorkflowDiagnosticAgent, as: DiagnosticAgent
+
   test "submits a heat quad guard catalog workflow as an asynchronous job" do
-    {:ok, _pid} = WorkflowApi.start_fake_agent_sessions([[guard_heat_result()]])
+    agent =
+      DiagnosticAgent.start!([
+        DiagnosticAgent.solver("solve_heat_plane_quad_2d", [guard_heat_result()]),
+        DiagnosticAgent.diagnostic(
+          "extract_thermal_diagnostics",
+          "extract.thermal_result_diagnostics"
+        )
+      ])
+
     port = WorkflowApi.await_fake_agent_port()
     WorkflowApi.configure_fake_agent_pool(port)
 
@@ -14,6 +24,8 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
       )
 
     assert result_payload["job"]["status"] == "completed"
+    [_, diagnostic] = DiagnosticAgent.assert_complete(agent)
+    assert_diagnostic_input(diagnostic, result_payload, "solve_heat.result")
     assert result_payload["result"]["workflow_id"] == "workflow.heat-plane-quad-guard-json"
 
     assert result_payload["result"]["dataset_contract"]["id"] ==
@@ -39,10 +51,18 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
   end
 
   test "submits a heat thermo benchmark catalog workflow as an asynchronous job" do
-    {:ok, _pid} =
-      WorkflowApi.start_fake_agent_sessions([
-        [benchmark_heat_result()],
-        [benchmark_thermo_result()]
+    agent =
+      DiagnosticAgent.start!([
+        DiagnosticAgent.solver("solve_heat_plane_quad_2d", [benchmark_heat_result()]),
+        DiagnosticAgent.diagnostic(
+          "extract_thermal_diagnostics",
+          "extract.thermal_result_diagnostics"
+        ),
+        DiagnosticAgent.solver("solve_thermal_plane_quad_2d", [benchmark_thermo_result()]),
+        DiagnosticAgent.diagnostic(
+          "extract_thermo_diagnostics",
+          "extract.thermo_result_diagnostics"
+        )
       ])
 
     port = WorkflowApi.await_fake_agent_port()
@@ -56,6 +76,9 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
       )
 
     assert result_payload["job"]["status"] == "completed"
+    [_, thermal, _, thermo] = DiagnosticAgent.assert_complete(agent)
+    assert_diagnostic_input(thermal, result_payload, "solve_heat.result")
+    assert_diagnostic_input(thermo, result_payload, "solve_thermo.result")
     assert result_payload["result"]["workflow_id"] == "workflow.heat-thermo-quad-benchmark-json"
 
     assert result_payload["result"]["dataset_contract"]["id"] ==
@@ -78,6 +101,99 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
     assert summary["benchmark_winner"] == "thermo"
     assert summary["benchmark_margin"] == 3.0
     assert summary["benchmark_criteria_count"] == 3
+  end
+
+  for field <- ~w(task_id task_digest operator_id program_id) do
+    test "rejects a diagnostic receipt with stale #{field} and a fresh run recovers" do
+      assert_rejected_then_recovered(
+        &Map.put(&1, unquote(field), "stale-diagnostic-identity"),
+        "operator_task_execution_receipt_invalid"
+      )
+    end
+  end
+
+  test "a delivery acknowledgement cannot publish diagnostics or export a guard report" do
+    assert_rejected_then_recovered(
+      fn receipt ->
+        receipt
+        |> Map.put("operator_task_ir_status", "verified_pending_execution")
+        |> Map.put("execution_readiness", %{"status" => "blocked", "ready_to_dispatch" => false})
+      end,
+      "native_workflow_operator_not_executed"
+    )
+  end
+
+  test "an executed but incomplete diagnostic cannot downgrade a blocking guard to a warning" do
+    assert_rejected_then_recovered(
+      fn receipt ->
+        Map.update!(
+          receipt,
+          "result",
+          &Map.drop(&1, ~w(thermal_peak_flux_magnitude thermal_flux_peak_magnitude))
+        )
+      end,
+      "payload.thermal_peak_flux_magnitude",
+      ["heat_model", "solve_heat", "extract_thermal_diagnostics"]
+    )
+  end
+
+  defp assert_rejected_then_recovered(
+         mutate_receipt,
+         reason,
+         completed_nodes \\ ["heat_model", "solve_heat"]
+       ) do
+    agent =
+      DiagnosticAgent.start!([
+        DiagnosticAgent.solver("solve_heat_plane_quad_2d", [guard_heat_result()]),
+        DiagnosticAgent.diagnostic(
+          "extract_thermal_diagnostics",
+          "extract.thermal_result_diagnostics",
+          mutate_receipt
+        ),
+        DiagnosticAgent.solver("solve_heat_plane_quad_2d", [guard_heat_result()]),
+        DiagnosticAgent.diagnostic(
+          "extract_thermal_diagnostics",
+          "extract.thermal_result_diagnostics"
+        )
+      ])
+
+    WorkflowApi.configure_fake_agent_pool(WorkflowApi.await_fake_agent_port())
+    failed = submit_guard()
+    assert failed["job"]["status"] == "failed"
+    assert failed["job"]["message"] =~ reason
+    refute get_in(failed, ["result", "artifacts", "json_output.json"])
+    assert {:ok, retained} = AnalysisResultStore.get(failed["job"]["job_id"])
+    assert retained["_workflow_recovery"]["state"] == "failed"
+    refute Map.has_key?(retained["artifacts"], "extract_thermal_diagnostics.summary")
+    refute Map.has_key?(retained["artifacts"], "json_output.json")
+    assert Enum.map(retained["progress_events"], & &1["node_id"]) == completed_nodes
+
+    recovered = submit_guard()
+    assert recovered["job"]["status"] == "completed"
+    refute recovered["job"]["job_id"] == failed["job"]["job_id"]
+    assert recovered["result"]["failed_nodes"] == []
+    exported = recovered["result"]["artifacts"]["json_output.json"]
+    assert Jason.decode!(exported["content"])["guard_status"] == "block"
+    [_, rejected_request, _, recovered_request] = DiagnosticAgent.assert_complete(agent)
+    rejected_task = rejected_request["params"]["task_ir"]
+    recovered_task = recovered_request["params"]["task_ir"]
+    refute rejected_task["task_id"] == recovered_task["task_id"]
+    assert rejected_task["input_artifact"] == recovered_task["input_artifact"]
+    assert_diagnostic_input(recovered_request, recovered, "solve_heat.result")
+  end
+
+  defp submit_guard do
+    WorkflowApi.submit_catalog_workflow_job(
+      @opts,
+      "workflow.heat-plane-quad-guard-json",
+      WorkflowApi.heat_to_thermo_quad_input_artifacts()
+    )
+  end
+
+  defp assert_diagnostic_input(request, payload, artifact_key) do
+    task = request["params"]["task_ir"]
+    assert task["config"] == %{}
+    assert task["input_artifact"] == payload["result"]["artifacts"][artifact_key]
   end
 
   defp guard_heat_result do

@@ -14,6 +14,8 @@ import { isWorkbenchAdminRecordSourceCurrent } from "./workbench-admin-record-so
 import { getWorkbenchAdminRecordSourceChangedLabel } from "./workbench-admin-record-source-copy";
 import { workbenchProjectContextChangedError } from "@/lib/workbench/project-context";
 import { captureWorkbenchLibraryWriteSource, type WorkbenchLibraryWriteKind } from "./workbench-library-write-source";
+import { getWorkbenchLibraryMutations, resolveWorkbenchLibraryMutationTarget, WorkbenchLibraryWritePendingError } from "./workbench-library-mutations";
+import { getWorkbenchLibraryMutationPendingLabel } from "./workbench-library-mutation-copy";
 
 type ScriptProjectModelControllerDeps = {
   language?: string;
@@ -64,7 +66,7 @@ type ScriptProjectModelControllerDeps = {
   setMessage: (value: string) => void;
 };
 
-export async function handleWorkbenchScriptProjectModelAction({
+async function executeWorkbenchScriptProjectModelAction({
   language = "en",
   checkpointRecovery,
   openModelVersionById,
@@ -363,5 +365,18 @@ export async function handleWorkbenchScriptProjectModelAction({
     }
     default:
       return null;
+  }
+}
+
+export async function handleWorkbenchScriptProjectModelAction(deps: ScriptProjectModelControllerDeps): Promise<Record<string, unknown> | null> {
+  const target = resolveWorkbenchLibraryMutationTarget(deps.action, deps.selectedProjectId, deps.selectedModelId);
+  if (!target) return executeWorkbenchScriptProjectModelAction(deps);
+  const ownsIntent = deps.projectContext.capture();
+  try {
+    return await getWorkbenchLibraryMutations(deps.projectContext).run(target, () => executeWorkbenchScriptProjectModelAction(deps),
+      getWorkbenchLibraryMutationPendingLabel(deps.language ?? "en"));
+  } catch (error) {
+    if (error instanceof WorkbenchLibraryWritePendingError && ownsIntent() && error.isCurrent()) deps.setMessage(error.message);
+    throw error;
   }
 }

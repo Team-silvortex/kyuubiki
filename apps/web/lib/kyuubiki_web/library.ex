@@ -120,10 +120,12 @@ defmodule KyuubikiWeb.Library do
   end
 
   defp normalize_project_attrs(attrs) do
-    with {:ok, name} <- fetch_required_string(attrs, ["name", :name]) do
+    with {:ok, name} <- fetch_required_string(attrs, ["name", :name]),
+         {:ok, request_id} <- KyuubikiWeb.Library.CheckpointRequest.normalize(attrs) do
       {:ok,
        %{
          "project_id" => random_id(),
+         "request_id" => request_id,
          "name" => name,
          "description" => fetch_optional_string(attrs, ["description", :description])
        }}

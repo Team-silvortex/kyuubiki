@@ -2,51 +2,57 @@ defmodule KyuubikiWeb.WorkflowCfdRuntime do
   @moduledoc false
 
   alias KyuubikiWeb.WorkflowDomainMetricResolver
+  alias KyuubikiWeb.WorkflowDecisionChecks
+  alias KyuubikiWeb.WorkflowReportingChecks, as: Check
 
-  def extract_stokes_flow_result_diagnostics(payload, config)
-      when is_map(payload) and is_map(config) do
-    nodes = Map.get(payload, "nodes", [])
-    elements = Map.get(payload, "elements", [])
-
-    with true <- is_list(nodes) and is_list(elements),
-         false <- nodes == [] and elements == [] do
+  def extract_stokes_flow_result_diagnostics(payload, config) do
+    Check.run("extract.stokes_flow_result_diagnostics", fn ->
+      payload = Check.object(payload, "payload")
+      config = Check.object(config, "config")
+      Check.converged(payload, "payload")
+      nodes = samples(payload, "nodes")
+      elements = samples(payload, "elements")
       prefix = normalize_prefix(Map.get(config, "output_prefix", "cfd"))
-      velocity_values = numeric_values(nodes, "velocity_magnitude")
-      pressure_values = numeric_values(nodes, "pressure")
-      divergence_values = numeric_values(elements, "divergence_error")
-      reynolds_values = numeric_values(elements, "reynolds_number")
-      dissipation_values = numeric_values(elements, "viscous_dissipation")
+      node_stats = sample_stats(nodes, ~w(velocity_magnitude pressure), "nodes")
 
-      summary =
-        %{
-          "diagnostic_contract" => "kyuubiki.workflow_diagnostics/v1",
-          "diagnostic_domain" => "fluid",
-          "diagnostic_subject" => "stokes_flow_result",
-          "diagnostic_prefix" => prefix,
-          "diagnostic_node_count" => length(nodes),
-          "diagnostic_element_count" => length(elements)
-        }
-        |> merge_min_max("#{prefix}_velocity", velocity_values)
-        |> merge_min_max("#{prefix}_pressure", pressure_values)
-        |> merge_peak("#{prefix}_divergence_error", elements, "divergence_error")
-        |> merge_peak("#{prefix}_reynolds_number", elements, "reynolds_number")
-        |> merge_peak("#{prefix}_viscous_dissipation", elements, "viscous_dissipation")
-        |> Map.put("#{prefix}_velocity_mean", mean_or_zero(velocity_values))
-        |> Map.put("#{prefix}_pressure_mean", mean_or_zero(pressure_values))
-        |> Map.put("#{prefix}_divergence_error_mean", mean_or_zero(divergence_values))
-        |> Map.put("#{prefix}_reynolds_number_mean", mean_or_zero(reynolds_values))
-        |> Map.put("#{prefix}_viscous_dissipation_total", Enum.sum(dissipation_values))
+      element_stats =
+        sample_stats(
+          elements,
+          ~w(divergence_error reynolds_number viscous_dissipation),
+          "elements"
+        )
 
-      {:ok, summary}
-    else
-      _ -> {:error, :invalid_stokes_flow_result}
-    end
+      %{
+        "diagnostic_contract" => "kyuubiki.workflow_diagnostics/v1",
+        "diagnostic_domain" => "fluid",
+        "diagnostic_subject" => "stokes_flow_result",
+        "diagnostic_prefix" => prefix,
+        "diagnostic_node_count" => length(nodes),
+        "diagnostic_element_count" => length(elements)
+      }
+      |> merge_bounds("#{prefix}_velocity", node_stats["velocity_magnitude"])
+      |> merge_bounds("#{prefix}_pressure", node_stats["pressure"])
+      |> merge_peak("#{prefix}_divergence_error", element_stats["divergence_error"])
+      |> merge_peak("#{prefix}_reynolds_number", element_stats["reynolds_number"])
+      |> merge_peak("#{prefix}_viscous_dissipation", element_stats["viscous_dissipation"])
+      |> Map.put("#{prefix}_velocity_mean", node_stats["velocity_magnitude"].mean)
+      |> Map.put("#{prefix}_pressure_mean", node_stats["pressure"].mean)
+      |> Map.put("#{prefix}_divergence_error_mean", element_stats["divergence_error"].mean)
+      |> Map.put("#{prefix}_reynolds_number_mean", element_stats["reynolds_number"].mean)
+      |> Map.put("#{prefix}_viscous_dissipation_total", element_stats["viscous_dissipation"].sum)
+    end)
   end
 
-  def extract_stokes_flow_result_diagnostics(_payload, _config),
-    do: {:error, :invalid_stokes_flow_result}
+  def evaluate_cfd_guard(payload, config) do
+    WorkflowDecisionChecks.guard(
+      "transform.evaluate_cfd_guard",
+      payload,
+      config,
+      &do_evaluate_cfd_guard/2
+    )
+  end
 
-  def evaluate_cfd_guard(payload, config) when is_map(payload) and is_map(config) do
+  defp do_evaluate_cfd_guard(payload, config) do
     rules = Map.get(config, "rules", [])
 
     if is_list(rules) and rules != [] do
@@ -78,9 +84,16 @@ defmodule KyuubikiWeb.WorkflowCfdRuntime do
     end
   end
 
-  def evaluate_cfd_guard(_payload, _config), do: {:error, :invalid_cfd_guard}
+  def benchmark_cfd_pair(payload, config) do
+    WorkflowDecisionChecks.pair(
+      "transform.benchmark_cfd_pair",
+      payload,
+      config,
+      &do_benchmark_cfd_pair/2
+    )
+  end
 
-  def benchmark_cfd_pair(payload, config) when is_map(payload) and is_map(config) do
+  defp do_benchmark_cfd_pair(payload, config) do
     with %{} = left <- Map.get(payload, "left"),
          %{} = right <- Map.get(payload, "right"),
          criteria when is_list(criteria) and criteria != [] <- Map.get(config, "criteria") do
@@ -108,51 +121,74 @@ defmodule KyuubikiWeb.WorkflowCfdRuntime do
     end
   end
 
-  def benchmark_cfd_pair(_payload, _config), do: {:error, :invalid_cfd_benchmark_pair}
+  defp samples(payload, source) do
+    rows = Check.list(payload[source], "payload.#{source}")
+    if rows == [], do: Check.fail("payload.#{source} must be a non-empty array")
+    rows
+  end
 
-  defp merge_min_max(summary, key, []),
-    do: summary |> Map.put("#{key}_min", 0.0) |> Map.put("#{key}_max", 0.0)
+  defp sample_stats(rows, fields, source) do
+    {_count, stats} =
+      Enum.reduce(rows, {0, %{}}, fn row, {index, stats} ->
+        path = "payload.#{source}[#{index}]"
+        row = Check.object(row, path)
 
-  defp merge_min_max(summary, key, values),
+        stats =
+          Enum.reduce(fields, stats, fn field, acc ->
+            value =
+              case WorkflowDomainMetricResolver.checked_metric_value(row, field, path) do
+                {:ok, value} -> Check.number(value, "#{path}.#{field}")
+                {:error, reason} -> Check.fail(reason)
+              end
+
+            next = observe(Map.get(acc, field), value, row["id"], index + 1, "#{path}.#{field}")
+
+            next =
+              if field == "viscous_dissipation" do
+                sum =
+                  Check.calculate("#{path}.#{field}.sum", fn ->
+                    Map.get(next, :sum, 0.0) + value
+                  end)
+
+                Map.put(next, :sum, sum)
+              else
+                next
+              end
+
+            Map.put(acc, field, next)
+          end)
+
+        {index + 1, stats}
+      end)
+
+    stats
+  end
+
+  defp observe(nil, value, id, _count, _path),
+    do: %{min: value, max: value, mean: value, peak: value, peak_id: id}
+
+  defp observe(stats, value, id, count, path) do
+    # Weighted means avoid overflowing an unused raw sum, matching native diagnostics.
+    mean =
+      Check.calculate("#{path}.mean", fn -> stats.mean * ((count - 1) / count) + value / count end)
+
+    stats = %{stats | min: min(stats.min, value), max: max(stats.max, value), mean: mean}
+    if abs(value) >= abs(stats.peak), do: %{stats | peak: value, peak_id: id}, else: stats
+  end
+
+  defp merge_bounds(summary, key, stats) do
+    span = Check.calculate("#{key}_span", fn -> stats.max - stats.min end)
+
+    Map.merge(summary, %{
+      "#{key}_min" => stats.min,
+      "#{key}_max" => stats.max,
+      "#{key}_span" => span
+    })
+  end
+
+  defp merge_peak(summary, key, stats),
     do:
-      summary
-      |> Map.put("#{key}_min", Enum.min(values))
-      |> Map.put("#{key}_max", Enum.max(values))
-
-  defp merge_peak(summary, key, elements, field) do
-    case peak_element(elements, field) do
-      nil ->
-        summary
-        |> Map.put("#{key}_peak", 0.0)
-        |> Map.put("#{key}_peak_element_id", nil)
-
-      {element, value} ->
-        summary
-        |> Map.put("#{key}_peak", value)
-        |> Map.put("#{key}_peak_element_id", Map.get(element, "id"))
-    end
-  end
-
-  defp peak_element(elements, field) do
-    elements
-    |> Enum.filter(&is_map/1)
-    |> Enum.filter(&number?(Map.get(&1, field)))
-    |> Enum.max_by(fn element -> abs(Map.fetch!(element, field)) end, fn -> nil end)
-    |> case do
-      nil -> nil
-      element -> {element, Map.fetch!(element, field)}
-    end
-  end
-
-  defp numeric_values(values, field) do
-    values
-    |> Enum.filter(&is_map/1)
-    |> Enum.map(&WorkflowDomainMetricResolver.metric_value(&1, field))
-    |> Enum.filter(&number?/1)
-  end
-
-  defp mean_or_zero([]), do: 0.0
-  defp mean_or_zero(values), do: Enum.sum(values) / length(values)
+      Map.merge(summary, %{"#{key}_peak" => stats.peak, "#{key}_peak_element_id" => stats.peak_id})
 
   defp number?(value), do: is_integer(value) or is_float(value)
 

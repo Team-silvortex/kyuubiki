@@ -193,6 +193,42 @@ cannot authorize writes. See the
 [Library write source controls](../../../reports/workbench-library-write-source-20261012.md)
 for source-client, payload provenance, write exclusion and audit-routing limits.
 
+`tests/integration/workbench-ui-library-mutation-flight.test.mjs` covers shared
+GUI/PWDT Library write exclusion, parent-project conflicts, pending catalog and
+version reads, failure release, explicit retries and independent backend scopes.
+Conflicting requests reject rather than queue or borrow another operation's
+success. Pure controls use `workbench-library-mutations` and the real PWDT
+project/model controller, including authority changes and dispose/remount.
+Wait for the GUI transition to finish before starting a subsequent write; a
+quiet network alone does not establish committed React selection state. See the
+[Library write coordination controls](../../../reports/workbench-library-mutation-flight-20261012.md)
+for workspace-scoped, import and cross-client limits.
+
+`tests/integration/workbench-ui-import-source-recovery.test.mjs` holds individual
+import writes and recovery reads while switching to a second backend. It waits
+for the GUI busy/ready transition before checking continuation requests, record
+counts and workspace feedback. `workbench-project-store-bundle-roundtrip` adds
+direct import controls for parsing, write/read boundaries, changed credentials
+and disposed owners. The final history read requires the remapped synchronous
+project context, not just deferred UI selection setters. Success feedback waits
+for that read; a newer intent owns any later feedback. Same-source workspace
+navigation still permits an accepted import to finish without replacing newer work. See the
+[project import source controls](../../../reports/workbench-project-import-source-20261012.md)
+for partial-record retention and separate import concurrency limits. The import
+history-outage case waits for visible recovered version rows and verifies that
+read-only recovery never repeats project/model/version creation.
+
+`tests/integration/workbench-ui-import-mutation-flight.test.mjs` checks overlapping
+file selection at project/model/version writes and catalog/history reads, failed
+imports followed by explicit re-import, and GUI/PWDT mutations of the new project.
+It also discovers a partial project via catalog refresh and tests deletion while
+model creation is held. Pure import controls cover parsing, localized feedback,
+newer intent/backend ownership, release after failures and unrelated project
+writes. The shared reservation matrix includes a distinct import slot, independent
+of manual project creation. See the
+[import admission controls](../../../reports/workbench-project-import-admission-20261012.md)
+for the one-context/API-scope boundary and persistent deduplication limitations.
+
 `tests/integration/workbench-ui-result-record-recovery.test.mjs` checks malformed
 result receipts and response bodies, invalid object drafts, slow saves, record
 switching, old reads after confirmed deletion, and successful or failed downloads.

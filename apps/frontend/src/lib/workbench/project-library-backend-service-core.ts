@@ -12,11 +12,12 @@ import type {
 } from "@/lib/api/project-types";
 
 export type WorkbenchProjectCreateInput = {
+  request_id?: string;
   description?: string;
   name: string;
 };
 
-export type WorkbenchProjectUpdateInput = Partial<WorkbenchProjectCreateInput>;
+export type WorkbenchProjectUpdateInput = Partial<Omit<WorkbenchProjectCreateInput, "request_id">>;
 
 export type WorkbenchModelMutationInput = Partial<{
   kind: string;

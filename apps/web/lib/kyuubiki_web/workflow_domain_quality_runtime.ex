@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
   @moduledoc false
 
   alias KyuubikiWeb.WorkflowDomainMetricResolver
+  alias KyuubikiWeb.WorkflowReportingChecks, as: Check
 
   @domains %{
     "transform.score_acoustic_quality" => %{
@@ -110,19 +111,31 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
 
   def supported_operator_ids, do: Map.keys(@domains)
 
-  def score(operator_id, payload, config) when is_map(payload) and is_map(config) do
+  def score(operator_id, payload, config) do
     with {:ok, domain} <- fetch_domain(operator_id) do
-      terms = terms_for(domain, config) |> Enum.map(&score_term(payload, config, &1))
-      missing = Enum.count(terms, &(Map.get(&1, "status") == "missing"))
-      watch = Enum.count(terms, &(Map.get(&1, "status") == "watch"))
-      score = Enum.reduce(terms, 0.0, &(&2 + Map.get(&1, "penalty", 0.0)))
-      max_ready = config_number(config, "max_ready_score", domain.ready)
-      grade = quality_grade(score, missing, max_ready)
-      {:ok, quality_payload(domain, payload, terms, score, missing, watch, max_ready, grade)}
+      Check.run(operator_id, fn ->
+        payload = Check.object(payload, "payload")
+        Check.converged(payload, "payload")
+        config = Check.config(config)
+        selected = terms_for(domain, config)
+        config = checked_config(domain, config)
+        terms = Enum.map(selected, &score_term(payload, config, &1))
+        missing = Enum.count(terms, &(Map.get(&1, "status") == "missing"))
+        watch = Enum.count(terms, &(Map.get(&1, "status") == "watch"))
+
+        score =
+          Enum.reduce(terms, 0.0, fn term, sum ->
+            Check.calculate("quality_score after #{term["field"]}", fn ->
+              sum + term["penalty"]
+            end)
+          end)
+
+        max_ready = config["max_ready_score"]
+        grade = quality_grade(score, missing, max_ready)
+        quality_payload(domain, payload, terms, score, missing, watch, max_ready, grade)
+      end)
     end
   end
-
-  def score(_operator_id, _payload, _config), do: {:error, :invalid_quality_score_payload}
 
   defp fetch_domain(operator_id) do
     case Map.fetch(@domains, operator_id) do
@@ -132,20 +145,75 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
   end
 
   defp terms_for(domain, config) do
-    case config["enabled_terms"] do
-      enabled_terms when is_list(enabled_terms) ->
-        enabled_terms
-        |> Enum.filter(&is_binary/1)
-        |> Enum.map(&quality_term_for(domain, &1))
-        |> Enum.reject(&is_nil/1)
-        |> case do
-          [] -> domain.terms
-          selected_terms -> selected_terms
-        end
-
-      _ ->
+    case Map.fetch(config, "enabled_terms") do
+      :error ->
         domain.terms
+
+      {:ok, requested} ->
+        requested = Check.list(requested, "config.enabled_terms")
+        if requested == [], do: Check.fail("config.enabled_terms must not be empty")
+
+        {terms, _seen} =
+          requested
+          |> Enum.with_index()
+          |> Enum.map_reduce(MapSet.new(), fn {field, index}, seen ->
+            path = "config.enabled_terms[#{index}]"
+
+            if not is_binary(field) or String.trim(field) == "",
+              do: Check.fail("#{path} must be a nonblank metric name")
+
+            field = String.trim(field)
+
+            term =
+              quality_term_for(domain, field) ||
+                Check.fail("#{path} names unknown metric #{field}")
+
+            if MapSet.member?(seen, field), do: Check.fail("#{path} repeats metric #{field}")
+            {term, MapSet.put(seen, field)}
+          end)
+
+        terms
     end
+  end
+
+  defp checked_config(domain, config) do
+    config =
+      Enum.reduce(~w(targets weights), config, fn group, config ->
+        values =
+          case Map.fetch(config, group) do
+            :error -> %{}
+            {:ok, values} -> Check.object(values, "config.#{group}")
+          end
+
+        checked =
+          Map.new(values, fn {field, value} ->
+            path = "config.#{group}.#{field}"
+
+            if quality_term_for(domain, field) == nil,
+              do: Check.fail("#{path} names an unknown metric")
+
+            {field, constrained_number(value, path, group == "targets")}
+          end)
+
+        Map.put(config, group, checked)
+      end)
+
+    ready =
+      case Map.fetch(config, "max_ready_score") do
+        :error -> domain.ready
+        {:ok, value} -> constrained_number(value, "config.max_ready_score", false)
+      end
+
+    Map.put(config, "max_ready_score", ready)
+  end
+
+  defp constrained_number(value, path, positive) do
+    value = Check.number(value, path)
+
+    if value < 0 or (positive and value == 0),
+      do: Check.fail("#{path} must be #{if positive, do: "positive", else: "nonnegative"}")
+
+    value
   end
 
   defp quality_term_for(domain, field) do
@@ -171,12 +239,24 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
   defp extra_quality_term(_domain_id, _field), do: nil
 
   defp score_term(payload, config, {field, label, default_target, default_weight, goal}) do
-    target = configured_number(config, "targets", field, default_target) |> max(1.0e-12)
-    weight = configured_number(config, "weights", field, default_weight) |> max(0.0)
+    target = Map.get(config["targets"], field, default_target)
+    weight = Map.get(config["weights"], field, default_weight)
 
-    case WorkflowDomainMetricResolver.metric_value(payload, field) do
-      value when is_number(value) ->
-        penalty = quality_ratio(value, target, goal) * weight
+    case WorkflowDomainMetricResolver.checked_metric_value(payload, field) do
+      {:error, reason} ->
+        Check.fail(reason)
+
+      {:ok, value} when is_number(value) ->
+        # A zero weight still validates evidence but need not evaluate an unused ratio.
+        penalty =
+          if weight == 0 do
+            0.0
+          else
+            ratio =
+              Check.calculate("#{field}.ratio", fn -> quality_ratio(value, target, goal) end)
+
+            Check.calculate("#{field}.penalty", fn -> ratio * weight end)
+          end
 
         %{
           "field" => field,
@@ -189,7 +269,7 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
           "status" => if(meets_target?(value, target, goal), do: "ok", else: "watch")
         }
 
-      _ ->
+      {:ok, nil} ->
         %{
           "field" => field,
           "label" => label,
@@ -323,7 +403,9 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
 
   defp dominant_quality_term(terms) do
     terms
-    |> Enum.max_by(&Map.get(&1, "penalty", 0.0), fn -> nil end)
+    |> Enum.reduce(nil, fn term, best ->
+      if best == nil or term["penalty"] >= best["penalty"], do: term, else: best
+    end)
     |> compact_quality_term()
   end
 
@@ -345,28 +427,6 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
       "penalty" => Map.get(term, "penalty")
     }
   end
-
-  defp configured_number(config, group, field, default) do
-    config
-    |> get_in([group, field])
-    |> number()
-    |> Kernel.||(default)
-  end
-
-  defp config_number(config, field, default) do
-    case number(config[field]) do
-      value when is_number(value) and value >= 0.0 -> value
-      _ -> default
-    end
-  end
-
-  defp number(value) when is_number(value) do
-    if finite?(value), do: value * 1.0
-  end
-
-  defp number(_value), do: nil
-
-  defp finite?(value), do: value == value and value not in [:infinity, :neg_infinity]
 
   defp quality_grade(score, missing, max_ready) do
     cond do

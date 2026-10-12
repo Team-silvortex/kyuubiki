@@ -313,7 +313,7 @@ defmodule KyuubikiWeb.WorkflowQualityObjectiveRuntimeTest do
     assert first["task_ir"]["execution_program"]["runtime_protocol"] == "kyuubiki.solver-rpc/v1"
     assert first["task_ir"]["dataset_contract"]["id"] == "kyuubiki.dataset.quality_heat/v1"
     assert first["agent_rpc"]["params"]["task_ir"]["task_id"] == first["task_id"]
-    assert first["agent_rpc"]["routing_opts"][:job_id] == first["task_id"]
+    assert first["agent_rpc"]["routing_opts"]["job_id"] == first["task_id"]
   end
 
   test "expands quality sweep payload before composing execution batch" do
@@ -344,7 +344,7 @@ defmodule KyuubikiWeb.WorkflowQualityObjectiveRuntimeTest do
            |> hd()
            |> Map.get("heat_load") == 20.0
 
-    assert List.last(batch["tasks"])["agent_rpc"]["routing_opts"][:required_capabilities] ==
+    assert List.last(batch["tasks"])["agent_rpc"]["routing_opts"]["required_capabilities"] ==
              ["solver:thermal"]
   end
 

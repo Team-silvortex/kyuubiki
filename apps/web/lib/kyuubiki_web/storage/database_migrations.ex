@@ -1,11 +1,18 @@
 defmodule KyuubikiWeb.Storage.DatabaseMigrations do
   @moduledoc "Versioned runtime storage gate. Application releases and data revisions are independent."
-  alias KyuubikiWeb.Storage.{CheckpointSchema, DatabaseShape, MigrationQuery, RuntimeSchema}
+  alias KyuubikiWeb.Storage.{
+    CheckpointSchema,
+    DatabaseShape,
+    MigrationQuery,
+    ProjectRequestSchema,
+    RuntimeSchema
+  }
 
   @ledger "kyuubiki_data_migrations"
   @migration_id "runtime-baseline-0001"
   @checkpoint_id "runtime-checkpoint-requests-0002"
-  @version 2
+  @project_id "runtime-project-requests-0003"
+  @version 3
   @checksums %{
     sqlite: "47a5d48a814f16803536b3edbaa4e15542f496b15e49ac656f62452258a6e586",
     postgres: "7655c5ee1acdb0e82367ba730d72acbd48b24a5ea420c0adc1c0ad2622d7e5a7"
@@ -13,6 +20,10 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
   @checkpoint_checksums %{
     sqlite: "96724e85166deffcedc3fc08d9491635097cab3e10f0ffd7a872c9f64a3452cb",
     postgres: "68a00b919521c676e60fb4b3508ca2e44e23471154da2c411efe911acfc4eb1e"
+  }
+  @project_checksums %{
+    sqlite: "ff80cdbfd531319e8e3375ef5e8bad9824c6f8663c1808ba0ad278432ce2a370",
+    postgres: "de30c7e026d93749f963cd96a5e3e7de306e21fa6cc800e970ea07ed24187f2f"
   }
 
   def version, do: @version
@@ -29,7 +40,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
     Map.merge(plan, %{
       "target_data_version" => target,
       "minimum_reader_version" => target,
-      "migration_id" => if(target == 1, do: @migration_id, else: @checkpoint_id),
+      "migration_id" => migration_id(target),
       "migration_sha256" => checksum(backend, target),
       "status" => if(plan["data_version"] == target, do: "current", else: plan["status"])
     })
@@ -60,6 +71,16 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
     actual
   end
 
+  def checksum(backend, 3) do
+    recipe = [@project_id | ProjectRequestSchema.statements(backend)]
+    actual = :crypto.hash(:sha256, Enum.join(recipe, "\n")) |> Base.encode16(case: :lower)
+
+    if actual != Map.fetch!(@project_checksums, backend),
+      do: raise("immutable migration recipe changed; add a new revision instead")
+
+    actual
+  end
+
   def plan!(connection, backend) when backend in [:sqlite, :postgres] do
     tables = DatabaseShape.tables!(connection, backend)
     ledger? = @ledger in tables
@@ -85,7 +106,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
       "data_version" => data_version,
       "target_data_version" => @version,
       "minimum_reader_version" => @version,
-      "migration_id" => @checkpoint_id,
+      "migration_id" => @project_id,
       "migration_sha256" => checksum(backend),
       "managed_table_count" => length(managed),
       "pending_columns" =>
@@ -101,6 +122,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
         "empty" ->
           apply_baseline!(connection, backend)
           apply_checkpoint!(connection, backend)
+          apply_project_requests!(connection, backend)
 
         "current" ->
           :ok
@@ -118,17 +140,10 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
   # Maintenance callers own a private, verified candidate; never pass the active database.
   def upgrade_candidate!(connection, backend) do
     MigrationQuery.transaction!(connection, backend, fn ->
-      case plan!(connection, backend)["status"] do
-        "current" ->
-          :ok
-
-        "upgrade_required" ->
-          apply_checkpoint!(connection, backend)
-
-        _ ->
-          apply_baseline!(connection, backend)
-          apply_checkpoint!(connection, backend)
-      end
+      version = plan!(connection, backend)["data_version"]
+      if version < 1, do: apply_baseline!(connection, backend)
+      if version < 2, do: apply_checkpoint!(connection, backend)
+      if version < 3, do: apply_project_requests!(connection, backend)
 
       plan!(connection, backend)
     end)
@@ -163,6 +178,16 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
     record_migration!(connection, backend, 2, @checkpoint_id)
   end
 
+  defp apply_project_requests!(connection, backend) do
+    Enum.each(ProjectRequestSchema.statements(backend), &MigrationQuery.rows!(connection, &1))
+    DatabaseShape.validate!(connection, backend, :current, 3)
+    record_migration!(connection, backend, 3, @project_id)
+  end
+
+  defp migration_id(1), do: @migration_id
+  defp migration_id(2), do: @checkpoint_id
+  defp migration_id(3), do: @project_id
+
   defp record_migration!(connection, backend, version, id) do
     MigrationQuery.rows!(
       connection,
@@ -193,7 +218,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
     rows =
       MigrationQuery.rows!(
         connection,
-        "SELECT version, migration_id, checksum, minimum_reader_version, applied_at FROM #{@ledger} ORDER BY version LIMIT 3"
+        "SELECT version, migration_id, checksum, minimum_reader_version, applied_at FROM #{@ledger} ORDER BY version LIMIT #{@version + 1}"
       )
 
     if rows == [] or length(rows) > @version,
@@ -202,7 +227,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
     Enum.each(Enum.with_index(rows, 1), fn {row, expected} ->
       case row do
         [^expected, id, digest, ^expected, applied_at] ->
-          expected_id = if expected == 1, do: @migration_id, else: @checkpoint_id
+          expected_id = migration_id(expected)
           if id != expected_id, do: raise("unsupported database migration history")
 
           if digest != checksum(backend, expected),

@@ -209,7 +209,7 @@
             }
           }
         },
-        "routing_opts": []
+        "routing_opts": {}
       }
     }
   ]

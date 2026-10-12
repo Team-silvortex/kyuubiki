@@ -15,6 +15,155 @@ source tree.
 Keep tests close to the source-domain they protect, even when they exercise
 multiple modules together.
 
+## Native Diagnostic Catalog Controls
+
+The follow-up [native thermal catalog controls](../../../reports/thermal-catalog-native-recovery-20261012.md)
+repair the three diagnostic catalog failures found during the expanded receipt
+sweep. `WorkflowDiagnosticAgent` scripts explicit solver/diagnostic sessions,
+validates task binding and checks complete consumption. Its default diagnostic
+adapter is a test reference, not native execution. Set
+`KYUUBIKI_WORKFLOW_DIAGNOSTIC_AGENT_PORT` to an isolated local Rust Agent port to
+execute real diagnostics; solver outputs remain fixtures. The thermal catalog
+tests cover stale receipts, pending acknowledgements, missing required flux and
+explicit new-job recovery. No automatic fallback to mock mode is permitted when
+a live port is configured. Stop the owned Agent after the run.
+
+## Cross-Domain Decision Recovery
+
+`workflow_domain_decision_integrity_test.exs` covers eight guard/pair families,
+including incomplete evidence, malformed rules, convergence markers, label
+collisions, valid zeros and numeric overflow. `api/workflow_decision_recovery_api_test.exs`
+executes rejected inputs and explicit fresh-job controls through the Router and
+asynchronous coordinator, checking both report publication and retained failures.
+These are controlled summaries, not solver runs. See the
+[initial decision admission evidence](../../../reports/domain-decision-integrity-20261012.md).
+
+`workflow_metric_integrity_test.exs` exercises checked resolution, corrupt aliases,
+incomplete derived samples, valid zeros, stable norms and native peak tie rules.
+`workflow_cfd_diagnostic_integrity_test.exs` checks complete node/element evidence,
+mixed-alias reductions, first/middle/last corrupt rows and checked arithmetic.
+The API suite also covers alias/sample rejection and explicit fresh-job recovery
+across all eight domain families. See the
+[checked metrics and CFD follow-up](../../../reports/checked-metric-cfd-recovery-20261012.md)
+for commands, counts and remaining legacy-reducer gaps.
+
+`workflow_electromagnetic_diagnostic_integrity_test.exs` protects optional versus
+partial static electric/magnetic groups, selected aliases, source mappings,
+convergence and numeric boundaries. `workflow_electromagnetic_diagnostic_recovery_test.exs`
+executes controlled raw-result graphs through registered local reducers, guards
+and JSON export under both `fail` and `skip`. These are direct GraphRunner tests,
+not new API jobs or live native dispatch. See the
+[electromagnetic evidence](../../../reports/electromagnetic-diagnostic-integrity-20261012.md).
+
+`workflow_thermal_diagnostic_integrity_test.exs` extends checked raw admission to
+thermal/thermo temperature, heat loads, gradients, flux, displacement, stress and
+strain. It covers signed reductions, selected aliases, component fallbacks,
+numeric extremes and complete secondary groups beside otherwise healthy data.
+`workflow_thermal_diagnostic_recovery_test.exs` checks direct GraphRunner failure
+isolation and corrected fresh runs through thermal guards and JSON export under
+both error policies. It is not live-Agent or durable recovery qualification.
+See the [thermal follow-up](../../../reports/thermal-diagnostic-integrity-20261012.md)
+for native mapping alignment, commands and remaining scoring/admission work.
+
+`workflow_quality_integrity_test.exs` checks all nine domain quality scorers:
+selected terms, every declared override, convergence, damaged versus absent
+metrics, zero weights, small positive targets and checked arithmetic.
+`workflow_quality_recovery_test.exs` follows those scorers through composite
+objective and JSON export with both `fail` and `skip`. Rejected inputs cannot
+publish, corrected fresh runs recover, and genuinely missing metrics export only
+a blocking assessment. The decision matrix and asynchronous API recovery suite
+now include thermal guards and coupled-heat pairs. These controlled evidence
+checks do not qualify independent composite-objective/candidate-ranking input,
+live physical solves or general durable recovery. See the
+[quality and thermal decision evidence](../../../reports/quality-and-thermal-decision-integrity-20261012.md).
+
+`workflow_objective_admission_test.exs` and `workflow_quality_round_admission_test.exs`
+check independently supplied objective/ranking inputs, checked numeric boundaries,
+validation evidence, retained metadata/blockers and incomplete-ranking gates.
+`workflow_objective_recovery_test.exs` exercises both error policies and export
+isolation; `api/workflow_objective_recovery_api_test.exs` tests actual asynchronous
+service jobs with the shared `support/quality_recovery.exs` graph fixtures.
+Partial rankings are successful evaluations but cannot become completed research
+decisions. Corrected submissions preserve earlier failure/replan records.
+The 76 new tests use controlled summaries, not physical solves. See the
+[objective and ranking evidence](../../../reports/quality-objective-ranking-recovery-20261012.md).
+
+`workflow_sweep_admission_test.exs` protects planning budgets, deferred ranges,
+strict counts, unambiguous path assignment and metadata retention.
+`workflow_quality_batch_admission_test.exs` rejects partial/empty cases and invalid
+batch configuration, and checks JSON exchange rather than only in-memory tuples.
+`workflow_sweep_recovery_test.exs` and `api/workflow_sweep_recovery_api_test.exs`
+use `support/quality_sweep_recovery.exs` for plan/materialize/expand/batch/export
+graphs. Decoded batches reach real local preparation and execution, with analytic
+thermal-shock results checked against independent formulas. Blocked scans cannot
+publish tasks; fresh submissions preserve earlier failures. These are not live
+Agent, FEM-accuracy or automatic durable-resumption tests. See the
+[sweep and batch evidence](../../../reports/quality-sweep-batch-recovery-20261012.md).
+
+`workflow_sweep_result_admission_test.exs` checks exact keyed joins, whole-batch
+positional inputs, stale-summary removal and rejected/unmatched result accounting.
+`workflow_sweep_evaluation_test.exs` checks complete selected metrics, provenance
+protection, numeric boundaries and hard feasibility ahead of score. Missing-data
+tables require explicit diagnostic mode and cannot enter scoring.
+`workflow_sweep_result_recovery_test.exs` and
+`api/workflow_sweep_result_recovery_api_test.exs` use
+`support/sweep_result_recovery.exs` for join/summary/score/export recovery. They
+also collect shuffled results from actual local thermal-shock batches with an
+explicit metric projection, not a generic extraction adapter or live Agent.
+Fresh successful submissions cannot rewrite failed jobs; all-infeasible completed
+jobs have no actionable winner. See the
+[result-selection evidence](../../../reports/sweep-result-selection-recovery-20261012.md).
+
+`workflow_sweep_score_contract_test.exs` runs the same 25 scoring fixtures as the
+native Engine tests from `tests/fixtures/workflow-sweep-score-contract.json` at
+the repository root. Valid controls assert selected output fields, including
+hard-limit breakdowns; invalid controls require rejection. This is bounded
+scoring parity, not full workflow equivalence or live Agent dispatch. The
+[native selection follow-up](../../../reports/native-sweep-selection-recovery-20261012.md)
+documents fixed-reference quality costs, native graph recovery and remaining
+aggregate-only evidence limits.
+
+`workflow_sweep_collection_contract_test.exs` runs 41 cases from the shared
+`tests/fixtures/workflow-sweep-collection-contract.json` fixture and checks custom
+summary cleanup and graph-level recovery. Native companion controls live under
+`workers/rust/crates/engine/src/tests/workflow_sweep_collection_*`. Final solver
+markers must be checked before field filtering, and provenance containers cannot
+be repurposed as result summaries. See the
+[collection follow-up](../../../reports/native-sweep-collection-recovery-20261012.md)
+for sixteen native and four service controlled graphs, copy avoidance and limits.
+
+`workflow_quality_decision_contract_test.exs` runs the same 49 cases as native
+`workflow_quality_decision_contract.rs`: composition domains/types, validation
+evidence, candidate identity, ranking accounting and next-round admission.
+Native `workflow_quality_decision_recovery.rs` adds thirty controlled graph runs,
+distinguishing incomplete evaluation from valid repair searches. See the
+[quality-decision follow-up](../../../reports/native-quality-decision-recovery-20261012.md)
+for fresh-run recovery and the remaining non-equivalence boundaries.
+
+`workflow_quality_ranking_integrity_test.exs` runs 31 shared ordering/score-copy
+cases plus canonical permutation and JSON-exchange controls. Its recovery test
+uses sixteen controlled service graphs and observes exports; the native
+`workflow_quality_ranking_recovery.rs` uses sixteen graphs through sweep expansion.
+See [ranking consistency evidence](../../../reports/quality-ranking-consistency-recovery-20261012.md)
+for rejection, corrected fresh execution and physical-optimality limits.
+
+## Project Creation Recovery
+
+`kyuubiki_web/library/project_request_test.exs` covers opt-in creation identities,
+identical/conflicting concurrent requests, original receipts after edits, deletion
+tombstones, invalid IDs and authentication before creation or replay. Run on the
+default disposable SQLite store or with `KYUUBIKI_STORAGE_BACKEND=memory`.
+`project_request_transaction_test.exs` additionally injects a real receipt-insert
+failure, uses independent SQLite connections, and closes/reopens a private database
+for committed and deleted receipts. Memory Library receipts are process-local,
+not durable recovery. These tests do not simulate a physical network disconnect.
+
+`storage/project_request_migration_test.exs` verifies an explicit revision-2 to
+revision-3 candidate upgrade, immutable old ledger rows, rollback and future-ledger
+refusal. `sqlite_lifecycle_test.exs` retains independent revision-1 and revision-2
+snapshot verification. No active installed database is migrated by these tests.
+See the [results and remaining gaps](../../../reports/project-create-receipts-20261012.md).
+
 ## PostgreSQL Recovery Tests
 
 Use a disposable database, never an installed runtime's active store. Set

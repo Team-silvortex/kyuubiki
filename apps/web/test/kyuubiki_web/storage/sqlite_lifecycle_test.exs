@@ -19,7 +19,7 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
     receipt = SqliteLifecycle.upgrade!(ctx.source, output, ctx.digest)
     assert Files.digest!(ctx.source) == ctx.digest
     assert receipt["source_data_version"] == 0
-    assert receipt["database"]["data_version"] == 2
+    assert receipt["database"]["data_version"] == 3
     assert receipt["source_retained"]
     assert is_boolean(receipt["directory_synced"])
     moved = Path.join(ctx.dir, "relocated.sqlite3")
@@ -39,8 +39,9 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
     baseline = Path.join(ctx.dir, "baseline.sqlite3")
     SqliteLifecycle.upgrade!(ctx.source, baseline, ctx.digest)
     db = Fixture.open!(baseline)
+    MigrationQuery.rows!(db, "DROP TABLE kyuubiki_project_requests")
     MigrationQuery.rows!(db, "DROP TABLE kyuubiki_checkpoint_requests")
-    MigrationQuery.rows!(db, "DELETE FROM kyuubiki_data_migrations WHERE version = 2")
+    MigrationQuery.rows!(db, "DELETE FROM kyuubiki_data_migrations WHERE version >= 2")
     Fixture.close!(db)
     snapshot = Path.join(ctx.dir, "baseline-snapshot.sqlite3")
     receipt = SqliteLifecycle.backup!(baseline, snapshot)
@@ -67,10 +68,10 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
     digest = Files.digest!(snapshot)
 
     upgraded =
-      SqliteLifecycle.upgrade!(snapshot, Path.join(ctx.dir, "revision-two.sqlite3"), digest)
+      SqliteLifecycle.upgrade!(snapshot, Path.join(ctx.dir, "revision-three.sqlite3"), digest)
 
     assert upgraded["source_data_version"] == 1
-    assert upgraded["database"]["data_version"] == 2
+    assert upgraded["database"]["data_version"] == 3
     assert Files.digest!(snapshot) == digest
     assert SqliteLifecycle.verify!(snapshot, old_receipt)["status"] == "verified"
   end
@@ -105,6 +106,26 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
     after
       Fixture.close!(db)
     end
+  end
+
+  test "revision-two snapshot receipts remain verifiable after upgrading a separate candidate",
+       ctx do
+    baseline = Path.join(ctx.dir, "revision-two.sqlite3")
+    SqliteLifecycle.upgrade!(ctx.source, baseline, ctx.digest)
+    db = Fixture.open!(baseline)
+    MigrationQuery.rows!(db, "DROP TABLE kyuubiki_project_requests")
+    MigrationQuery.rows!(db, "DELETE FROM kyuubiki_data_migrations WHERE version = 3")
+    Fixture.close!(db)
+    snapshot = Path.join(ctx.dir, "revision-two-snapshot.sqlite3")
+    receipt = SqliteLifecycle.backup!(baseline, snapshot)
+    old = Map.update!(receipt, "database", &DatabaseMigrations.plan_for_target(&1, 2))
+    assert SqliteLifecycle.verify!(snapshot, old)["status"] == "verified"
+    digest = Files.digest!(snapshot)
+    upgraded = SqliteLifecycle.upgrade!(snapshot, Path.join(ctx.dir, "current.sqlite3"), digest)
+    assert upgraded["source_data_version"] == 2
+    assert upgraded["database"]["data_version"] == 3
+    assert Files.digest!(snapshot) == digest
+    assert SqliteLifecycle.verify!(snapshot, old)["status"] == "verified"
   end
 
   test "restore uses a separate path and retains exact snapshot bytes", ctx do
@@ -242,7 +263,7 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
     second =
       SqliteLifecycle.upgrade!(output, Path.join(ctx.dir, "next.sqlite3"), first["output_sha256"])
 
-    assert second["database"]["data_version"] == 2
+    assert second["database"]["data_version"] == 3
     assert second["output_sha256"] == first["output_sha256"]
   end
 

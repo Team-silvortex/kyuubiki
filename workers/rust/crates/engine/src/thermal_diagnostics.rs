@@ -16,6 +16,8 @@ pub fn extract_thermal_result_diagnostics(payload: Value, config: Value) -> Resu
                 "heat_load",
                 Field::configured(config, "heat_load_field", &["heat_load"])?,
             )?;
+            diagnostics.alias_metric("heat_load_nonzero_count", "loaded_node_count");
+            diagnostics.alias_metric("heat_load_sum", "total_heat_load");
             diagnostics.element_vector_peak(
                 "gradient",
                 VectorFields {

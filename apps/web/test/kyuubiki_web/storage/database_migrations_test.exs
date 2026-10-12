@@ -20,7 +20,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrationsTest do
     DatabaseMigrations.boot!(db, :sqlite)
     assert DatabaseMigrations.plan!(db, :sqlite)["status"] == "current"
     assert MigrationQuery.rows!(db, "SELECT * FROM kyuubiki_data_migrations") == history
-    assert length(history) == 2
+    assert length(history) == 3
   end
 
   test "legacy startup refuses before any schema or data mutation", %{connection: db} do
@@ -83,7 +83,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrationsTest do
     MigrationQuery.rows!(
       db,
       "UPDATE kyuubiki_data_migrations SET checksum = $1, minimum_reader_version = 10 WHERE version = 2",
-      [DatabaseMigrations.checksum(:sqlite)]
+      [DatabaseMigrations.checksum(:sqlite, 2)]
     )
 
     assert_raise RuntimeError, ~r/history/, fn -> DatabaseMigrations.boot!(db, :sqlite) end
@@ -183,7 +183,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrationsTest do
       previous = repo.put_dynamic_repo(pid)
 
       try do
-        assert [[2]] ==
+        assert [[3]] ==
                  MigrationQuery.rows!(repo, "SELECT count(*) FROM kyuubiki_data_migrations")
       after
         repo.put_dynamic_repo(previous)
@@ -197,8 +197,9 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrationsTest do
     connection: db
   } do
     DatabaseMigrations.boot!(db, :sqlite)
+    MigrationQuery.rows!(db, "DROP TABLE kyuubiki_project_requests")
     MigrationQuery.rows!(db, "DROP TABLE kyuubiki_checkpoint_requests")
-    MigrationQuery.rows!(db, "DELETE FROM kyuubiki_data_migrations WHERE version = 2")
+    MigrationQuery.rows!(db, "DELETE FROM kyuubiki_data_migrations WHERE version >= 2")
     baseline = MigrationQuery.rows!(db, "SELECT * FROM kyuubiki_data_migrations")
     before = MigrationQuery.rows!(db, "SELECT sql FROM sqlite_schema ORDER BY name")
     assert DatabaseMigrations.plan!(db, :sqlite)["status"] == "upgrade_required"
@@ -213,7 +214,7 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrationsTest do
     assert MigrationQuery.rows!(db, "SELECT * FROM kyuubiki_data_migrations WHERE version = 1") ==
              baseline
 
-    assert DatabaseMigrations.plan!(db, :sqlite)["data_version"] == 2
+    assert DatabaseMigrations.plan!(db, :sqlite)["data_version"] == 3
     assert "kyuubiki_checkpoint_requests" in DatabaseShape.tables!(db, :sqlite)
   end
 
@@ -221,8 +222,9 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrationsTest do
     connection: db
   } do
     DatabaseMigrations.boot!(db, :sqlite)
+    MigrationQuery.rows!(db, "DROP TABLE kyuubiki_project_requests")
     MigrationQuery.rows!(db, "DROP TABLE kyuubiki_checkpoint_requests")
-    MigrationQuery.rows!(db, "DELETE FROM kyuubiki_data_migrations WHERE version = 2")
+    MigrationQuery.rows!(db, "DELETE FROM kyuubiki_data_migrations WHERE version >= 2")
     MigrationQuery.rows!(db, "CREATE INDEX kyuubiki_checkpoint_requests ON kyuubiki_jobs(status)")
     before = MigrationQuery.rows!(db, "SELECT sql FROM sqlite_schema ORDER BY name")
     assert_raise MatchError, fn -> DatabaseMigrations.upgrade_candidate!(db, :sqlite) end

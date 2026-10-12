@@ -27,6 +27,24 @@ impl<'a> Field<'a> {
         })
     }
 
+    pub(crate) fn configured_with_legacy(
+        config: &'a Value,
+        key: &str,
+        legacy: &str,
+        defaults: &[&'a str],
+    ) -> Result<Self, String> {
+        // A present primary mapping is authoritative, even when invalid.
+        Self::configured(
+            config,
+            if config.get(key).is_some() {
+                key
+            } else {
+                legacy
+            },
+            defaults,
+        )
+    }
+
     pub(crate) fn label(&self) -> &str {
         self.names.first().copied().unwrap_or("metric")
     }
@@ -264,22 +282,48 @@ impl Diagnostics<'_> {
         self.missing_scalar_id = fallback;
     }
 
+    pub(crate) fn alias_metric(&mut self, source: &str, alias: &str) {
+        if let Some(value) = self
+            .summary
+            .get(&format!("{}_{source}", self.prefix))
+            .cloned()
+        {
+            self.summary
+                .insert(format!("{}_{alias}", self.prefix), value);
+        }
+    }
+
     pub(crate) fn node_distribution(
         &mut self,
         label: &str,
         field: Field<'_>,
     ) -> Result<(), String> {
+        self.distribution(label, field, true)
+    }
+
+    pub(crate) fn element_distribution(
+        &mut self,
+        label: &str,
+        field: Field<'_>,
+    ) -> Result<(), String> {
+        self.distribution(label, field, false)
+    }
+
+    fn distribution(&mut self, label: &str, field: Field<'_>, nodes: bool) -> Result<(), String> {
         let name = format!("{}_{label}", self.prefix);
         let mut count = 0_usize;
+        let mut nonzero_count = 0_usize;
         let mut sum: f64 = 0.0;
         let mut min = f64::INFINITY;
         let mut max = f64::NEG_INFINITY;
-        let present = self.nodes.scan(
+        let samples = if nodes { &self.nodes } else { &self.elements };
+        let present = samples.scan(
             field.label(),
             field.required,
             |row, source, index| field.read(row, source, index),
             |_, value| {
                 count += 1;
+                nonzero_count += usize::from(value != 0.0);
                 sum += value;
                 if !sum.is_finite() {
                     return Err(format!("{name}_sum became non-finite"));
@@ -291,6 +335,8 @@ impl Diagnostics<'_> {
         )?;
         if present {
             self.summary.insert(format!("{name}_count"), count.into());
+            self.summary
+                .insert(format!("{name}_nonzero_count"), nonzero_count.into());
             for (suffix, value) in [
                 ("min", min),
                 ("max", max),
@@ -428,6 +474,10 @@ impl Diagnostics<'_> {
                 format!("{}_{label}_peak_magnitude", self.prefix),
                 value.magnitude,
             )?;
+            self.alias_metric(
+                &format!("{label}_peak_magnitude"),
+                &format!("peak_{label}_magnitude"),
+            );
             self.peak_identity(label, entry, value.magnitude)?;
             for (axis, component) in ["x", "y", "z"].into_iter().zip(value.components) {
                 if let Some(component) = component {
@@ -436,6 +486,10 @@ impl Diagnostics<'_> {
                         format!("{}_{label}_peak_{axis}", self.prefix),
                         component,
                     )?;
+                    self.alias_metric(
+                        &format!("{label}_peak_{axis}"),
+                        &format!("peak_{label}_{axis}"),
+                    );
                 }
             }
             self.measured_groups += 1;
@@ -454,6 +508,10 @@ impl Diagnostics<'_> {
             .insert(format!("{}_peak_{label}_id", self.prefix), id.clone());
         self.summary
             .insert(format!("{}_{label}_peak_element_id", self.prefix), id);
+        self.alias_metric(
+            &format!("{label}_peak_element_id"),
+            &format!("peak_{label}_element_id"),
+        );
         Ok(())
     }
 }

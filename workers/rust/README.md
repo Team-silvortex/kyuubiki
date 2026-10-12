@@ -60,6 +60,33 @@ Crate-level test expectations stay close to the code:
 Prefer colocated crate tests so runtime behavior stays near the code it
 validates.
 
+Native sweep scoring and quality mapping controls live in
+`crates/engine/src/tests/workflow_sweep_*`. Scoring shares 25 JSON fixtures with
+Elixir; graph controls cover blocked selection and explicit fresh-run recovery.
+For positive objective scores, mapping uses an explicitly calibrated fixed
+`score_reference`, not a per-batch offset. See the
+[mapping contract and evidence](../../reports/native-sweep-selection-recovery-20261012.md)
+for the scale policy, commands and limits. Run the complete Engine library suite
+with `cargo test --locked --offline -p kyuubiki-engine --lib` in this workspace.
+
+Collection/summary controls additionally share 41 fixtures with Elixir and check
+final convergence before metric projection, explicit stale-summary cleanup and
+provenance separation. Their fail/skip graph controls are explicit fresh-run
+recovery, not durable restart or live Agent evidence. See the
+[collection contract follow-up](../../reports/native-sweep-collection-recovery-20261012.md).
+
+Quality composition/ranking/next-round controls share 49 fixture cases with
+Elixir and add thirty controlled native graphs. Malformed inputs reject, partial
+evaluation pauses expansion, and valid quality blockers retain repair planning.
+See the [quality-decision audit](../../reports/native-quality-decision-recovery-20261012.md)
+for admission rules, readiness thresholds and explicit fresh-run recovery limits.
+
+Ranking integrity adds 31 shared cases, permutation/JSON-exchange controls and
+sixteen native graph executions. Next-round input must already have canonical
+ready/score/identity order, consistent rank positions and matching score copies.
+It is not silently repaired. See the
+[ranking consistency follow-up](../../reports/quality-ranking-consistency-recovery-20261012.md).
+
 For the currently retained thermal-quad matrix optimization set and its
 benchmark evidence, also read:
 

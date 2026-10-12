@@ -60,6 +60,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
 
   const persistedModelEffects = {
     projectContext: props.projectContext,
+    language: props.language,
     startTransition: props.startTransition,
     activeMaterial: props.activeMaterial,
     createProject: props.projectLibraryBackendService.createProject,
@@ -117,6 +118,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
   };
 
   const projectStorageController = createWorkbenchProjectStorageController({
+    language: props.language,
     projectContext: props.projectContext,
     feedback: props.feedback,
     sourceChangedLabel: getWorkbenchAdminRecordSourceChangedLabel(props.language),

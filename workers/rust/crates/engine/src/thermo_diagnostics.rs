@@ -19,15 +19,32 @@ pub fn extract_thermo_result_diagnostics(payload: Value, config: Value) -> Resul
                 "temperature_delta",
                 Field::configured(config, temperature_key, &["temperature_delta"])?,
             )?;
+            diagnostics.alias_metric("temperature_delta_nonzero_count", "heated_node_count");
             diagnostics.node_vector_peak(
                 "displacement",
                 VectorFields {
-                    x: Field::configured(config, "displacement_x_field", &["ux"])?,
-                    y: Field::configured(config, "displacement_y_field", &["uy"])?,
-                    z: Field::configured(config, "displacement_z_field", &[])?,
-                    magnitude: Field::configured(
+                    x: Field::configured_with_legacy(
+                        config,
+                        "displacement_x_field",
+                        "ux_field",
+                        &["ux", "displacement_x"],
+                    )?,
+                    y: Field::configured_with_legacy(
+                        config,
+                        "displacement_y_field",
+                        "uy_field",
+                        &["uy", "displacement_y"],
+                    )?,
+                    z: Field::configured_with_legacy(
+                        config,
+                        "displacement_z_field",
+                        "uz_field",
+                        &[],
+                    )?,
+                    magnitude: Field::configured_with_legacy(
                         config,
                         "displacement_magnitude_field",
+                        "displacement_field",
                         &["displacement_magnitude"],
                     )?,
                 },

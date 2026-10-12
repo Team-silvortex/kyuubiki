@@ -212,3 +212,74 @@ pub(crate) fn require_count(value: &Value, field: &str, expected: usize) -> Resu
     }
     Ok(())
 }
+
+pub(crate) fn require_evaluation_complete(payload: &Value) -> Result<(), String> {
+    if !payload.is_object() {
+        return Err("parameter sweep payload must be an object".to_string());
+    }
+    require_complete(
+        payload,
+        "join_complete",
+        &[
+            ("missing_summary_count", "missing_case_ids"),
+            ("unmatched_result_count", "unmatched_result_ids"),
+            ("rejected_result_count", "rejected_results"),
+        ],
+    )?;
+    require_complete(
+        payload,
+        "summary_complete",
+        &[("missing_field_count", "missing_fields")],
+    )
+}
+
+pub(crate) fn finite(value: f64, path: &str) -> Result<f64, String> {
+    if value.is_finite() {
+        Ok(value)
+    } else {
+        Err(format!("{path} produced a non-finite value"))
+    }
+}
+
+pub(crate) fn number(value: Option<&Value>, path: &str) -> Result<f64, String> {
+    value
+        .and_then(Value::as_f64)
+        .filter(|v| v.is_finite())
+        .ok_or_else(|| format!("{path} must be a finite number"))
+}
+
+pub(crate) fn optional_number(value: Option<&Value>, path: &str) -> Result<Option<f64>, String> {
+    value.map(|value| number(Some(value), path)).transpose()
+}
+
+pub(crate) fn metric_field(field: &str) -> Result<(), String> {
+    if field.trim().is_empty()
+        || matches!(
+            field,
+            "id" | "case_id"
+                | "caseId"
+                | "model"
+                | "parameters"
+                | "metadata"
+                | "result_status"
+                | "result_error"
+                | "objective_score"
+                | "objective_feasible"
+                | "objective_breakdown"
+        )
+    {
+        Err(format!(
+            "metric field {field:?} is blank or reserved for identity/provenance"
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+pub(crate) fn require_evaluated_row(row: &Value, path: &str) -> Result<(), String> {
+    let object = row
+        .as_object()
+        .ok_or_else(|| format!("{path} must be an object"))?;
+    require_success(row, "result_status", "result_error", path)?;
+    crate::workflow_result_admission::require_converged_result(object, "parameter sweep", path)
+}

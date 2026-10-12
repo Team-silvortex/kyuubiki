@@ -209,13 +209,13 @@ fn quality_objective_rejects_malformed_success_metadata() {
         for value in [Value::Null, json!("0"), json!(-1)] {
             let mut malformed = report.clone();
             malformed[field] = value;
-            assert_blocked_objective(malformed);
+            assert_malformed_objective(malformed, field);
         }
     }
     for value in [Value::Null, json!("false"), json!(0)] {
         let mut malformed = report.clone();
         malformed["validation_fail_on_missing"] = value;
-        assert_blocked_objective(malformed);
+        assert_malformed_objective(malformed, "validation_fail_on_missing");
     }
 }
 
@@ -224,6 +224,16 @@ fn quality_objective_does_not_hide_contradictory_failure_details() {
     let mut report = validate(pair(), Value::Null).unwrap();
     report["validation_failures"] = json!([{"field": "stress"}]);
     assert_blocked_objective(report);
+}
+
+fn assert_malformed_objective(report: Value, field: &str) {
+    let error = run_transform_operator(
+        "transform.compose_quality_objective",
+        json!({"cross_check": report}),
+        json!({}),
+    )
+    .unwrap_err();
+    assert!(error.contains(field), "{error}");
 }
 
 fn assert_blocked_objective(report: Value) {

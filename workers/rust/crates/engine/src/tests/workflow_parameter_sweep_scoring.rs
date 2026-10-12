@@ -71,7 +71,7 @@ fn maps_scored_parameter_sweep_rows_to_quality_candidates() {
                             "focus_field": "max_stress"
                         }
                     },
-                    "objective_score": -5.0,
+                    "objective_score": -6.56,
                     "objective_feasible": true,
                     "objective_breakdown": [
                         {
@@ -91,7 +91,7 @@ fn maps_scored_parameter_sweep_rows_to_quality_candidates() {
                 {
                     "case_id": "thin_light",
                     "parameters": { "thickness": 0.01 },
-                    "objective_score": -1000000000002.0,
+                    "objective_score": -1000000000002.8,
                     "objective_feasible": false,
                     "objective_breakdown": [
                         {

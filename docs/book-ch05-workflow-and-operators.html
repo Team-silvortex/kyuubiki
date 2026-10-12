@@ -331,6 +331,17 @@
             missing, malformed, or negative selected scores instead of treating
             them as zero. Supplied completeness counters must agree with the
             ranking and rejection arrays.</li>
+          <li>Rankings must already be ordered by declared readiness (ready
+            first), ascending score and exact candidate ID. A supplied
+            <code>rank</code> must match its one-based array position. Admission
+            rejects an incoherent order rather than silently changing the winner;
+            matching best-candidate metadata does not override this check.</li>
+          <li>Each present <code>objective.composite_quality_score</code> must
+            numerically equal its row's <code>score</code>. Every row's objective
+            must also have valid types and no explicitly failed final convergence
+            markers, not just the selected row. Missing objective/score fields remain permitted
+            for shorthand contracts; they are not proof of physical correctness.
+            This checks score copies, not a recomputation of objective terms.</li>
           <li>Incomplete evaluation produces <code>replan</code> with a
             <code>repair_rejected_candidates</code> hint and retained rejection
             details. Even <code>require_ready: false</code> only permits an

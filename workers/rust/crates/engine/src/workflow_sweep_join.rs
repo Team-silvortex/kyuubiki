@@ -1,9 +1,10 @@
 use serde_json::{Map, Value, json};
 use std::collections::{HashMap, HashSet};
 
+use crate::workflow_result_admission::require_converged_result;
 use crate::workflow_sweep_contract::{
-    bool_option, case_ids, object_or_null, optional_case_id, require_count, require_success,
-    text_option,
+    bool_option, case_ids, metric_field, object_or_null, optional_case_id, require_count,
+    require_success, text_option,
 };
 
 pub fn join_parameter_sweep_results(payload: Value, config: Value) -> Result<Value, String> {
@@ -25,19 +26,17 @@ pub fn join_parameter_sweep_results(payload: Value, config: Value) -> Result<Val
         })?;
     let summary_field = text_option(config.get("summary_field"), "summary_field", "summary")?;
     let output_field = text_option(config.get("output_field"), "output_field", "summary")?;
-    if matches!(
-        output_field,
-        "id" | "case_id"
-            | "caseId"
-            | "model"
-            | "parameters"
-            | "metadata"
-            | "result_status"
-            | "result_error"
-    ) {
-        return Err(format!(
-            "output_field {output_field:?} is reserved for case identity or provenance"
-        ));
+    let old_field = text_option(
+        payload.get("joined_summary_field"),
+        "joined_summary_field",
+        "summary",
+    )?;
+    for (path, field) in [
+        ("summary_field", summary_field),
+        ("output_field", output_field),
+        ("joined_summary_field", old_field),
+    ] {
+        metric_field(field).map_err(|error| format!("{path}: {error}"))?;
     }
     let strict = bool_option(config.get("strict"), "strict", false)?;
     let ids = case_ids(cases)?;
@@ -80,15 +79,16 @@ pub fn join_parameter_sweep_results(payload: Value, config: Value) -> Result<Val
     let mut missing = Vec::new();
     let mut rejected = Vec::new();
     let mut joined_count = 0usize;
+    let replaced = ["summary", "result", "result_error", output_field, old_field];
     for (index, (case, case_id)) in cases.iter().zip(&ids).enumerate() {
+        // Filter before cloning so stale result trees are never copied into the new attempt.
         let mut next_case = case
             .as_object()
             .expect("case_ids validates objects")
-            .clone();
-        // A retry must not inherit either conventional summary alias from an old run.
-        for field in ["summary", "result", "result_error", output_field] {
-            next_case.remove(field);
-        }
+            .iter()
+            .filter(|(field, _)| !replaced.contains(&field.as_str()))
+            .map(|(field, value)| (field.clone(), value.clone()))
+            .collect::<Map<_, _>>();
         next_case.insert("id".into(), json!(case_id));
         let result_index = if positional {
             Some(index)
@@ -166,6 +166,13 @@ fn extract_summary<'a>(
     positional: bool,
 ) -> Result<&'a Map<String, Value>, String> {
     require_success(result, "status", "error", "parameter sweep result")?;
+    require_converged_result(
+        result
+            .as_object()
+            .expect("result identities validate objects"),
+        "parameter sweep join",
+        "result",
+    )?;
     let selected = if explicit {
         result.get(field)
     } else {
@@ -177,7 +184,9 @@ fn extract_summary<'a>(
                     .then_some(result)
             })
     };
-    selected
+    let summary = selected
         .and_then(Value::as_object)
-        .ok_or_else(|| format!("result requires an object {field:?} summary"))
+        .ok_or_else(|| format!("result requires an object {field:?} summary"))?;
+    require_converged_result(summary, "parameter sweep join", &format!("result.{field}"))?;
+    Ok(summary)
 }

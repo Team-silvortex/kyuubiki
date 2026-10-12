@@ -541,3 +541,36 @@ fn complete_reductions_match_independent_distribution_and_peak_references() {
         }
     }
 }
+
+#[test]
+fn electrostatic_charge_source_selects_the_requested_collection_without_fallback() {
+    let case = CASES[1];
+    let payload = json!({
+        "points":[{"rho":100.0}],
+        "cells":[{"rho":-2.0},{"rho":5.0}]
+    });
+    let config = json!({
+        "node_source":"points", "element_source":"cells", "charge_density_field":"rho"
+    });
+    for source in ["element", "elements"] {
+        let mut selected = config.clone();
+        selected["charge_density_source"] = json!(source);
+        let result = case.run(payload.clone(), selected.clone()).unwrap();
+        assert_eq!(result["electrostatic_charge_density_count"], 2);
+        assert_eq!(result["electrostatic_charge_density_sum"], 3.0);
+        let mut broken = payload.clone();
+        broken["cells"][1] = json!({});
+        case.rejects(broken, selected, "payload.cells[1].rho");
+    }
+    for source in ["node", "nodes"] {
+        let mut selected = config.clone();
+        selected["charge_density_source"] = json!(source);
+        let result = case.run(payload.clone(), selected).unwrap();
+        assert_eq!(result["electrostatic_charge_density_sum"], 100.0);
+    }
+    for invalid in [Value::Null, json!(false), json!(" "), json!("automatic")] {
+        let mut selected = config.clone();
+        selected["charge_density_source"] = invalid;
+        case.rejects(payload.clone(), selected, "config.charge_density_source");
+    }
+}

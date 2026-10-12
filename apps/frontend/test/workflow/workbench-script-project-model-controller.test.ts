@@ -180,6 +180,22 @@ test("PWDT invoker preserves the canonical version history for real version writ
   assert.deepEqual(calls, ["update-version:version-a:model-a", "refresh-versions:model-a", "message:version renamed"]);
 });
 
+test("PWDT conflicting deletion cannot advance the intent or borrow the pending save's result", async () => {
+  const calls: string[] = [], args = baseArgs(calls);
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  args.projectLibraryBackendService.createModelVersion = async () => { await gate; return versionEnvelope("version-created"); };
+  args.projectLibraryBackendService.deleteModel = async () => assert.fail("conflicting delete must not dispatch");
+  const input = { ...args, selectedProjectId: "project-a", selectedModelId: "model-a", selectedVersionId: "version-a" };
+  const first = handleWorkbenchScriptProjectModelAction({ ...input, action: "model/save" });
+  const ownsIntent = args.projectContext.capture();
+  await assert.rejects(handleWorkbenchScriptProjectModelAction({ ...input, action: "model/deleteSelected" }), /WORKBENCH_LIBRARY_WRITE_PENDING/);
+  assert.equal(ownsIntent(), true);
+  release(); const outcome = await first;
+  assert.equal(outcome?.ok, true); assert.equal(outcome?.contextChanged ?? false, false);
+  assert.equal(calls.filter((call) => call.startsWith("set-version:")).length, 1);
+});
+
 test("script project action creates projects through project library service", async () => {
   const calls: string[] = [];
   const result = await handleWorkbenchScriptProjectModelAction({

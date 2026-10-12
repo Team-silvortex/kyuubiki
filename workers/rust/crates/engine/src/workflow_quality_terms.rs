@@ -1,3 +1,5 @@
+use crate::workflow_quality_checks as check;
+use crate::workflow_quality_checks::finite_quality_value;
 use crate::workflow_result_admission::require_converged_result;
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
@@ -97,6 +99,9 @@ pub(crate) fn quality_entries(
             object.contains_key("qualities") || !matches!(id.as_str(), "id" | "label" | "metadata")
         })
         .map(|(source_id, value)| {
+            if source_id.trim().is_empty() {
+                return Err("quality source id must be nonblank text".to_string());
+            }
             value
                 .as_object()
                 .map(|summary| (source_id.as_str(), summary))
@@ -126,14 +131,12 @@ pub(crate) fn candidate_entries(
             .iter()
             .enumerate()
             .map(|(index, value)| {
-                let id = value
-                    .get("id")
-                    .and_then(Value::as_str)
+                let id = check::text(value.get("id"), "candidate.id")?
                     .map(ToString::to_string)
                     .unwrap_or_else(|| format!("candidate_{}", index + 1));
-                (id, value)
+                Ok((id, value))
             })
-            .collect(),
+            .collect::<Result<Vec<_>, String>>()?,
         Some(_) => {
             return Err(
                 "transform.rank_quality_candidates candidates must be an object or array"
@@ -199,27 +202,24 @@ pub(crate) fn quality_term(
         return validation_quality_term(source_id, summary, config, not_ready_penalty);
     }
 
-    let (score_field, score) = find_number_suffix(summary, "_quality_score").ok_or_else(|| {
-        format!("transform.compose_quality_objective missing quality score for {source_id}")
-    })?;
-    let score = finite_quality_value(score, source_id, &score_field)?;
-    let domain = quality_domain(summary, &score_field);
-    let declared_ready = find_bool_suffix(summary, "_quality_ready").unwrap_or(false);
+    let (score_field, score) = check::domain_score(summary, source_id)?;
+    let prefix = score_field.strip_suffix("_score").unwrap();
+    let field = |suffix: &str| summary.get(&format!("{prefix}_{suffix}"));
+    let path = |suffix: &str| format!("source {source_id}.{prefix}_{suffix}");
+    let contract = check::text(field("contract"), &path("contract"))?;
+    let domain = contract
+        .and_then(|contract| contract.strip_prefix("kyuubiki."))
+        .and_then(|contract| contract.strip_suffix("_quality_score/v1"))
+        .unwrap_or_else(|| score_field.trim_end_matches("_quality_score"));
+    let declared_ready = check::boolean(field("ready"), &path("ready"), false)?;
     let missing_metric_count =
-        find_u64_suffix(summary, "_quality_missing_metric_count").unwrap_or(0);
-    let watch_count = find_u64_suffix(summary, "_quality_watch_count").unwrap_or(0);
-    let grade = find_string_suffix(summary, "_quality_grade").unwrap_or("unknown");
-    let dominant_term = find_value_suffix(summary, "_quality_dominant_term")
-        .cloned()
-        .unwrap_or(Value::Null);
-    let blocking_terms = find_value_suffix(summary, "_quality_blocking_terms")
-        .cloned()
-        .unwrap_or_else(|| Value::Array(Vec::new()));
-    let blockers = blocking_terms
-        .as_array()
-        .ok_or_else(|| format!("quality source {source_id} blocking_terms must be an array"))?;
-    let ready = declared_ready && blockers.is_empty();
-    let weight = quality_weight(config, source_id, &domain);
+        check::count(field("missing_metric_count"), &path("missing_metric_count"))?.unwrap_or(0);
+    let watch_count = check::count(field("watch_count"), &path("watch_count"))?.unwrap_or(0);
+    let grade = check::text(field("grade"), &path("grade"))?.unwrap_or("unknown");
+    let dominant_term = field("dominant_term").cloned().unwrap_or(Value::Null);
+    let blocking_terms = check::list(field("blocking_terms"), &path("blocking_terms"))?;
+    let ready = declared_ready && blocking_terms.is_empty();
+    let weight = quality_weight(config, source_id, domain);
     let weighted_score = finite_quality_value(score * weight, source_id, "weighted_score")?;
     let missing_penalty = finite_quality_value(
         missing_metric_count as f64 * missing_metric_penalty,
@@ -264,31 +264,13 @@ fn validation_quality_term(
     config: &Value,
     not_ready_penalty: f64,
 ) -> Result<QualityTerm, String> {
-    let declared_pass = summary
-        .get("validation_passed")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    let checked_count = summary
-        .get("validation_checked_field_count")
-        .and_then(Value::as_u64);
+    let ready = check::validation(summary, source_id)?;
     let failed_count = summary
         .get("validation_failed_field_count")
         .and_then(Value::as_u64);
     let missing_count = summary
         .get("validation_missing_field_count")
         .and_then(Value::as_u64);
-    let fail_on_missing = match summary.get("validation_fail_on_missing") {
-        None => Some(true),
-        Some(value) => value.as_bool(),
-    };
-    let ready = declared_pass
-        && checked_count.is_some_and(|count| count > 0)
-        && failed_count == Some(0)
-        && summary
-            .get("validation_failures")
-            .is_none_or(|value| value.as_array().is_some_and(Vec::is_empty))
-        && missing_count
-            .is_some_and(|count| fail_on_missing.is_some_and(|required| !required || count == 0));
     let failed_count = failed_count.unwrap_or(0);
     let missing_count = missing_count.unwrap_or(0);
     let score = validation_score(summary, source_id)?;
@@ -447,6 +429,15 @@ pub(crate) fn validate_quality_config(config: &Value) -> Result<(), String> {
     if !config.is_null() && !config.is_object() {
         return Err("quality config must be an object".to_string());
     }
+    for field in [
+        "missing_metric_penalty",
+        "not_ready_penalty",
+        "max_ready_score",
+        "target_score",
+        "max_candidates",
+    ] {
+        config_number(config, field, 0.0)?;
+    }
     if let Some(weights) = config.get("weights") {
         let weights = weights
             .as_object()
@@ -460,20 +451,6 @@ pub(crate) fn validate_quality_config(config: &Value) -> Result<(), String> {
         }
     }
     Ok(())
-}
-
-pub(crate) fn finite_quality_value(value: f64, source: &str, field: &str) -> Result<f64, String> {
-    if !value.is_finite() {
-        Err(format!(
-            "quality source {source} {field} produced a non-finite value"
-        ))
-    } else if value < 0.0 {
-        Err(format!(
-            "quality source {source} {field} must be nonnegative"
-        ))
-    } else {
-        Ok(value)
-    }
 }
 
 pub(crate) fn composite_grade(
@@ -555,23 +532,6 @@ fn compact_composite_term(term: &Value) -> Value {
     })
 }
 
-fn quality_domain(summary: &Map<String, Value>, score_field: &str) -> String {
-    summary
-        .iter()
-        .find_map(|(key, value)| {
-            if key.ends_with("_quality_contract") {
-                value
-                    .as_str()
-                    .and_then(|contract| contract.strip_prefix("kyuubiki."))
-                    .and_then(|contract| contract.strip_suffix("_quality_score/v1"))
-                    .map(ToString::to_string)
-            } else {
-                None
-            }
-        })
-        .unwrap_or_else(|| score_field.trim_end_matches("_quality_score").to_string())
-}
-
 fn quality_weight(config: &Value, source_id: &str, domain: &str) -> f64 {
     config
         .get("weights")
@@ -580,52 +540,4 @@ fn quality_weight(config: &Value, source_id: &str, domain: &str) -> f64 {
         .and_then(Value::as_f64)
         .filter(|value| value.is_finite() && *value >= 0.0)
         .unwrap_or(1.0)
-}
-
-fn find_number_suffix(summary: &Map<String, Value>, suffix: &str) -> Option<(String, f64)> {
-    for (key, value) in summary {
-        if key.ends_with(suffix) {
-            let Some(value) = value.as_f64().filter(|value| value.is_finite()) else {
-                continue;
-            };
-            return Some((key.clone(), value));
-        }
-    }
-    None
-}
-
-fn find_bool_suffix(summary: &Map<String, Value>, suffix: &str) -> Option<bool> {
-    summary.iter().find_map(|(key, value)| {
-        if key.ends_with(suffix) {
-            value.as_bool()
-        } else {
-            None
-        }
-    })
-}
-
-fn find_u64_suffix(summary: &Map<String, Value>, suffix: &str) -> Option<u64> {
-    summary.iter().find_map(|(key, value)| {
-        if key.ends_with(suffix) {
-            value.as_u64()
-        } else {
-            None
-        }
-    })
-}
-
-fn find_string_suffix<'a>(summary: &'a Map<String, Value>, suffix: &str) -> Option<&'a str> {
-    summary.iter().find_map(|(key, value)| {
-        if key.ends_with(suffix) {
-            value.as_str()
-        } else {
-            None
-        }
-    })
-}
-
-fn find_value_suffix<'a>(summary: &'a Map<String, Value>, suffix: &str) -> Option<&'a Value> {
-    summary
-        .iter()
-        .find_map(|(key, value)| key.ends_with(suffix).then_some(value))
 }

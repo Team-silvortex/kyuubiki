@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 
 import JSZip from "jszip";
 import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-context.ts";
+import { WORKBENCH_API_BASE_URL_STORAGE_KEY } from "../../src/lib/api/backend-target.ts";
+import { writeInMemoryWorkbenchSecrets } from "../../src/lib/workbench/workbench-secrets.ts";
+import { getWorkbenchLibraryMutations } from "../../src/components/workbench/workbench-library-mutations.ts";
 
 import {
   importWorkbenchProjectBundle,
@@ -65,9 +68,11 @@ test.before(() => {
 test.beforeEach(() => {
   storage.clear();
   storage.failWrites = false;
+  writeInMemoryWorkbenchSecrets({});
 });
 
 test.after(() => {
+  writeInMemoryWorkbenchSecrets({});
   if (originalWindowDescriptor) Object.defineProperty(globalThis, "window", originalWindowDescriptor);
   else Reflect.deleteProperty(globalThis, "window");
 });
@@ -184,6 +189,216 @@ function importEffects(state: { selectedProjectId: string | null; messages: stri
     storeManifestPersistenceFailedLabel: "store manifest persistence failed",
     updateModelVersion: async () => ({ version: {} }),
   };
+}
+
+for (const failed of [false, true]) {
+  test(`project import source change after creation suppresses ${failed ? "old errors" : "local persistence and recovery"}`, async () => {
+    const state = { selectedProjectId: "existing-project" as string | null, messages: [] as string[], alerts: [] as Array<{ id: string; message: string }> };
+    const effects = importEffects(state);
+    storage.setItem(WORKBENCH_API_BASE_URL_STORAGE_KEY, "https://source-a.invalid");
+    effects.createProject = async () => {
+      storage.setItem(WORKBENCH_API_BASE_URL_STORAGE_KEY, "https://source-b.invalid");
+      if (failed) throw new Error("old source create failed");
+      return { project: { project_id: "imported-project" } };
+    };
+    let reads = 0;
+    effects.refreshProjects = async () => { reads += 1; };
+    await importWorkbenchProjectBundle(new File([projectBundleJson()], "source-change.kyuubiki.json"), effects);
+    assert.equal(reads, 0, "old-source import cannot refresh the new backend");
+    assert.equal(storage.getItem(STORE_MANIFEST_STORAGE_KEY), null, "old-source manifest cannot become new-source local state");
+    assert.equal(state.selectedProjectId, "existing-project");
+    assert.deepEqual(state.messages, []);
+    assert.deepEqual(state.alerts, []);
+  });
+}
+
+function modelImportFixture(boundary: (phase: string) => Promise<void>) {
+  const state = { selectedProjectId: "existing-project" as string | null, messages: [] as string[], alerts: [] as Array<{ id: string; message: string }> };
+  const effects = importEffects(state);
+  const bundle = JSON.parse(projectBundleJson());
+  const model = { project_id: "source-project", model_id: "source-model", name: "Imported research", kind: "truss_2d",
+    latest_version_id: "source-version-2", model_schema_version: "kyuubiki.model/v1", inserted_at: "", updated_at: "",
+    payload: { kind: "truss_2d", name: "Imported research", youngs_modulus_gpa: 210,
+      nodes: [{ id: "n1", x: 0, y: 0 }, { id: "n2", x: 1, y: 0 }],
+      elements: [{ id: "e1", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 210e9 }] } };
+  bundle.models = [model];
+  bundle.model_versions = [1, 2].map((number) => ({ ...model, version_id: `source-version-${number}`, version_number: number }));
+  const file = new File([], "scoped-import.kyuubiki.json");
+  file.text = async () => { await boundary("parse"); return JSON.stringify(bundle); };
+  effects.createProject = async () => { await boundary("project"); return { project: { project_id: "imported-project" } }; };
+  effects.createModel = async () => { await boundary("model"); return { model: {
+    model_id: "imported-model", latest_version_id: "imported-version-1", versions: [{ version_id: "imported-version-1" }],
+  } }; };
+  effects.updateModelVersion = async () => { await boundary("rename"); return { version: {} }; };
+  effects.createModelVersion = async () => { await boundary("version"); return { version: { version_id: "imported-version-2" } }; };
+  effects.refreshProjects = async () => { await boundary("catalog"); };
+  effects.refreshVersions = async () => { await boundary("history"); };
+  return { state, effects, file };
+}
+
+for (const phase of ["parse", "project", "model", "rename", "version", "catalog", "history"]) {
+  for (const sameFile of [true, false]) for (const failed of [false, true]) {
+    test(`pending import ${phase} excludes ${sameFile ? "same" : "other"} file before parsing; failure=${failed}`, async () => {
+      let release!: () => void, reached!: () => void, shouldFail = failed, reads = 0;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const waiting = new Promise<void>((resolve) => { reached = resolve; });
+      const calls: string[] = [];
+      const fixture = modelImportFixture(async (step) => {
+        calls.push(step);
+        if (step !== phase) return;
+        reached(); await gate;
+        if (shouldFail) throw new Error("original import failed");
+      });
+      const first = importWorkbenchProjectBundle(fixture.file, fixture.effects);
+      await waiting;
+      const originalText = fixture.file.text, duplicate = sameFile ? fixture.file : new File([], "other.kyuubiki.json");
+      duplicate.text = async () => { reads += 1; throw new Error("duplicate file must not be parsed"); };
+      const ownsIntent = fixture.effects.projectContext.capture(), before = [...calls];
+      try {
+        await importWorkbenchProjectBundle(duplicate, fixture.effects);
+        assert.equal(reads, 0, "overlapping import is rejected before parsing or changing intent");
+        assert.equal(ownsIntent(), true);
+        assert.deepEqual(calls, before, "no request is queued or borrowed from the original import");
+        assert.match(fixture.state.messages.at(-1) ?? "", /WORKBENCH_LIBRARY_WRITE_PENDING/);
+      } finally { fixture.file.text = originalText; release(); await first; }
+      assert.equal(fixture.state.messages.at(-1), failed ? "original import failed" : "project imported");
+      shouldFail = false;
+      const creations = calls.filter((step) => step === "project").length;
+      await importWorkbenchProjectBundle(fixture.file, fixture.effects);
+      assert.equal(calls.filter((step) => step === "project").length, creations + 1, "only an explicit later import creates another project");
+      assert.equal(fixture.state.messages.at(-1), "project imported");
+    });
+  }
+}
+
+for (const phase of ["model", "rename", "version", "catalog", "history"]) {
+  test(`import protects its created project through ${phase} but leaves unrelated work available`, async () => {
+    let release!: () => void, reached!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const waiting = new Promise<void>((resolve) => { reached = resolve; });
+    const fixture = modelImportFixture(async (step) => { if (step === phase) { reached(); await gate; } });
+    const first = importWorkbenchProjectBundle(fixture.file, fixture.effects);
+    await waiting;
+    const registry = getWorkbenchLibraryMutations(fixture.effects.projectContext);
+    try {
+      for (const target of [{ kind: "project", projectId: "imported-project" },
+        { kind: "model", projectId: "imported-project", modelId: "imported-model" }] as const) {
+        await assert.rejects(registry.run(target, async () => {}, "wait"), /WORKBENCH_LIBRARY_WRITE_PENDING/);
+      }
+      await registry.run({ kind: "project", projectId: "other-project" }, async () => {}, "wait");
+      await registry.run({ kind: "createProject" }, async () => {}, "wait");
+    } finally { release(); await first; }
+    await registry.run({ kind: "project", projectId: "imported-project" }, async () => {}, "wait");
+    assert.equal(fixture.state.messages.at(-1), "project imported");
+  });
+}
+
+for (const change of ["stay", "intent", "backend"]) {
+  test(`import admission localizes busy feedback without replacing newer ${change} feedback`, async () => {
+    storage.setItem(WORKBENCH_API_BASE_URL_STORAGE_KEY, "https://source-a.invalid");
+    let release!: () => void, reached!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const waiting = new Promise<void>((resolve) => { reached = resolve; });
+    const fixture = modelImportFixture(async (step) => { if (step === "project") { reached(); await gate; } });
+    fixture.effects.language = "zh";
+    const first = importWorkbenchProjectBundle(fixture.file, fixture.effects);
+    await waiting;
+    try {
+      const second = importWorkbenchProjectBundle(fixture.file, fixture.effects);
+      if (change === "intent") fixture.effects.projectContext.begin();
+      if (change === "backend") storage.setItem(WORKBENCH_API_BASE_URL_STORAGE_KEY, "https://source-b.invalid");
+      if (change !== "stay") fixture.state.messages.push("Newer feedback");
+      await second;
+      if (change === "stay") assert.match(fixture.state.messages.at(-1) ?? "", /WORKBENCH_LIBRARY_WRITE_PENDING: 此项目/);
+      else assert.deepEqual(fixture.state.messages, ["Newer feedback"]);
+    } finally { release(); await first; }
+    if (change !== "stay") assert.deepEqual(fixture.state.messages, ["Newer feedback"]);
+  });
+}
+
+for (const phase of ["parse", "project", "model", "rename", "version", "catalog", "history"]) {
+  for (const change of ["backend", "credentials", "disposed"]) for (const failed of [false, true]) {
+    test(`project import ${phase} ${failed ? "failure" : "receipt"} stops after ${change} changes`, async () => {
+      storage.setItem(WORKBENCH_API_BASE_URL_STORAGE_KEY, "https://source-a.invalid");
+      const calls: string[] = [];
+      let stoppedAt: string[] | undefined, before: typeof fixture.state | undefined, manifest: string | null = null;
+      const fixture = modelImportFixture(async (step) => {
+        calls.push(step);
+        if (step !== phase) return;
+        if (change === "backend") storage.setItem(WORKBENCH_API_BASE_URL_STORAGE_KEY, "https://source-b.invalid");
+        else if (change === "credentials") writeInMemoryWorkbenchSecrets({ controlPlaneApiToken: "fixture-next-token" });
+        else fixture.effects.projectContext.dispose();
+        stoppedAt = [...calls]; before = structuredClone(fixture.state); manifest = storage.getItem(STORE_MANIFEST_STORAGE_KEY);
+        if (failed) throw new Error(`obsolete ${step} failure`);
+      });
+      await importWorkbenchProjectBundle(fixture.file, fixture.effects);
+      assert.ok(stoppedAt, "the selected asynchronous boundary must actually run");
+      assert.deepEqual(calls, stoppedAt, "no later write or read may use the changed authority");
+      assert.deepEqual(fixture.state, before, "an obsolete import cannot publish bindings, warnings or failure messages");
+      assert.equal(storage.getItem(STORE_MANIFEST_STORAGE_KEY), manifest, "already persisted local data is preserved, no new local import writes occur");
+    });
+  }
+}
+
+test("same-source project selection still lets an accepted import finish without replacing newer work", async () => {
+  const calls: string[] = [];
+  const fixture = modelImportFixture(async (step) => {
+    calls.push(step);
+    if (step === "project") {
+      fixture.effects.projectContext.update({ projectId: "newer-project", modelId: null, versionId: null });
+      fixture.state.selectedProjectId = "newer-project";
+      fixture.state.messages.push("Newer workspace");
+    }
+  });
+  await importWorkbenchProjectBundle(fixture.file, fixture.effects);
+  assert.deepEqual(calls, ["parse", "project", "model", "rename", "version", "catalog"]);
+  assert.equal(fixture.state.selectedProjectId, "newer-project");
+  assert.deepEqual(fixture.state.messages, ["Newer workspace"]);
+  assert.equal(readWorkspaceStoreManifest("imported-project").entries.length, 1);
+});
+
+test("disposed project import cannot parse a file or start a transition", async () => {
+  const fixture = modelImportFixture(async () => assert.fail("disposed owner cannot start import"));
+  fixture.effects.startTransition = () => assert.fail("disposed owner cannot start transition");
+  fixture.effects.projectContext.dispose();
+  await importWorkbenchProjectBundle(fixture.file, fixture.effects);
+  assert.deepEqual(fixture.state.messages, []);
+});
+
+test("import busy callback and returned promise remain pending through final history recovery", async () => {
+  let release!: () => void, reached!: () => void, finished = false, callbackResult: unknown;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const reading = new Promise<void>((resolve) => { reached = resolve; });
+  const fixture = modelImportFixture(async (phase) => { if (phase === "history") { reached(); await gate; } });
+  fixture.effects.startTransition = (callback) => { callbackResult = callback(); };
+  const operation = importWorkbenchProjectBundle(fixture.file, fixture.effects).then(() => { finished = true; });
+  try {
+    await reading;
+    assert.deepEqual(fixture.effects.projectContext.current(), { projectId: "imported-project",
+      modelId: "imported-model", versionId: "imported-version-2" }, "history reads require the remapped model context before React commits selection");
+    assert.ok(callbackResult instanceof Promise, "React needs the async callback to retain its busy state");
+    assert.equal(finished, false);
+    assert.deepEqual(fixture.state.messages, [], "success is not published before final history recovery");
+  } finally { release(); await operation; }
+  assert.equal(fixture.state.selectedProjectId, "imported-project");
+  assert.equal(fixture.state.messages.at(-1), "project imported");
+});
+
+for (const navigation of ["stay", "switch", "away-and-back", "new-intent"]) {
+  test(`project import final history failure preserves feedback ownership: ${navigation}`, async () => {
+    const fixture = modelImportFixture(async (phase) => {
+      if (phase !== "history") return;
+      const context = fixture.effects.projectContext, selection = context.current();
+      if (navigation === "new-intent") context.begin();
+      else if (navigation !== "stay") context.update({ projectId: "newer-project", modelId: null, versionId: null });
+      if (navigation === "away-and-back") context.update(selection);
+      if (navigation !== "stay") fixture.state.messages.push("Newer operation");
+      throw new Error("history unavailable");
+    });
+    await importWorkbenchProjectBundle(fixture.file, fixture.effects);
+    assert.deepEqual(fixture.state.messages, [navigation === "stay" ? "history unavailable" : "Newer operation"]);
+    assert.equal(fixture.state.alerts.length, navigation === "stay" ? 1 : 0);
+  });
 }
 
 test("project import rewrites and persists the Store manifest for the new project", async () => {

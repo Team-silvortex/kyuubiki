@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench project import captures effective API/authentication scope before parsing and fences continuation after project/model/version writes and catalog/history reads. Changed scope or disposal stops subsequent writes, local preset/Store persistence, reads and late feedback; same-source workspace navigation still lets accepted creation finish without replacing newer work. GUI busy state and the returned promise span the async import through final history recovery. Pure importer controls and isolated Chromium cases verify backend/credential/disposal boundaries, retained partial records and explicit re-import behavior. This is client contract/recovery/UX evidence, not import transactions, resumption, duplicate-write exclusion, continuous authenticated authority, complete local-data provenance, installed/mobile acceptance, remote execution or numerical accuracy. No operational promotion, durable import journal, backup, snapshot or production Node dependency.",
+  "evidence_claims": [
+    {
+      "id": "workbench-project-import-source-continuation-and-completion",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-persisted-model-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-library-mutations.ts",
+        "apps/frontend/test/workflow/workbench-project-store-bundle-roundtrip.test.ts",
+        "tests/integration/workbench-ui-import-source-recovery.test.mjs",
+        "tests/integration/workbench-ui-project-boundaries.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-project-import-source-20261012.md"
+      ],
+      "required_text": [
+        "importProjectBundleInScope",
+        "Same-source navigation may leave an import running; backend changes may not",
+        "captureWorkbenchApiAuthority",
+        "runWorkbenchLibraryTransition",
+        "no later write or read may use the changed authority",
+        "disposed project import cannot parse a file or start a transition",
+        "import busy callback and returned promise remain pending through final history recovery",
+        "history reads require the remapped model context before React commits selection",
+        "waitForGuiTransition(page, true)",
+        "only the explicit second import creates another project",
+        "read recovery cannot replay import writes",
+        "1,685 tests with zero failures or skips",
+        "85 tests with zero failures or skips",
+        "22 tests with zero failures or skips"
+      ]
+    }
+  ]
+}

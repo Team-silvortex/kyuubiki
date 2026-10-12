@@ -156,6 +156,22 @@ test("project library backend fetches model versions through transport", async (
   assert.equal(payload.versions[0]?.version_id, "version-a");
 });
 
+test("project creation forwards the caller's recovery identity and never retries an ambiguous write automatically", async () => {
+  const calls: unknown[] = [];
+  const service = createProjectLibraryBackendService(projectTransport({
+    createProject: async (input) => {
+      calls.push(structuredClone(input));
+      if (calls.length === 1) throw new Error("response lost after commit");
+      return projectEnvelope("committed-project", input.name);
+    },
+  }));
+  const input = { name: "Study", request_id: "project-create-request-0001" };
+  await assert.rejects(service.createProject(input), /response lost after commit/);
+  assert.equal(calls.length, 1);
+  assert.equal((await service.createProject(input)).project.project_id, "committed-project");
+  assert.deepEqual(calls, [input, input]);
+});
+
 test("project library backend forwards full model and version CRUD through transport", async () => {
   const calls: string[] = [];
   const service = createProjectLibraryBackendService(projectTransport({

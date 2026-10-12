@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Source Workbench GUI and PWDT share workspace-owned, effective-client-authority Library write reservations. Project mutations exclude model children; versions share model scope, Save As reserves its project, and duplicate project creation excludes itself. Conflicts reject without queuing, merging success or advancing project intent. GUI async callbacks remain awaitable through receipt handling and catalog/history reads; settlement releases for explicit retry only. Pure frontend and isolated Chromium controls verify conflict hierarchy, failure/retry, dependent-action stopping, disposed/remounted owners, independent workspaces and same-ID backend scopes. This qualifies workbench-shell contract/recovery/UX, not backend or cross-client locking, durable exclusion, continuous authenticated authority, working-payload provenance, audit-routing ownership, imports, installed/mobile acceptance, remote execution, scientific accuracy or exactly-once. No operational promotion, persistent payload, backup, snapshot or production Node dependency.",
+  "evidence_claims": [
+    {
+      "id": "workbench-library-shared-write-reservation-through-read-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/components/workbench/workbench-library-mutations.ts",
+        "apps/frontend/src/components/workbench/workbench-library-mutation-copy.ts",
+        "apps/frontend/src/components/workbench/workbench-project-storage-controller.ts",
+        "apps/frontend/src/components/workbench/workbench-project-flows.ts",
+        "apps/frontend/src/components/workbench/workbench-script-project-model-controller.ts",
+        "apps/frontend/test/workflow/workbench-library-mutations.test.ts",
+        "apps/frontend/test/workflow/workbench-script-project-model-controller.test.ts",
+        "tests/integration/workbench-ui-library-mutation-flight.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "workers/rust/crates/script-runner/src/node_tests.rs",
+        "reports/workbench-library-mutation-flight-20261012.md"
+      ],
+      "required_text": [
+        "WORKBENCH_LIBRARY_WRITE_PENDING",
+        "Reserve synchronously before accepted work can change context or dispatch a request",
+        "runWorkbenchLibraryTransition",
+        "conflicting deletion cannot advance the intent or borrow the pending save's result",
+        "parent deletion cannot interrupt read recovery",
+        "active original backend cannot be bypassed",
+        "different workspace owners never share reservations",
+        "unreadable authority is an awaitable rejection",
+        "waitForGuiTransition(page, true)",
+        "only the explicit rename may run after failure",
+        "same-ID B project editing is independent",
+        "1,634 tests with zero failures or skips",
+        "All 22 new isolated Chromium controls passed",
+        "117 tests with zero failures or skips"
+      ]
+    }
+  ]
+}

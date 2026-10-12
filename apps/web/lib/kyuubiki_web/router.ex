@@ -569,8 +569,14 @@ defmodule KyuubikiWeb.Router do
   post "/api/v1/projects" do
     with_auth(conn, :write, fn conn ->
       case Library.create_project(conn.body_params) do
-        {:ok, project} -> respond_json(conn, 201, %{"project" => project})
-        {:error, reason} -> unprocessable(conn, reason)
+        {:ok, project} ->
+          respond_json(conn, 201, %{"project" => project})
+
+        {:error, reason} when reason in [:project_request_conflict, :project_result_deleted] ->
+          respond_json(conn, 409, %{"error" => Atom.to_string(reason)})
+
+        {:error, reason} ->
+          unprocessable(conn, reason)
       end
     end)
   end

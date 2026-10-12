@@ -84,7 +84,7 @@ defmodule KyuubikiWeb.Storage.DatabasePostgresTest do
       Repo,
       "UPDATE kyuubiki_data_migrations SET checksum=$1 WHERE version=2",
       [
-        DatabaseMigrations.checksum(:postgres)
+        DatabaseMigrations.checksum(:postgres, 2)
       ]
     )
 

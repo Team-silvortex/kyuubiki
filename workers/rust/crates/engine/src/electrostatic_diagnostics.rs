@@ -1,4 +1,4 @@
-use crate::workflow_diagnostic_samples::{Field, VectorFields, extract_checked};
+use crate::workflow_diagnostic_samples::{Field, VectorFields, configured_name, extract_checked};
 use serde_json::Value;
 
 pub fn extract_electrostatic_result_diagnostics(
@@ -15,14 +15,18 @@ pub fn extract_electrostatic_result_diagnostics(
                 "potential",
                 Field::configured(config, "potential_field", &["potential", "phi", "voltage"])?,
             )?;
-            diagnostics.node_distribution(
-                "charge_density",
-                Field::configured(
-                    config,
-                    "charge_density_field",
-                    &["charge_density", "rho_e", "q_density"],
-                )?,
+            let charge = Field::configured(
+                config,
+                "charge_density_field",
+                &["charge_density", "rho_e", "q_density"],
             )?;
+            match configured_name(config, "charge_density_source")?.unwrap_or("nodes") {
+                "nodes" | "node" => diagnostics.node_distribution("charge_density", charge)?,
+                "elements" | "element" => {
+                    diagnostics.element_distribution("charge_density", charge)?;
+                }
+                _ => return Err("config.charge_density_source must be nodes or elements".into()),
+            }
             diagnostics.element_scalar_peak(
                 "energy_density",
                 Field::configured(

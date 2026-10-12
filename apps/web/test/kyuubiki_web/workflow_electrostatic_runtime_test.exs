@@ -94,8 +94,6 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntimeTest do
                  "charge_density_field" => "rho",
                  "charge_density_source" => "elements",
                  "field_magnitude_field" => "field_abs",
-                 "field_x_field" => "missing_x",
-                 "field_y_field" => "missing_y",
                  "output_prefix" => "es_diag"
                }
              )

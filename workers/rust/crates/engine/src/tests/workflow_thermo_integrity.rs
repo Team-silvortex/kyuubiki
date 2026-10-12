@@ -303,3 +303,64 @@ fn thermo_selected_temperature_mapping_and_explicit_null_identity_keep_precedenc
         "config.temperature_delta_field",
     );
 }
+
+#[test]
+fn legacy_displacement_mappings_select_complete_custom_vectors() {
+    let result = extract(
+        json!({"nodes":[{"x":3.0,"y":4.0,"z":12.0}],"elements":[]}),
+        json!({"ux_field":"x","uy_field":"y","uz_field":"z"}),
+    )
+    .unwrap();
+    assert_eq!(result["thermo_displacement_peak_magnitude"], 13.0);
+    let result = extract(
+        json!({"nodes":[{"norm":7.0}],"elements":[]}),
+        json!({"displacement_field":"norm"}),
+    )
+    .unwrap();
+    assert_eq!(result["thermo_displacement_peak_magnitude"], 7.0);
+}
+
+#[test]
+fn displacement_mapping_precedence_is_presence_based_not_validity_based() {
+    for (primary, legacy, field) in [
+        ("displacement_x_field", "ux_field", "ux"),
+        ("displacement_y_field", "uy_field", "uy"),
+        ("displacement_z_field", "uz_field", "uz"),
+        ("displacement_magnitude_field", "displacement_field", "norm"),
+    ] {
+        let mut input = payload();
+        for index in [0, 1] {
+            input["nodes"][index]["uz"] = json!(12.0);
+            input["nodes"][index]["norm"] = json!(7.0);
+        }
+        for invalid in [Value::Null, json!(false), json!(" ")] {
+            rejects(
+                input.clone(),
+                json!({primary:invalid.clone(),legacy:field}),
+                &format!("config.{primary}"),
+            );
+            rejects(
+                input.clone(),
+                json!({legacy:invalid.clone()}),
+                &format!("config.{legacy}"),
+            );
+            assert!(extract(input.clone(), json!({primary:field,legacy:invalid})).is_ok());
+        }
+        rejects(input, json!({legacy:"missing"}), "payload.nodes[0].missing");
+    }
+}
+
+#[test]
+fn selected_scalar_strain_peak_is_signed_maximum_not_absolute_component_peak() {
+    for field in ["thermal_strain", "mechanical_strain", "total_strain"] {
+        let result = extract(
+            json!({"nodes":[],"elements":[
+                {"id":"compression",field:-0.8},
+                {"id":"tension",field:0.1}]}),
+            json!({}),
+        )
+        .unwrap();
+        assert_eq!(result[format!("thermo_{field}_peak")], 0.1);
+        assert_eq!(result[format!("thermo_peak_{field}_id")], "tension");
+    }
+}

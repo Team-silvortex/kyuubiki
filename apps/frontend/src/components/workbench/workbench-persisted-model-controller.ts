@@ -13,6 +13,8 @@ import {
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api/project-types";
 import type { CheckpointVersionGuard } from "@/lib/workbench/checkpoint-recovery";
 import { captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
+import { getWorkbenchLibraryMutations, runWorkbenchLibraryTransition, WorkbenchLibraryWritePendingError } from "./workbench-library-mutations";
+import { getWorkbenchLibraryMutationPendingLabel } from "./workbench-library-mutation-copy";
 import { parsePlaygroundModel } from "@/lib/models/model-import";
 import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
 import { isSensitivePresetSaveError } from "@/lib/scripting/workbench-script-preset-security";
@@ -61,6 +63,7 @@ type PersistedModelEffects = {
 
 type PersistedModelControllerDeps = PersistedModelEffects & {
   projectContext: WorkbenchProjectContext;
+  language?: string;
   activeMaterial: string;
   startTransition?: (callback: () => void) => void;
   createProject: (input: { name: string; description: string }) => Promise<any>;
@@ -108,143 +111,176 @@ export function applyPersistedWorkbenchPayload(
   effects.resetActiveResult();
 }
 
-export async function importWorkbenchProjectBundle(file: File | undefined, effects: PersistedModelControllerDeps) {
-  if (!file) return;
-  const isCurrent = effects.projectContext.begin();
+export function importWorkbenchProjectBundle(file: File | undefined, effects: PersistedModelControllerDeps) {
+  if (!file || !effects.projectContext.capture()()) return Promise.resolve();
+  const ownsIntent = effects.projectContext.capture();
+  const pendingLabel = getWorkbenchLibraryMutationPendingLabel(effects.language ?? "en");
+  return getWorkbenchLibraryMutations(effects.projectContext).run({ kind: "importProject" },
+    () => runWorkbenchLibraryTransition(effects.startTransition ?? ((callback) => callback()),
+      () => importProjectBundleInScope(file, effects, pendingLabel)), pendingLabel).catch((error) => {
+    if (ownsIntent() && (!(error instanceof WorkbenchLibraryWritePendingError) || error.isCurrent())) {
+      effects.setMessage(error instanceof Error ? error.message : effects.importFailedLabel);
+    }
+  });
+}
+
+async function importProjectBundleInScope(file: File, effects: PersistedModelControllerDeps, pendingLabel: string) {
+  let isCurrent = effects.projectContext.begin();
+  let ownsAuthority = () => true;
+  // Same-source navigation may leave an import running; backend changes may not.
+  const ownsSource = () => {
+    try { return effects.projectContext.capture()() && ownsAuthority(); } catch { return false; }
+  };
 
   try {
+    ownsAuthority = captureWorkbenchApiAuthority("/api/v1/projects", "/api/v1/models", "/api/v1/model-versions");
     dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-error");
     dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-store-manifest-warning");
     dismissWorkbenchNotice(effects.setImportNotice);
     const { parseProjectBundleFile } = await import("@/lib/projects/project-format");
+    if (!isCurrent() || !ownsSource()) return;
     const bundle = await parseProjectBundleFile(file);
+    if (!isCurrent() || !ownsSource()) return;
     const activeModel = bundle.models.find((model) => model.model_id === bundle.active_model_id) ?? bundle.models[0];
     const activeVersion = bundle.model_versions.find((version) =>
       version.version_id === bundle.active_version_id && version.model_id === activeModel?.model_id);
     const workspacePayload = bundle.workspace_snapshot ?? activeVersion?.payload ?? activeModel?.payload;
     // Validate the payload before creating persistent records or changing the active workspace.
     const importedWorkspace = workspacePayload ? parsePlaygroundModel(JSON.stringify(workspacePayload)) : null;
-    if (!isCurrent()) return;
+    if (!isCurrent() || !ownsSource()) return;
     const createdProject = await effects.createProject({
       name: bundle.project.name,
       description: bundle.project.description ?? "",
     });
+    if (!ownsSource()) return;
 
-    const modelIdMap = new Map<string, string>();
-    const versionIdMap = new Map<string, string>();
+    // The import slot excludes overlapping files; the new project excludes all of its child writes.
+    await getWorkbenchLibraryMutations(effects.projectContext).run({ kind: "project", projectId: createdProject.project.project_id }, async () => {
+      const modelIdMap = new Map<string, string>();
+      const versionIdMap = new Map<string, string>();
 
-    for (const bundledModel of bundle.models) {
-      const bundledVersions = bundle.model_versions
-        .filter((version) => version.model_id === bundledModel.model_id)
-        .sort((left, right) => left.version_number - right.version_number);
+      for (const bundledModel of bundle.models) {
+        if (!ownsSource()) return;
+        const bundledVersions = bundle.model_versions
+          .filter((version) => version.model_id === bundledModel.model_id)
+          .sort((left, right) => left.version_number - right.version_number);
 
-      const baseVersion = bundledVersions[0];
-      const createdModel = await effects.createModel(createdProject.project.project_id, {
-        name: baseVersion?.name || bundledModel.name,
-        kind: bundledModel.kind,
-        material: bundledModel.material ?? undefined,
-        model_schema_version: bundledModel.model_schema_version,
-        payload: (baseVersion?.payload ?? bundledModel.payload) as Record<string, unknown>,
-      });
-
-      const newModelId = createdModel.model.model_id;
-      modelIdMap.set(bundledModel.model_id, newModelId);
-
-      const initialVersionId = createdModel.model.latest_version_id ?? createdModel.model.versions?.[0]?.version_id;
-      if (initialVersionId && baseVersion) versionIdMap.set(baseVersion.version_id, initialVersionId);
-      if (createdModel.model.versions?.[0]?.version_id && baseVersion?.name) {
-        await effects.updateModelVersion(initialVersionId, { name: baseVersion.name });
-      }
-
-      for (const extraVersion of bundledVersions.slice(1)) {
-        const createdVersion = await effects.createModelVersion(newModelId, {
-          name: extraVersion.name,
-          kind: extraVersion.kind,
-          material: extraVersion.material ?? undefined,
-          model_schema_version: extraVersion.model_schema_version,
-          payload: extraVersion.payload,
+        const baseVersion = bundledVersions[0];
+        const createdModel = await effects.createModel(createdProject.project.project_id, {
+          name: baseVersion?.name || bundledModel.name,
+          kind: bundledModel.kind,
+          material: bundledModel.material ?? undefined,
+          model_schema_version: bundledModel.model_schema_version,
+          payload: (baseVersion?.payload ?? bundledModel.payload) as Record<string, unknown>,
         });
-        versionIdMap.set(extraVersion.version_id, createdVersion.version.version_id);
-      }
-    }
+        if (!ownsSource()) return;
 
-    let skippedSensitivePresetCount = 0;
-    for (const preset of bundle.automation_presets ?? []) {
-      try {
-        saveWorkbenchMacroPreset({
-          projectId: createdProject.project.project_id,
-          presetId: preset.presetId,
-          name: preset.name,
-          macro: preset.macro,
-        });
-      } catch (error) {
-        if (isSensitivePresetSaveError(error)) {
-          skippedSensitivePresetCount += 1;
+        const newModelId = createdModel.model.model_id;
+        modelIdMap.set(bundledModel.model_id, newModelId);
+
+        const initialVersionId = createdModel.model.latest_version_id ?? createdModel.model.versions?.[0]?.version_id;
+        if (initialVersionId && baseVersion) versionIdMap.set(baseVersion.version_id, initialVersionId);
+        if (createdModel.model.versions?.[0]?.version_id && baseVersion?.name) {
+          await effects.updateModelVersion(initialVersionId, { name: baseVersion.name });
+          if (!ownsSource()) return;
         }
-        // Ignore malformed preset payloads so model/project import stays usable.
-      }
-    }
-    for (const preset of bundle.snippet_presets ?? []) {
-      try {
-        saveWorkbenchSnippetPreset({
-          projectId: createdProject.project.project_id,
-          presetId: preset.presetId,
-          snippetId: preset.snippetId,
-          name: preset.name,
-          parameters: preset.parameters,
-        });
-      } catch (error) {
-        if (isSensitivePresetSaveError(error)) {
-          skippedSensitivePresetCount += 1;
+
+        for (const extraVersion of bundledVersions.slice(1)) {
+          const createdVersion = await effects.createModelVersion(newModelId, {
+            name: extraVersion.name,
+            kind: extraVersion.kind,
+            material: extraVersion.material ?? undefined,
+            model_schema_version: extraVersion.model_schema_version,
+            payload: extraVersion.payload,
+          });
+          if (!ownsSource()) return;
+          versionIdMap.set(extraVersion.version_id, createdVersion.version.version_id);
         }
-        // Ignore malformed snippet preset payloads so model/project import stays usable.
       }
-    }
 
-    let manifestPersisted = true;
-    if (bundle.store_manifest) {
-      manifestPersisted = persistWorkspaceStoreManifest(
-        rewriteWorkspaceStoreManifestProject(bundle.store_manifest, createdProject.project.project_id),
-      );
-    }
+      if (!ownsSource()) return;
+      let skippedSensitivePresetCount = 0;
+      for (const preset of bundle.automation_presets ?? []) {
+        try {
+          saveWorkbenchMacroPreset({
+            projectId: createdProject.project.project_id,
+            presetId: preset.presetId,
+            name: preset.name,
+            macro: preset.macro,
+          });
+        } catch (error) {
+          if (isSensitivePresetSaveError(error)) {
+            skippedSensitivePresetCount += 1;
+          }
+          // Ignore malformed preset payloads so model/project import stays usable.
+        }
+      }
+      for (const preset of bundle.snippet_presets ?? []) {
+        try {
+          saveWorkbenchSnippetPreset({
+            projectId: createdProject.project.project_id,
+            presetId: preset.presetId,
+            snippetId: preset.snippetId,
+            name: preset.name,
+            parameters: preset.parameters,
+          });
+        } catch (error) {
+          if (isSensitivePresetSaveError(error)) {
+            skippedSensitivePresetCount += 1;
+          }
+          // Ignore malformed snippet preset payloads so model/project import stays usable.
+        }
+      }
 
-    await effects.refreshProjects(false, undefined, { preserveSelection: true });
-    if (!isCurrent()) return;
-    if (!manifestPersisted) {
-      upsertWorkbenchAlert(effects.setSystemAlerts, {
-        id: "project-import-store-manifest-warning",
-        message: effects.storeManifestPersistenceFailedLabel,
-        tone: "warning",
-      });
-    }
+      let manifestPersisted = true;
+      if (bundle.store_manifest) {
+        manifestPersisted = persistWorkspaceStoreManifest(
+          rewriteWorkspaceStoreManifestProject(bundle.store_manifest, createdProject.project.project_id),
+        );
+      }
 
-    const importedActiveModelId =
-      (activeModel && modelIdMap.get(activeModel.model_id)) || null;
-    const sourceVersionId = activeVersion?.version_id ?? activeModel?.latest_version_id;
-    const importedActiveVersionId = (sourceVersionId && versionIdMap.get(sourceVersionId)) || null;
+      if (!ownsSource()) return;
+      await effects.refreshProjects(false, undefined, { preserveSelection: true });
+      if (!isCurrent() || !ownsSource()) return;
+      if (!manifestPersisted) {
+        upsertWorkbenchAlert(effects.setSystemAlerts, {
+          id: "project-import-store-manifest-warning",
+          message: effects.storeManifestPersistenceFailedLabel,
+          tone: "warning",
+        });
+      }
 
-    if (importedWorkspace) {
-      effects.recordHistory(effects.importActionLabel);
-      applyImportedWorkbenchModel(importedWorkspace, effects);
-      if (!bundle.workspace_snapshot) effects.setLoadedModelName(activeVersion?.name ?? activeModel?.name ?? importedWorkspace.name);
-      effects.resetActiveResult();
-    }
+      const importedActiveModelId =
+        (activeModel && modelIdMap.get(activeModel.model_id)) || null;
+      const sourceVersionId = activeVersion?.version_id ?? activeModel?.latest_version_id;
+      const importedActiveVersionId = (sourceVersionId && versionIdMap.get(sourceVersionId)) || null;
 
-    // Loading a payload clears saved-model associations; restore the remapped IDs afterwards.
-    effects.setSelectedProjectId(createdProject.project.project_id);
-    effects.setSelectedModelId(importedActiveModelId);
-    effects.setSelectedVersionId(importedActiveVersionId);
-    effects.setModelVersions([]);
+      if (importedWorkspace) {
+        effects.recordHistory(effects.importActionLabel);
+        applyImportedWorkbenchModel(importedWorkspace, effects);
+        if (!bundle.workspace_snapshot) effects.setLoadedModelName(activeVersion?.name ?? activeModel?.name ?? importedWorkspace.name);
+        effects.resetActiveResult();
+      }
 
-    effects.setMessage(effects.importedProjectLabel);
-    if (skippedSensitivePresetCount > 0) {
-      showWorkbenchNotice(effects.setImportNotice, effects.formatImportNotice(skippedSensitivePresetCount));
-    } else {
-      dismissWorkbenchNotice(effects.setImportNotice);
-    }
-    if (importedActiveModelId) await effects.refreshVersions(importedActiveModelId);
+      // Loading a payload clears saved-model associations; restore the remapped IDs afterwards.
+      isCurrent = effects.projectContext.update({ projectId: createdProject.project.project_id,
+        modelId: importedActiveModelId, versionId: importedActiveVersionId });
+      effects.setSelectedProjectId(createdProject.project.project_id);
+      effects.setSelectedModelId(importedActiveModelId);
+      effects.setSelectedVersionId(importedActiveVersionId);
+      effects.setModelVersions([]);
+
+      if (importedActiveModelId && ownsSource()) await effects.refreshVersions(importedActiveModelId);
+      if (!isCurrent() || !ownsSource()) return;
+      effects.setMessage(effects.importedProjectLabel);
+      if (skippedSensitivePresetCount > 0) {
+        showWorkbenchNotice(effects.setImportNotice, effects.formatImportNotice(skippedSensitivePresetCount));
+      } else {
+        dismissWorkbenchNotice(effects.setImportNotice);
+      }
+    }, pendingLabel);
   } catch (error) {
-    if (!isCurrent()) return;
+    if (!isCurrent() || !ownsSource()) return;
     dismissWorkbenchNotice(effects.setImportNotice);
     const message = error instanceof Error ? error.message : effects.importFailedLabel;
     upsertWorkbenchAlert(effects.setSystemAlerts, {

@@ -49,7 +49,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert entry["task_digest"] == OperatorTaskIR.compute_task_digest(task_ir)
     assert get_in(entry, ["agent_rpc", "method"]) == "run_operator_task_ir"
     assert get_in(entry, ["agent_rpc", "params", "task_ir"]) == task_ir
-    assert entry["agent_rpc"]["routing_opts"][:required_capabilities] == ["solver:thermal"]
+    assert entry["agent_rpc"]["routing_opts"]["required_capabilities"] == ["solver:thermal"]
     assert get_in(task_ir, ["runtime_hints", "required_capabilities"]) == ["solver:thermal"]
   end
 

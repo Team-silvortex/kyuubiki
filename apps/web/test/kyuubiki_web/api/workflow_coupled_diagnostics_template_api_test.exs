@@ -2,11 +2,12 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
   use KyuubikiWeb.TestSupport.ApiRouterCase
 
   alias KyuubikiWeb.TestSupport.WorkflowApi
+  alias KyuubikiWeb.TestSupport.WorkflowDiagnosticAgent, as: DiagnosticAgent
 
   test "runs the coupled electrostatic heat thermo diagnostics template through the catalog job api" do
-    {:ok, _pid} =
-      WorkflowApi.start_fake_agent_sessions([
-        [
+    agent =
+      DiagnosticAgent.start!([
+        DiagnosticAgent.solver("solve_electrostatic_plane_quad_2d", [
           %{
             "ok" => true,
             "result" => %{
@@ -57,8 +58,8 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
               "max_electric_field" => 10.0
             }
           }
-        ],
-        [
+        ]),
+        DiagnosticAgent.solver("solve_heat_plane_quad_2d", [
           %{
             "ok" => true,
             "result" => %{
@@ -118,8 +119,8 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
               }
             }
           }
-        ],
-        [
+        ]),
+        DiagnosticAgent.solver("solve_thermal_plane_quad_2d", [
           %{
             "ok" => true,
             "result" => %{
@@ -167,7 +168,19 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
               ]
             }
           }
-        ]
+        ]),
+        DiagnosticAgent.diagnostic(
+          "extract_electrostatic_diagnostics",
+          "extract.electrostatic_result_diagnostics"
+        ),
+        DiagnosticAgent.diagnostic(
+          "extract_thermal_diagnostics",
+          "extract.thermal_result_diagnostics"
+        ),
+        DiagnosticAgent.diagnostic(
+          "extract_thermo_diagnostics",
+          "extract.thermo_result_diagnostics"
+        )
       ])
 
     port = WorkflowApi.await_fake_agent_port()
@@ -181,6 +194,17 @@ defmodule KyuubikiWeb.Api.WorkflowCoupledDiagnosticsTemplateApiTest do
       )
 
     assert result_payload["job"]["status"] == "completed"
+    [_, _, _, electrostatic, thermal, thermo] = DiagnosticAgent.assert_complete(agent)
+
+    for {request, source} <- [
+          {electrostatic, "solve_electrostatic"},
+          {thermal, "solve_heat"},
+          {thermo, "solve_thermo"}
+        ] do
+      task = request["params"]["task_ir"]
+      assert task["config"] == %{}
+      assert task["input_artifact"] == result_payload["result"]["artifacts"]["#{source}.result"]
+    end
 
     assert result_payload["result"]["workflow_id"] ==
              "workflow.electrostatic-heat-thermo-diagnostics-markdown"
