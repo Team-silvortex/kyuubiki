@@ -1,5 +1,24 @@
 # Changelog
 
+## daji 3.6.0
+
+October 12, 2026. Workflow recovery and evidence-admission checkpoint.
+
+- Retain dispatch/cancellation ownership checks and bounded, identity-bound
+  receipt/output/branch recovery without replaying ambiguous work.
+- Harden result collection, scoring, quality composition and next-round
+  admission against incomplete, malformed and contradictory evidence.
+- Align Rust and Elixir ranking-order, ordinal and nested-score checks, with
+  shared fixtures and explicit corrected fresh-run regression coverage.
+- Align first-party source packages, language-pack targets, release contracts
+  and documentation to 3.6.0 without changing protocol identifiers or history.
+
+See `docs/current-line.md#daji-360-checkpoint` and
+`releases/snapshots/3.6.0.json` for evidence and limits. Historical tests are not
+relabeled as fresh release qualification. No desktop rebuild, installation,
+publication or new physical/remote/scale qualification is included; the last
+recorded local installed baseline remains 3.4.0 and tensor gaps remain open.
+
 ## daji 3.4.7
 
 October 5, 2026. Bounded modal research and verified repository cleanup.

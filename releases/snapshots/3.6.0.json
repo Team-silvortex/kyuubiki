@@ -1,0 +1,91 @@
+{
+  "version": "3.6.0",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-10-12",
+  "git_commit": "a1740601c14cf8797ea9b078db3ceb2306bb38cc",
+  "summary": "Daji 3.6.0 source checkpoint: bounded workflow recovery and cross-runtime quality-evidence admission. Source metadata, language-pack targets and documentation aligned; no desktop rebuild, installation or publication.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "reliability": "docs/operator-reliability.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.6.0", "notes": ["Source metadata aligned; no new GUI acceptance."] },
+    "hub_gui": { "version": "3.6.0", "notes": ["Book and language-pack target mirrors aligned; no new desktop artifact."] },
+    "workbench_gui": { "version": "3.6.0", "notes": ["Source metadata aligned; no new desktop artifact."] },
+    "installer_gui": { "version": "3.6.0", "notes": ["Source and installation contracts aligned; no new desktop artifact."] },
+    "web_api": { "version": "3.6.0", "notes": ["Workflow recovery and quality-evidence admission hardened; authority boundaries unchanged."] },
+    "rust_headless_sdk": { "version": "3.6.0", "notes": ["Source recovery gates retained; no registry publication."] },
+    "python_headless_sdk": { "version": "3.6.0", "notes": ["Metadata aligned; native source tests do not establish Python parity."] },
+    "elixir_headless_sdk": { "version": "3.6.0", "notes": ["Metadata aligned; service regressions do not establish SDK parity."] },
+    "rust_worker_sdk": { "version": "3.6.0", "notes": ["Rust-only operator extension remains separate from Headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "Dispatch and recovery remain bound to invocation identity and current execution ownership.",
+      "Collection, scoring and next-round admission reject malformed, incomplete or contradictory evidence.",
+      "Rust and Elixir enforce canonical ranking order, declared ordinal positions and matching row/objective scores."
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Operator extension remains Rust-only and separate from Headless control.",
+      "Solver owns numerical algorithms; Engine/Agent own execution authority."
+    ]
+  },
+  "desktop_artifacts": {},
+  "verification": {
+    "source_revision_role": "Recorded base commit plus version-alignment overlay, not a clean-commit binary build.",
+    "release_checks": {
+      "source_version": "3.6.0",
+      "status": "passed",
+      "exact_version_contracts": { "checks": 224, "mismatched": 0 },
+      "cargo_manifest_resolution": "Six workspace, standalone SDK, desktop and operator-template manifests resolve with --locked --offline --no-deps; no third-party dependency changes.",
+      "frontend_product_identity": { "passed": 1, "failed": 0, "scope": "Source package, brand, display label and language-pack target agreement, not installed WebView acceptance." },
+      "language_pack_metadata": "60 canonical packs validated for 3.6.0; translation content unchanged.",
+      "documentation": "26 HTML book files, manifest, research bootstrap and documentation inventory passed; a repeated version synchronization made no changes.",
+      "desktop_mirrors": "Native shared-asset synchronization and independent verification passed; no binary build.",
+      "installation_integrity": "Disk-hygiene and component-integrity self-tests and contracts passed, including 11 components and 16 required layout rules.",
+      "release_catalog": "Release-snapshot, version-audit and update-catalog self-tests passed; only 3.6.0 is current.",
+      "architecture": "Module extension standard, topology, matrix and tensor structure/self-test checks passed; no maturity or evidence-grade changes.",
+      "project_organization": "Source limit 800, documentation limit 2000, tracked debt 0; diff whitespace check passed.",
+      "scope": "Source metadata and selected synchronization/contract checks only. No full numerical or remote suite rerun, App build/install, CI rerun, registry publication or public distribution."
+    },
+    "prior_source_evidence": {
+      "base_commit": "69da83e9",
+      "date": "2026-10-12",
+      "platform": "macos source working-tree overlay",
+      "ranking_consistency": {
+        "shared_fixture_cases": 31,
+        "native_graph_executions": 16,
+        "service_graph_executions": 16,
+        "engine_suite": { "passed": 690, "ignored": 1, "failed": 0 },
+        "service_selection": { "passed": 2078, "skipped": 71, "failed": 0 },
+        "scope": "Controlled evidence admission and explicit corrected fresh runs; not physical, installed, remote or durable-recovery qualification."
+      }
+    },
+    "reports": [
+      "reports/quality-ranking-consistency-recovery-20261012.md",
+      "reports/native-quality-decision-recovery-20261012.md"
+    ],
+    "report_provenance": "Original reports retain their source metadata, commit, working-tree overlay and test scope; advancing to 3.6.0 does not relabel those runs.",
+    "known_limits": [
+      "Conflicting nested readiness evidence and downstream request admission still need further audits.",
+      "Controlled fresh-run recovery does not establish automatic durable continuation or exactly-once execution.",
+      "Source consistency tests do not qualify physical optimality, external solver correlation or installed-platform acceptance.",
+      "Tensor grades remain unchanged: four maturity, 20 evidence-grade and 15 P0 gaps; release qualification remains blocked."
+    ],
+    "desktop_packaging": { "status": "not performed", "last_local_installed_version": "3.4.0" },
+    "runtime_payload": { "status": "not rebuilt or replaced", "last_local_installed_version": "3.4.0" },
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "Source metadata alignment does not close readiness gaps or establish installed-platform acceptance."
+  }
+}

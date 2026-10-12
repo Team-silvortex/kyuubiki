@@ -1,11 +1,41 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.5.0`.
-Source package metadata targets `3.5.0`; the last locally built and installed
+The current development point in this line is `daji 3.6.0`.
+Source package metadata targets `3.6.0`; the last locally built and installed
 desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
+
+## Daji 3.6.0 Checkpoint
+
+October 12, 2026. Commit `a1740601` records the 3.6.0 development checkpoint;
+the version-alignment overlay brings source packages, language-pack targets,
+installation/update contracts and current documentation forward from 3.5.0.
+This does not rebuild, install or publish binaries or SDK packages.
+
+- Workflow recovery now fences dispatch admission, cancellation and ambiguous
+  restart outcomes. Scoped receipt/output/branch reuse remains bound to the
+  original invocation and current ownership; unknown work is not replayed.
+- Collection, scoring, quality composition and next-round planning reject
+  malformed or contradictory evidence rather than silently dropping failures.
+  Incomplete and blocked candidates cannot become successful research stops.
+- Rust and Elixir check canonical candidate order, declared ranks and matching
+  row/objective scores. Corrected fresh runs are explicit; no sorting or replay
+  silently repairs invalid evidence.
+
+The latest retained [ranking consistency report](../reports/quality-ranking-consistency-recovery-20261012.md)
+records 31 shared cases, permutation/JSON-exchange controls and 16 controlled
+graphs per runtime. Its full Engine suite passed 690 tests with one ignored;
+the service selection passed 2,078 with 71 conditional skips. These are prior
+source runs at the report's recorded overlay, not new 3.6.0 installed, physical,
+remote or durable-recovery qualification. Earlier follow-ups below retain their
+original provenance and limitations.
+
+The tensor still records four maturity, 20 evidence-grade and 15 P0 gaps;
+release qualification remains blocked. The next recovery audits include
+conflicting nested readiness evidence and downstream request admission.
+See `releases/snapshots/3.6.0.json` for the source checkpoint and scope.
 
 ## Daji 3.5.0 Checkpoint
 
@@ -867,11 +897,11 @@ independent. This protects report assumptions, not material truth or numerical
 qualification. The artifact test service also waits for bounded complete request
 headers instead of racing delayed clients.
 
-See `releases/snapshots/3.5.0.json`. Package, update, language-pack and book
+See `releases/snapshots/3.6.0.json`. Package, update, language-pack and book
 targets are aligned, without changing protocol/schema versions, translation
 content or historical grades. The installed baseline remains 3.4.0. The tensor
 continues to have four maturity gaps, 20 evidence-grade gaps and 15 P0 gaps;
-release qualification remains blocked. The 3.5.x mainline continues reliable
+release qualification remains blocked. The 3.6.x mainline continues reliable
 research execution and recovery under the existing Engine/Solver split.
 
 ## Daji 3.4.7 Checkpoint

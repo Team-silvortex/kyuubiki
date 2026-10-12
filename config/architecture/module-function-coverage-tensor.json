@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-tensor/v5",
-  "version_line": "daji 3.5.x",
+  "version_line": "daji 3.6.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",
@@ -149,7 +149,7 @@
   "release_profile": {
     "id": "daji-3-4-hardening",
     "current_checkpoint": "daji 3.4.5",
-    "target_release": "daji 3.5.x",
+    "target_release": "daji 3.6.x",
     "gate_mode": "advisory",
     "enforce_from": "explicit gate-mode decision",
     "required_target_met_percent": 100.0,
