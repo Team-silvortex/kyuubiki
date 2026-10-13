@@ -7,7 +7,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.Engine
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator
-  alias KyuubikiWeb.Playground.{AgentClient, AgentExecutionGate, AgentJobCancellation}
+
+  alias KyuubikiWeb.Playground.{
+    AgentDispatchCancellation,
+    AgentExecutionGate
+  }
+
   alias KyuubikiWeb.WorkflowGraphResponse
 
   @registry KyuubikiWeb.Orchestra.WorkflowRunnerRegistry
@@ -70,6 +75,18 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
   def start_claimed(_job_id, _claim, _envelope),
     do: {:error, :invalid_workflow_execution_envelope}
 
+  @doc false
+  def start_finalizing(job_id, claim, result) do
+    Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
+      case Registry.register(@registry, job_id, claim) do
+        {:ok, _} -> publish_result(job_id, claim, result)
+        {:error, {:already_registered, pid}} -> exit({:duplicate_workflow_runner, job_id, pid})
+      end
+    end)
+  catch
+    :exit, _ -> {:error, :workflow_runner_supervisor_unavailable}
+  end
+
   @spec running(String.t()) :: {:ok, pid()} | :error
   def running(job_id) when is_binary(job_id) do
     case Registry.lookup(@registry, job_id) do
@@ -79,7 +96,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
   end
 
   @doc false
-  def stop_failed(job_id) do
+  def stop_failed(job_id, request_cancel? \\ true) do
     targets = cancellation_targets(job_id)
 
     case running(job_id) do
@@ -87,7 +104,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
       :error -> :ok
     end
 
-    if match?({:ok, _}, targets), do: request_cancellation(job_id, elem(targets, 1))
+    if request_cancel? and match?({:ok, _}, targets),
+      do: request_cancellation(job_id, elem(targets, 1))
+
     :ok
   end
 
@@ -100,7 +119,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
   defp request_cancellation(job_id, targets) do
     if targets.endpoints != [] do
       Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
-        AgentClient.cancel_job(job_id, targets)
+        AgentDispatchCancellation.cancel(job_id, targets)
       end)
     end
   catch
@@ -141,7 +160,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
         )
       end)
 
-    case await_execution(task, job_id, timeout_ms) do
+    case await_execution(task, job_id, claim, timeout_ms) do
       {:ok, {:ok, result}} ->
         complete_job(job_id, claim, graph, result, response_options)
 
@@ -149,14 +168,20 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
         if not cancelled?(job_id), do: fail_job(job_id, claim, "workflow execution was fenced")
 
       {:ok, {:error, {:workflow_node_error, _node, {:native_workflow_recovery_blocked, reason}}}} ->
-        WorkflowRecoveryCoordinator.block_native_recovery(job_id, claim, reason)
+        await_terminal_commit(fn ->
+          WorkflowRecoveryCoordinator.block_native_recovery(job_id, claim, reason)
+        end)
 
       {:ok, {:error, {:workflow_node_error, _node, {:workflow_solve_checkpoint_blocked, reason}}}} ->
-        WorkflowRecoveryCoordinator.block_solve_checkpoint(job_id, claim, reason)
+        await_terminal_commit(fn ->
+          WorkflowRecoveryCoordinator.block_solve_checkpoint(job_id, claim, reason)
+        end)
 
       {:ok,
        {:error, {:workflow_node_error, _node, {:workflow_branch_checkpoint_blocked, reason}}}} ->
-        WorkflowRecoveryCoordinator.block_branch_checkpoint(job_id, claim, reason)
+        await_terminal_commit(fn ->
+          WorkflowRecoveryCoordinator.block_branch_checkpoint(job_id, claim, reason)
+        end)
 
       {:ok, {:error, reason}} ->
         if not cancelled?(job_id), do: fail_job(job_id, claim, inspect(reason))
@@ -164,48 +189,84 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
       {:exit, reason} ->
         exit({:workflow_execution_process_lost, reason})
 
-      nil ->
-        if not cancelled?(job_id) do
-          fail_job(job_id, claim, "workflow execution timed out after #{timeout_ms} ms")
-        end
+      :deadline_retired ->
+        :ok
     end
   end
 
-  defp await_execution(task, job_id, timeout_ms) do
+  defp await_execution(task, job_id, claim, timeout_ms) do
     case Task.yield(task, timeout_ms) do
       nil ->
-        # Capture the actual dispatch targets before owner DOWN releases their leases.
-        case AgentJobCancellation.stop_dispatch(task, job_id) do
-          {:ok, reply, targets} ->
-            if is_nil(reply), do: request_cancellation(job_id, targets)
-
-            reply
-
-          {:error, _} ->
-            Task.shutdown(task, :brutal_kill)
-        end
+        await_deadline(task, job_id, claim, "workflow execution timed out after #{timeout_ms} ms")
 
       reply ->
         reply
     end
   end
 
+  defp await_deadline(task, job_id, claim, message) do
+    case WorkflowRecoveryCoordinator.expire(job_id, claim, message) do
+      :ok ->
+        cancellation_targets(job_id)
+        Task.shutdown(task, :brutal_kill)
+        :deadline_retired
+
+      {:error, reason} ->
+        if retryable_retirement?(reason) do
+          # A missed deadline stays missed: discard late output, never publish it as success.
+          # Re-read under the claim/lease on each retry; do not replay an unchecked write.
+          Task.yield(task, 0)
+          Process.sleep(250)
+          await_deadline(task, job_id, claim, message)
+        else
+          # Lost authority must not cancel other work sharing this job ID.
+          Task.shutdown(task, :brutal_kill)
+          :deadline_retired
+        end
+    end
+  end
+
+  defp retryable_retirement?({:completion_persistence_failed, {:invalid_payload, _}}), do: false
+  defp retryable_retirement?({:completion_persistence_failed, _}), do: true
+  defp retryable_retirement?({:stale_job_snapshot, _}), do: true
+
+  defp retryable_retirement?(reason),
+    do:
+      reason in [
+        :stale_analysis_result,
+        :execution_gate_unavailable,
+        :workflow_coordinator_unavailable
+      ]
+
   defp complete_job(job_id, claim, graph, result, response_options) do
     unless cancelled?(job_id) do
       shaped_result = WorkflowGraphResponse.shape(graph, result, response_options)
 
-      case WorkflowRecoveryCoordinator.commit_result(job_id, claim, shaped_result) do
-        :ok ->
-          :ok
-
-        {:error, :stale_workflow_execution_claim} ->
-          :ok
-
-        {:error, reason} ->
-          fail_job(job_id, claim, "failed to persist workflow result: #{inspect(reason)}")
+      with :ok <-
+             await_terminal_commit(fn ->
+               WorkflowRecoveryCoordinator.stage_result(job_id, claim, shaped_result)
+             end) do
+        publish_result(job_id, claim, shaped_result)
+      else
+        error -> completion_error(job_id, claim, error)
       end
     end
   end
+
+  defp publish_result(job_id, claim, result) do
+    case await_terminal_commit(fn ->
+           WorkflowRecoveryCoordinator.commit_result(job_id, claim, result)
+         end) do
+      :ok -> :ok
+      error -> completion_error(job_id, claim, error)
+    end
+  end
+
+  defp completion_error(_job, _claim, {:error, :stale_workflow_execution_claim}), do: :ok
+  defp completion_error(_job, _claim, {:error, {:workflow_job_terminal, _}}), do: :ok
+
+  defp completion_error(job, claim, {:error, reason}),
+    do: fail_job(job, claim, "failed to persist workflow result: #{inspect(reason)}")
 
   defp apply_progress(job_id, claim, %{"node_id" => node_id} = progress)
        when is_binary(job_id) and is_binary(node_id) do
@@ -227,11 +288,32 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
   defp apply_progress(_job_id, _claim, _progress), do: :ok
 
   defp fail_job(job_id, claim, message) do
-    case WorkflowRecoveryCoordinator.fail(job_id, claim, message) do
-      :ok -> :ok
-      {:error, :stale_workflow_execution_claim} -> :ok
-      {:error, _reason} -> :ok
+    await_terminal_commit(fn -> WorkflowRecoveryCoordinator.fail(job_id, claim, message) end)
+  end
+
+  defp await_terminal_commit(commit) do
+    case terminal_commit(commit) do
+      {:error, reason} = error ->
+        if retryable_retirement?(reason) do
+          # Keep the registered runner and original outcome; retry only its fenced commit.
+          # Exiting here would turn a rejected terminal write into runner-loss recovery.
+          Process.sleep(250)
+          await_terminal_commit(commit)
+        else
+          error
+        end
+
+      reply ->
+        reply
     end
+  end
+
+  defp terminal_commit(commit) do
+    commit.()
+  catch
+    :exit, {reason, {GenServer, :call, [WorkflowRecoveryCoordinator | _]}}
+    when reason in [:noproc, :normal, :shutdown, :killed, :timeout] ->
+      {:error, :workflow_coordinator_unavailable}
   end
 
   defp cancelled?(job_id) when is_binary(job_id) do

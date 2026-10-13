@@ -5,6 +5,7 @@ use super::{
 use crate::agent_execution_control::register_cancel;
 use crate::agent_watchdog::FailureReport;
 use crate::operator_task_runtime::OperatorTaskRuntimeError;
+use crate::rpc_execution_context::ExecutionContext;
 use crate::{agent_lifecycle, operator_task_receipts, transport::AgentReply};
 use kyuubiki_protocol::{RPC_VERSION, RpcMethod, RpcRequest};
 use serde_json::{Value, json};
@@ -43,7 +44,7 @@ fn publication_boundary_discards_cancelled_result_and_allows_explicit_rerun() {
         "publication-cancel".into(),
         guard,
         None,
-        None,
+        &ExecutionContext::Transport(None),
         result.clone(),
         Some(&task),
     );
@@ -74,7 +75,7 @@ fn publication_boundary_discards_cancelled_result_and_allows_explicit_rerun() {
         "publication-rerun".into(),
         guard,
         None,
-        None,
+        &ExecutionContext::Transport(None),
         result.clone(),
         Some(&task),
     );
@@ -217,7 +218,7 @@ fn heartbeat_stop_cancellation_is_retained_as_failure_not_computed_success() {
         id.into(),
         guard,
         Some(heartbeat),
-        None,
+        &ExecutionContext::Transport(None),
         json!({"operator_task_ir_status":"executed", "result":{"value":42}}),
         Some(&task),
     );
@@ -262,7 +263,7 @@ fn heartbeat_stop_cancellation_is_retained_as_failure_not_computed_success() {
         "publication-heartbeat-rerun".into(),
         rerun,
         None,
-        None,
+        &ExecutionContext::Transport(None),
         json!({"operator_task_ir_status":"executed"}),
         Some(&task),
     );
@@ -296,7 +297,7 @@ fn watchdog_failure_during_heartbeat_stop_fences_publication_before_cancel_propa
         id.into(),
         guard,
         Some(heartbeat),
-        None,
+        &ExecutionContext::Transport(None),
         json!({"operator_task_ir_status":"executed"}),
         Some(&task),
     );
@@ -339,7 +340,7 @@ fn legacy_solver_cancellation_during_serialization_discards_result_and_progress(
             method: RpcMethod::SolveBar1d,
             params: json!({"job_id":JOB}),
         },
-        None,
+        ExecutionContext::Transport(None),
         "bar_1d",
         "bar result",
         |_| 2,
@@ -417,7 +418,7 @@ fn assert_legacy_explicit_rerun(id: &str, job: &str, previous_generation: u64) {
     assert!(guard.result_publication_allowed());
     let AgentReply::Stream(frames, response) = execute_solver::<Value, _, _, _>(
         legacy_request(id, json!({"job_id": job})),
-        None,
+        ExecutionContext::Transport(None),
         guard,
         "bar_1d",
         "bar result",
@@ -439,7 +440,7 @@ fn legacy_decode_error_preserves_original_watchdog_failure_and_allows_explicit_r
     let (guard, recorded) = recorded_legacy_failure(id, job);
     let reply = execute_solver::<String, Value, _, _>(
         legacy_request(id, json!({"job_id": job})),
-        None,
+        ExecutionContext::Transport(None),
         guard,
         "bar_1d",
         "bar result",
@@ -466,7 +467,7 @@ fn legacy_encoding_error_preserves_original_watchdog_failure_and_allows_explicit
     let solver_called = std::cell::Cell::new(false);
     let reply = execute_solver::<Value, _, _, _>(
         legacy_request(id, json!({"job_id": job})),
-        None,
+        ExecutionContext::Transport(None),
         guard,
         "bar_1d",
         "bar result",
@@ -488,7 +489,7 @@ fn legacy_decode_error_without_prior_failure_keeps_invalid_params_classification
             "legacy-decode-primary-failure",
             json!({"job_id":"legacy-decode-primary-job"}),
         ),
-        None,
+        ExecutionContext::Transport(None),
         "bar_1d",
         "bar result",
         |_| panic!("decode failure must not publish progress"),
@@ -517,7 +518,7 @@ fn legacy_encoding_error_without_prior_failure_keeps_transport_classification() 
             "legacy-encoding-primary-failure",
             json!({"job_id":"legacy-encoding-primary-job"}),
         ),
-        None,
+        ExecutionContext::Transport(None),
         "bar_1d",
         "bar result",
         |_| panic!("encoding failure must not publish progress"),

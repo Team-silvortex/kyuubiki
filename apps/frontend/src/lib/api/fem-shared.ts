@@ -8,6 +8,8 @@ export type ModelMaterial = {
 };
 
 export type JobState = {
+  // Local direct-run observation only, never an Orchestra cancellation target.
+  direct_execution?: import("./durable-direct-client").DurableDirectRecoveryHandle;
   job_id: string;
   status: WorkflowRunStatus;
   status_detail?: JobStatusDetail | null;

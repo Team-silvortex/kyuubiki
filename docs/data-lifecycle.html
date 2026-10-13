@@ -187,8 +187,8 @@
             recovery payload as <code>recovery_blocked</code>, with the original failure
             message and a bounded inspection action. Verified terminal observations and
             undispatched work retain normal cleanup; local-only graphs do not require
-            the journal. The workflow runner deadline captures its actual dispatch targets
-            before stopping the local waiter, then requests best-effort cancellation.
+            the journal. The workflow runner deadline commits its captured-target intent
+            together with failure before stopping the local waiter or requesting cancellation.
             A cancellation acknowledgement cannot prove computation stopped or permit
             replay. Controlled TCP and coordinator/journal restart tests cover this path.
             Periodic queue/execution expiry and stale-job scans now use the same owning
@@ -198,9 +198,97 @@
             Standby/unavailable coordinators report an unavailable scan, including for
             plain jobs. Repo registry disappearance during restart is bounded as a storage
             outage, not a watchdog crash. Historical inconsistent records are not migrated
-            automatically and remote cancellation is not durable. See the
+            automatically; bounded watchdog intent persistence is described below. See the
             <a href="../reports/workflow-watchdog-finalization-20261013.md">periodic watchdog report</a> and
             <a href="../reports/workflow-native-failure-finalization-20261013.md">failure-finalization report</a>.</li>
+          <li><strong>Automatic cancellation scope:</strong> workflow deadlines and
+            failed-runner shutdown now capture original RPC request IDs before losing
+            local ownership. Only matching requests on still-configured original
+            endpoint sessions are inspected and cancelled by observed process and
+            generation. Later same-job requests are not selected; missing or invalid
+            observations never fall back to job-wide or peer cancellation. Batches
+            allow at most 128 requests and 32 endpoints, one description per endpoint,
+            and a 15-second delivery-start budget plus bounded transport timeouts.
+            Explicit user job cancellation is unchanged. Runner-local deadlines and
+            periodic watchdog retirement use the bounded durable intent below.
+            Neither path proves remote termination. See the
+            <a href="../reports/workflow-scoped-cancellation-20261013.md">scoped cancellation report</a>.</li>
+          <li><strong>Durable expiry cancellation:</strong> periodic watchdog and runner deadline retirement
+            now commits a sealed, parent-bound intent with job/recovery failure. The
+            read-only gate snapshot retains original RPC IDs and endpoint fingerprints,
+            never addresses, credentials or payloads. At most 128 requests, 32 endpoints
+            and 256 KiB are accepted. Attempt reservation and exact process/generation
+            binding must commit before send; retries cannot select a newer target.
+            Current coordinator ownership, delivery nonces and snapshot checks fence
+            stale writes. At most three reservations are allowed, including interrupted
+            attempts. Lost replies remain uncertain; exhaustion is unresolved rather
+            than successful termination. Startup or explicit recovery can run one
+            bounded sweep of at most 16 pending jobs with a 15-second delivery-start
+            budget. Concurrent kicks are not queued; remaining work requires another
+            sweep, not an automatic retry daemon. Runner deadlines additionally check
+            the original execution claim. Selected transient commit/snapshot/gate/control
+            failures retry after 250 ms while retaining the waiter and discarding late
+            parent success; every retry rechecks authority. Lost claims stop only the
+            local task without issuing broad cancellation. Storage/lease outages retain
+            the existing ownership-loss fence. Ordinary-failure cancellation, explicit user cancellation
+            and historical failures are not upgraded by this change. See the
+            <a href="../reports/workflow-deadline-retirement-20261013.md">runner deadline report</a> and
+            <a href="../reports/workflow-durable-cancellation-20261013.md">durable watchdog report</a>.</li>
+          <li><strong>Failed-runner persistence:</strong> ordinary failure and native,
+            solve and branch checkpoint blocks retain the registered runner and
+            original reason while selected write/snapshot failures retry after 250 ms.
+            Each retry rechecks the original claim and current lease rather than
+            rerunning the solver. Coordinator unavailability can retain this waiter;
+            competing terminal decisions, changed claims and authority loss fence it.
+            A rejected successful-solve checkpoint cannot become published success.
+            This is not durable failure intent before commit: runner loss, process
+            loss and watchdog policy still follow existing recovery rules. No new
+            ordinary-failure cancellation delivery or parallel-branch guarantee is
+            claimed. See the
+            <a href="../reports/workflow-failure-retirement-20261013.md">failure persistence report</a>.</li>
+          <li><strong>Successful final publication:</strong> once the graph finishes,
+            selected write/snapshot failures retain the exact shaped result and retry
+            its fenced final commit instead of marking the computation failed. The
+            same execution claim and current lease must still authorize publication;
+            cancellation, other terminal decisions, deletion and changed authority win.
+            Known JSON/schema encoding failures carry a non-retryable invalid-payload
+            classification with no result contents in the message. Earlier failed
+            solve/native/branch checkpoint commits still block publication. See the
+            <a href="../reports/workflow-completion-retry-20261013.md">final publication retry report</a>.</li>
+          <li><strong>Durable final-publication record:</strong> a private pending result
+            now commits before final publication, using the existing fenced job/result
+            transaction. It binds lossless result JSON to the parent creation time,
+            execution envelope and producer claim. Restart consumes this record only
+            for publication, not solver/graph replay; invalid or conflicting records
+            block recovery. One record per parent, at most 64 MiB of encoded result
+            and 2,000,000 JSON nodes with depth/string limits; oversize rejects rather
+            than silently skipping persistence. Ordinary terminal states prune it.
+            No separate archive or backup daemon is added; JSON's existing previous
+            generation may retain the prior record until the next rotation. SQLite
+            explicitly uses WAL/FULL. Independent child-process SIGKILL tests on both
+            sides of staging pass with SQLite and JSON, but do not qualify physical
+            power loss, JSON directory metadata durability, hardware caches or live
+            PostgreSQL. Before the record commits, output remains volatile; watchdog
+            and cancellation policy still apply. See the
+            <a href="../reports/workflow-completion-checkpoint-20261013.md">durable handoff report</a>.</li>
+          <li><strong>Opt-in standalone Agent ledger:</strong>
+            <code>KYUUBIKI_AGENT_EXECUTION_STORE</code> explicitly selects a dedicated
+            deployment-state directory. Each durable execution has one immutable,
+            checksummed admission and at most one receipt; writes sync files and,
+            on Unix, directory metadata. One process owns the directory lock. No
+            input-model copies, previous generations, background backups or automatic
+            identity eviction are added. Limits are 1,024 admissions, 8 MiB per receipt
+            and 128 MiB retained bytes, with active-receipt reservations. Capacity or
+            persistence errors reject instead of claiming volatile success. Abandoned
+            temporary writes are removed at exclusive startup; committed corruption
+            blocks the affected execution. Restart without a receipt reports
+            <code>outcome_unknown</code>, never authorizes replay. IDs and the Agent
+            store must be preserved together; deleting the store deliberately destroys
+            duplicate protection. Development reset requires a stopped Agent and
+            retired callers. This does not change the older in-memory TaskIR retention
+            cache or the legacy direct-GUI result cache. Unix process-kill tests are
+            not physical-power-loss or Windows directory-durability qualification.
+            See <a href="./book-ch04-runtime-modes.html#standalone-durable-execution">the direct execution contract</a>.</li>
           <li><strong>Native workflow result handoff:</strong> completed built-in native
             diagnostic/scoring receipts commit privately before downstream publication,
             through the existing fenced job/result transaction. Per parent: at most 32
@@ -646,6 +734,30 @@
           the original authority first. Current native evidence verifies clean macOS process exit,
           not hard power loss, concurrent-window end-to-end reconciliation or all-platform storage.
           See the <a href="./tutorial-pwdt-automation.html#checkpoint-retries">PWDT recovery tutorial</a>.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="direct-execution-caller-storage">
+        <h2>Direct execution caller identities</h2>
+        <p>Single-Agent Workbench runs reserve an identity before network submission.
+          The native desktop-preferences root contains <code>desktop-direct-execution.json</code>,
+          its fixed <code>.lock</code>, and at most one <code>.pending</code> staging file.
+          The journal holds at most 64 entries and 64 KiB, with no model/result copies,
+          credentials, backups or automatic eviction. Writes synchronize the file before
+          replacement and, on Unix, the directory before acknowledgement. Corruption,
+          unsupported hosts or storage failure block submission. Process-kill recovery has
+          been tested; physical power-loss durability has not been qualified.</p>
+        <p>Normal browser mode uses <code>kyuubiki-direct-execution</code> IndexedDB. It survives
+          tested page reloads but is not a guarantee against browser/user eviction. Desktop
+          never downgrades to that storage. Gateway addresses are hashed for scoping; live
+          request authorization remains in memory and is checked across asynchronous work.</p>
+        <p>A matching completed/failed receipt can retire its exact caller identity. Unknown
+          or missing Agent receipts cannot. Recovery inspection never overwrites the active
+          model/result. The Agent ledger is separate, bounded and immutable; stop the Agent
+          and retire callers before deleting disposable development ledgers. Default managed
+          Agent stores live at <code>&lt;runtime-state&gt;/agent-executions/agent-&lt;port&gt;</code>;
+          the configurable parent is <code>KYUUBIKI_AGENT_EXECUTION_STORE_ROOT</code>.
+          Do not treat either journal as routine cache. See the
+          <a href="./book-ch04-runtime-modes.html#standalone-durable-execution">runtime recovery contract</a>.</p>
       </section>
 
       <section class="docs-card docs-section" id="project-migration">

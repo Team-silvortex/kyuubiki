@@ -6,6 +6,10 @@ import type { RuntimeApiClient } from "@/lib/api/runtime-client";
 
 function createFakeRuntimeClient(calls: string[]): RuntimeApiClient {
   return {
+    submitDurableDirectStudy: async () => { throw new Error("unexpected durable submission"); },
+    inspectDurableDirectExecution: async () => { throw new Error("unexpected durable inspection"); },
+    listDurableDirectExecutions: async () => { throw new Error("unexpected durable index"); },
+    cancelDurableDirectExecution: async () => { throw new Error("unexpected durable cancellation"); },
     cancelJob: async (jobId) => {
       calls.push(`cancel:${jobId}`);
       return { job_id: jobId, status: "cancelled" } as never;

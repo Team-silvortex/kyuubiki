@@ -43,6 +43,11 @@ fn get_workbench_panel_layout() -> Result<Option<kyuubiki_desktop_runtime::Workb
 }
 
 #[tauri::command]
+fn direct_execution_journal(payload: kyuubiki_desktop_runtime::DirectExecutionJournalRequest) -> Result<serde_json::Value, String> {
+    kyuubiki_desktop_runtime::direct_execution_journal(payload)
+}
+
+#[tauri::command]
 fn list_checkpoint_intents() -> Result<Vec<kyuubiki_desktop_runtime::CheckpointIntent>, String> {
     kyuubiki_desktop_runtime::list_checkpoint_intents()
 }
@@ -201,6 +206,7 @@ fn main() {
             set_global_language_preference,
             get_workbench_panel_layout,
             list_checkpoint_intents,
+            direct_execution_journal,
             reserve_checkpoint_intent,
             remove_checkpoint_intent,
             set_workbench_panel_layout,

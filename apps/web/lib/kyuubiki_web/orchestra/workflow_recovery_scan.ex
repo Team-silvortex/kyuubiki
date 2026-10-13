@@ -20,6 +20,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryScan do
          }, Ownership.lose(state, :analysis_store_unavailable)}
 
       jobs when is_list(jobs) ->
+        if Ownership.owner?(state) do
+          jobs
+          |> Enum.filter(&(&1.status == :failed))
+          |> Enum.map(& &1.job_id)
+          |> KyuubikiWeb.Orchestra.WorkflowCancellationDelivery.kick()
+        end
+
         recover(Enum.filter(jobs, &(&1.status in @active)), state, recover_job)
     end
   end

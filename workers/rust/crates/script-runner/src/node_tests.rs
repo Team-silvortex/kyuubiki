@@ -80,6 +80,7 @@ pub(crate) fn run_node_command(
             &[
                 "apps/desktop-shared/test/tauri-bridge.test.mjs",
                 "apps/desktop-shared/test/workbench-panel-layout-bridge.test.mjs",
+                "apps/desktop-shared/test/direct-execution-journal-bridge.test.mjs",
                 "tests/integration/desktop-gui-action-sweep.test.mjs",
                 "tests/integration/desktop-gui-capability-closure.test.mjs",
                 "tests/integration/desktop-gui-call-chain-contract.test.mjs",
@@ -123,6 +124,7 @@ pub(crate) fn run_node_command(
                 "tests/integration/workbench-ui-functional-recovery.test.mjs",
                 "tests/integration/workbench-ui-project-boundaries.test.mjs",
                 "tests/integration/workbench-ui-checkpoint-recovery.test.mjs",
+                "tests/integration/workbench-ui-durable-direct-recovery.test.mjs",
                 "tests/integration/workbench-ui-checkpoint-reopen.test.mjs",
                 "tests/integration/workbench-ui-pwdt-completion.test.mjs",
                 "tests/integration/workbench-ui-pwdt-runtime.test.mjs",

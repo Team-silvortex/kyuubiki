@@ -1,4 +1,6 @@
 import type { MutableRefObject } from "react";
+import { observeWorkbenchDurableRun } from "./workbench-durable-run-observer";
+import { captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import {
@@ -213,6 +215,11 @@ export async function runWorkbenchAnalysis({
   trussModel,
 }: RunWorkbenchAnalysisArgs): Promise<WorkbenchRunOperationResult> {
   const runToken = ++jobPollTokenRef.current;
+  const ownsDirectAuthority = frontendRuntimeMode === "direct_mesh_gui"
+    ? captureWorkbenchApiAuthority("/api/direct-mesh/tasks", "/api/direct-mesh/tasks/inspect") : () => true;
+  const ownsDirectRun = () => {
+    try { return runToken === jobPollTokenRef.current && ownsDirectAuthority(); } catch { return false; }
+  };
   const precheckErrors = trussDiagnostics?.blockingMessages ?? [];
   if (precheckErrors.length > 0) {
     const precheckMessage = `${labels.precheckPrefix}: ${precheckErrors[0]}`;
@@ -230,6 +237,8 @@ export async function runWorkbenchAnalysis({
   dismissWorkbenchAlert(setSystemAlerts, "precheck-blocking");
   setMessage(labels.dispatching);
   setResult(null);
+  setJob(null);
+  setDirectMeshExecution(null);
 
   const created = await runBackendService.submitRun({
     axialForm,
@@ -262,6 +271,13 @@ export async function runWorkbenchAnalysis({
     throw error;
   });
 
+  if (created.backend === "durable_direct") {
+    if (!runBackendService.durableDirect) throw new Error("Durable execution observation is unavailable.");
+    if (!ownsDirectRun()) throw new Error(`Direct execution observation was superseded: ${created.handle.execution_id}`);
+    setDirectMeshExecution({ endpoint: created.handle.endpoint, strategy: "first_reachable", at: new Date().toISOString() });
+    return observeWorkbenchDurableRun({ ...created, service: runBackendService.durableDirect,
+      isCurrent: ownsDirectRun, setJob, setResult, setMessage });
+  }
   if (runToken !== jobPollTokenRef.current) throw new Error(`Job observation was superseded: ${created.envelope.job.job_id}`);
   setJob(created.envelope.job);
 

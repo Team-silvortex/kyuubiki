@@ -176,6 +176,9 @@ pub enum RpcMethod {
     RunOperatorTaskIr,
     #[serde(rename = "fetch_operator_task_result")]
     FetchOperatorTaskResult,
+    RunDurableAgentTask,
+    SubmitDurableAgentTask,
+    FetchDurableAgentExecution,
     #[serde(rename = "solve_bar_1d")]
     SolveBar1d,
     #[serde(rename = "solve_acoustic_bar_1d")]
@@ -285,6 +288,8 @@ pub enum RpcMethod {
     #[serde(rename = "cancel_job")]
     CancelJob,
     CancelExecution,
+    ListDurableAgentExecutions,
+    CancelDurableAgentExecution,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

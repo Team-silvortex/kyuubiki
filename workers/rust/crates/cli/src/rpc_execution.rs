@@ -1,20 +1,16 @@
 use crate::agent_artifact::decode_solver_params;
-use crate::agent_reply_writer::{self, SharedReplyWriter};
 use crate::agent_state::{build_progress_frames, extract_job_id};
 use crate::operator_task_runtime::{OperatorTaskRuntimeError, run_operator_task_ir};
+use crate::rpc_execution_context::ExecutionContext;
 use crate::transport::{AgentReply, HeartbeatHandle};
 use crate::{agent_fault_injection, agent_lifecycle};
 use kyuubiki_protocol::{RpcMethod, RpcRequest, RpcResponse};
 use serde::{Serialize, de::DeserializeOwned};
 
-pub(crate) fn handle_operator_task_ir(
-    request: RpcRequest,
-    writer: Option<SharedReplyWriter>,
-) -> AgentReply {
+pub(crate) fn handle_operator_task_ir(request: RpcRequest, writer: ExecutionContext) -> AgentReply {
     let request_id = request.id.clone();
     let maybe_job_id = extract_job_id(&request.params);
-    let guard = match agent_reply_writer::begin_execution(
-        writer.as_ref(),
+    let guard = match writer.begin(
         request_id.clone(),
         maybe_job_id.clone(),
         "run_operator_task_ir".to_string(),
@@ -31,13 +27,13 @@ pub(crate) fn handle_operator_task_ir(
 
 fn execute_operator_task_ir(
     request: RpcRequest,
-    writer: Option<SharedReplyWriter>,
+    writer: ExecutionContext,
     guard: agent_lifecycle::ExecutionGuard,
 ) -> AgentReply {
     let request_id = request.id;
     let maybe_job_id = extract_job_id(&request.params);
     let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
-        writer.clone().map(|shared_writer| {
+        writer.writer().map(|shared_writer| {
             HeartbeatHandle::spawn(
                 shared_writer,
                 request_id.clone(),
@@ -105,7 +101,7 @@ fn execute_operator_task_ir(
         request_id,
         guard,
         heartbeat,
-        writer.as_ref(),
+        &writer,
         result,
         request.params.get("task_ir"),
     )
@@ -115,7 +111,7 @@ fn publish_operator_task_result(
     request_id: String,
     guard: agent_lifecycle::ExecutionGuard,
     heartbeat: Option<HeartbeatHandle>,
-    writer: Option<&SharedReplyWriter>,
+    writer: &ExecutionContext,
     result: serde_json::Value,
     task_ir: Option<&serde_json::Value>,
 ) -> AgentReply {
@@ -136,7 +132,7 @@ fn publish_operator_task_result(
         );
     }
 
-    agent_reply_writer::complete_execution(writer, guard);
+    writer.complete(guard);
     AgentReply::Stream(Vec::new(), RpcResponse::success(request_id, result))
 }
 
@@ -185,7 +181,7 @@ fn bind_failure_report(
 
 pub(crate) fn run_solver<Request, ResultValue, NodeCount, Solver>(
     request: RpcRequest,
-    writer: Option<SharedReplyWriter>,
+    writer: ExecutionContext,
     model_name: &str,
     serialize_label: &str,
     node_count: NodeCount,
@@ -200,12 +196,7 @@ where
     let request_id = request.id.clone();
     let method = rpc_method_name(&request.method);
     let maybe_job_id = extract_job_id(&request.params);
-    let guard = match agent_reply_writer::begin_execution(
-        writer.as_ref(),
-        request_id.clone(),
-        maybe_job_id,
-        method,
-    ) {
+    let guard = match writer.begin(request_id.clone(), maybe_job_id, method) {
         Ok(guard) => guard,
         Err(error) => return execution_admission_error(request_id, error),
     };
@@ -223,7 +214,7 @@ where
 
 fn execute_solver<Request, ResultValue, NodeCount, Solver>(
     request: RpcRequest,
-    writer: Option<SharedReplyWriter>,
+    writer: ExecutionContext,
     guard: agent_lifecycle::ExecutionGuard,
     model_name: &str,
     serialize_label: &str,
@@ -241,7 +232,7 @@ where
     let maybe_job_id = extract_job_id(&request.params);
     let externalize_result = request.params.get("model_artifact_ref").is_some();
     let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
-        writer.clone().map(|shared_writer| {
+        writer.writer().map(|shared_writer| {
             HeartbeatHandle::spawn(
                 shared_writer,
                 request_id.clone(),
@@ -331,7 +322,7 @@ where
                     "execution cancelled before result publication",
                 );
             }
-            agent_reply_writer::complete_execution(writer.as_ref(), guard);
+            writer.complete(guard);
             AgentReply::Stream(
                 progress_frames,
                 RpcResponse::success(request_id, encoded_result),

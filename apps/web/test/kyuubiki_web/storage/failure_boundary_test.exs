@@ -3,6 +3,24 @@ defmodule KyuubikiWeb.Storage.FailureBoundaryTest do
 
   alias KyuubikiWeb.Storage.{AnalysisMemoryState, FailureBoundary}
 
+  test "completion encoding and schema errors retain a non-retryable payload classification" do
+    for exception <- [
+          %Jason.EncodeError{message: "invalid UTF-8"},
+          %Protocol.UndefinedError{protocol: Jason.Encoder, value: fn -> :not_json end},
+          %Ecto.ChangeError{message: "invalid persisted value"},
+          %Ecto.Query.CastError{message: "private result payload", type: :map, value: :invalid}
+        ] do
+      assert {:completion_persistence_failed, {:invalid_payload, message}} =
+               FailureBoundary.completion_error(exception)
+
+      assert is_binary(message)
+      refute message =~ "private result payload"
+    end
+
+    assert {:completion_persistence_failed, "injected write failure"} =
+             FailureBoundary.completion_error(%Exqlite.Error{message: "injected write failure"})
+  end
+
   test "successful values and domain errors retain their exact shape" do
     for value <- [[], %{}, :ok, {:ok, 42}, {:error, :stale_workflow_execution_claim}] do
       assert FailureBoundary.run(fn -> value end) === value

@@ -75,6 +75,22 @@ function runInput(params: {
   };
 }
 
+test("single Agent uses durable submission and never the synchronous mesh fallback", async () => {
+  const submitted: unknown[] = [];
+  const durableDirect = { submit: async (...args: unknown[]) => { submitted.push(args); return { handle: {}, envelope: {} }; } } as never;
+  const service = createStudyRunBackendService({ durableDirect, resolveStudyPayload: () => ({ value: 1 }),
+    fetchJob: async () => assert.fail(), submitDirectMesh: async () => assert.fail(), submitOrchestrated: async () => assert.fail() });
+  const result = await service.submitRun(runInput({ frontendRuntimeMode: "direct_mesh_gui", directMeshEndpointsText: "127.0.0.1:5001" }));
+  assert.equal(result.backend, "durable_direct");
+  assert.deepEqual(submitted, [["axial_bar_1d", { value: 1 }, "127.0.0.1:5001"]]);
+});
+
+test("missing durable capability cannot silently fall back to synchronous execution", async () => {
+  const service = createStudyRunBackendService({ resolveStudyPayload: () => ({}), fetchJob: async () => assert.fail(),
+    submitDirectMesh: async () => assert.fail(), submitOrchestrated: async () => assert.fail() });
+  await assert.rejects(service.submitRun(runInput({ frontendRuntimeMode: "direct_mesh_gui", directMeshEndpointsText: "127.0.0.1:5001" })), /no synchronous fallback/);
+});
+
 test("study run backend routes orchestrated studies with project context", async () => {
   const calls: Array<{ input: Record<string, unknown>; kind: string }> = [];
   const service = createStudyRunBackendService({

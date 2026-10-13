@@ -5,6 +5,7 @@ import type { JobEnvelope, JobHistoryPayload, JobState } from "@/lib/api/fem-sha
 import { isWorkflowJobStatusContractValid } from "@/lib/api/job-status";
 import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
 import { captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
+import { workbenchDurableDirectRunService, type DurableDirectRunService } from "@/lib/workbench/durable-direct-run";
 import { workbenchAdminRecordSources } from "./workbench-admin-record-source";
 import { readWorkbenchCancellationReceipt } from "./workbench-job-cancellation-receipt";
 import {
@@ -44,6 +45,8 @@ type UseWorkbenchJobHistoryControllerArgs = {
 };
 
 type CancelWorkbenchJobArgs = {
+  directExecution?: JobState["direct_execution"];
+  durableDirectService?: DurableDirectRunService;
   jobId: string;
   jobHistoryBackendService: WorkbenchJobHistoryBackendService;
   jobPollTokenRef: MutableRefObject<number>;
@@ -82,6 +85,8 @@ export function readWorkbenchJobHistory(payload: unknown): JobState[] {
 }
 
 export async function cancelWorkbenchJob({
+  directExecution,
+  durableDirectService = workbenchDurableDirectRunService,
   jobId,
   jobHistoryBackendService,
   jobPollTokenRef,
@@ -93,6 +98,13 @@ export async function cancelWorkbenchJob({
 }: CancelWorkbenchJobArgs): Promise<WorkbenchCancellationResult> {
   let observation = jobPollTokenRef.current;
   try {
+    if (directExecution || jobId.startsWith("direct-durable-")) {
+      if (!directExecution || jobId !== `direct-durable-${directExecution.execution_id}`) throw new Error("Direct execution cancellation requires its original handle.");
+      const receipt = await durableDirectService.cancel(directExecution);
+      if (observation === jobPollTokenRef.current) setMessage(`direct:cancel_${receipt.status}: ${directExecution.execution_id}. Inspect again to confirm the terminal outcome.`);
+      // A registered request is not a terminal receipt: keep observing, do not clear the result or advance the poll token.
+      return { ok: true, jobId, ...(observation !== jobPollTokenRef.current ? { contextChanged: true } : {}) };
+    }
     const cancelledJob = readWorkbenchCancellationReceipt(await jobHistoryBackendService.cancelJob(jobId), jobId);
     if (observation === jobPollTokenRef.current) {
       observation = ++jobPollTokenRef.current;
@@ -173,6 +185,7 @@ export function useWorkbenchJobHistoryController({
 
     const operation = runWorkbenchTransitionOperation(startTransition, () => cancelWorkbenchJob({
       jobId,
+      directExecution: job?.direct_execution,
       jobHistoryBackendService,
       jobPollTokenRef,
       labels,

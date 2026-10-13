@@ -9,8 +9,10 @@ use serde::Deserialize;
 mod agent_artifact;
 mod agent_control_link;
 mod agent_deployment;
+mod agent_durable_execution;
 mod agent_execution_cancellation;
 mod agent_execution_control;
+mod agent_execution_store;
 mod agent_fault_injection;
 mod agent_headless_bridge;
 mod agent_http;
@@ -37,6 +39,7 @@ mod operator_task_runtime;
 mod operator_task_runtime_error;
 mod rpc;
 mod rpc_execution;
+mod rpc_execution_context;
 mod transport;
 mod worker;
 
@@ -84,6 +87,7 @@ fn main() {
 }
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
+    agent_durable_execution::configure()?;
     agent_lifecycle::configure_execution_capacity()?;
     let reply_timeout = agent_reply_writer::timeout_from_env()?;
     let shutdown = agent_shutdown::AgentShutdown::install()?;

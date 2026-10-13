@@ -47,6 +47,12 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
       else: {:error, :invalid_execution_job_id}
   end
 
+  def observe_job_targets(job_id) do
+    if valid_job_id?(job_id),
+      do: GenServer.call(__MODULE__, {:observe_job_targets, job_id}),
+      else: {:error, :invalid_execution_job_id}
+  end
+
   def valid_job_id?(job_id) when is_binary(job_id) do
     byte_size(job_id) in 1..256 and String.valid?(job_id) and
       not Regex.match?(~r/\p{Cc}/u, job_id)
@@ -118,16 +124,7 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
 
     matching = state.leases |> Map.values() |> Enum.filter(&(&1.job_id == job_id))
 
-    targets = %{
-      endpoints:
-        matching
-        |> Enum.filter(& &1.dispatched)
-        |> Enum.map(& &1.endpoint)
-        |> Enum.uniq_by(& &1.id)
-        |> Enum.sort_by(& &1.id),
-      queued_cancelled_count: length(removed),
-      reserved_cancelled_count: Enum.count(matching, &(not &1.dispatched))
-    }
+    targets = job_targets(matching, job_id, length(removed))
 
     leases =
       Map.new(state.leases, fn {id, lease} ->
@@ -135,6 +132,12 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
       end)
 
     {:reply, {:ok, targets}, %{state | leases: leases, waiters: renumber_waiters(remaining)}}
+  end
+
+  def handle_call({:observe_job_targets, job_id}, _from, state) do
+    matching = state.leases |> Map.values() |> Enum.filter(&(&1.job_id == job_id))
+    queued = Enum.count(state.waiters, &(&1.job_id == job_id))
+    {:reply, {:ok, job_targets(matching, job_id, queued)}, state}
   end
 
   def handle_call({:release, pid, lease_id}, _from, state) do
@@ -217,6 +220,22 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
     lease = lease(endpoint, lease_id, pid, monitor_ref, job_id)
     next_state = put_in(state, [:leases, lease_id], lease)
     {:reply, {:ok, endpoint, queue_metadata(0, 0, scheduling)}, next_state}
+  end
+
+  defp job_targets(matching, job_id, queued) do
+    dispatched = Enum.filter(matching, & &1.dispatched)
+
+    %{
+      # AgentClient uses its wire RPC ID as the capacity lease ID.
+      requests:
+        dispatched
+        |> Enum.map(&%{endpoint: &1.endpoint, request_id: &1.lease_id, job_id: job_id})
+        |> Enum.sort_by(&{&1.endpoint.id, &1.request_id}),
+      endpoints:
+        dispatched |> Enum.map(& &1.endpoint) |> Enum.uniq_by(& &1.id) |> Enum.sort_by(& &1.id),
+      queued_cancelled_count: queued,
+      reserved_cancelled_count: Enum.count(matching, &(not &1.dispatched))
+    }
   end
 
   defp queue_waiter(state, from, pid, endpoints, lease_id, timeout_ms, job_id) do

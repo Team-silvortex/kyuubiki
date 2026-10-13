@@ -22,6 +22,13 @@ defmodule KyuubikiWeb.Playground.AgentJobCancellationTest do
     assert :ok = AgentExecutionGate.authorize_dispatch("cancel-bystander")
     assert {:ok, targets} = AgentExecutionGate.cancel_job_targets("shared-cancel")
     assert Enum.sort_by(targets.endpoints, & &1.id) == [@first, @second]
+
+    assert Enum.sort_by(targets.requests, & &1.request_id) == [
+             %{endpoint: @first, request_id: "cancel-one", job_id: "shared-cancel"},
+             %{endpoint: @second, request_id: "cancel-three", job_id: "shared-cancel"},
+             %{endpoint: @first, request_id: "cancel-two", job_id: "shared-cancel"}
+           ]
+
     assert AgentExecutionGate.snapshot().active_lease_count == 4
 
     assert {:error, {:rpc_error, "cancelled", _}} =
@@ -166,6 +173,10 @@ defmodule KyuubikiWeb.Playground.AgentJobCancellationTest do
     assert_receive :dispatch_owned
     assert {:ok, nil, targets} = AgentJobCancellation.stop_dispatch(task, "timeout-job")
     assert targets.endpoints == [@first]
+
+    assert targets.requests == [
+             %{endpoint: @first, request_id: "cancel-timeout-owner", job_id: "timeout-job"}
+           ]
 
     assert {:ok, receipt} =
              AgentJobCancellation.cancel_targets("timeout-job", targets, fn endpoint ->

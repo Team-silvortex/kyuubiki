@@ -123,7 +123,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowStorageOutageTest do
     assert Process.whereis(WorkflowRecoveryCoordinator) == pid
   end
 
-  for operation <- [:progress, :complete, :fail, :cancel, :initialize] do
+  for operation <- [:progress, :complete, :fail, :expire, :cancel, :initialize] do
     test "#{operation} during an outage leaves a retryable record and a live coordinator" do
       fixture = Fixture.claimed_job()
       pid = Process.whereis(WorkflowRecoveryCoordinator)
@@ -147,6 +147,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowStorageOutageTest do
 
             :fail ->
               WorkflowRecoveryCoordinator.fail(fixture.id, fixture.claim, "failed")
+
+            :expire ->
+              WorkflowRecoveryCoordinator.expire(fixture.id, fixture.claim, "deadline")
 
             :cancel ->
               WorkflowRecoveryCoordinator.cancel(fixture.id)

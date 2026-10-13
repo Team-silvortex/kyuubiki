@@ -33,6 +33,138 @@
         </ul>
       </section>
 
+      <section class="docs-card docs-section" id="standalone-durable-execution">
+        <h2>Single-Agent direct execution and recovery</h2>
+        <p class="docs-copy">
+          The native frontend gateway can bypass Orchestra for direct solving.
+          A Workbench direct-mode run with exactly one endpoint now uses the durable
+          contract. This is not a claim that all Workbench workflows run without Orchestra. Existing
+          <code>/api/direct-mesh/solve</code> results still use a process-local cache.
+        </p>
+        <ul class="docs-list">
+          <li>Configure <code>KYUUBIKI_AGENT_EXECUTION_STORE</code> to a dedicated,
+            absolute directory in the deployment's writable state. Its parent must
+            already exist. The Agent creates the final directory; Unix permissions
+            must be owner-only. One Agent process holds its exclusive directory lock.
+            No implicit home-directory store or memory fallback is created.</li>
+          <li>The desktop-managed runtime now provisions a separate
+            <code>agent-executions/agent-&lt;port&gt;</code> under its writable state on Agent
+            startup. Override the parent with <code>KYUUBIKI_AGENT_EXECUTION_STORE_ROOT</code>,
+            an absolute directory. Runtime status displays the root and the Agent descriptor
+            displays the concrete directory and limits. Managed startup rejects the standalone
+            single-directory override to prevent multiple Agents sharing one ledger.
+            Already-running Agents need an explicit managed restart to receive this configuration.</li>
+          <li><code>run_durable_agent_task</code> accepts a caller-generated
+            <code>execution_id</code> (32 lowercase hex characters), a solver RPC
+            <code>method</code>, and object <code>params</code>. Execute-mode
+            <code>run_operator_task_ir</code> also uses this boundary. The Agent writes
+            and syncs the admission before dispatch, and the checksummed final receipt
+            before returning. The engine and operator implementations stay unchanged.</li>
+          <li><code>submit_durable_agent_task</code> accepts the same task but returns
+            after reserving an execution slot and syncing admission, without waiting
+            for computation. Its worker has no submitting socket, so losing that
+            connection does not cancel the task. Existing capacity, drain, watchdog
+            and exact cancellation rules still apply. The slot stays owned through
+            receipt commit; no unbounded background queue is introduced.</li>
+          <li><code>fetch_durable_agent_execution</code> queries that exact ID.
+            States are <code>not_found</code>, <code>running</code>,
+            <code>completed</code>, <code>failed</code>, or <code>outcome_unknown</code>.
+            Completed/failed records contain the original nested RPC response.
+            An interrupted admission without a receipt is unknown, not proof of
+            failure before execution. No state grants automatic replay permission.</li>
+          <li>Persist the chosen Agent and execution ID on the caller side before
+            submitting. Repeat IDs with identical inputs return the existing state or
+            receipt; changed inputs are rejected. Retry only against the same Agent
+            with the same preserved store. Replacing or deleting that store removes
+            its deduplication history. These IDs are not authentication credentials.</li>
+          <li><code>list_durable_agent_executions</code> takes <code>limit</code>
+            (1 to 64) and optional <code>after</code> (execution ID). It reads only
+            admission metadata, not result receipts; IDs sort lexicographically, not
+            chronologically. <code>next_cursor</code> is the final ID when another
+            page exists. This is not a snapshot across pages; refresh from the first
+            page to include newly admitted IDs that sort before the cursor.
+            An index row is not evidence of successful or completed computation.</li>
+          <li><code>cancel_durable_agent_execution</code> requires the inspected
+            <code>execution_id</code>, <code>process_instance_id</code> and
+            <code>request_digest</code>. It can mark only the original live async
+            owner, never a later task reusing a job or transport request ID.
+            Its <code>requested</code> receipt explicitly has
+            <code>execution_terminal_confirmed: false</code>. Query again to observe
+            the persisted final result. This control neither replays work nor creates
+            pending cancellation for a future execution; synchronous wrappers have no
+            async owner and are not cancelled through this convenience control.</li>
+          <li>The Rust HTTP gateway exposes <code>POST /api/direct-mesh/tasks</code>
+            with <code>execution_id</code>, <code>study_kind</code>, <code>input</code>,
+            and a single allowlisted <code>endpoints</code> entry. Query via
+            <code>POST /api/direct-mesh/tasks/inspect</code> with the same endpoint
+            and ID. Responses expose <code>execution</code> and <code>endpoint</code>.
+            Submission uses asynchronous admission, while inspection reads the
+            Agent ledger rather than the gateway's in-memory result cache.
+            Unknown transport outcomes preserve this handle and never trigger
+            cross-Agent failover. An HTTP 200 alone does not mean computation succeeded:
+            inspect <code>execution.status</code> and the nested response.</li>
+          <li>The native gateway also exposes <code>POST /api/direct-mesh/tasks/list</code>
+            and <code>POST /api/direct-mesh/tasks/cancel</code>, carrying the corresponding
+            RPC fields plus one allowlisted <code>endpoints</code> entry. Both enforce
+            the same gateway token and return a validated <code>recovery</code> envelope.
+            Neither route uses Orchestra history or the gateway result cache.</li>
+          <li>The frontend runtime client exposes <code>submitDurableDirectStudy</code>
+            and <code>inspectDurableDirectExecution</code>. Its recovery helper saves
+            a caller-owned handle before sending, pins gateway and Agent, and only
+            inspects after reconnect. Handle storage failure blocks submission;
+            connection changes fence late responses. The ordinary run button and PWDT
+            <code>job/run</code> use this service for exactly one declared Agent. They check
+            its durable capability before reserving a local identity; disabled/old Agents
+            fail closed, without a synchronous fallback. Multi-Agent selection still uses
+            its existing synchronous route and has not acquired this recovery guarantee.</li>
+          <li>Before dispatch, the Workbench stores only the execution ID, endpoint,
+            study kind, gateway-address digest and creation time. Desktop uses the native
+            <code>desktop-direct-execution.json</code> journal; normal browsers use
+            <code>kyuubiki-direct-execution</code> IndexedDB with strict durability requested.
+            Desktop host failure never falls back to browser storage. There is no RAM fallback,
+            model copy or token persisted. Limits are 64 pending identities and 64 KiB for
+            the native journal; one pending reservation per gateway/Agent blocks duplicate
+            runs across views. Browser storage remains subject to browser/user eviction.</li>
+          <li>In direct mode, open Workbench <strong>System &gt; Runtime &gt; Direct
+            Execution Recovery</strong>. The panel is collapsed and performs no reads
+            until requested. It lists 24 admissions per page, inspects one receipt,
+            and asks for confirmation before cancellation. GUI and PWDT share
+            <code>directExecution/pending</code>, <code>directExecution/list</code>, <code>directExecution/inspect</code>, and
+            <code>directExecution/cancel</code>. Inspection returns bounded status/identity
+            metadata to action history, not numerical result arrays. It does not replace
+            the current model or result. Unknown, not-found and transport failures never
+            authorize resubmission. Ordinary synchronous solves do not appear in this
+            ledger. Use <strong>Local Pending Executions</strong> after a lost response or
+            UI restart. Inspecting a matching terminal receipt clears only that caller
+            reservation, not the Agent receipt. Unknown/not-found records remain pending.
+            Ordinary cancel routes the current direct handle to its original Agent, never
+            an Orchestra job ID; cancellation registration does not clear observation or
+            mark the job cancelled. Automatic observation is bounded to 40 inspection reads.</li>
+          <li>The ledger stores at most 1,024 admissions, 8 MiB per encoded receipt,
+            and 128 MiB of retained record bytes, with capacity reserved for active
+            receipts. It keeps no model-input copies or backup generations. Capacity
+            exhaustion rejects new work instead of silently evicting identities.
+            Clear a disposable ledger only with the Agent stopped and callers retired.</li>
+        </ul>
+        <p class="docs-copy">
+          Qualification includes real local Agent process kills before computation,
+          after durable receipt sync but before reply delivery, and after completion,
+          with repeat restart and duplicate-submission checks. This is not physical
+          power-loss qualification or a claim of mid-solver numerical continuation.
+          Installed-WebView-to-real-Agent qualification, multi-Agent durable selection,
+          full workflow-graph execution and TLS/authentication parity
+          remain separate work. The direct transport still requires a trusted network
+          boundary; do not expose the raw Agent listener publicly.
+          See the <a href="../reports/agent-durable-execution-20261013.md">scoped test report</a>.
+          The <a href="../reports/agent-durable-async-20261013.md">asynchronous admission report</a>
+          records the detached-worker, shutdown and frontend recovery-interface checks.
+          The <a href="../reports/agent-durable-recovery-controls-20261013.md">recovery controls report</a>
+          tracks the separate Agent index, exact-owner cancellation and GUI/PWDT checks.
+          The <a href="../reports/workbench-durable-direct-run-20261013.md">default-run report</a>
+          adds native caller process-kill, browser reload and ordinary run/cancel coverage.
+        </p>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Operational goal</h2>
         <p class="docs-copy">

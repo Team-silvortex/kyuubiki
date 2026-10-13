@@ -498,9 +498,9 @@ that the Agent stopped: unconfirmed attempts, missing/corrupt journal history or
 invalid dispatch evidence retain the envelope and become `recovery_blocked`.
 The original failure message remains visible, with a bounded reason and next
 action in recovery history. Confirmed outcomes and undispatched work still fail
-normally; local-only graphs do not depend on journal availability. Before killing
-the waiter, the runner captures its actual dispatch endpoints for best-effort
-targeted cancellation. A cancellation acknowledgement does not settle the
+normally; local-only graphs do not depend on journal availability. The runner
+deadline now commits failure and captured-target intent before killing its waiter,
+as described in the deadline follow-up below. A cancellation acknowledgement does not settle the
 dispatch observation or authorize replay. Local controlled-TCP tests cover the
 deadline, late replies and recovery-component restart.
 
@@ -515,8 +515,91 @@ controlled Agent continues normally. Plain jobs retain snapshot checks, but expi
 now also requires coordinator authority; unavailable/standby control planes report
 an unavailable scan instead of claiming work was retired. A repo-restart registry
 race is classified as storage unavailability without swallowing unrelated errors.
-This does not repair historical inconsistent records or make cancellation durable.
+This checkpoint did not repair historical records or make cancellation durable;
+the bounded watchdog-only follow-up below adds retained delivery intent.
 SQLite and memory source tests are not new physical-Agent or power-loss acceptance.
+
+The [captured-request cancellation follow-up](../reports/workflow-scoped-cancellation-20261013.md)
+replaces automatic workflow job-wide cancellation with exact captured RPC targets.
+The original endpoint/session must remain configured; only a matching observed
+request/job/process/generation may receive cancellation. A later same-job request
+remains untouched. Missing/invalid observations do not fall back to job-wide or
+peer cancellation. Delivery is bounded to 128 requests, 32 endpoints and a
+15-second start budget, with one description per endpoint. Shared Agent control
+validation also serves operator inspection/cancellation without changing journal
+identity. Explicit user job cancellation is unchanged. Periodic watchdog and
+runner deadline persistence build on this safety prerequisite below.
+
+The [durable watchdog cancellation follow-up](../reports/workflow-durable-cancellation-20261013.md)
+atomically retains original RPC IDs and endpoint fingerprints with failed workflow
+state. Attempt reservation and exact observed process/generation binding persist
+before sending. Startup or explicit recovery can retry only that stored target,
+under current coordinator ownership, with at most three reserved attempts.
+Lost acknowledgements remain uncertain; exhausted retries show `unresolved`,
+never stopped computation. The private intent is limited to 128 requests,
+32 endpoints and 256 KiB, without addresses, secrets or payloads. One bounded
+sweep considers at most 16 pending jobs within a 15-second delivery-start budget;
+busy workers do not queue kicks, and remaining work needs a later explicit sweep
+or startup. There is no retry daemon or unlimited automatic backlog recovery.
+SQLite regression covers 3,225 tests (73 skips); memory covers 213 (25 skips),
+both with zero failures. The engine and operators are unchanged. That checkpoint
+covered periodic watchdog retirement; the next increment extends runner deadlines.
+
+The [runner deadline retirement follow-up](../reports/workflow-deadline-retirement-20261013.md)
+reuses the same bounded intent and delivery protocol, rather than killing the
+transport and then trying to persist failure. The active job, execution claim and
+current Orchestra lease must authorize the joint failure/intent commit before
+local shutdown and remote delivery. Selected transient write, snapshot, gate and
+coordinator failures keep the waiter and retry after 250 ms, re-reading authority
+and state each time. Once the deadline was observed, late output cannot publish
+parent success. Terminal/stale claims stop only the old local task without a
+job-wide cancellation. Actual storage/lease unavailability still invokes the
+existing authority-loss fencing; this is not permission to keep an unowned runner
+alive. Restart compensation cancels only retained original requests, isolating
+later same-job work. Ordinary-failure cancellation, explicit user cancellation, identities lost
+before a successful capture, historical repair and physical remote termination
+remain separate work. No numerical algorithm or engine/operator boundary changed.
+
+The [failed-runner retirement follow-up](../reports/workflow-failure-retirement-20261013.md)
+keeps the registered runner and original failure while selected terminal-write or
+snapshot failures retry after 250 ms. Ordinary failure and native/solve/branch
+checkpoint blocks no longer silently exit into runner-loss recovery after a
+rejected write. Each retry uses the original execution claim through the current
+lease-checked transaction; it retries persistence, not computation. Competing
+terminal decisions, changed claims and revoked authority stop the old finalizer.
+A rejected successful-solve checkpoint remains blocked, not successful output.
+The controlled tests cover coordinator restart without solver redispatch. This
+does not persist the uncommitted failure across runner/process loss, add durable
+ordinary-failure cancellation or override watchdog policy. The graph runner is
+sequential; these tests do not qualify parallel-branch shutdown.
+
+The [successful-result commit follow-up](../reports/workflow-completion-retry-20261013.md)
+extends that runner-local wait to final publication after the entire graph has
+finished. Selected transient write/snapshot failures retain the same shaped output
+and retry only the claim/lease-checked commit, instead of converting computation
+success into failure. Competing terminal decisions, deletion, changed claims and
+lost authority still win. Known JSON/schema encoding errors are explicitly
+non-retryable on both stores, with bounded messages that omit result contents.
+This is not a retry of an earlier failed solve/native/branch checkpoint: those
+remain blocked. That first increment retained pending output only in memory.
+
+The [durable final-publication follow-up](../reports/workflow-completion-checkpoint-20261013.md)
+adds a private pending-result record before final publication. The existing fenced
+job/result transaction stores lossless result JSON bound to the job creation,
+execution envelope and exact producer claim. After process loss, a verified record
+starts a publication-only runner, without a new execution attempt or graph replay;
+even a checkpoint-required graph can finish this already-computed publication.
+Changed claims, corrupt records, cancellation, deletion and lost leases still win.
+One record per parent is bounded to 64 MiB of encoded result and 2,000,000 JSON nodes,
+with existing depth/string limits. Oversize/invalid results reject explicitly, never
+silently downgrade to volatile success. Ordinary terminal states prune the record.
+SQLite now explicitly uses WAL with FULL synchronization. Independent child-BEAM
+SIGKILL tests cover both sides of the record point on SQLite and JSON, followed by
+two fresh-process recoveries with exactly one recorded solver invocation per case.
+This is process-crash evidence, not a physical power-loss guarantee: JSON directory
+metadata sync, hardware cache behavior, PostgreSQL and installed qualification remain
+open. Before a successful record commit, volatile output can still be lost; prior
+replay/uncertainty gates and watchdog policy remain in force.
 
 The [bounded solve-artifact follow-up](../reports/workflow-solve-artifact-checkpoints-20261011.md)
 retains successful small typed-solve results in the existing private recovery

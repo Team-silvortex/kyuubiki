@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 
 mod audit_log;
 mod checkpoint_journal;
+mod direct_execution_journal;
+pub use direct_execution_journal::{DirectExecutionJournalRequest, direct_execution_journal};
 mod direct_mesh_gateway;
 mod direct_mesh_rpc;
 mod frontend_http;
@@ -19,6 +21,7 @@ pub use checkpoint_journal::{
     CheckpointIntent, CheckpointReservation, list_checkpoint_intents, remove_checkpoint_intent,
     reserve_checkpoint_intent,
 };
+mod runtime_agent_storage;
 mod runtime_control;
 mod runtime_export;
 mod runtime_layout;

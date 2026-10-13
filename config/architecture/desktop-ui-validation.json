@@ -19,6 +19,7 @@
     "tests/integration/workbench-ui-functional-recovery.test.mjs",
     "tests/integration/workbench-ui-project-boundaries.test.mjs",
     "tests/integration/workbench-ui-checkpoint-recovery.test.mjs",
+    "tests/integration/workbench-ui-durable-direct-recovery.test.mjs",
     "tests/integration/workbench-ui-checkpoint-reopen.test.mjs",
     "tests/integration/workbench-ui-pwdt-completion.test.mjs",
     "tests/integration/workbench-ui-pwdt-runtime.test.mjs",

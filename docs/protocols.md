@@ -66,8 +66,13 @@ The current generic/runtime methods are:
 - `describe_agent`
 - `release_operator_package_job`
 - `cancel_job`
+- `run_durable_agent_task`, `submit_durable_agent_task` (asynchronous admission),
+  `fetch_durable_agent_execution`, `list_durable_agent_executions`,
+  and `cancel_durable_agent_execution` (explicit Agent
+  execution-store configuration required; see the
+  [standalone durable execution contract](book-ch04-runtime-modes.html#standalone-durable-execution))
 
-The current solver methods are:
+Examples of solver methods are (query `describe_agent` for the complete list):
 
 - `solve_bar_1d`
 - `solve_truss_2d`

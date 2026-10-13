@@ -197,4 +197,5 @@ config :kyuubiki_web, KyuubikiWeb.SqliteRepo,
   database: sqlite_database_path,
   pool_size: 1,
   journal_mode: :wal,
+  synchronous: :full,
   busy_timeout: 5_000

@@ -17,7 +17,7 @@ const DESKTOP_APPS: [(&str, &str); 3] = [
     ("installer-gui", "hub"),
     ("workbench-gui", "workbench"),
 ];
-const SHARED_UI_FILES: [&str; 9] = [
+const SHARED_UI_FILES: [&str; 10] = [
     "desktop-shell.css",
     "desktop-shell-runtime-mesh.css",
     "language-pack-loader.js",
@@ -27,6 +27,7 @@ const SHARED_UI_FILES: [&str; 9] = [
     "tauri-bridge.js",
     "workbench-panel-layout-bridge.js",
     "checkpoint-recovery-bridge.js",
+    "direct-execution-journal-bridge.js",
 ];
 const INSTALLER_PRIMARY_BUTTON_CSS: &str = "\n.desktop-shell-button-primary {\n  background: linear-gradient(180deg, rgba(255, 174, 72, 0.28), rgba(79, 84, 93, 0.96));\n  border-color: rgba(255, 174, 72, 0.34);\n}\n";
 

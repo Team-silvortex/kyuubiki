@@ -175,7 +175,11 @@ fn describe_agent(endpoint: &str) -> AgentSummary {
     }
 }
 
-fn request(endpoint: &str, method: &str, params: Value) -> Result<(Value, Vec<Value>), String> {
+pub(crate) fn request(
+    endpoint: &str,
+    method: &str,
+    params: Value,
+) -> Result<(Value, Vec<Value>), String> {
     let parsed = parse_endpoint(endpoint)?;
     let mut stream = connect(&parsed)?;
     stream

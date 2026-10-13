@@ -45,9 +45,21 @@ use kyuubiki_solver::{
 use crate::agent_reply_writer::SharedReplyWriter;
 use crate::agent_state::agent_descriptor_payload;
 use crate::rpc_execution::{handle_operator_task_ir, run_solver};
+use crate::rpc_execution_context::ExecutionContext;
 use crate::transport::AgentReply;
 
 pub(crate) fn handle_request(request: RpcRequest, writer: Option<SharedReplyWriter>) -> AgentReply {
+    handle_request_in(request, ExecutionContext::Transport(writer))
+}
+
+pub(crate) fn handle_reserved_request(
+    request: RpcRequest,
+    guard: crate::agent_lifecycle::ExecutionGuard,
+) -> AgentReply {
+    handle_request_in(request, ExecutionContext::Durable(guard))
+}
+
+fn handle_request_in(request: RpcRequest, writer: ExecutionContext) -> AgentReply {
     if let Err(error) = validate_rpc_request_envelope(&request) {
         let response_id = if error.code == RpcEnvelopeErrorCode::InvalidRequestId {
             "unknown".to_string()
@@ -79,6 +91,19 @@ pub(crate) fn handle_request(request: RpcRequest, writer: Option<SharedReplyWrit
         }
         RpcMethod::RunOperatorTaskIr => handle_operator_task_ir(request, writer),
         RpcMethod::FetchOperatorTaskResult => crate::agent_task_results::handle_fetch(request),
+        RpcMethod::RunDurableAgentTask => {
+            crate::agent_durable_execution::handle_run(request, writer.writer())
+        }
+        RpcMethod::SubmitDurableAgentTask => crate::agent_durable_execution::handle_submit(request),
+        RpcMethod::ListDurableAgentExecutions => {
+            crate::agent_durable_execution::handle_list(request)
+        }
+        RpcMethod::CancelDurableAgentExecution => {
+            crate::agent_durable_execution::handle_cancel(request)
+        }
+        RpcMethod::FetchDurableAgentExecution => {
+            crate::agent_durable_execution::handle_fetch(request)
+        }
         RpcMethod::SolveBar1d => run_solver::<SolveBarRequest, _, _, _>(
             request,
             writer,

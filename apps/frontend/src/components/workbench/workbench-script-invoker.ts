@@ -121,6 +121,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any> & Pick
         downloadTextFile: options.downloadTextFile,
       },
       stateArgs: {
+        durableDirectActions: options.durableDirectActions,
         batchModelController: options.batchModelController,
         action,
         payload,

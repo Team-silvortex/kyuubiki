@@ -378,6 +378,29 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     },
   },
   {
+    id: "directExecution/pending", category: "job", risk: "normal",
+    summary: { en: "Read this workstation's pending direct execution identities without dispatching any work.", zh: "读取本机待确认的直连执行凭据，不提交计算。" },
+    payloadExample: { endpoint: "127.0.0.1:5001" },
+  },
+  {
+    id: "directExecution/list", category: "job", risk: "normal",
+    summary: { en: "Read one bounded page of durable admissions from one pinned Agent; no results or replay.",
+      zh: "从固定 Agent 分页读取持久化接收记录，不批量读取结果、不重算。" },
+    payloadExample: { endpoint: "127.0.0.1:5001", after: null },
+  },
+  {
+    id: "directExecution/inspect", category: "job", risk: "normal",
+    summary: { en: "Inspect a durable execution receipt without replacing the current model or result.",
+      zh: "检查直连执行回执，不覆盖当前模型或结果；未知状态不授权重算。" },
+    payloadExample: { endpoint: "127.0.0.1:5001", executionId: "a".repeat(32) },
+  },
+  {
+    id: "directExecution/cancel", category: "job", risk: "sensitive", requiresConfirmation: true,
+    summary: { en: "Request cancellation of the inspected async owner; inspect again for a terminal receipt.",
+      zh: "仅向已核对的异步执行实例请求取消；须再次查询才能确认最终状态。" },
+    payloadExample: { endpoint: "127.0.0.1:5001", executionId: "a".repeat(32), processInstanceId: "from-inspection", requestDigest: "b".repeat(64) },
+  },
+  {
     id: "macro/run",
     category: "macro",
     risk: "normal",

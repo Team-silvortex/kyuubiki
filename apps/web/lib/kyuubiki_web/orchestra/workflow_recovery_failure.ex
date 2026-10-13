@@ -9,8 +9,42 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard, as: DispatchGuard
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Orchestra.{WorkflowJobRunner, WorkflowRecoveryCoordinator}
+  alias KyuubikiWeb.Orchestra.{WorkflowCancellationDelivery, WorkflowCancellationIntent}
+  alias KyuubikiWeb.Playground.AgentExecutionGate
 
   @active ~w(queued preprocessing partitioning solving postprocessing)a
+
+  def expire(job_id, claim, message)
+      when is_binary(job_id) and is_map(claim) and is_binary(message) do
+    GenServer.call(WorkflowRecoveryCoordinator, {:expire, job_id, claim, message}, 30_000)
+  catch
+    :exit, {reason, {GenServer, :call, [WorkflowRecoveryCoordinator | _]}}
+    when reason in [:noproc, :normal, :shutdown, :killed, :timeout] ->
+      {:error, :workflow_coordinator_unavailable}
+  end
+
+  def handle_expiry(job_id, claim, message, state) do
+    reply =
+      if Ownership.owner?(state),
+        do: finish(job_id, claim, message, state.lease, true),
+        else: {:error, :orchestra_standby}
+
+    next =
+      if reply == :ok do
+        WorkflowCancellationDelivery.kick([job_id])
+
+        %{
+          state
+          | progress: Map.delete(state.progress, job_id),
+            activity: Map.delete(state.activity, job_id)
+        }
+      else
+        state
+      end
+
+    # The calling runner stops its own linked task only after this commit returns.
+    {:reply, reply, Ownership.after_write(next, reply)}
+  end
 
   def fail_observed(%KyuubikiWeb.Jobs.Job{} = job, message) when is_binary(message) do
     GenServer.call(WorkflowRecoveryCoordinator, {:fail_observed, job, message}, 30_000)
@@ -21,12 +55,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
   end
 
   def handle_observed(job, message, state) do
-    reply = Ownership.guarded_write(state, fn -> finish_observed(job, message) end)
+    result = Ownership.guarded_write(state, fn -> finish_observed(job, message) end)
+
+    {reply, durable?} =
+      case result do
+        {:ok, retired, :workflow} -> {{:ok, retired}, true}
+        other -> {other, false}
+      end
 
     next =
       if match?({:ok, _}, reply) do
         # Stop only after both snapshots committed; a rejected scan must not cancel work.
-        WorkflowJobRunner.stop_failed(job.job_id)
+        WorkflowJobRunner.stop_failed(job.job_id, not durable?)
+        if durable?, do: WorkflowCancellationDelivery.kick([job.job_id])
 
         %{
           state
@@ -55,9 +96,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
           {:error, :workflow_recovery_not_active}
 
         {:ok, %{"_workflow_recovery" => %{} = recovery} = runtime} ->
-          with {:ok, ended, _} <- transition(expected.job_id, recovery, message) do
+          with {:ok, ended, _} <- transition(expected.job_id, recovery, message),
+               {:ok, ended} <- capture_intent(ended, expected, true) do
             replacement = Map.put(runtime, WorkflowRecoveryEnvelope.internal_key(), ended)
-            Store.apply_progress_with_result(attrs, expected, runtime, replacement)
+
+            with {:ok, retired} <-
+                   Store.apply_progress_with_result(attrs, expected, runtime, replacement),
+                 do: {:ok, retired, :workflow}
           end
 
         {:ok, %{"_workflow_recovery" => _}} ->
@@ -83,12 +128,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
   defp finish_observed(expected, _message),
     do: {:error, {:workflow_job_terminal, expected.status}}
 
-  def finish(job_id, claim, message, lease) do
+  defp observe_targets(job_id) do
+    AgentExecutionGate.observe_job_targets(job_id)
+  catch
+    :exit, _ -> {:error, :execution_gate_unavailable}
+  end
+
+  def finish(job_id, claim, message, lease, capture_targets? \\ false) do
     LeaseStore.with_lease(lease, fn ->
       with {:ok, job} <- active_job(job_id),
            {:ok, runtime, recovery} <- fetch_runtime(job_id),
            true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
            {:ok, ended, text} <- transition(job_id, recovery, message),
+           {:ok, ended} <- capture_intent(ended, job, capture_targets?),
            replacement <- Map.put(runtime, WorkflowRecoveryEnvelope.internal_key(), ended),
            {:ok, _} <-
              Store.apply_progress_with_result(
@@ -105,6 +157,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
         _ -> {:error, {:workflow_recovery_not_found, job_id}}
       end
     end)
+  end
+
+  defp capture_intent(recovery, _job, false), do: {:ok, recovery}
+
+  defp capture_intent(recovery, job, true) do
+    with {:ok, targets} <- observe_targets(job.job_id),
+         do: WorkflowCancellationIntent.attach(recovery, job, targets)
   end
 
   defp fetch_runtime(job_id) do

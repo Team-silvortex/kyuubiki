@@ -5,7 +5,7 @@ defmodule KyuubikiWeb.Storage.AnalysisMemoryState do
 
   alias KyuubikiWeb.Jobs.Job
   alias KyuubikiWeb.Persistence
-  alias KyuubikiWeb.Storage.MemorySnapshot
+  alias KyuubikiWeb.Storage.{FailureBoundary, MemorySnapshot}
 
   @schema "kyuubiki.analysis-memory-state/v1"
 
@@ -40,7 +40,7 @@ defmodule KyuubikiWeb.Storage.AnalysisMemoryState do
     persist!(updated)
     {reply, updated}
   rescue
-    error -> {{:error, {:completion_persistence_failed, Exception.message(error)}}, current}
+    error -> {{:error, FailureBoundary.completion_error(error)}, current}
   end
 
   defp load! do

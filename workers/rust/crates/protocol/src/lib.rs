@@ -4,6 +4,7 @@ mod analysis;
 mod artifact_transport;
 mod axial_bar_input;
 mod benchmark_surface;
+mod durable_agent_execution;
 mod graph_entity_input;
 mod job;
 mod operator;
@@ -51,6 +52,11 @@ pub use artifact_transport::{
 pub use benchmark_surface::{
     PROTOCOL_BENCHMARK_SURFACE_SCHEMA_VERSION, ProtocolBenchmarkLane, ProtocolBenchmarkSurface,
     protocol_benchmark_surface,
+};
+pub use durable_agent_execution::{
+    DURABLE_AGENT_CANCELLATION_SCHEMA, DURABLE_AGENT_EXECUTION_SCHEMA, DURABLE_AGENT_INDEX_SCHEMA,
+    DurableAgentExecutionCancel, DurableAgentExecutionList, DurableAgentExecutionQuery,
+    DurableAgentTask, validate_durable_execution_id,
 };
 pub use job::{
     JOB_ID_MAX_BYTES, Job, JobStatus, PROGRESS_MESSAGE_MAX_BYTES, ProgressEvent,

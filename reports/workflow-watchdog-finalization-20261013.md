@@ -2,6 +2,11 @@
 
 Date: 2026-10-13. Scope: periodic queue/execution timeout and stalled-job decisions.
 
+Follow-up: [captured-request cancellation](workflow-scoped-cancellation-20261013.md)
+replaces automatic job-wide delivery with observed request/process/generation
+targets. The original results below remain this checkpoint's evidence; durable
+restart compensation is still open.
+
 ## Reproduced failures
 
 The periodic watchdog previously updated only the job row. Its workflow recovery

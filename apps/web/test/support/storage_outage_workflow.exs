@@ -23,8 +23,15 @@ defmodule KyuubikiWeb.TestSupport.StorageOutageWorkflow do
     send(owner, {:outage_solver_request, Keyword.get(opts, :job_id), mode})
 
     case mode do
-      :succeed -> {:ok, Map.put(payload, "recovered", true)}
-      :hold -> receive do: (:finish -> {:ok, payload})
+      :succeed ->
+        {:ok, Map.put(payload, "recovered", true)}
+
+      :hold ->
+        receive do: (:finish -> {:ok, payload})
+
+      :controlled ->
+        send(owner, {:outage_solver_waiting, Keyword.get(opts, :job_id), self()})
+        receive do: ({:reply, result} -> result)
     end
   end
 

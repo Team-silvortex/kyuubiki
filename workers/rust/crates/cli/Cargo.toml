@@ -19,5 +19,5 @@ sha2 = "0.10"
 [dev-dependencies]
 kyuubiki-operator-sdk = { path = "../operator-sdk" }
 
-[target.'cfg(unix)'.dev-dependencies]
+[target.'cfg(unix)'.dependencies]
 libc = "0.2"

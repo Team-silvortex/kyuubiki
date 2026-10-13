@@ -246,6 +246,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
         checkpoint_count(recovery, WorkflowNativeResultCheckpoint.key()),
       "native_dispatch_evidence_count" =>
         checkpoint_count(recovery, WorkflowNativeDispatchEvidence.key()),
+      "cancellation" => KyuubikiWeb.Orchestra.WorkflowCancellationIntent.summary(recovery),
+      "completion_checkpoint_policy" =>
+        KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint.policy(),
+      "completion_checkpoint_retained" =>
+        Map.has_key?(recovery, KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint.key()),
       "updated_at" => Map.get(recovery, "updated_at"),
       "history" => public_history(Map.get(recovery, "history", []))
     }
@@ -341,6 +346,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
     do:
       Map.drop(recovery, [
         "envelope",
+        KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint.key(),
         WorkflowSolveCheckpoint.key(),
         WorkflowBranchCheckpoint.key(),
         WorkflowNativeResultCheckpoint.key(),

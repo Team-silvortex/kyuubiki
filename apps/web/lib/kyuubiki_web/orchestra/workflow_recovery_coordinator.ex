@@ -13,6 +13,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.LeaseStore
   alias KyuubikiWeb.Orchestra.WorkflowActivityStore
+  alias KyuubikiWeb.Orchestra.WorkflowCompletionStore
   alias KyuubikiWeb.Orchestra.WorkflowAdmission
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
   alias KyuubikiWeb.Orchestra.WorkflowNodeProgress
@@ -76,6 +77,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     GenServer.call(__MODULE__, {:commit_result, job_id, claim, result}, @call_timeout)
   end
 
+  def stage_result(job_id, claim, result)
+      when is_binary(job_id) and is_map(claim) and is_map(result),
+      do: GenServer.call(__MODULE__, {:stage_result, job_id, claim, result}, @call_timeout)
+
   @spec fail(String.t(), map(), String.t()) :: :ok | {:error, term()}
   def fail(job_id, claim, message)
       when is_binary(job_id) and is_map(claim) and is_binary(message) do
@@ -83,6 +88,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   defdelegate fail_observed(job, message), to: WorkflowRecoveryFailure
+  defdelegate expire(job_id, claim, message), to: WorkflowRecoveryFailure
 
   def block_native_recovery(job_id, claim, reason)
       when is_binary(job_id) and is_map(claim) do
@@ -267,12 +273,21 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   def handle_call({:commit_result, job_id, claim, result}, _from, state) do
     if Ownership.owner?(state) do
-      reply = commit_result_if_owned(job_id, claim, result, state.lease)
+      reply = WorkflowCompletionStore.commit(job_id, claim, result, state.lease)
       next_state = state |> forget_progress(job_id) |> Ownership.after_write(reply)
       {:reply, reply, next_state}
     else
       {:reply, {:error, :orchestra_standby}, state}
     end
+  end
+
+  def handle_call({:stage_result, job_id, claim, result}, _from, state) do
+    reply =
+      if Ownership.owner?(state),
+        do: WorkflowCompletionStore.stage(job_id, claim, result, state.lease),
+        else: {:error, :orchestra_standby}
+
+    {:reply, reply, Ownership.after_write(state, reply)}
   end
 
   def handle_call({:checkpoint, checkpoint, job_id, claim, action}, _from, state)
@@ -307,6 +322,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   def handle_call({:fail_observed, job, message}, _from, state),
     do: WorkflowRecoveryFailure.handle_observed(job, message, state)
+
+  def handle_call({:expire, job_id, claim, message}, _from, state),
+    do: WorkflowRecoveryFailure.handle_expiry(job_id, claim, message, state)
+
+  def handle_call({:cancellation_intent, job_id, action}, _from, state),
+    do: KyuubikiWeb.Orchestra.WorkflowCancellationStore.handle(job_id, action, state)
 
   def handle_call({:delete, job_id}, _from, state) do
     reply = Ownership.guarded_write(state, fn -> Store.delete_with_result(job_id) end)
@@ -508,8 +529,30 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       {:ok, pid} ->
         {{:ok, pid}, track_runner(job_id, pid, state)}
 
-      :error ->
+      :error when reason == :initial ->
         do_dispatch_job(job_id, reason, state)
+
+      :error ->
+        case WorkflowCompletionStore.pending(job_id, state.lease) do
+          {:ok, claim, result} ->
+            case WorkflowJobRunner.start_finalizing(job_id, claim, result) do
+              {:ok, pid} -> {{:ok, pid}, track_runner(job_id, pid, state)}
+              error -> {error, state}
+            end
+
+          {:error, :workflow_completion_checkpoint_invalid = error} ->
+            reply = block_recovery(job_id, error, state.lease)
+            {reply, Ownership.after_write(state, reply)}
+
+          :none ->
+            do_dispatch_job(job_id, reason, state)
+
+          {:error, {:workflow_recovery_not_found, _}} ->
+            do_dispatch_job(job_id, reason, state)
+
+          error ->
+            {error, Ownership.after_write(state, error)}
+        end
     end
   end
 
@@ -574,50 +617,6 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   defp record_progress_if_owned(job_id, claim, update, lease),
     do: WorkflowNodeProgressStore.record(job_id, claim, update, lease)
-
-  defp commit_result_if_owned(job_id, claim, result, lease) do
-    LeaseStore.with_lease(lease, fn ->
-      with {:ok, job} <- active_job(job_id),
-           {:ok, runtime, recovery} <- fetch_runtime(job_id),
-           true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
-           {:ok, failed_count} <- failed_node_count(result),
-           completed <-
-             WorkflowRecoveryEnvelope.transition(recovery, "completed", %{
-               "committed_generation" => claim["generation"]
-             }),
-           final <-
-             result
-             |> Map.put("workflow_id", Map.get(runtime, "workflow_id"))
-             |> Map.put("current_node", nil)
-             |> Map.put("progress_events", Map.get(runtime, "progress_events", []))
-             |> Map.put("response_options", Map.get(runtime, "response_options", %{}))
-             |> Map.put(WorkflowRecoveryEnvelope.internal_key(), completed),
-           {:ok, _job} <-
-             Store.apply_progress_with_result(
-               %{
-                 job_id: job_id,
-                 stage: "completed",
-                 progress: 1.0,
-                 message:
-                   if(failed_count == 0,
-                     do: "workflow completed",
-                     else:
-                       "workflow completed with #{failed_count} failed node(s); inspect node_failures"
-                   )
-               },
-               job,
-               runtime,
-               final
-             ) do
-        :ok
-      else
-        false -> {:error, :stale_workflow_execution_claim}
-        {:error, _reason} = error -> error
-        :error -> {:error, {:workflow_recovery_not_found, job_id}}
-        {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
-      end
-    end)
-  end
 
   defp fail_if_owned(job_id, claim, message, lease),
     do: WorkflowRecoveryFailure.finish(job_id, claim, message, lease)
@@ -705,13 +704,6 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     attrs = Map.merge(%{job_id: job.job_id, stage: job.status, progress: job.progress}, changes)
     replacement = Map.put(runtime, WorkflowRecoveryEnvelope.internal_key(), recovery)
     Store.apply_progress_with_result(attrs, job, runtime, replacement) |> progress_reply()
-  end
-
-  defp failed_node_count(result) do
-    case Map.get(result, "failed_nodes", []) do
-      nodes when is_list(nodes) -> {:ok, length(nodes)}
-      _ -> {:error, {:invalid_workflow_result, :failed_nodes}}
-    end
   end
 
   defp progress_reply({:ok, _job}), do: :ok

@@ -189,7 +189,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCommitTest do
     coordinator = Process.whereis(WorkflowRecoveryCoordinator)
     result = Map.put(Fixture.result(), "bad", fn -> :not_json end)
 
-    assert {:error, {:completion_persistence_failed, _}} =
+    assert {:error, {:completion_persistence_failed, {:invalid_payload, _}}} =
              WorkflowRecoveryCoordinator.commit_result(fixture.id, fixture.claim, result)
 
     assert Process.whereis(WorkflowRecoveryCoordinator) == coordinator

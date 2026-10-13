@@ -66,6 +66,105 @@
   ],
   "evidence_claims": [
     {
+      "id": "workbench-single-agent-durable-run-caller-journal",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["persistence_provenance"],
+      "dimensions": ["contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/frontend/src/lib/workbench/durable-direct-run.ts",
+        "apps/frontend/src/lib/workbench/direct-execution-journal.ts",
+        "apps/frontend/src/lib/workbench/study-run-backend-service-core.ts",
+        "apps/frontend/src/components/workbench/workbench-durable-run-observer.ts",
+        "apps/desktop-shared/src/direct-execution-journal-bridge.ts",
+        "workers/rust/crates/desktop-runtime/src/direct_execution_journal.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_execution_journal_tests.rs",
+        "workers/rust/crates/desktop-runtime/src/runtime_agent_storage.rs",
+        "apps/frontend/test/workflow/durable-direct-run.test.ts",
+        "apps/desktop-shared/test/direct-execution-journal-bridge.test.mjs",
+        "tests/integration/workbench-ui-durable-direct-recovery.test.mjs",
+        "reports/workbench-durable-direct-run-20261013.md"
+      ],
+      "required_text": [
+        "force_killed_caller_keeps_the_exact_execution_and_releases_the_process_lock",
+        "direct:recovery_required",
+        "desktop-direct-execution.json",
+        "KYUUBIKI_AGENT_EXECUTION_STORE_ROOT",
+        "lost run reply survives browser reload",
+        "Not qualified: physical power loss"
+      ]
+    },
+    {
+      "id": "standalone-agent-durable-index-exact-owner-recovery-controls",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["solver_execution"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_durable_execution.rs",
+        "workers/rust/crates/cli/src/agent_execution_store.rs",
+        "workers/rust/crates/cli/tests/agent_durable_recovery_live.rs",
+        "tests/integration/workbench-ui-durable-direct-recovery.test.mjs",
+        "reports/agent-durable-recovery-controls-20261013.md"
+      ],
+      "required_text": [
+        "list_durable_agent_executions",
+        "cancel_durable_agent_execution",
+        "index_and_exact_owner_cancel_survive_restart_without_poisoning_reused_job_and_request",
+        "interrupted_admission_is_discoverable_but_cannot_cancel_new_owner_or_replay",
+        "Not qualified: physical power loss"
+      ]
+    },
+    {
+      "id": "standalone-agent-async-durable-admission-lifecycle",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["solver_execution"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_durable_execution.rs",
+        "workers/rust/crates/cli/src/rpc_execution_context.rs",
+        "workers/rust/crates/cli/tests/agent_durable_async_live.rs",
+        "reports/agent-durable-async-20261013.md"
+      ],
+      "required_text": [
+        "submit_durable_agent_task",
+        "killing_async_worker_before_receipt_never_authorizes_replay",
+        "termination_signal_waits_for_detached_durable_owner_before_exit",
+        "async_receipt_write_failure_releases_slot_but_does_not_publish_success",
+        "Not qualified: physical power loss"
+      ]
+    },
+    {
+      "id": "standalone-agent-durable-receipt-process-crash-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["solver_execution"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/protocol/src/durable_agent_execution.rs",
+        "workers/rust/crates/cli/src/agent_durable_execution.rs",
+        "workers/rust/crates/cli/src/agent_execution_store.rs",
+        "workers/rust/crates/cli/src/agent_execution_store_io.rs",
+        "workers/rust/crates/cli/tests/agent_durable_execution_live.rs",
+        "docs/book-ch04-runtime-modes.html",
+        "reports/agent-durable-execution-20261013.md"
+      ],
+      "required_text": [
+        "kyuubiki.agent-durable-execution/v1",
+        "KYUUBIKI_AGENT_EXECUTION_STORE",
+        "killed_inflight_execution_remains_unknown_across_restarts_and_retries",
+        "kill_after_receipt_sync_before_reply_recovers_original_result",
+        "native_task_ir_uses_the_same_durable_boundary_without_changing_the_engine",
+        "exact_execution_cancellation_remains_effective_and_its_receipt_survives_restart",
+        "Not qualified: physical power loss"
+      ]
+    },
+    {
       "id": "agent-engine-solver-task-ir-qualification",
       "status": "proven",
       "grade": "qualified",

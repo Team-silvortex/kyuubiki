@@ -73,6 +73,7 @@ import {
   type WorkbenchStudyRunTransport,
 } from "@/lib/workbench/study-run-backend-service-core";
 import { toAxialInput } from "@/lib/workbench/helpers";
+import { createDurableDirectRunService } from "./durable-direct-run";
 
 const orchestratedSubmitters: Record<
   StudyKind,
@@ -112,6 +113,7 @@ function adaptSubmitter<TInput, TResult extends WorkbenchStudyResult>(
 
 function createStudyRunTransport(runtimeClient: RuntimeApiClient): WorkbenchStudyRunTransport {
   return {
+    durableDirect: createDurableDirectRunService({ client: runtimeClient }),
     resolveStudyPayload,
     fetchJob(jobId) {
       return runtimeClient.fetchJobStatus<WorkbenchStudyResult>(jobId);

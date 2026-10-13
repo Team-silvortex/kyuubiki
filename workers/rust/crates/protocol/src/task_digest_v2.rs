@@ -6,6 +6,21 @@ pub const TASK_DIGEST_FIXED15_V1: &str = "kyuubiki.task-digest/fixed15-v1";
 const DOMAIN: &[u8] = b"kyuubiki.task-digest/typed-ieee754-v2\0";
 const MAX_DEPTH: usize = 128;
 
+pub(crate) fn agent_execution_digest(
+    method: &crate::RpcMethod,
+    params: &Value,
+) -> Result<String, String> {
+    let mut hash = Sha256::new();
+    hash.update(b"kyuubiki.agent-durable-execution/v1\0");
+    encode(
+        &mut hash,
+        &serde_json::to_value(method).map_err(|e| e.to_string())?,
+        0,
+    )?;
+    encode(&mut hash, params, 0)?;
+    Ok(format!("{:x}", hash.finalize()))
+}
+
 pub(crate) fn task_digest(object: &Map<String, Value>, fields: &[&str]) -> Result<String, String> {
     // Borrow the projection; do not duplicate large input artifacts or encoded JSON.
     let mut entries = fields

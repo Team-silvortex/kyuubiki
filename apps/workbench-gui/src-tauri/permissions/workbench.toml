@@ -47,3 +47,8 @@ commands.allow = ["set_workbench_panel_layout"]
 identifier = "allow-checkpoint-recovery"
 description = "Manage only bounded checkpoint identity metadata in a fixed application-owned journal; no paths, payloads or credentials."
 commands.allow = ["list_checkpoint_intents", "reserve_checkpoint_intent", "remove_checkpoint_intent"]
+
+[[permission]]
+identifier = "allow-direct-execution-journal"
+description = "Manage bounded direct execution identities in a fixed application-owned journal, never model inputs or credentials."
+commands.allow = ["direct_execution_journal"]

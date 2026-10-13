@@ -291,10 +291,7 @@ export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSour
         scriptActionLog={props.scriptActionLog}
         getScriptSnapshot={props.getScriptSnapshot}
         scriptRecordingMode={props.scriptRecordingMode}
-        invokeScriptAction={async (action: string, payload?: Record<string, unknown>) => {
-          await props.invokeScriptAction(action, payload);
-          return {};
-        }}
+        invokeScriptAction={props.invokeScriptAction}
         setScriptRecordingMode={props.setScriptRecordingMode}
         scriptSnapshot={props.scriptSnapshot}
         systemDataTab={props.systemDataTab}

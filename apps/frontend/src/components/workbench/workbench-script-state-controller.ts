@@ -7,8 +7,10 @@ import type { WorkbenchModelBatchController } from "./workbench-model-batch-cont
 import type { ModelBatchRequest } from "@/lib/workbench/model-batch-commands";
 import type { BatchQuery } from "@/lib/workbench/model-batch-selection";
 import { IMMERSIVE_TOOL_TABS, type ImmersiveToolTab } from "./workbench-types";
+import { workbenchDurableDirectActions } from "@/lib/workbench/durable-direct-actions";
 
 type ScriptStateControllerDeps = {
+  durableDirectActions?: typeof workbenchDurableDirectActions;
   batchModelController?: WorkbenchModelBatchController;
   action: string;
   payload: Record<string, unknown>;
@@ -59,6 +61,7 @@ type ScriptStateControllerDeps = {
 };
 
 export async function handleWorkbenchScriptStateAction({
+  durableDirectActions = workbenchDurableDirectActions,
   batchModelController,
   action,
   payload,
@@ -107,6 +110,7 @@ export async function handleWorkbenchScriptStateAction({
   setTruss3dViewPreset,
   setTruss3dProjectionMode,
 }: ScriptStateControllerDeps): Promise<Record<string, unknown> | null> {
+  if (action.startsWith("directExecution/")) return durableDirectActions(action, payload);
   switch (action) {
     case "state/inspectModelBatch": {
       if (!batchModelController) throw new Error("model_batch:unavailable");

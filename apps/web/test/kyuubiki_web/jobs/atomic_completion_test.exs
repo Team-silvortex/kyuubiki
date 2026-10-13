@@ -85,7 +85,7 @@ defmodule KyuubikiWeb.Jobs.AtomicCompletionTest do
   test "an unencodable result rolls back and does not poison the following completion" do
     job = create_job("encoding")
 
-    assert {:error, {:completion_persistence_failed, _reason}} =
+    assert {:error, {:completion_persistence_failed, {:invalid_payload, _reason}}} =
              Store.complete_with_result(job.job_id, "bad-worker", %{"invalid" => fn -> :bad end})
 
     assert {:ok, ^job} = Store.get(job.job_id)

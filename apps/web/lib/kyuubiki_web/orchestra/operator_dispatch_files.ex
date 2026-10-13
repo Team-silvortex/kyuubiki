@@ -148,11 +148,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
 
   defp valid_shape?(_record), do: false
 
-  def fingerprint(endpoint) do
-    [endpoint[:id], endpoint[:host], endpoint[:port], endpoint[:agent_session_id]]
-    |> DurableJson.encode!()
-    |> digest()
-  end
+  defdelegate fingerprint(endpoint),
+    to: KyuubikiWeb.Playground.AgentExecutionCancellation,
+    as: :endpoint_fingerprint
 
   defp read(path) do
     with {:ok, %{type: :regular, size: size}} <- File.lstat(path),

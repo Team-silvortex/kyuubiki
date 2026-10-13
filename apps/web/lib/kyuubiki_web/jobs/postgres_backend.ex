@@ -7,7 +7,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   alias KyuubikiWeb.AnalysisResultPostgresBackend, as: Results
   alias KyuubikiWeb.Jobs.{Job, ProgressEvent}
   alias KyuubikiWeb.Storage
-  alias KyuubikiWeb.Storage.{JobRecord, ResultRecord}
+  alias KyuubikiWeb.Storage.{FailureBoundary, JobRecord, ResultRecord}
 
   @write_attempts 4
 
@@ -221,7 +221,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
       else: apply(repo(), :transaction, [commit, options])
   rescue
     error ->
-      reason = {:completion_persistence_failed, Exception.message(error)}
+      reason = FailureBoundary.completion_error(error)
 
       if apply(repo(), :in_transaction?, []),
         do: apply(repo(), :rollback, [reason]),

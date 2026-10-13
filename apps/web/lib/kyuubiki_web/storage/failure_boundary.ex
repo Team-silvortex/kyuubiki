@@ -8,6 +8,20 @@ defmodule KyuubikiWeb.Storage.FailureBoundary do
     KyuubikiWeb.Orchestra.LeaseMemoryBackend
   ]
 
+  # Serialization/schema failures cannot be repaired by retrying the same payload.
+  def completion_error(%kind{})
+      when kind in [
+             Jason.EncodeError,
+             Protocol.UndefinedError,
+             Ecto.ChangeError,
+             Ecto.Query.CastError
+           ],
+      do:
+        {:completion_persistence_failed,
+         {:invalid_payload, "completion payload cannot be encoded for its storage schema"}}
+
+  def completion_error(error), do: {:completion_persistence_failed, Exception.message(error)}
+
   # Preserve successful/domain-error replies. Never replace failed reads with
   # empty collections, or retry a write whose commit outcome may be unknown.
   # Wrap outside SQL transaction boundaries so exceptions roll back first.

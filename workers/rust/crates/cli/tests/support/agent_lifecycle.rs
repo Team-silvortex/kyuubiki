@@ -38,9 +38,18 @@ pub(crate) struct LiveAgent {
     solver_hold: Option<(String, String)>,
     retain_evidence: bool,
     orchestrator_url: Option<String>,
+    durable_store: bool,
 }
 
 impl LiveAgent {
+    pub(crate) fn start_with_durable_store() -> Result<Self, Box<dyn Error>> {
+        let mut agent = Self::start()?;
+        agent.stop_process()?;
+        agent.durable_store = true;
+        agent.start_process()?;
+        Ok(agent)
+    }
+
     pub(crate) fn start() -> Result<Self, Box<dyn Error>> {
         Self::start_with_reply_timeout("10000")
     }
@@ -114,6 +123,7 @@ impl LiveAgent {
             solver_hold,
             retain_evidence: evidence_root.is_some(),
             orchestrator_url: None,
+            durable_store: false,
         };
         agent.start_process()?;
         Ok(agent)
@@ -168,6 +178,19 @@ impl LiveAgent {
             command.env("KYUUBIKI_ORCHESTRATOR_URL", url);
         } else {
             command.env_remove("KYUUBIKI_ORCHESTRATOR_URL");
+        }
+        if self.durable_store {
+            command.env(
+                "KYUUBIKI_AGENT_EXECUTION_STORE",
+                self.root.join("executions"),
+            );
+            command.env(
+                "KYUUBIKI_AGENT_FAULT_INJECTION_RECEIPT_HOLD_FILE",
+                self.root.join("receipt.hold"),
+            );
+        } else {
+            command.env_remove("KYUUBIKI_AGENT_EXECUTION_STORE");
+            command.env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_RECEIPT_HOLD_FILE");
         }
         let child = command.spawn()?;
         self.child = Some(child);

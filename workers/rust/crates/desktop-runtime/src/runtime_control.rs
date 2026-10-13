@@ -60,6 +60,10 @@ pub(super) fn service_status() -> Result<String, String> {
             paths.run.join("lifecycle.lock").display()
         ),
     ];
+    lines.push(format!(
+        "agent-execution-store-root: {} (per-port; bounded; no automatic eviction)",
+        crate::runtime_agent_storage::execution_store_root(&paths.state, &env)?.display()
+    ));
     if paths.is_development() {
         for command in ["mix", "cargo"] {
             lines.push(match resolve_development_command(&paths.root, command) {
@@ -429,7 +433,7 @@ fn start_agent(
         pid: paths.run.join(format!("agent-{port}.pid")),
         log: paths.run.join(format!("agent-{port}.log")),
         port: Some(port),
-        env: env.clone(),
+        env: crate::runtime_agent_storage::agent_environment(&paths.state, port, env)?,
     };
     spawn_managed(process, Duration::from_secs(60))?;
     Ok(format!("started Rust FEM agent at tcp://127.0.0.1:{port}"))

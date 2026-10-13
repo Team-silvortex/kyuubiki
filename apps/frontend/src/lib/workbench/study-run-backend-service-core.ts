@@ -59,6 +59,9 @@ import type {
 } from "@/components/workbench/workbench-types";
 import { validateWorkbenchExecutionGovernance } from "@/lib/workbench/governance";
 import { parseDirectMeshEndpoints } from "@/lib/workbench/helpers";
+import type { DurableDirectRunService } from "./durable-direct-run";
+import type { DurableDirectRecoveryHandle } from "./durable-direct-recovery";
+import type { DurableDirectEnvelope } from "../api/durable-direct-client";
 
 export type WorkbenchStudyResult =
   | AxialBarResult
@@ -112,10 +115,12 @@ export type WorkbenchStudyRunInput = {
 };
 
 export type WorkbenchStudyRunCreated =
+  | { backend: "durable_direct"; handle: DurableDirectRecoveryHandle; envelope: DurableDirectEnvelope<WorkbenchStudyResult> }
   | { backend: "orchestrated"; envelope: JobEnvelope<WorkbenchStudyResult> }
   | { backend: "direct_mesh"; envelope: DirectMeshSolveEnvelope<WorkbenchStudyResult> };
 
 export type WorkbenchStudyRunTransport = {
+  durableDirect?: DurableDirectRunService;
   resolveStudyPayload(input: WorkbenchStudyRunInput): Record<string, unknown>;
   submitDirectMesh(
     studyKind: StudyKind,
@@ -131,6 +136,7 @@ export type WorkbenchStudyRunTransport = {
 };
 
 export type WorkbenchStudyRunBackendService = {
+  durableDirect?: DurableDirectRunService;
   fetchJob(jobId: string): Promise<JobEnvelope<WorkbenchStudyResult>>;
   submitRun(input: WorkbenchStudyRunInput): Promise<WorkbenchStudyRunCreated>;
 };
@@ -139,6 +145,7 @@ export function createStudyRunBackendService(
   transport: WorkbenchStudyRunTransport,
 ): WorkbenchStudyRunBackendService {
   return {
+    durableDirect: transport.durableDirect,
     fetchJob: transport.fetchJob,
     async submitRun(input) {
       if (input.frontendRuntimeMode === "direct_mesh_gui") {
@@ -148,12 +155,20 @@ export function createStudyRunBackendService(
         });
         if (!governance.ok) throw new Error("direct-mesh-endpoints-required");
 
+        const endpoints = parseDirectMeshEndpoints(governance.directMeshEndpointsText);
+        if (endpoints.length === 1) {
+          if (!transport.durableDirect) throw new Error("Durable single-Agent execution is unavailable; no synchronous fallback was attempted.");
+          return { backend: "durable_direct", ...await transport.durableDirect.submit<WorkbenchStudyResult>(
+            input.studyKind, transport.resolveStudyPayload(input), endpoints[0],
+          ) };
+        }
+
         return {
           backend: "direct_mesh",
           envelope: await transport.submitDirectMesh(
             input.studyKind,
             transport.resolveStudyPayload(input),
-            parseDirectMeshEndpoints(governance.directMeshEndpointsText),
+            endpoints,
             input.directMeshSelectionMode,
           ),
         };

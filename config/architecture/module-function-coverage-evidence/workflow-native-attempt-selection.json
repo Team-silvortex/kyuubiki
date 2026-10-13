@@ -4,6 +4,177 @@
   "summary": "Local service recovery rejects ambiguous native success selection and rechecks journal observations after receipt retrieval. Observations seal once; live reads verify inventory and selected disk records. Managed native workflows persist bounded attempt identities before RPC, fencing missing journal history after restart and rejecting failed evidence commits before transport. Active/recovery-blocked parent history is protected within the existing journal cap; matching ordinary terminal parents release it. Compact retention queries stay outside the journal process, and storage failure cannot prune evidence or poison healthy reads. The shared receipt API also revalidates the exact selected observation after lookup, rejecting stale completions without replay or retention renewal. This is bounded SQLite/memory source evidence, not new live Agent, atomic cross-store publication, joint rollback, live PostgreSQL, power-loss or installed qualification.",
   "evidence_claims": [
     {
+      "id": "durable-workflow-final-publication-process-crash",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_completion_checkpoint.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_completion_store.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+        "apps/web/config/runtime.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_completion_checkpoint_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_completion_retry_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_completion_crash_test.exs",
+        "apps/web/test/support/workflow_completion_crash_child.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-completion-checkpoint-20261013.md"
+      ],
+      "required_text": [
+        "publish_only_no_execution",
+        "synchronous: :full",
+        "completed computation can publish after restart even when replay is forbidden",
+        "a rejected staging write retries without claiming a durable handoff or rerunning solve",
+        "SIGKILL",
+        "Process SIGKILL is not physical power loss",
+        "Before the staging transaction succeeds"
+      ]
+    },
+    {
+      "id": "successful-workflow-final-publication-retry",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/storage/failure_boundary.ex",
+        "apps/web/lib/kyuubiki_web/storage/analysis_memory_state.ex",
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_completion_retry_test.exs",
+        "apps/web/test/support/workflow_completion_probe.exs",
+        "apps/web/test/kyuubiki_web/storage/failure_boundary_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_commit_test.exs",
+        "apps/web/test/kyuubiki_web/jobs/atomic_completion_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-completion-retry-20261013.md"
+      ],
+      "required_text": [
+        "rejected final result commit retries the exact successful output instead of failing the job",
+        "coordinator restart retains the successful output without another solver dispatch",
+        "deletion during completion retry does not recreate the job or result",
+        "lease takeover stops pending completion without publishing the old result",
+        "completion encoding and schema errors retain a non-retryable payload classification",
+        "Pending success remains in runner memory until a successful commit"
+      ]
+    },
+    {
+      "id": "runner-failure-write-retry-without-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_failure_retirement_test.exs",
+        "apps/web/test/support/storage_outage_workflow.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-failure-retirement-20261013.md"
+      ],
+      "required_text": [
+        "await_terminal_commit",
+        "a real rejected solve checkpoint commit cannot publish success or repeat the solver",
+        "a coordinator restart during failure persistence keeps the original waiter and reason",
+        "revoked authority stops the failure waiter without a stale terminal write",
+        "The pending failure lives in the runner until a successful commit",
+        "This change does not assume"
+      ]
+    },
+    {
+      "id": "runner-deadline-durable-retirement",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_failure.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_intent.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_deadline_retirement_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_storage_outage_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_pipeline_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-deadline-retirement-20261013.md"
+      ],
+      "required_text": [
+        "runner deadline retains intent across loss before delivery and isolates later same-job work",
+        "rejected deadline write preserves its waiter and cannot accept late success",
+        "stale runner only stops its own task after a deadline loses its claim",
+        "revoked Orchestra authority cannot persist a runner deadline or cancel an Agent",
+        "Ordinary failure and explicit user cancellation retain their existing behavior",
+        "Failed commits cannot establish durable intent"
+      ]
+    },
+    {
+      "id": "watchdog-durable-exact-target-cancellation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_intent.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_store.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_failure.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_scan.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_execution_gate.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_intent_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_pipeline_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-durable-cancellation-20261013.md"
+      ],
+      "required_text": [
+        "watchdog commit survives loss before cancellation delivery without selecting later same-job work",
+        "failed retirement cannot cancel or change the original gate reservation",
+        "reservation and target writes must succeed before authorization; lost ack retries the same target",
+        "changed endpoint session is never contacted and bounded retries stay unresolved",
+        "bound target is immutable across retry and old delivery tokens cannot finish it",
+        "Runner-local deadlines, ordinary failure cleanup and explicit user cancellation",
+        "an acknowledgement is not proof of execution termination"
+      ]
+    },
+    {
+      "id": "workflow-captured-request-cancellation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_execution_gate.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_dispatch_cancellation.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_execution_cancellation.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_cancellation.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_inspection.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_dispatch_cancellation_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_job_cancellation_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_pipeline_test.exs",
+        "apps/web/test/support/scoped_cancellation_agent.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-scoped-cancellation-20261013.md"
+      ],
+      "required_text": [
+        "captured request remains exact when a later dispatch reuses the same job id",
+        "replaced endpoint session, moved address and removed endpoint never receive a probe",
+        "lost acknowledgement stays unknown and forged success is not accepted",
+        "capacity limits reject the entire snapshot before side effects",
+        "Durable restart cancellation delivery remains open",
+        "A cancellation acknowledgement is not proof of termination"
+      ]
+    },
+    {
       "id": "periodic-watchdog-atomic-workflow-retirement",
       "status": "proven",
       "grade": "verified",
@@ -51,7 +222,7 @@
       ],
       "required_text": [
         "verify_native_dispatch",
-        "AgentJobCancellation.stop_dispatch(task, job_id)",
+        "WorkflowRecoveryCoordinator.expire(job_id, claim, message)",
         "workflow deadline retains an in-flight native attempt after killing its transport",
         "invalid failure text still rejects the whole transaction with uncertain evidence",
         "rejected job progress cannot publish blocked recovery ahead of the job",

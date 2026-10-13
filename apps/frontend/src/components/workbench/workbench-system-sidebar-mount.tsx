@@ -12,6 +12,7 @@ import { WorkbenchSystemInstallLayoutCard } from "@/components/workbench/system/
 import { WorkbenchSystemInstallPolicyMount } from "@/components/workbench/system/workbench-system-install-policy-mount";
 import { buildWorkbenchLanguagePackPresentation } from "@/components/workbench/system/workbench-system-language-pack-presentation";
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
+import { DurableDirectRecoveryPanel } from "@/components/workbench/system/durable-direct-recovery-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
 import {
   getWorkbenchProtocolAgentCopy,
@@ -355,6 +356,10 @@ export function WorkbenchSystemSidebarMount({
         />
       }
       runtimeContent={
+        <>
+        {frontendRuntimeMode === "direct_mesh_gui" ?
+          <DurableDirectRecoveryPanel language={language} endpointsText={directMeshEndpointsText}
+            backendTarget={backendTarget.baseUrl} accessToken={directMeshApiToken} invoke={invokeScriptAction} /> : null}
         <WorkbenchSystemRuntimePanel
           language={language}
           storageCopy={t}
@@ -456,6 +461,7 @@ export function WorkbenchSystemSidebarMount({
           watchdogStatus={healthWatchdogOnline ? t.online : t.offline}
           watchdogRows={runtimeWatchdogRows}
         />
+        </>
       }
       dataContent={
         <WorkbenchSystemDataMount

@@ -1,0 +1,51 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createDirectExecutionJournalClient, installDirectExecutionJournalHost, validateDirectExecutionIntent } from "../ui/direct-execution-journal-bridge.js";
+const protocol = "kyuubiki:direct-execution-journal/v1";
+const intent = { scope: "a".repeat(64), endpoint: "agent:5001", study_kind: "axial_bar_1d", execution_id: "b".repeat(32), created_at: 1 };
+function events() {
+  const listeners = new Set();
+  return { addEventListener: (_, fn) => listeners.add(fn), removeEventListener: (_, fn) => listeners.delete(fn),
+    emit: value => { for (const fn of listeners) fn(value); }, listeners };
+}
+const settle = () => new Promise(resolve => setImmediate(resolve));
+test("native bridge only accepts bounded identities from its known frame", async () => {
+  const host = events(), calls = [], replies = [];
+  const frame = { contentWindow: { postMessage: (value, origin) => replies.push({ value, origin }) } };
+  const stop = installDirectExecutionJournalHost(frame, async (command, payload) => { calls.push({ command, payload }); return []; }, host);
+  const event = { source: frame.contentWindow, origin: "http://127.0.0.1:3000", data: { type: protocol, id: "one", action: "list" } };
+  for (const bad of [{ ...event, source: {} }, { ...event, origin: "https://elsewhere.test" },
+    { ...event, data: { ...event.data, path: "elsewhere" } }, { ...event, data: { ...event.data, action: "exec" } },
+    { ...event, data: { ...event.data, action: "reserve", intent: { ...intent, token: "secret" } } }]) host.emit(bad);
+  await settle(); assert.equal(calls.length, 0);
+  host.emit(event); await settle();
+  assert.deepEqual(calls, [{ command: "direct_execution_journal", payload: { payload: { action: "list" } } }]);
+  assert.equal(replies[0].origin, event.origin); assert.equal(replies[0].value.ok, true);
+  stop(); assert.equal(host.listeners.size, 0);
+});
+test("strict journal metadata rejects payloads, unknown studies and noncanonical endpoints", () => {
+  for (const value of [{ ...intent, model: {} }, { ...intent, endpoint: "agent:05001" }, { ...intent, study_kind: "new" }, { ...intent, created_at: Infinity }]) {
+    assert.throws(() => validateDirectExecutionIntent(value));
+  }
+});
+test("desktop client discovers only with metadata-free reads; writes target the verified shell", async () => {
+  const host = events(), messages = [];
+  host.parent = { postMessage(data, origin) { messages.push({ data, origin }); } };
+  Object.assign(host, { crypto: globalThis.crypto, location: { search: "?desktopLayout=1" }, setTimeout, clearTimeout });
+  const client = createDirectExecutionJournalClient(host, 1000);
+  const pending = client.reserve(intent);
+  assert.equal(messages[0].data.action, "list"); assert.equal(messages[0].origin, "*"); assert.equal(messages[0].data.intent, undefined);
+  host.emit({ source: host.parent, origin: "https://untrusted.test", data: { type: `${protocol}:result`, id: messages[0].data.id, ok: true, result: [] } });
+  assert.equal(messages.length, 1);
+  host.emit({ source: host.parent, origin: "tauri://localhost", data: { type: `${protocol}:result`, id: messages[0].data.id, ok: true, result: [] } });
+  await settle();
+  assert.equal(messages[1].origin, "tauri://localhost"); assert.deepEqual(messages[1].data.intent, intent);
+  host.emit({ source: host.parent, origin: "tauri://localhost", data: { type: `${protocol}:result`, id: messages[1].data.id, ok: true, result: { is_new: true, intent } } });
+  assert.deepEqual(await pending, { is_new: true, intent }); client.dispose();
+});
+test("missing desktop host fails closed rather than using a memory journal", async () => {
+  const host = events(); Object.assign(host, { parent: { postMessage() {} }, crypto: globalThis.crypto,
+    location: { search: "?desktopLayout=1" }, setTimeout, clearTimeout });
+  const client = createDirectExecutionJournalClient(host, 5);
+  await assert.rejects(client.reserve(intent), /journal_unavailable/); client.dispose();
+});

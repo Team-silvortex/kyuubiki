@@ -16,6 +16,9 @@ const RESULT_TTL: Duration = Duration::from_secs(10 * 60);
 const MAX_CHUNK_LIMIT: usize = 1000;
 static NEXT_JOB_ID: AtomicU64 = AtomicU64::new(1);
 
+#[path = "direct_mesh_recovery_gateway.rs"]
+mod recovery;
+
 #[derive(Clone)]
 pub(crate) struct DirectMeshGateway {
     config: Arc<GatewayConfig>,
@@ -71,6 +74,10 @@ impl DirectMeshGateway {
         match (request.method.as_str(), request.path.as_str()) {
             ("POST", "/api/direct-mesh/agents") => self.inspect_agents(request),
             ("POST", "/api/direct-mesh/solve") => self.run_study(request),
+            ("POST", "/api/direct-mesh/tasks") => self.durable_task(request, true),
+            ("POST", "/api/direct-mesh/tasks/inspect") => self.durable_task(request, false),
+            ("POST", "/api/direct-mesh/tasks/list") => self.durable_control(request, false),
+            ("POST", "/api/direct-mesh/tasks/cancel") => self.durable_control(request, true),
             ("GET" | "HEAD", path) if path.starts_with("/api/direct-mesh/results/") => {
                 self.fetch_result(request)
             }
@@ -129,6 +136,81 @@ impl DirectMeshGateway {
                 "agents": agents,
             }),
         )
+    }
+
+    fn durable_task(&self, request: &HttpRequest, submit: bool) -> HttpResponse {
+        let body = match parse_json_object(request) {
+            Ok(body) => body,
+            Err(response) => return response,
+        };
+        let id = match body.get("execution_id").and_then(Value::as_str) {
+            Some(id)
+                if id.len() == 32
+                    && id
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) =>
+            {
+                id
+            }
+            _ => {
+                return json_response(
+                    400,
+                    json!({"error":"execution_id must be 32 lowercase hex characters"}),
+                );
+            }
+        };
+        let endpoints = match self.resolve_endpoints(body.get("endpoints")) {
+            Ok(endpoints) if endpoints.len() == 1 => endpoints,
+            Ok(_) => {
+                return json_response(
+                    400,
+                    json!({"error":"durable execution requires exactly one pinned Agent endpoint"}),
+                );
+            }
+            Err(error) => return json_response(400, json!({"error":error})),
+        };
+        let (method, params) = if submit {
+            let method = match body
+                .get("study_kind")
+                .and_then(Value::as_str)
+                .and_then(method_for_study)
+            {
+                Some(method) => method,
+                None => {
+                    return json_response(400, json!({"error":"unsupported durable direct study"}));
+                }
+            };
+            let input = match body.get("input") {
+                Some(Value::Object(input)) => Value::Object(input.clone()),
+                _ => return json_response(400, json!({"error":"input must be an object"})),
+            };
+            (
+                "submit_durable_agent_task",
+                json!({"execution_id":id, "method":method, "params":input}),
+            )
+        } else {
+            ("fetch_durable_agent_execution", json!({"execution_id":id}))
+        };
+        // Never use the multi-endpoint solver failover after an uncertain dispatch.
+        let outcome = crate::direct_mesh_rpc::request(&endpoints[0], method, params).and_then(
+            |(execution, progress)| {
+                validate_durable_report(&execution, id)?;
+                Ok((execution, progress))
+            },
+        );
+        match outcome {
+            Ok((execution, _)) => json_response(
+                200,
+                json!({"execution":execution,
+                "endpoint":endpoints[0], "gateway_runtime":"rust-native"}),
+            ),
+            Err(error) => json_response(
+                502,
+                json!({"error":error, "execution_id":id,
+                "endpoint":endpoints[0], "automatic_replay_authorized":false,
+                "required_action":"inspect_execution_on_original_agent"}),
+            ),
+        }
     }
 
     fn run_study(&self, request: &HttpRequest) -> HttpResponse {
@@ -321,6 +403,52 @@ impl DirectMeshGateway {
     }
 }
 
+fn validate_durable_report(report: &Value, id: &str) -> Result<(), String> {
+    let status = report.get("status").and_then(Value::as_str);
+    let response = &report["response"];
+    let identity = ["request_id", "process_instance_id", "method"]
+        .iter()
+        .all(|field| {
+            report[field]
+                .as_str()
+                .is_some_and(|value| !value.is_empty())
+        })
+        && report["request_digest"].as_str().is_some_and(|digest| {
+            digest.len() == 64
+                && digest
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        })
+        && report["resumable"] == false;
+    let terminal_identity = response["rpc_version"] == 1 && response["id"] == report["request_id"];
+    let valid_state = match status {
+        Some("completed") => {
+            response["ok"] == true
+                && response["error"].is_null()
+                && !response["result"].is_null()
+                && terminal_identity
+        }
+        Some("failed") => {
+            response["ok"] == false
+                && response["result"].is_null()
+                && response["error"]["code"].is_string()
+                && response["error"]["message"].is_string()
+                && terminal_identity
+        }
+        Some("running" | "outcome_unknown" | "not_found") => response.is_null(),
+        _ => false,
+    };
+    if report["schema_version"] != "kyuubiki.agent-durable-execution/v1"
+        || report["execution_id"] != id
+        || report["automatic_replay_authorized"] != false
+        || (status != Some("not_found") && !identity)
+        || !valid_state
+    {
+        return Err("Agent returned an invalid or mismatched durable execution report".into());
+    }
+    Ok(())
+}
+
 fn parse_json_object(request: &HttpRequest) -> Result<Map<String, Value>, HttpResponse> {
     if request.body.is_empty() {
         return Ok(Map::new());
@@ -386,7 +514,7 @@ fn bool_env(name: &str) -> Result<Option<bool>, String> {
     }
 }
 
-fn method_for_study(kind: &str) -> Option<&'static str> {
+pub(crate) fn method_for_study(kind: &str) -> Option<&'static str> {
     Some(match kind {
         "axial_bar_1d" => "solve_bar_1d",
         "thermal_bar_1d" => "solve_thermal_bar_1d",
@@ -464,3 +592,7 @@ mod tests {
         assert!(!constant_time_equal(b"token", b"toker"));
     }
 }
+
+#[cfg(test)]
+#[path = "direct_mesh_durable_tests.rs"]
+mod durable_tests;

@@ -11,7 +11,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeDispatchPipelineTest do
   alias KyuubikiWeb.Playground.{AgentClient, AgentPool}
 
   alias KyuubikiWeb.TestSupport.{
-    CancellableSolverAgent,
+    ScopedCancellationAgent,
     ControlledSolverAgent,
     WorkflowCommitFixture
   }
@@ -208,7 +208,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeDispatchPipelineTest do
 
     on_exit(fn -> Application.put_env(:kyuubiki_web, Watchdog, watchdog) end)
 
-    start_supervised!({CancellableSolverAgent, {self(), "deadline-agent"}})
+    start_supervised!({ScopedCancellationAgent, {self(), "deadline-agent"}})
     assert_receive {:cancellable_agent_ready, "deadline-agent", port}
     config = Application.get_env(:kyuubiki_web, AgentPool)
     [endpoint] = config[:endpoints]
@@ -236,12 +236,23 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeDispatchPipelineTest do
     assert final[Envelope.internal_key()]["envelope"] ==
              before[Envelope.internal_key()]["envelope"]
 
+    assert %{"entries" => [entry]} = final[Envelope.internal_key()]["cancellation_intent"]
+    assert entry["request_id"] == request["id"]
+
     refute Map.has_key?(result["artifacts"], "diagnose.payload")
     assert {:ok, [record]} = Journal.lookup_task(task_id)
     assert record["state"] == "dispatch_boundary_unconfirmed"
     assert_receive {:agent_request, "deadline-agent", _, cancellation}, 2_000
-    assert cancellation["method"] == "cancel_job"
+    assert cancellation["method"] == "cancel_execution"
     assert cancellation["params"]["job_id"] == job
+    assert cancellation["params"]["request_id"] == request["id"]
+    assert cancellation["params"]["process_instance_id"] == "deadline-agent-process"
+    assert cancellation["params"]["generation"] == 1
+    acknowledged = cancellation_acknowledged(job)
+
+    assert Map.delete(acknowledged[Envelope.internal_key()], "cancellation_intent") ==
+             Map.delete(final[Envelope.internal_key()], "cancellation_intent")
+
     send(agent, {:reply, %{"ok" => true, "result" => %{}}})
 
     assert :ok = stop_supervised(Journal)
@@ -249,7 +260,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeDispatchPipelineTest do
     WorkflowCommitFixture.restart_coordinator()
     assert Coordinator.recover_now()["recovered"] == 0
     {:ok, restarted} = AnalysisResultStore.get(job)
-    assert restarted[Envelope.internal_key()] == final[Envelope.internal_key()]
+    assert restarted[Envelope.internal_key()] == acknowledged[Envelope.internal_key()]
     refute_receive {:solver_request, _, _}, 30
     refute_receive {:agent_request, _, _, _}, 30
     assert [%{consecutive_failures: 0}] = AgentPool.endpoints()
@@ -260,7 +271,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeDispatchPipelineTest do
          ctx do
       watchdog = Application.get_env(:kyuubiki_web, Watchdog, [])
       on_exit(fn -> Application.put_env(:kyuubiki_web, Watchdog, watchdog) end)
-      start_supervised!({CancellableSolverAgent, {self(), "watchdog-agent"}})
+      start_supervised!({ScopedCancellationAgent, {self(), "watchdog-agent"}})
       assert_receive {:cancellable_agent_ready, "watchdog-agent", port}
       config = Application.get_env(:kyuubiki_web, AgentPool)
       [endpoint] = config[:endpoints]
@@ -303,8 +314,16 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeDispatchPipelineTest do
                before[Envelope.internal_key()][Evidence.key()]
 
       assert_receive {:agent_request, "watchdog-agent", _, cancel}, 2_000
-      assert cancel["method"] == "cancel_job"
+      assert cancel["method"] == "cancel_execution"
       assert cancel["params"]["job_id"] == job
+      assert cancel["params"]["request_id"] == request["id"]
+      assert cancel["params"]["process_instance_id"] == "watchdog-agent-process"
+      assert cancel["params"]["generation"] == 1
+      acknowledged = cancellation_acknowledged(job)
+
+      assert Map.delete(acknowledged[Envelope.internal_key()], "cancellation_intent") ==
+               Map.delete(final[Envelope.internal_key()], "cancellation_intent")
+
       assert Task.yield(bystander, 0) == nil
       send(other_agent, {:reply, %{"ok" => true, "result" => %{"unrelated" => true}}})
       assert {:ok, %{"unrelated" => true}} = Task.await(bystander, 2_000)
@@ -315,10 +334,32 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeDispatchPipelineTest do
       WorkflowCommitFixture.restart_coordinator()
       assert Coordinator.recover_now()["recovered"] == 0
       {:ok, restarted} = AnalysisResultStore.get(job)
-      assert restarted[Envelope.internal_key()] == final[Envelope.internal_key()]
+      assert restarted[Envelope.internal_key()] == acknowledged[Envelope.internal_key()]
       refute_receive {:agent_request, _, _, _}, 30
       refute_receive {:solver_request, _, _}, 30
       assert [%{consecutive_failures: 0}] = AgentPool.endpoints()
+    end
+  end
+
+  defp cancellation_acknowledged(job, attempts \\ 200)
+
+  defp cancellation_acknowledged(_, 0),
+    do: flunk("cancellation acknowledgement was not persisted")
+
+  defp cancellation_acknowledged(job, attempts) do
+    {:ok, runtime} = AnalysisResultStore.get(job)
+
+    if get_in(runtime, [
+         Envelope.internal_key(),
+         "cancellation_intent",
+         "entries",
+         Access.at(0),
+         "status"
+       ]) == "requested" do
+      runtime
+    else
+      Process.sleep(5)
+      cancellation_acknowledged(job, attempts - 1)
     end
   end
 

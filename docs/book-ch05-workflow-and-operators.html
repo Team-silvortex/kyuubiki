@@ -268,15 +268,57 @@
           <li>Ordinary coordinator failure now verifies native dispatch evidence before
             cleanup. The workflow runner deadline cannot discard an in-flight attempt
             merely because its local transport was killed: unresolved or damaged evidence
-            retains blocked recovery. It also captures actual targets before shutdown for
-            best-effort cancellation, without treating the acknowledgement as execution
+            retains blocked recovery. It now commits actual targets with failure before
+            shutdown and cancellation, without treating the acknowledgement as execution
             completion. Confirmed failures still clean up normally. Local controlled-TCP
             regressions cover this path. Periodic watchdog decisions now use the same
             owning coordinator, require the original scanned job, and atomically update
             job/recovery state before stopping the local runner. Stale decisions and
             rejected commits leave live work intact; unrelated work on the same Agent
-            continues. No automatic repair of historical inconsistencies or durable
-            physical Agent shutdown is claimed.</li>
+            continues. Automatic cleanup now captures original RPC IDs and cancels
+            only matching observed process/generation targets on original configured
+            endpoint sessions, without job-wide fallback. Even later same-job requests
+            are excluded. Periodic watchdog and runner deadline retirement retain a bounded,
+            sealed intent atomically with failure. It persists attempts and the exact
+            observed target before sending; startup/explicit recovery can retry that
+            target at most three times without selecting a new generation. Exhaustion
+            remains unresolved, not proof of termination. A bounded sweep is not a retry
+            daemon; work left while it is busy needs another sweep. Runner deadlines
+            recheck the active claim before commit, retain the waiter on selected transient
+            write failures and never turn late output into parent success. Authority loss
+            still fences local work; stale runners cannot cancel a newer execution.
+            Ordinary-failure cancellation and explicit user cancellation are not upgraded. No automatic
+            historical repair or physical Agent shutdown qualification is claimed. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md">watchdog intent contract</a> and
+            <a href="../reports/workflow-deadline-retirement-20261013.md">runner deadline extension</a>.</li>
+          <li>Ordinary failures and native/solve/branch checkpoint blocks now wait through
+            selected terminal-write failures rather than silently exiting into runner-loss
+            recovery. The original reason and registered runner remain; only the fenced
+            persistence operation retries, not the computation. New claims, competing
+            terminal decisions and lost authority stop the old finalizer. Rejected solve
+            checkpoints cannot publish successful output. This is not a durable uncommitted
+            failure log or parallel-branch recovery. Runner/process loss and watchdog policy
+            still use existing recovery rules. See the
+            <a href="../reports/workflow-failure-retirement-20261013.md">failure persistence report</a>.</li>
+          <li>After the whole graph succeeds, final publication now uses the same fenced
+            terminal-write wait. Selected transient failures retain the original shaped
+            output without calling the solver again. New claims, terminal decisions,
+            deletion and lease loss prevent late publication. Known encoding/schema
+            failures are non-retryable and do not expose result contents in their message.
+            This does not turn a rejected intermediate checkpoint into success or
+            change watchdog policy. See the
+            <a href="../reports/workflow-completion-retry-20261013.md">final publication report</a>.</li>
+          <li>A follow-up stages the final shaped result durably before publication.
+            After process loss, an identity/digest/claim-checked handoff starts only
+            a finalizer, not the graph, and does not increment execution attempts.
+            Corrupt or stale handoffs cannot fall back to recomputation. The private
+            record is bounded (64 MiB result, 2,000,000 JSON nodes, depth/string limits)
+            and pruned on ordinary terminal transitions; unsupported output rejects
+            without a false durability claim. SQLite WAL/FULL and actual child-BEAM
+            SIGKILL/restart tests cover the pending-publication boundary on SQLite and
+            JSON. This is not physical power-loss, hardware-cache or live PostgreSQL
+            qualification. See the
+            <a href="../reports/workflow-completion-checkpoint-20261013.md">durable publication report</a>.</li>
           <li>Orchestra also binds recoverable solves, condition decisions and
             native receipts to the actual consumed path through rebuilt local
             nodes. A join selecting another source must not reuse an old result

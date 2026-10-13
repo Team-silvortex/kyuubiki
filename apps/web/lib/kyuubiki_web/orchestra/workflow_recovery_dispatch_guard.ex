@@ -60,6 +60,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard do
   def next_action(:workflow_native_result_checkpoint_invalid),
     do: "inspect_native_result_checkpoint_before_explicit_resubmit"
 
+  def next_action(:workflow_completion_checkpoint_invalid),
+    do: "inspect_completion_checkpoint_without_reexecuting_workflow"
+
   def next_action(_reason), do: "supply_verified_checkpoint_or_resubmit"
 
   # Also used before ordinary failure cleanup; it does not claim or replay work.

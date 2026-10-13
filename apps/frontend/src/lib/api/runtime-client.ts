@@ -20,6 +20,8 @@ import type {
 } from "./workflow-types.ts";
 import type { JobEnvelope, JobHistoryPayload, JobState } from "./fem-shared.ts";
 import { requestJson } from "./core.ts";
+import { createDurableDirectApiClient } from "./durable-direct-client.ts";
+import { createDurableDirectControlClient } from "./durable-direct-controls.ts";
 import {
   normalizeDirectMeshStudyInput,
   type DirectMeshStudyKind,
@@ -173,6 +175,8 @@ export function createDirectMeshSolve<TResult>(
 
 export function createRuntimeApiClient(request: RuntimeRequestJson) {
   return {
+    ...createDurableDirectApiClient(request),
+    ...createDurableDirectControlClient(request),
     fetchJobStatus<TResult>(jobId: string) {
       return request<JobEnvelope<TResult>>(`/api/v1/jobs/${jobId}`, { method: "GET", cache: "no-store" });
     },
