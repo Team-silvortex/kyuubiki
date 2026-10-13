@@ -11,6 +11,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   alias KyuubikiWeb.Storage.DurableJson
   alias KyuubikiWeb.Orchestra.WorkflowSolveCheckpoint
   alias KyuubikiWeb.Orchestra.WorkflowBranchCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowNativeDispatchEvidence
+  alias KyuubikiWeb.Orchestra.WorkflowNativeResultCheckpoint
   alias KyuubikiWeb.Orchestra.WorkflowExecutionEnvelope
   alias KyuubikiWeb.WorkflowTaskDigestPolicy
 
@@ -61,7 +63,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
          "created_at" => now,
          "updated_at" => now,
          "history" => [event("prepared", 0, 0, now, %{})]
-       }}
+       }
+       |> WorkflowNativeDispatchEvidence.initialize(orchestration_context)}
     end
   rescue
     _error in [Jason.EncodeError, Protocol.UndefinedError, ArgumentError] ->
@@ -237,6 +240,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
       "solve_checkpoint_count" => checkpoint_count(recovery, WorkflowSolveCheckpoint.key()),
       "branch_checkpoint_policy" => WorkflowBranchCheckpoint.policy(),
       "branch_checkpoint_count" => checkpoint_count(recovery, WorkflowBranchCheckpoint.key()),
+      "native_dispatch_evidence_policy" => WorkflowNativeDispatchEvidence.policy(),
+      "native_result_checkpoint_policy" => WorkflowNativeResultCheckpoint.policy(),
+      "native_result_checkpoint_count" =>
+        checkpoint_count(recovery, WorkflowNativeResultCheckpoint.key()),
+      "native_dispatch_evidence_count" =>
+        checkpoint_count(recovery, WorkflowNativeDispatchEvidence.key()),
       "updated_at" => Map.get(recovery, "updated_at"),
       "history" => public_history(Map.get(recovery, "history", []))
     }
@@ -333,7 +342,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
       Map.drop(recovery, [
         "envelope",
         WorkflowSolveCheckpoint.key(),
-        WorkflowBranchCheckpoint.key()
+        WorkflowBranchCheckpoint.key(),
+        WorkflowNativeResultCheckpoint.key(),
+        WorkflowNativeDispatchEvidence.key()
       ])
 
   defp maybe_prune_terminal_envelope(recovery, _state), do: recovery

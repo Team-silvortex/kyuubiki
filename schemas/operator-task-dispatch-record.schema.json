@@ -14,7 +14,7 @@
     "operator_id": {"$ref": "#/$defs/identity"},
     "program_id": {"$ref": "#/$defs/identity"},
     "endpoint_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "state": {"enum": ["dispatch_boundary_unconfirmed", "outcome_unknown", "observed_executed", "observed_failed", "observed_blocked", "not_dispatched"]},
+    "state": {"enum": ["dispatch_boundary_unconfirmed", "outcome_unknown", "observed_executed", "observed_failed", "observed_blocked", "not_dispatched"], "description": "The unconfirmed state can become one observation only. Repeated identical observations verify storage without rewriting; conflicting observations, including upgrades from unknown, are rejected. No state authorizes replay by itself."},
     "created_at_ms": {"type": "integer", "minimum": 0},
     "updated_at_ms": {"type": "integer", "minimum": 0}
   },

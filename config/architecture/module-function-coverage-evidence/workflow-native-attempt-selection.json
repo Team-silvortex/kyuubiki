@@ -1,0 +1,306 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local service recovery rejects ambiguous native success selection and rechecks journal observations after receipt retrieval. Observations seal once; live reads verify inventory and selected disk records. Managed native workflows persist bounded attempt identities before RPC, fencing missing journal history after restart and rejecting failed evidence commits before transport. Active/recovery-blocked parent history is protected within the existing journal cap; matching ordinary terminal parents release it. Compact retention queries stay outside the journal process, and storage failure cannot prune evidence or poison healthy reads. The shared receipt API also revalidates the exact selected observation after lookup, rejecting stale completions without replay or retention renewal. This is bounded SQLite/memory source evidence, not new live Agent, atomic cross-store publication, joint rollback, live PostgreSQL, power-loss or installed qualification.",
+  "evidence_claims": [
+    {
+      "id": "periodic-watchdog-atomic-workflow-retirement",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/jobs/watchdog.ex",
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_failure.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/storage/failure_boundary.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_watchdog_failure_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_pipeline_test.exs",
+        "apps/web/test/kyuubiki_web/storage/failure_boundary_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-watchdog-finalization-20261013.md"
+      ],
+      "required_text": [
+        "fail_observed",
+        "periodic watchdog commits local workflow failure with its recovery record",
+        "failed durable finalization does not kill the runner and a repaired retry succeeds",
+        "a stale scan cannot overwrite a fresh heartbeat or its recovery state",
+        "an Ecto registry entry lost during repo restart is a bounded storage outage",
+        "unrelated ETS errors including direct registry access are not swallowed",
+        "Retirement commit and external cancellation are not one atomic operation"
+      ]
+    },
+    {
+      "id": "native-failure-finalization-retains-uncertain-dispatch",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_failure.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_dispatch_guard.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_failure_retention_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_pipeline_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-native-failure-finalization-20261013.md"
+      ],
+      "required_text": [
+        "verify_native_dispatch",
+        "AgentJobCancellation.stop_dispatch(task, job_id)",
+        "workflow deadline retains an in-flight native attempt after killing its transport",
+        "invalid failure text still rejects the whole transaction with uncertain evidence",
+        "rejected job progress cannot publish blocked recovery ahead of the job",
+        "A cancellation acknowledgement is not proof of termination",
+        "Separate periodic watchdog reconciliation remains open"
+      ]
+    },
+    {
+      "id": "managed-native-live-uncertainty-propagation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_task_dispatch.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_job_cancellation.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_pipeline_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_task_uncertain_dispatch_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_job_cancellation_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_catalog_thermal_job_api_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-managed-dispatch-uncertainty-20261013.md"
+      ],
+      "required_text": [
+        "operator_task_dispatch_outcome_unknown",
+        "on_dispatch_reserved",
+        "concurrent cancellation does not hide a disconnected native attempt",
+        "an uncertain task does not block unrelated work on a healthy peer",
+        "Standalone calls without that callback retain their existing",
+        "Six red coordinator/TCP regressions",
+        "handoff availability window remains open"
+      ]
+    },
+    {
+      "id": "bounded-native-success-receipt-handoff",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_native_result_checkpoint.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_native_result_recovery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_checkpoint_store.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_dispatch_guard.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+        "apps/web/lib/kyuubiki_web/storage/dispatch_retention_store.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_result_handoff_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_result_checkpoint_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_result_restart_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_recovery_block_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_retention_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-native-result-handoff-20261013.md"
+      ],
+      "required_text": [
+        "native_result_checkpoint_policy",
+        "observation_sha256",
+        "successful native output is handed off before it escapes the runtime",
+        "a recovered original receipt is handed off before downstream continuation",
+        "checkpoint store loss is not silently treated as an empty cache",
+        "entry and aggregate byte caps do not evict existing completed evidence",
+        "a retained native result cannot bypass missing dispatch history",
+        "loss of the orchestration lease cannot read or write a native checkpoint",
+        "handoff survives application restart with Agent offline",
+        "retained_native_result",
+        "atomic producer-to-database protocol remain open"
+      ]
+    },
+    {
+      "id": "public-original-receipt-post-lookup-observation-revalidation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_journal.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_result.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_native_result_recovery.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_result_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_dispatch_storage_api_test.exs",
+        "schemas/operator-task-dispatch-result.schema.json",
+        "docs/data-lifecycle.html",
+        "reports/operator-dispatch-result-revalidation-20261013.md"
+      ],
+      "required_text": [
+        "operator_task_dispatch_observation_changed",
+        "a valid receipt cannot escape after its journal file disappears during retrieval",
+        "eviction during lookup cannot return a receipt detached from its original observation",
+        "public receipt lookup revalidates after TCP reply across",
+        "revalidation stays scoped to the selected observation, not unrelated payloads",
+        "malformed observation verification cannot poison the healthy journal",
+        "2,955 total, 2,884 passed, 71 conditional skips,",
+        "point-in-time integrity check"
+      ]
+    },
+    {
+      "id": "active-parent-journal-retention-and-terminal-release",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_journal.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_retention.ex",
+        "apps/web/lib/kyuubiki_web/storage/dispatch_retention_store.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_retention_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_evidence_test.exs",
+        "schemas/operator-task-dispatch-inspection.schema.json",
+        "docs/data-lifecycle.html",
+        "reports/operator-dispatch-active-retention-20261013.md"
+      ],
+      "required_text": [
+        "protected_within_existing_capacity",
+        "reject_dispatch_without_pruning_or_quarantine",
+        "active parent evidence survives unrelated history turnover and journal restart",
+        "protected history cannot exceed capacity and terminal release restores admission",
+        "a saturated single-connection pool cannot lock journal readers behind pruning",
+        "temporary storage loss neither prunes nor quarantines a healthy journal",
+        "committed native evidence survives history turnover before and after restart",
+        "2,927 total, 2,856 passed,",
+        "No new Engine or physical-computation qualification is claimed"
+      ]
+    },
+    {
+      "id": "native-workflow-attempt-selection-and-observation-revalidation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_native_result_recovery.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_attempt_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_result_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_recovery_block_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/native-workflow-attempt-selection-20261012.md"
+      ],
+      "required_text": [
+        "dispatch_attempt_ambiguous",
+        "dispatch_observation_changed",
+        "ambiguity remains blocked after journal restart without rewriting old attempts",
+        "a single success with non-dispatched or foreign peers remains recoverable",
+        "journal loss after a valid receipt arrives cannot publish or authorize fresh execution",
+        "selected attempt eviction during receipt retrieval cannot authorize stale reuse",
+        "on_error skip cannot turn an unavailable recovery receipt into a partial success",
+        "2,632 total, 2,561 passed, 71 conditional skips",
+        "No new native Engine test coverage is claimed"
+      ]
+    },
+    {
+      "id": "dispatch-observation-sealing-and-request-failure-isolation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_journal.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_files.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_transition_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_journal_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_result_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_attempt_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_task_dispatch_observation_test.exs",
+        "schemas/operator-task-dispatch-inspection.schema.json",
+        "docs/data-lifecycle.html",
+        "reports/operator-dispatch-observation-transitions-20261012.md"
+      ],
+      "required_text": [
+        "operator_task_dispatch_transition_rejected",
+        "operator_task_dispatch_state_invalid",
+        "verify_without_rewrite",
+        "malformed finish states reject only the request, not unrelated dispatches",
+        "concurrent contradictory completions seal exactly one observation across restart",
+        "duplicate observations do not refresh retention and evicted attempts never resurrect",
+        "recovering a retained receipt never rewrites a sealed unknown observation",
+        "a rejected late completion cannot poison a valid unique recovery",
+        "a delayed TCP success respects an already sealed",
+        "2,810 total, 2,739 passed, 71 conditional skips"
+      ]
+    },
+    {
+      "id": "dispatch-live-read-integrity-and-recovery-fencing",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_journal.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_files.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_read_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_attempt_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_dispatch_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_dispatch_storage_api_test.exs",
+        "schemas/operator-task-dispatch-inspection.schema.json",
+        "schemas/examples.operator-task-dispatch-inspection.json",
+        "docs/data-lifecycle.html",
+        "reports/operator-dispatch-read-integrity-20261013.md"
+      ],
+      "required_text": [
+        "verify_inventory_and_selected_records",
+        "legitimate absent and empty journals stay read-only until first dispatch",
+        "payload checks are scoped to selected evidence, not every unrelated record",
+        "storage repair requires explicit reload and preserves the original generation",
+        "full bounded inventory supports narrow and all-selected reads without retention writes",
+        "blocks cached successful native reuse",
+        "blocks coordinator recovery before a new claim",
+        "journal evidence before any Agent RPC",
+        "2,872 total, 2,801 passed,",
+        "71 conditional skips, zero failures"
+      ]
+    },
+    {
+      "id": "managed-native-pre-rpc-attempt-evidence-and-restart-fence",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_native_dispatch_evidence.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_checkpoint_store.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_dispatch_guard.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_task_dispatch.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_evidence_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_native_dispatch_pipeline_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_task_dispatch_evidence_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/workflow-native-dispatch-evidence-20261013.md"
+      ],
+      "required_text": [
+        "persist_attempt_identity_before_rpc",
+        "workflow_dispatch_evidence_missing",
+        "another valid attempt for the same task cannot replace lost evidence",
+        "loss between recovery lookup and reservation cannot be papered over by a new commit",
+        "real coordinator to TCP dispatch persists evidence before Agent work",
+        "durable callback prevents even opening the Agent connection",
+        "Legacy native workflows lacking the bucket are blocked, not backfilled",
+        "2,915 total, 2,844 passed,",
+        "retention availability solution",
+        "No installed"
+      ]
+    }
+  ]
+}

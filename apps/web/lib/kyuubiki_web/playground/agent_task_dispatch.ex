@@ -21,11 +21,14 @@ defmodule KyuubikiWeb.Playground.AgentTaskDispatch do
          opts
        ) do
     if params["mode"] == "execute" do
-      with {:ok, attempt} <- Journal.begin_dispatch(request, endpoint) do
+      with {:ok, attempt} <- Journal.begin_dispatch(request, endpoint),
+           :ok <- persist_attempt(opts, attempt) do
         request = put_in(request, ["params", "dispatch_attempt_id"], attempt)
         result = AgentRpcTransport.request(endpoint, id, request, progress, opts)
+        state = observed_state(params["task_ir"], result)
 
-        case Journal.finish_dispatch(attempt, observed_state(params["task_ir"], result)) do
+        case Journal.finish_dispatch(attempt, state) do
+          :ok when state == "outcome_unknown" -> unconfirmed(result, opts)
           :ok -> result
           {:error, _} -> {:error, :operator_task_dispatch_outcome_unknown}
         end
@@ -37,6 +40,49 @@ defmodule KyuubikiWeb.Playground.AgentTaskDispatch do
 
   defp dispatch(endpoint, id, request, progress, opts),
     do: AgentRpcTransport.request(endpoint, id, request, progress, opts)
+
+  # Managed parents bind recovery to each reserved attempt. Their uncertainty must
+  # not escape as a skippable error or a retry hint. Standalone routing is unchanged.
+  defp unconfirmed(result, opts) do
+    if is_function(Keyword.get(opts, :on_dispatch_reserved), 1),
+      do: unconfirmed(result),
+      else: result
+  end
+
+  # Preserve the transport cause for health accounting without permitting peer replay.
+  defp unconfirmed({:error, {:operator_task_rpc_error, _, _, _}}),
+    do: unconfirmed({:ok, nil})
+
+  defp unconfirmed({:error, reason}),
+    do: {:error, {:operator_task_dispatch_outcome_unknown, reason}}
+
+  defp unconfirmed({:ok, _receipt}),
+    do:
+      {:error,
+       {:operator_task_dispatch_outcome_unknown,
+        {:agent_transport_failure, :protocol, :unverified_operator_task_receipt}}}
+
+  # Keep an unconfirmed reservation on any callback failure. No RPC has been sent,
+  # but a failed/aborted storage acknowledgement is not permission to erase evidence.
+  defp persist_attempt(opts, attempt) do
+    case Keyword.get(opts, :on_dispatch_reserved) do
+      nil ->
+        :ok
+
+      callback when is_function(callback, 1) ->
+        case callback.(attempt) do
+          :ok -> :ok
+          _ -> {:error, :operator_task_dispatch_evidence_unavailable}
+        end
+
+      _ ->
+        {:error, :operator_task_dispatch_evidence_unavailable}
+    end
+  rescue
+    _ -> {:error, :operator_task_dispatch_evidence_unavailable}
+  catch
+    _, _ -> {:error, :operator_task_dispatch_evidence_unavailable}
+  end
 
   defp observed_state(_task, {:error, {:agent_transport_failure, :connect, _}}),
     do: "not_dispatched"

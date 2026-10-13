@@ -5,6 +5,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard do
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope, as: Envelope
   alias KyuubikiWeb.Orchestra.WorkflowSolveCheckpoint
   alias KyuubikiWeb.Orchestra.WorkflowBranchCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowNativeResultCheckpoint
+  alias KyuubikiWeb.Orchestra.WorkflowNativeDispatchEvidence, as: Evidence
   alias KyuubikiWeb.WorkflowNativeOperatorRuntime, as: Native
 
   def claim(job_id, recovery, session, reason, max_attempts, journal \\ Journal) do
@@ -13,8 +15,16 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard do
          {:ok, claimed, claim} <- Envelope.claim(recovery, session, reason),
          :ok <- verify_solve_checkpoints(claimed, job_id),
          :ok <- verify_branch_checkpoints(claimed, job_id),
-         :ok <- dispatch_fence(job_id, claimed, journal) do
+         :ok <- verify_native_result_checkpoints(claimed, job_id),
+         :ok <- verify_native_dispatch(job_id, claimed, journal) do
       {:ok, claimed, claim}
+    end
+  end
+
+  defp verify_native_result_checkpoints(recovery, job_id) do
+    case WorkflowNativeResultCheckpoint.verify(recovery, job_id) do
+      :ok -> :ok
+      _ -> {:error, :workflow_native_result_checkpoint_invalid}
     end
   end
 
@@ -44,15 +54,22 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard do
   def next_action(:workflow_branch_checkpoint_invalid),
     do: "inspect_branch_checkpoint_before_explicit_resubmit"
 
+  def next_action(:workflow_native_dispatch_evidence_invalid),
+    do: "inspect_native_dispatch_evidence_before_explicit_resubmit"
+
+  def next_action(:workflow_native_result_checkpoint_invalid),
+    do: "inspect_native_result_checkpoint_before_explicit_resubmit"
+
   def next_action(_reason), do: "supply_verified_checkpoint_or_resubmit"
 
-  defp dispatch_fence(job_id, recovery, journal) do
+  # Also used before ordinary failure cleanup; it does not claim or replay work.
+  def verify_native_dispatch(job_id, recovery, journal \\ Journal) do
     with {:ok, envelope} <- Envelope.execution(recovery) do
       context = envelope["orchestration_context"]
 
       if context["job_id"] == job_id do
         with {:ok, tasks} <- native_tasks(envelope["graph"], context) do
-          check_journal(job_id, tasks, journal)
+          check_journal(job_id, tasks, recovery, journal)
         end
       else
         {:error, :workflow_recovery_identity_mismatch}
@@ -74,10 +91,18 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard do
     end
   end
 
-  defp check_journal(_job_id, [], _journal), do: :ok
+  defp check_journal(_job_id, [], _recovery, _journal), do: :ok
 
-  defp check_journal(job_id, tasks, journal) do
-    case Journal.workflow_replay_fence(job_id, tasks, journal) do
+  defp check_journal(job_id, tasks, recovery, journal) do
+    if Evidence.verify(recovery, job_id) == :ok do
+      check_expected(job_id, tasks, Evidence.expected(recovery), journal)
+    else
+      {:error, :workflow_native_dispatch_evidence_invalid}
+    end
+  end
+
+  defp check_expected(job_id, tasks, expected, journal) do
+    case Journal.workflow_replay_fence(job_id, tasks, expected, journal) do
       :ok -> :ok
       {:error, :workflow_dispatch_outcome_unconfirmed} = blocked -> blocked
       {:error, reason} -> {:error, {:workflow_dispatch_journal_unavailable, reason}}

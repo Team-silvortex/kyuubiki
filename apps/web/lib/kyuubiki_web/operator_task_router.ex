@@ -158,6 +158,9 @@ defmodule KyuubikiWeb.OperatorTaskRouter do
   defp operator_task_error_code({:invalid_operator_task_batch_structure, _path, _reason}),
     do: "operator_task_batch_structure_invalid"
 
+  defp operator_task_error_code({:operator_task_checkpoint_evidence_invalid, _path}),
+    do: "operator_task_checkpoint_evidence_invalid"
+
   defp operator_task_error_code(
          {:invalid_operator_task_batch_checkpoint_structure, _path, _reason}
        ),

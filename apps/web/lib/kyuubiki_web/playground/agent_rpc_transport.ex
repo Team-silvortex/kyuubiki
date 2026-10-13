@@ -64,6 +64,7 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
              :operator_task_dispatch_journal_invalid,
              :operator_task_dispatch_journal_unavailable,
              :operator_task_dispatch_journal_full,
+             :operator_task_dispatch_evidence_unavailable,
              :operator_task_dispatch_outcome_unknown
            ],
       do: true

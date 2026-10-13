@@ -107,7 +107,7 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
     test "rejects a diagnostic receipt with stale #{field} and a fresh run recovers" do
       assert_rejected_then_recovered(
         &Map.put(&1, unquote(field), "stale-diagnostic-identity"),
-        "operator_task_execution_receipt_invalid"
+        "native_workflow_recovery_dispatch_unconfirmed"
       )
     end
   end
@@ -163,10 +163,19 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogThermalJobApiTest do
     assert failed["job"]["message"] =~ reason
     refute get_in(failed, ["result", "artifacts", "json_output.json"])
     assert {:ok, retained} = AnalysisResultStore.get(failed["job"]["job_id"])
-    assert retained["_workflow_recovery"]["state"] == "failed"
+    uncertain? = reason == "native_workflow_recovery_dispatch_unconfirmed"
+    expected_state = if uncertain?, do: "recovery_blocked", else: "failed"
+    assert retained["_workflow_recovery"]["state"] == expected_state
     refute Map.has_key?(retained["artifacts"], "extract_thermal_diagnostics.summary")
     refute Map.has_key?(retained["artifacts"], "json_output.json")
     assert Enum.map(retained["progress_events"], & &1["node_id"]) == completed_nodes
+
+    if uncertain? do
+      assert retained["_workflow_recovery"]["native_dispatch_evidence"]
+      assert [%{consecutive_failures: 1}] = AgentPool.endpoints()
+      # Explicitly re-register the repaired fixture before a new job, not a replay.
+      AgentPool.reload()
+    end
 
     recovered = submit_guard()
     assert recovered["job"]["status"] == "completed"

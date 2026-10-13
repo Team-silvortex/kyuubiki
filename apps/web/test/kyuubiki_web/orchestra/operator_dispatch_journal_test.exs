@@ -147,6 +147,10 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchJournalTest do
     {:ok, report} = Inspection.inspect_task(query(), journal: ctx.journal, endpoints: [])
     assert Jason.decode!(Jason.encode!(report["journal_policy"])) == sample["journal_policy"]
 
+    for {key, value} <- sample["journal_policy"] do
+      assert get_in(schema, ["properties", "journal_policy", "properties", key, "const"]) == value
+    end
+
     assert Jason.decode!(Jason.encode!(report["inspection_policy"])) ==
              sample["inspection_policy"]
 

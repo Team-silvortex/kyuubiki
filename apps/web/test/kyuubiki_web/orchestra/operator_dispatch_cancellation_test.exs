@@ -43,7 +43,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellationTest do
       "execution_target" => target
     }
 
-    %{journal: journal, endpoint: endpoint, query: query, target: target}
+    %{journal: journal, endpoint: endpoint, query: query, target: target, request: request}
   end
 
   test "exact target is sent once only to its retained owner without journal mutation", ctx do
@@ -92,8 +92,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellationTest do
     assert {:ok, %{"status" => "no_retained_dispatch"}} = cancel(ctx, never, missing)
 
     for state <- ~w(not_dispatched observed_executed observed_failed observed_blocked) do
-      :ok = Journal.finish_dispatch(ctx.query["attempt_id"], state, ctx.journal)
-      assert {:ok, result} = cancel(ctx, never)
+      {:ok, attempt} = Journal.begin_dispatch(ctx.request, ctx.endpoint, ctx.journal)
+      :ok = Journal.finish_dispatch(attempt, state, ctx.journal)
+      assert {:ok, result} = cancel(ctx, never, Map.put(ctx.query, "attempt_id", attempt))
 
       assert result["status"] ==
                if(state == "not_dispatched", do: state, else: "retained_terminal_dispatch")

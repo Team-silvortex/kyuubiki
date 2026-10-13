@@ -192,7 +192,10 @@ defmodule KyuubikiWeb.OperatorTaskCompletionApiTest do
     assert execution["executed_count"] == 0
     assert execution["error_count"] == 1
     checkpoint = OperatorTaskBatchRun.checkpoint(batch, execution: execution)
-    assert checkpoint["resume_policy"]["next_action"] == "retry_failed_cases"
+    assert checkpoint["resume_policy"]["next_action"] == "resolve_incomplete_cases"
+    assert {:ok, plan} = OperatorTaskBatchRun.resume_plan(batch, checkpoint)
+    assert plan["repair_required_case_ids"] == ["case-bad"]
+    assert plan["retryable_case_ids"] == []
   end
 
   test "zero error counts without complete case coverage never authorize archival" do

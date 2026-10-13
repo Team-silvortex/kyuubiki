@@ -37,8 +37,11 @@ release qualification remains blocked. Direct sweep-request, plan and expansion
 quality-metadata admission now have scoped follow-ups below. Expansion counts and
 direct execution-batch quality evidence also have bounded checks. Batch structure,
 unique recovery identities and checkpoint input/policy admission now have a scoped
-follow-up. Remaining audits include summary counter coherence, receipt provenance,
-standalone TaskIR boundaries and producer-side readiness preservation through ranking.
+follow-up. Preparation counters/identities and persisted completion evidence now
+have bounded revalidation too. Execution failure identity, recovery permissions and
+outcome/counter partitions now have a scoped follow-up. Remaining audits include
+cross-process attempt ownership, authenticated provenance, standalone TaskIR boundaries and producer-side
+readiness preservation through ranking.
 See `releases/snapshots/3.6.0.json` for the source checkpoint and scope.
 
 ## Daji 3.5.0 Checkpoint
@@ -380,6 +383,140 @@ also loses the Agent cache and blocks without replay, retaining its envelope.
 Missing or changed evidence cannot become skip-on-error success. This is bounded
 native receipt-assisted recovery, not general durable per-node continuation,
 exactly-once or installed/remote qualification.
+
+The [native attempt-selection follow-up](../reports/native-workflow-attempt-selection-20261012.md)
+does not choose between multiple dispatched attempts merely because one succeeded
+or sorts newest. A single successful candidate is rechecked against the journal
+after receipt retrieval. Concurrent outcome changes, another relevant dispatch,
+record eviction or journal loss block reuse rather than publishing a stale result.
+Unrelated parents and confirmed non-dispatched attempts do not poison a uniquely
+owned success. Controlled local tests cover journal restart and bounded retention;
+the graph retains blocked recovery state even with skip-on-error. No new Agent
+calculation, result archive or larger storage budget is introduced. This is bounded
+service recovery evidence, not an atomic cross-store publication or power-loss proof.
+
+The [dispatch observation follow-up](../reports/operator-dispatch-observation-transitions-20261012.md)
+seals each attempt's first observation, including unknown outcomes. Conflicting or
+malformed finish messages reject only that request instead of rewriting history or
+poisoning unrelated dispatches. Identical repeats verify the original on-disk
+generation without rewriting timestamps or refreshing retention; missing, corrupt,
+replaced or partial storage still stops dispatch. First observations cannot move
+timestamps backwards. Local transition, restart and controlled TCP tests preserve
+the recovery fence and allow explicit read-only receipt retrieval without clearing
+uncertainty. No extra archive, larger storage budget, remote acceptance or atomic
+cross-store publication guarantee is introduced.
+
+The [live dispatch-read integrity follow-up](../reports/operator-dispatch-read-integrity-20261013.md)
+checks directory membership and selected on-disk observations before returning
+history or admitting native recovery. Empty queries still verify the inventory;
+new dispatch reservation cannot silently recreate a lost nonempty journal.
+Missing, changed or partial evidence blocks inspection, receipt retrieval and
+cancellation before their Agent RPC. Native reuse also checks storage after receipt
+retrieval. Relevant payloads alone are decoded, with no read-time writes, archives
+or retention renewal. This covers live cached history and controlled local recovery,
+not authenticated provenance, an atomic cross-store snapshot or detecting a journal
+already lost before process startup.
+
+The [durable native-attempt follow-up](../reports/workflow-native-dispatch-evidence-20261013.md)
+now closes that fresh-process gap for coordinator-managed native workflows whose
+private recovery record survives. Before an Agent RPC, the reserved attempt ID
+and task identity must commit through the existing fenced job/result transaction.
+Replay admission requires every recorded attempt in the journal, even after a
+restart with an absent or empty directory. Another attempt with the same task
+cannot substitute. Runtime checks repeat before receipt reuse and reservation;
+failed persistence sends no RPC, and unknown completion retains blocked recovery
+even with skip-on-error. The private bucket has 512 entries/512 KiB maximum, stores
+no payloads, results, endpoints or credentials, and prunes on ordinary terminal
+states. Public recovery exposes only policy/count. Missing legacy native evidence
+blocks recovery pending explicit inspection/resubmission; pure local graphs remain independent.
+This uses controlled local TCP and process-restart tests, not a real Rust Agent,
+installed/remote acceptance, cross-store atomicity or exactly-once proof. Joint
+loss/rollback of both stores remains separate work.
+
+The [active-history retention follow-up](../reports/operator-dispatch-active-retention-20261013.md)
+protects terminal dispatch observations while their actual parent is active,
+recovery-blocked, inconsistent or still retains private recovery evidence.
+Ordinary matching completed/failed/cancelled parents release this protection
+after their recovery envelope and attempt bucket are pruned. Only unprotected
+terminal history participates in the 128-record retention window; unresolved
+attempts remain protected, and the overall 512-record/4-KiB-per-record cap is
+unchanged. A full protected journal rejects new work rather than evicting evidence.
+Bounded parent metadata is read outside the journal process, avoiding a dependency
+cycle with lease holders or a saturated database pool. Only unchanged records in
+that observation can be pruned. Storage lookup failure rejects admission without
+deleting files or quarantining a healthy journal. Local SQLite and durable-memory
+tests cover turnover, restart, release and failure isolation; this is not an Agent
+receipt-retention extension or protection against joint store rollback.
+
+The [public receipt-read follow-up](../reports/operator-dispatch-result-revalidation-20261013.md)
+extends the post-retrieval journal check to the shared read-only API, not only
+workflow-native reuse. Even a valid Agent reply is withheld if its selected
+observation changed, disappeared or failed on-disk validation during the query.
+Legitimate transitions/eviction return `operator_task_dispatch_observation_changed`
+without quarantining healthy history; a fresh read remains possible. Actual
+damage retains the existing fail-closed journal behavior. HTTP errors contain no
+completion, raw storage content or local paths. Complete journal restarts can
+still return the original receipt when the exact observation survives. This is
+local controlled-TCP/source evidence, not a longer Agent cache lifetime, atomic
+cross-store read or new real-solver qualification.
+
+The [native result-handoff follow-up](../reports/workflow-native-result-handoff-20261013.md)
+adds bounded, verified native success receipts to the existing private recovery
+record before downstream publication. Later authorized generations can use that
+handoff without an available Agent cache, but still require the original unique
+successful dispatch, exact observation digest, rebuilt TaskIR, durable attempt
+identity and current claim/lease. It retains at most 32 receipts, 512 KiB per
+receipt and 2 MiB encoded bytes per parent, separate from solve/branch budgets.
+Oversize or full capacity omits new entries without evicting completed evidence;
+the original receipt remains required on recovery if no handoff exists. Failed
+commits and damaged checkpoints block, including skip-on-error. Ordinary terminal
+states remove the bucket; blocked recovery retains it and prevents early journal
+release. Ten actual local application-restart tests use controlled TCP producers
+for extract/transform paths, then remove all Agent endpoints. This is bounded
+SQLite/memory source evidence, not a live Rust Agent restart, general node
+continuation, exactly-once execution or an atomic Agent-to-database handoff.
+
+The [managed uncertainty propagation follow-up](../reports/workflow-managed-dispatch-uncertainty-20261013.md)
+closes the live path before recovery: once a managed native dispatch seals an
+unknown observation, it must return a blocking recovery error, not an ordinary
+transport/application error or an unverified success. Skip-on-error cannot hide
+it, and even idempotent/checkpoint hints cannot dispatch that attempt to a peer.
+The parent retains its original generation and evidence across coordinator and
+journal restart. Concurrent cancellation cannot replace this uncertainty with a
+plain cancellation error. Transport/protocol faults still affect Agent health;
+local callback failures do not. Confirmed pre-execution connection/capacity
+rejections retain safe failover, and independent work remains available.
+This applies to the trusted pre-RPC evidence callback used by managed workflows;
+standalone TaskIR routing, its existing explicit replay policies and raw solver
+RPC behavior are unchanged. This is controlled local TCP/source evidence, not
+new physical-Agent, installed or power-loss qualification.
+
+The [native failure-finalization follow-up](../reports/workflow-native-failure-finalization-20261013.md)
+checks the recovery envelope and native dispatch fence before ordinary failure
+cleanup. Killing a local waiter at the workflow runner deadline is not evidence
+that the Agent stopped: unconfirmed attempts, missing/corrupt journal history or
+invalid dispatch evidence retain the envelope and become `recovery_blocked`.
+The original failure message remains visible, with a bounded reason and next
+action in recovery history. Confirmed outcomes and undispatched work still fail
+normally; local-only graphs do not depend on journal availability. Before killing
+the waiter, the runner captures its actual dispatch endpoints for best-effort
+targeted cancellation. A cancellation acknowledgement does not settle the
+dispatch observation or authorize replay. Local controlled-TCP tests cover the
+deadline, late replies and recovery-component restart.
+
+The [periodic watchdog follow-up](../reports/workflow-watchdog-finalization-20261013.md)
+now routes queue/execution deadlines and stalled-job decisions through the owning
+coordinator. The exact scanned job must still match; workflow recovery and job
+failure commit together, retaining unresolved native evidence. Only a successful
+commit permits local runner shutdown and best-effort cancellation of its actual
+dispatch targets. Fresh heartbeats, terminal results, lost ownership or rejected
+writes cannot be treated as successful expiry. An unrelated task on the same
+controlled Agent continues normally. Plain jobs retain snapshot checks, but expiry
+now also requires coordinator authority; unavailable/standby control planes report
+an unavailable scan instead of claiming work was retired. A repo-restart registry
+race is classified as storage unavailability without swallowing unrelated errors.
+This does not repair historical inconsistent records or make cancellation durable.
+SQLite and memory source tests are not new physical-Agent or power-loss acceptance.
 
 The [bounded solve-artifact follow-up](../reports/workflow-solve-artifact-checkpoints-20261011.md)
 retains successful small typed-solve results in the existing private recovery
@@ -960,7 +1097,34 @@ Empty batches and optional-header shorthand remain supported, while ordinary
 per-task digest/semantic failures stay isolated. Expanded service regressions pass
 2,512 with 71 conditional skips. This is control-plane source evidence, not new
 native Engine, physical, installed or durable-recovery qualification. Full summary
-counter coherence and receipt provenance remain separate from structural validity.
+counter coherence and receipt provenance remain separate from structural validity;
+the next follow-up adds bounded preparation/completion checks.
+
+The [checkpoint evidence follow-up](../reports/operator-task-checkpoint-evidence-20261012.md)
+requires batch-bound preparation rows with matching counters, identities and failure
+reasons. Checkpoints retain compact task identity evidence, not numerical results,
+and recheck completion markers and unresolved targets when read. Missing records
+remain targets even alongside a known task failure. Foreign batch/phase summaries,
+including error-only summaries, require inspection rather than direct retry.
+Editing a completion flag and rehashing does not bypass the consistency checks.
+Older preparation/execution summaries without compact evidence require explicit
+regeneration from original records; nothing silently reruns. Expanded service
+regressions pass 2,528 with 71 conditional skips. This is local control-plane
+consistency, not authenticated provenance or physical qualification.
+
+The [failure recovery follow-up](../reports/operator-task-batch-failure-recovery-20261012.md)
+binds failed/blocked rows to their tasks, checks Agent inner/outer failure mirrors,
+and reconciles disjoint success/failure/blocker/skipped partitions with counters.
+Compact receipt fingerprints are rechecked after checkpoint read, even after a
+caller recomputes the checksum. Nonretryable failures require repair, not direct
+retry; unsafe-continuation receipts block progression. Plans separate explicit
+retry candidates from repair targets and always deny automatic replay. Unverified
+execution stays diagnostic, with no borrowed preparation or unchecked failure
+actions. Whitespace-only actions no longer make a generated checkpoint unreadable.
+Full result payloads are not copied. The controlled Agent protocol covers all four
+retryability/continuation combinations, not a live Engine or durable restart.
+Expanded service regressions pass 2,541 with 71 conditional skips; module maturity
+and release qualification remain unchanged.
 
 The [retained material run follow-up](../reports/headless-material-run-results-20261008.md)
 rejects unfinished or contradictory execution records, checks fetched job

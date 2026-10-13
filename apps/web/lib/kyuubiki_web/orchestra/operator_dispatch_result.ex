@@ -39,19 +39,26 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResult do
       probe = Keyword.get(opts, :probe, &probe_endpoint/2)
       result = retrieve(record, endpoints, probe)
 
-      {:ok,
-       Map.merge(result, %{
-         "schema_version" => @schema,
-         "task_id" => payload["task_id"],
-         "task_digest" => payload["task_digest"],
-         "attempt_id" => payload["attempt_id"],
-         "automatic_replay_authorized" => false,
-         "publication_performed" => false
-       })}
+      with :ok <- revalidate(record, opts) do
+        {:ok,
+         Map.merge(result, %{
+           "schema_version" => @schema,
+           "task_id" => payload["task_id"],
+           "task_digest" => payload["task_digest"],
+           "attempt_id" => payload["attempt_id"],
+           "automatic_replay_authorized" => false,
+           "publication_performed" => false
+         })}
+      end
     end
   catch
     :exit, _ -> {:error, :operator_task_dispatch_result_unavailable}
   end
+
+  defp revalidate(nil, _opts), do: :ok
+
+  defp revalidate(record, opts),
+    do: Journal.verify_observation(record, Keyword.get(opts, :journal, Journal))
 
   defp validate_query(
          %{"task_id" => id, "task_digest" => digest, "attempt_id" => attempt} = payload

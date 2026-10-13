@@ -11,6 +11,9 @@ defmodule KyuubikiWeb.Playground.AgentJobCancellation do
       {:error, _} = cancelled ->
         case result do
           {:error, {:operator_task_rpc_error, _, _, _}} -> result
+          {:error, {:operator_task_dispatch_outcome_unknown, _}} -> result
+          {:error, :operator_task_dispatch_outcome_unknown} -> result
+          {:error, :operator_task_dispatch_evidence_unavailable} -> result
           _ -> cancelled
         end
     end

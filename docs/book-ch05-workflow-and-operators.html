@@ -198,6 +198,85 @@
             artifacts, and retained branch decisions cannot bypass this graph
             gate. Synchronous and asynchronous API requests return a validation
             error before dispatch or job admission.</li>
+          <li>Native receipt reuse needs an unambiguous original attempt. If the
+            same parent/task has a success plus another dispatched attempt, stop
+            with <code>dispatch_attempt_ambiguous</code> rather than choosing by
+            timestamp. Confirmed non-dispatched attempts are not competing results.
+            After reading, recheck the selected journal record before the final
+            claim/lease gate. Changed or evicted observations block with
+            <code>dispatch_observation_changed</code>; journal loss and new unknown
+            outcomes also block. No peer fallback or automatic rerun is authorized,
+            and skip-on-error cannot publish a partial success. Read-only inspection
+            of an explicitly selected historical attempt remains available.</li>
+          <li>Each dispatch attempt accepts only one observation after its initial
+            unconfirmed state. Unknown is not upgradeable by a late completion.
+            Identical repeats verify the original disk record without rewriting
+            timestamps or refreshing retention; conflicting or malformed updates
+            reject only the request. Real storage loss still blocks dispatch.
+            Explicit receipt retrieval remains read-only and cannot erase uncertainty.
+            These checks do not authenticate an observation or create an atomic
+            transaction spanning Agent, dispatch journal and job publication.</li>
+          <li>Cached dispatch history is checked against disk before lookup or
+            replay admission. Verify directory membership even for empty queries,
+            then check the selected records, including relevant terminal and
+            legacy observations. Changed, missing or partial evidence blocks rather
+            than authorizing stale reuse or sending inspection/cancellation RPCs.
+            Native receipt reuse repeats this check after retrieval. The shared
+            public receipt API also requires its exact observation to survive lookup;
+            concurrent transitions or eviction reject that read without poisoning
+            healthy history, while storage damage still fails closed. Reads do not
+            write or renew retention; these are live integrity checks, not a full
+            scan of every payload or proof of history lost before process startup.</li>
+          <li>Coordinator-managed native workflows additionally persist a compact
+            attempt identity in their private recovery record before sending the RPC.
+            The exact attempt must survive in the journal at recovery admission and
+            runtime reuse; an absent directory or another same-task attempt is not
+            evidence of never having executed. Failed evidence commits send no RPC;
+            unknown completion remains recovery-blocked, including skip-on-error.
+            The 512-entry/512-KiB bucket stores no task payload or result and is pruned
+            on ordinary terminal states. Missing legacy native evidence blocks rather
+            than being silently reconstructed. This source-tested fence depends on the
+            recovery record surviving; it is not cross-store atomicity, installed
+            qualification or protection from joint store rollback.</li>
+          <li>Dispatch history now protects active or recovery-blocked parents and
+            inconsistent recovery state. Matching ordinary terminal parents release
+            protection once the private envelope and attempt bucket are pruned.
+            Unprotected terminal history uses the 128-record window; protected and
+            unresolved attempts still count toward the unchanged 512-record hard cap.
+            Parent metadata lookup stays outside the journal process; failure stops
+            new admission without deleting evidence or poisoning healthy reads.
+            Local SQLite and memory tests cover retention/restart, not longer Agent
+            receipt lifetime or exactly-once execution.</li>
+          <li>Managed native diagnostic/scoring successes now hand off their verified
+            receipts into a bounded private checkpoint before downstream publication.
+            Later claims can continue with the Agent offline, while still requiring
+            unique original success history, the exact observation digest, matching
+            TaskIR/attempt and claim/lease checks. The separate per-parent budget is
+            32 entries, 512 KiB per receipt and 2 MiB total; full/oversize results do not
+            evict old evidence or authorize replay. Missing handoff requires the original
+            Agent receipt. Failed commits/corruption block even with skip-on-error;
+            ordinary terminal states prune the bucket. Controlled-TCP application-restart
+            tests are not new live Rust Agent, installed or power-loss qualification.</li>
+          <li>Managed native workflows now propagate a sealed unknown dispatch outcome
+            immediately as recovery-blocked, retaining their original attempt evidence.
+            Disconnects, invalid receipts and local progress errors cannot be skipped or
+            automatically sent to a peer, even with idempotent/checkpoint hints. Concurrent
+            cancellation cannot hide the uncertainty. Pre-execution connection/capacity
+            rejection still permits failover; local callbacks do not penalize Agent health.
+            Standalone TaskIR and raw solver replay policies are unchanged. These are
+            controlled-TCP source tests, not new installed or physical-Agent qualification.</li>
+          <li>Ordinary coordinator failure now verifies native dispatch evidence before
+            cleanup. The workflow runner deadline cannot discard an in-flight attempt
+            merely because its local transport was killed: unresolved or damaged evidence
+            retains blocked recovery. It also captures actual targets before shutdown for
+            best-effort cancellation, without treating the acknowledgement as execution
+            completion. Confirmed failures still clean up normally. Local controlled-TCP
+            regressions cover this path. Periodic watchdog decisions now use the same
+            owning coordinator, require the original scanned job, and atomically update
+            job/recovery state before stopping the local runner. Stale decisions and
+            rejected commits leave live work intact; unrelated work on the same Agent
+            continues. No automatic repair of historical inconsistencies or durable
+            physical Agent shutdown is claimed.</li>
           <li>Orchestra also binds recoverable solves, condition decisions and
             native receipts to the actual consumed path through rebuilt local
             nodes. A join selecting another source must not reuse an old result
@@ -228,7 +307,8 @@
             retain one lossless execution JSON string. Five source solved-domain
             chains restore solve outputs, branch decisions and native receipts
             across real Orchestra restarts without repeated completed work or
-            changed scoring identity. Lost Agent receipts block continuation.
+            changed scoring identity. Lost Agent receipts block continuation when no
+            valid private native handoff is available.
             A <a href="../reports/workflow-typed-postgres-recovery-20261011.md">PostgreSQL follow-up</a>
             repeats seven bounded source macOS rounds against a remote JSONB store
             and checks rollback, selected-pool lease fencing and numeric identity.
@@ -407,8 +487,36 @@
             resume policies. Public batch routes return HTTP 422 rather than
             crashing or silently merging identities. Empty batches and optional
             header shorthand remain supported. These are structural consistency
-            checks, not authenticated execution evidence; full summary counter
-            and receipt provenance validation remains separate.</li>
+            checks, not authenticated execution evidence.</li>
+          <li>Preparation reuse requires batch/phase-bound task identities,
+            consistent integer counters and aligned failure reasons, not merely
+            zero errors. Execution checkpoints retain compact completed-task
+            identities rather than full result payloads. Completion flags and
+            unresolved targets are recomputed and compared when reading the
+            checkpoint. Missing evidence remains unresolved even when another
+            task failed; foreign run evidence requires inspection, not direct
+            retry. Legacy preparation/execution summaries without these records
+            cannot authorize reuse. Explicitly regenerate from original records;
+            do not silently recompute jobs or promote a saved completion flag.
+            Checksums and compact evidence establish consistency, not signed
+            provenance or independently authenticated computation.</li>
+          <li>Execution recovery checks failed/blocked task identities, inner and
+            outer Agent failure receipts, and disjoint completed, failed, blocked
+            and skipped partitions against exact counters. Checkpoints retain
+            critical receipt fingerprints and compact blocked readiness, not full
+            result copies. These records are rechecked on read; changing a
+            recovery flag and rehashing the checkpoint cannot bypass a mismatch.
+            <code>retryable_case_ids</code> lists explicit retry candidates;
+            <code>repair_required_case_ids</code> lists verified nonretryable
+            failures. <code>continuation_blocked</code> preserves unsafe-continuation
+            advice and blocks unverified recovery, but false is not dispatch
+            permission. <code>automatic_replay_allowed</code> is always false.
+            Contradictory executions remain diagnostic with no recovery actions;
+            their static <code>recovery_evidence_error</code> names the failed check,
+            not its rejected value. Legacy execution summaries missing recovery
+            evidence need explicit regeneration from original records. Neither
+            a retry candidate nor a matching fingerprint authenticates the original
+            attempt or grants ownership after restart.</li>
           <li>An incomplete ranking or a nonempty rejected-candidate list disables downstream quality-sweep planning
             and expansion. The result contains zero cases, keeps
             <code>sweep_action: replan</code>, and exposes

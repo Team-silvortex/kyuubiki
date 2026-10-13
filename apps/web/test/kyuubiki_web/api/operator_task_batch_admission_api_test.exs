@@ -54,6 +54,61 @@ defmodule KyuubikiWeb.Api.OperatorTaskBatchAdmissionApiTest do
     end
   end
 
+  test "checkpoint API requires preparation evidence and rejects a rehashed false completion" do
+    good = batch()
+
+    assert {422, rejected} =
+             request("checkpoint-batch", %{
+               "batch" => good,
+               "preparation" => %{"error_count" => 0}
+             })
+
+    assert rejected["error_code"] == "operator_task_checkpoint_evidence_invalid"
+
+    assert {200, prepared} = request("prepare-batch", %{"batch" => good})
+
+    assert {200, checkpoint} =
+             request("checkpoint-batch", %{"batch" => good, "preparation" => prepared})
+
+    assert {200, %{"next_action" => "execute"}} =
+             request("resume-plan-batch", %{"batch" => good, "checkpoint" => checkpoint})
+
+    assert {200, execution} = request("execute-batch", %{"batch" => good})
+
+    assert {200, complete} =
+             request("checkpoint-batch", %{"batch" => good, "execution" => execution})
+
+    assert {200, %{"next_action" => "archive"}} =
+             request("resume-plan-batch", %{"batch" => good, "checkpoint" => complete})
+
+    changed = put_in(complete, ["execution", "completion_evidence", "completed_tasks"], [])
+
+    digest =
+      changed
+      |> Map.delete("checkpoint_digest")
+      |> legacy_json()
+      |> KyuubikiWeb.CanonicalJson.encode!()
+      |> then(&:crypto.hash(:sha256, &1))
+      |> Base.encode16(case: :lower)
+
+    changed = Map.put(changed, "checkpoint_digest", digest)
+
+    for route <- ~w(verify-checkpoint-batch resume-plan-batch) do
+      assert {422, response} = request(route, %{"batch" => good, "checkpoint" => changed})
+      assert response["error_code"] == "operator_task_checkpoint_evidence_invalid"
+    end
+
+    assert {200, %{"next_action" => "archive"}} =
+             request("resume-plan-batch", %{"batch" => good, "checkpoint" => complete})
+  end
+
+  defp legacy_json(value) when is_map(value),
+    do: Map.new(value, fn {key, nested} -> {key, legacy_json(nested)} end)
+
+  defp legacy_json([]), do: %{}
+  defp legacy_json(value) when is_list(value), do: Enum.map(value, &legacy_json/1)
+  defp legacy_json(value), do: value
+
   defp batch do
     tasks =
       for id <- ~w(a b) do

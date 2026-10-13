@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.Orchestra.OperatorDispatchResultTest do
   use ExUnit.Case, async: false
   alias KyuubikiWeb.Orchestra.OperatorDispatchJournal, as: Journal
+  alias KyuubikiWeb.Orchestra.OperatorDispatchFiles, as: Files
   alias KyuubikiWeb.Orchestra.OperatorDispatchResult, as: Result
 
   @schema_path Path.expand(
@@ -42,7 +43,34 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResultTest do
     {:ok, _attempt} = Journal.begin_dispatch(request, endpoint, journal)
     {:ok, [record]} = Journal.lookup("task", String.duplicate("a", 64), journal)
     query = Map.take(record, ~w(attempt_id task_id task_digest))
-    %{journal: journal, endpoint: endpoint, record: record, query: query}
+
+    %{
+      root: root,
+      journal: journal,
+      endpoint: endpoint,
+      record: record,
+      query: query,
+      request: request
+    }
+  end
+
+  test "recovering a retained receipt never rewrites a sealed unknown observation", ctx do
+    attempt = ctx.query["attempt_id"]
+    assert :ok = Journal.finish_dispatch(attempt, "outcome_unknown", ctx.journal)
+    {:ok, before} = Journal.lookup_task("task", ctx.journal)
+    path = Path.join(ctx.root, attempt <> ".json")
+    bytes = File.read!(path)
+
+    assert {:error, :operator_task_dispatch_transition_rejected} =
+             Journal.finish_dispatch(attempt, "observed_executed", ctx.journal)
+
+    assert {:ok, result} = fetch(ctx, fn _, _ -> {:ok, retained(ctx.record)} end)
+    assert result["status"] == "receipt_recovered"
+    assert result["outcome"] == "executed"
+    refute result["automatic_replay_authorized"]
+    refute result["publication_performed"]
+    assert {:ok, ^before} = Journal.lookup_task("task", ctx.journal)
+    assert File.read!(path) == bytes
   end
 
   test "one original endpoint returns a fully gated receipt without updating the journal", ctx do
@@ -71,6 +99,155 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResultTest do
     assert {:ok, [record]} = Journal.lookup("task", ctx.query["task_digest"], ctx.journal)
     assert record == ctx.record
     assert result["completion"]["result"]["result"]["value"] == 42
+  end
+
+  test "a valid receipt cannot escape after its journal file disappears during retrieval", ctx do
+    probe = fn _, _ ->
+      File.rm!(Path.join(ctx.root, ctx.record["attempt_id"] <> ".json"))
+      {:ok, retained(ctx.record)}
+    end
+
+    assert {:error, :operator_task_dispatch_journal_invalid} = fetch(ctx, probe)
+  end
+
+  for fault <- [:corrupt, :replacement, :partial, :missing_root],
+      reply <- [:retained, :expired, :unreachable] do
+    test "#{fault} during #{reply} lookup rejects the reply and quarantines damaged history",
+         ctx do
+      path = Path.join(ctx.root, ctx.record["attempt_id"] <> ".json")
+
+      probe = fn _, _ ->
+        case unquote(fault) do
+          :corrupt ->
+            File.write!(path, "SECRET damaged observation")
+
+          :replacement ->
+            assert :ok =
+                     Files.write(
+                       ctx.root,
+                       Map.put(ctx.record, "state", "outcome_unknown"),
+                       ctx.record
+                     )
+
+          :partial ->
+            File.write!(path <> ".next", "SECRET incomplete replacement")
+
+          :missing_root ->
+            File.rm_rf!(ctx.root)
+        end
+
+        case unquote(reply) do
+          :retained ->
+            {:ok, retained(ctx.record)}
+
+          :expired ->
+            {:ok,
+             retained(ctx.record) |> Map.put("status", "not_retained") |> Map.put("response", nil)}
+
+          :unreachable ->
+            {:error, :timeout}
+        end
+      end
+
+      assert {:error, error} = fetch(ctx, probe)
+
+      assert error in [
+               :operator_task_dispatch_journal_invalid,
+               :operator_task_dispatch_journal_unavailable
+             ]
+
+      before = File.read(path)
+      assert {:error, ^error} = Journal.lookup_task("task", ctx.journal)
+      assert File.read(path) == before
+      assert Process.alive?(ctx.journal)
+    end
+  end
+
+  for state <- ~w(observed_executed outcome_unknown not_dispatched) do
+    test "concurrent #{state} rejects only the stale lookup and permits a fresh read", ctx do
+      probe = fn _, _ ->
+        assert :ok =
+                 Journal.finish_dispatch(ctx.record["attempt_id"], unquote(state), ctx.journal)
+
+        {:ok, retained(ctx.record)}
+      end
+
+      assert {:error, :operator_task_dispatch_observation_changed} = fetch(ctx, probe)
+      assert {:ok, [current]} = Journal.lookup_task("task", ctx.journal)
+      assert current["state"] == unquote(state)
+      bytes = File.read!(Path.join(ctx.root, current["attempt_id"] <> ".json"))
+
+      assert {:ok, result} = fetch(ctx, fn _, _ -> {:ok, retained(ctx.record)} end)
+
+      expected =
+        if unquote(state) == "not_dispatched", do: "not_dispatched", else: "receipt_recovered"
+
+      assert result["status"] == expected
+      refute result["automatic_replay_authorized"]
+      refute result["publication_performed"]
+      assert File.read!(Path.join(ctx.root, current["attempt_id"] <> ".json")) == bytes
+    end
+  end
+
+  test "eviction during lookup cannot return a receipt detached from its original observation",
+       ctx do
+    assert :ok =
+             Journal.finish_dispatch(ctx.record["attempt_id"], "observed_executed", ctx.journal)
+
+    probe = fn _, _ ->
+      for _ <- 1..140 do
+        assert {:ok, id} = Journal.begin_dispatch(ctx.request, ctx.endpoint, ctx.journal)
+        assert :ok = Journal.finish_dispatch(id, "not_dispatched", ctx.journal)
+      end
+
+      {:ok, retained(ctx.record)}
+    end
+
+    assert {:error, :operator_task_dispatch_observation_changed} = fetch(ctx, probe)
+    assert {:ok, records} = Journal.lookup_task("task", ctx.journal)
+    assert length(records) == 128
+    refute Enum.any?(records, &(&1["attempt_id"] == ctx.record["attempt_id"]))
+
+    assert {:ok, %{"status" => "no_retained_dispatch"}} =
+             fetch(ctx, fn _, _ -> flunk("no RPC") end)
+  end
+
+  test "journal process loss during retrieval cannot return a cached completion", ctx do
+    probe = fn _, _ ->
+      GenServer.stop(ctx.journal, :normal)
+      {:ok, retained(ctx.record)}
+    end
+
+    assert {:error, :operator_task_dispatch_journal_unavailable} = fetch(ctx, probe)
+  end
+
+  test "revalidation stays scoped to the selected observation, not unrelated payloads", ctx do
+    other = put_in(ctx.request, ["params", "task_ir", "task_id"], "unrelated")
+    {:ok, id} = Journal.begin_dispatch(other, ctx.endpoint, ctx.journal)
+
+    probe = fn _, _ ->
+      File.write!(Path.join(ctx.root, id <> ".json"), "damaged unrelated payload")
+      {:ok, retained(ctx.record)}
+    end
+
+    assert {:ok, %{"status" => "receipt_recovered"}} = fetch(ctx, probe)
+    assert :ok = Journal.verify_observation(ctx.record, ctx.journal)
+    assert {:error, _} = Journal.lookup_task("unrelated", ctx.journal)
+  end
+
+  test "malformed observation verification cannot poison the healthy journal", ctx do
+    for bad <- [
+          nil,
+          [],
+          %{},
+          Map.put(ctx.record, "extra", true),
+          Map.put(ctx.record, "state", "bad")
+        ] do
+      assert {:error, :operator_task_dispatch_journal_invalid} =
+               Journal.verify_observation(bad, ctx.journal)
+    end
+
+    assert :ok = Journal.verify_observation(ctx.record, ctx.journal)
   end
 
   test "all identity mirrors, RPC framing and completion contradiction fail closed", ctx do

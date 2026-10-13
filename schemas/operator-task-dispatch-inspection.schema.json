@@ -18,7 +18,7 @@
     "journal_policy": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["max_records", "max_file_bytes", "terminal_retention", "storage", "single_writer", "corrupt_generation_policy", "unresolved_retention", "inputs_results_credentials_stored"],
+      "required": ["max_records", "max_file_bytes", "terminal_retention", "storage", "single_writer", "corrupt_generation_policy", "unresolved_retention", "active_parent_retention", "retention_store_failure", "inputs_results_credentials_stored"],
       "properties": {
         "max_records": {"const": 512},
         "max_file_bytes": {"const": 4096},
@@ -26,7 +26,13 @@
         "storage": {"const": "operator-task-dispatches/*.json"},
         "single_writer": {"const": true},
         "corrupt_generation_policy": {"const": "fail_closed_no_rollback"},
+        "state_transition_policy": {"const": "unconfirmed_to_one_observation"},
+        "repeated_observation_policy": {"const": "verify_without_rewrite"},
+        "invalid_transition_policy": {"const": "reject_without_poisoning_other_attempts"},
+        "read_integrity_policy": {"const": "verify_inventory_and_selected_records"},
         "unresolved_retention": {"const": "never_automatically_pruned"},
+        "active_parent_retention": {"const": "protected_within_existing_capacity"},
+        "retention_store_failure": {"const": "reject_dispatch_without_pruning_or_quarantine"},
         "inputs_results_credentials_stored": {"const": false}
       }
     },

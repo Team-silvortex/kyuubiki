@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
     OperatorTaskCompletion,
     OperatorTaskExecutionSummary,
     OperatorTaskIR,
+    WorkflowNativeDispatchEvidence,
     WorkflowNativeResultRecovery
   }
 
@@ -54,9 +55,11 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
              is_map(context) and is_list(opts) do
     on_progress = Keyword.get(opts, :on_progress, fn _ -> :ok end)
     before_dispatch = Keyword.get(opts, :before_dispatch, fn -> :ok end)
+    checkpoint = Keyword.get(opts, :native_result_checkpoint)
 
     cond do
       not is_function(on_progress, 1) or not is_function(before_dispatch, 0) or
+        (not is_nil(checkpoint) and not is_function(checkpoint, 1)) or
           not is_boolean(Keyword.get(opts, :recover_native_results, false)) ->
         {:error, :invalid_native_workflow_operator_request}
 
@@ -99,21 +102,34 @@ defmodule KyuubikiWeb.WorkflowNativeOperatorRuntime do
              Keyword.get(opts, :native_task_digest_encoding, WorkflowTaskDigestPolicy.legacy())
            ),
          {:ok, summary} <- OperatorTaskExecutionSummary.build(task) do
+      rpc_opts =
+        Keyword.merge(rpc_opts, WorkflowNativeDispatchEvidence.dispatch_options(summary, opts))
+
       case WorkflowNativeResultRecovery.resolve(task, summary, context, opts) do
-        :execute -> dispatch(client, task, summary, rpc_opts, on_progress)
+        :execute -> dispatch(client, task, summary, rpc_opts, on_progress, context, opts)
         result -> result
       end
     end
   end
 
-  defp dispatch(client, task, summary, rpc_opts, on_progress) do
+  defp dispatch(client, task, summary, rpc_opts, on_progress, context, opts) do
     with {:ok, result} <- client.run_operator_task_ir(task, rpc_opts, on_progress),
          {:ok, %{"status" => "executed", "result" => %{"result" => output}}} <-
-           OperatorTaskCompletion.agent_receipt(summary, result) do
+           OperatorTaskCompletion.agent_receipt(summary, result),
+         :ok <- WorkflowNativeResultRecovery.retain(summary, context, result, opts) do
       {:ok, output}
     else
-      {:error, _} = error -> error
-      {:ok, receipt} -> {:error, {:native_workflow_operator_not_executed, receipt["status"]}}
+      {:error, :operator_task_dispatch_evidence_unavailable} ->
+        {:error, {:native_workflow_recovery_blocked, :dispatch_evidence_commit_failed}}
+
+      {:error, :operator_task_dispatch_outcome_unknown} ->
+        {:error, {:native_workflow_recovery_blocked, :dispatch_unconfirmed}}
+
+      {:error, _} = error ->
+        error
+
+      {:ok, receipt} ->
+        {:error, {:native_workflow_operator_not_executed, receipt["status"]}}
     end
   end
 end

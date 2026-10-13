@@ -8,13 +8,20 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCheckpointStore do
     LeaseStore,
     WorkflowRecoveryEnvelope,
     WorkflowSolveCheckpoint,
-    WorkflowBranchCheckpoint
+    WorkflowBranchCheckpoint,
+    WorkflowNativeResultCheckpoint,
+    WorkflowNativeDispatchEvidence
   }
 
   @active ~w(queued preprocessing partitioning solving postprocessing)a
 
   def access(job_id, claim, action, lease, checkpoint)
-      when checkpoint in [WorkflowSolveCheckpoint, WorkflowBranchCheckpoint] do
+      when checkpoint in [
+             WorkflowSolveCheckpoint,
+             WorkflowBranchCheckpoint,
+             WorkflowNativeResultCheckpoint,
+             WorkflowNativeDispatchEvidence
+           ] do
     LeaseStore.with_lease(lease, fn ->
       with {:ok, job} <- active_job(job_id),
            {:ok, runtime} when is_map(runtime) <- AnalysisResultStore.get(job_id),

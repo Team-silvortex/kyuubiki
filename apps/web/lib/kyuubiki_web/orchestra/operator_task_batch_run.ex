@@ -7,9 +7,10 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
   """
 
   alias KyuubikiWeb.CanonicalJson
-  alias KyuubikiWeb.Orchestra.OperatorTaskBatchCompletion
   alias KyuubikiWeb.Orchestra.OperatorTaskBatchContract
   alias KyuubikiWeb.Orchestra.OperatorTaskCheckpointAdmission
+  alias KyuubikiWeb.Orchestra.OperatorTaskCheckpointEvidence
+  alias KyuubikiWeb.Orchestra.OperatorTaskBatchRecoveryEvidence
   alias KyuubikiWeb.WorkflowQualityBatchAdmission
 
   @digest_fields ~w(quality_execution_batch_contract operator_id task_count case_index tasks) ++
@@ -64,18 +65,23 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
 
   def checkpoint_checked(batch, opts) when is_map(batch) and is_list(opts) do
     with :ok <- OperatorTaskBatchContract.validate(batch),
-         :ok <- OperatorTaskCheckpointAdmission.options(batch, opts) do
-      {:ok, build_checkpoint(batch, opts)}
+         :ok <- OperatorTaskCheckpointAdmission.options(batch, opts),
+         digest = batch_digest(batch),
+         {:ok, preparation} <-
+           OperatorTaskCheckpointEvidence.preparation(
+             batch,
+             Keyword.get(opts, :preparation),
+             digest
+           ) do
+      {:ok, build_checkpoint(batch, opts, preparation, digest)}
     end
   end
 
   def checkpoint_checked(_batch, _opts), do: {:error, :invalid_operator_task_batch_checkpoint}
 
-  defp build_checkpoint(batch, opts) do
-    preparation = Keyword.get(opts, :preparation)
+  defp build_checkpoint(batch, opts, preparation, digest) do
     execution = Keyword.get(opts, :execution)
     created_at = timestamp(opts, :created_at)
-    digest = batch_digest(batch)
     execution_summary = execution_checkpoint_summary(batch, execution, digest)
 
     manifest =
@@ -88,7 +94,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
         "quality_execution_batch_contract" => Map.get(batch, "quality_execution_batch_contract"),
         "task_count" => task_count(batch),
         "case_index" => case_index(batch),
-        "preparation" => checkpoint_summary(preparation),
+        "preparation" => preparation,
         "execution" => execution_summary,
         "resume_policy" => resume_policy(preparation, execution_summary)
       }
@@ -102,6 +108,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
          :ok <- verify_checkpoint_contract(checkpoint),
          :ok <- OperatorTaskCheckpointAdmission.manifest(batch, checkpoint),
          expected_batch_digest = batch_digest(batch),
+         :ok <- OperatorTaskCheckpointEvidence.verify(batch, checkpoint, expected_batch_digest),
          expected_checkpoint_digest = checkpoint_digest(checkpoint),
          :ok <- verify_field(checkpoint, "batch_digest", expected_batch_digest),
          :ok <- verify_field(checkpoint, "checkpoint_digest", expected_checkpoint_digest),
@@ -134,20 +141,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       policy = Map.get(checkpoint, "resume_policy", %{})
       next_action = Map.get(policy, "next_action", "prepare")
 
-      {:ok,
-       %{
-         "operator_task_batch_resume_plan_contract" =>
-           "kyuubiki.operator_task_batch_resume_plan/v1",
-         "plan_id" => plan_id(checkpoint, next_action),
-         "status" => Map.get(policy, "status", "draft"),
-         "next_action" => next_action,
-         "batch_digest" => verification["batch_digest"],
-         "checkpoint_digest" => verification["checkpoint_digest"],
-         "target_case_ids" => target_case_ids(batch, checkpoint, next_action),
-         "blocked_case_ids" => blocked_case_ids(batch, checkpoint, next_action),
-         "recovery_actions" => recovery_actions(checkpoint, next_action),
-         "resume_policy" => policy
-       }}
+      plan = %{
+        "operator_task_batch_resume_plan_contract" =>
+          "kyuubiki.operator_task_batch_resume_plan/v1",
+        "plan_id" => plan_id(checkpoint, next_action),
+        "status" => Map.get(policy, "status", "draft"),
+        "next_action" => next_action,
+        "batch_digest" => verification["batch_digest"],
+        "checkpoint_digest" => verification["checkpoint_digest"],
+        "target_case_ids" => target_case_ids(batch, checkpoint, next_action),
+        "blocked_case_ids" => blocked_case_ids(batch, checkpoint, next_action),
+        "recovery_actions" => recovery_actions(checkpoint, next_action),
+        "resume_policy" => policy
+      }
+
+      {:ok, Map.merge(plan, OperatorTaskBatchRecoveryEvidence.advice(checkpoint["execution"]))}
     end
   end
 
@@ -211,10 +219,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
 
   defp checkpoint_summary(nil), do: nil
 
-  defp checkpoint_summary(%{"run_phase" => "execute"} = result) do
+  defp checkpoint_summary(result) when is_map(result) do
     Map.take(result, [
       "run_id",
       "run_phase",
+      "status",
       "batch_digest",
       "started_at",
       "finished_at",
@@ -225,6 +234,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       "ok_count",
       "blocked_count",
       "error_count",
+      "error_codes",
+      "error_code_counts",
       "skipped_count",
       "skipped_case_ids",
       "failed_case_ids",
@@ -233,24 +244,6 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
     ])
     |> Map.put("blocked_readiness_case_ids", blocked_readiness_case_ids(result))
     |> Map.put("readiness_recovery_actions", readiness_recovery_actions(result))
-  end
-
-  defp checkpoint_summary(result) when is_map(result) do
-    Map.take(result, [
-      "run_id",
-      "run_phase",
-      "batch_digest",
-      "started_at",
-      "finished_at",
-      "task_count",
-      "verified_count",
-      "executed_count",
-      "ok_count",
-      "error_count",
-      "failed_case_ids",
-      "failure_receipts",
-      "readiness_counts"
-    ])
   end
 
   defp blocked_readiness_case_ids(%{"results" => results}) when is_list(results) do
@@ -263,19 +256,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
   defp blocked_readiness_case_ids(_result), do: []
 
   defp execution_checkpoint_summary(batch, execution, digest) when is_map(execution) do
-    completed = OperatorTaskBatchCompletion.completed_case_ids(batch, execution)
-    complete? = OperatorTaskBatchCompletion.complete?(batch, execution, digest, completed)
-    completed_set = MapSet.new(completed)
-    incomplete = Enum.reject(all_case_ids(batch), &MapSet.member?(completed_set, &1))
+    evidence = OperatorTaskCheckpointEvidence.execution(batch, execution, digest)
+    summary = checkpoint_summary(execution)
+    recovery = OperatorTaskBatchRecoveryEvidence.build(batch, execution, summary, evidence)
+    summary = Map.merge(summary, recovery)
 
-    incomplete =
-      if incomplete == [] and not complete?,
-        do: all_case_ids(batch),
-        else: incomplete
+    {complete?, incomplete} =
+      OperatorTaskCheckpointEvidence.execution_state(batch, summary, digest, evidence)
 
-    execution
-    |> Map.put("run_phase", "execute")
-    |> checkpoint_summary()
+    summary
+    |> Map.put("completion_evidence", evidence)
     |> Map.put("incomplete_case_ids", incomplete)
     |> Map.put("completion_verified", complete?)
   end
@@ -303,15 +293,30 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
   end
 
   defp resume_policy(_preparation, execution) when is_map(execution) do
-    blocked = execution["blocked_readiness_case_ids"]
+    blocked = normalize_string_list(execution["blocked_readiness_case_ids"])
+    failed = normalize_string_list(execution["failed_case_ids"])
     skipped = normalize_string_list(execution["skipped_case_ids"])
     errors? = is_integer(execution["error_count"]) and execution["error_count"] > 0
+    incomplete = normalize_string_list(execution["incomplete_case_ids"])
+    known_unresolved = MapSet.new(failed ++ blocked)
+    unknown? = Enum.any?(incomplete, &(not MapSet.member?(known_unresolved, &1)))
+    advice = OperatorTaskBatchRecoveryEvidence.advice(execution)
 
     cond do
+      get_in(execution, ["completion_evidence", "batch_bound"]) != true ->
+        %{"status" => "blocked", "next_action" => "resolve_incomplete_cases"}
+
+      unknown? ->
+        %{"status" => "blocked", "next_action" => "resolve_incomplete_cases"}
+
+      execution["recovery_verified"] != true or advice["continuation_blocked"] or
+          advice["repair_required_case_ids"] != [] ->
+        %{"status" => "blocked", "next_action" => "resolve_incomplete_cases"}
+
       skipped != [] or (errors? and blocked != []) ->
         %{"status" => "partial", "next_action" => "resolve_incomplete_cases"}
 
-      errors? ->
+      errors? and failed != [] ->
         %{"status" => "partial", "next_action" => "retry_failed_cases"}
 
       blocked != [] ->
@@ -410,7 +415,10 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       |> Enum.map(&get_in(&1, ["recovery", "required_action"]))
 
     readiness =
-      normalize_string_list(get_in(checkpoint, ["execution", "readiness_recovery_actions"]))
+      if get_in(checkpoint, ["execution", "recovery_verified"]) == true,
+        do:
+          normalize_string_list(get_in(checkpoint, ["execution", "readiness_recovery_actions"])),
+        else: []
 
     normalize_string_list(failures ++ readiness)
   end
@@ -418,12 +426,14 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
   defp recovery_actions(_checkpoint, _next_action), do: []
 
   defp checkpoint_failure_receipts(checkpoint) do
-    [
-      get_in(checkpoint, ["preparation", "failure_receipts"]),
-      get_in(checkpoint, ["execution", "failure_receipts"])
-    ]
-    |> List.flatten()
-    |> Enum.filter(&is_map/1)
+    receipts =
+      case checkpoint["execution"] do
+        %{"recovery_verified" => true} = execution -> execution["failure_receipts"]
+        %{} -> []
+        _ -> get_in(checkpoint, ["preparation", "failure_receipts"])
+      end
+
+    receipts |> List.wrap() |> Enum.filter(&is_map/1)
   end
 
   defp all_case_ids(batch) do
@@ -435,7 +445,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
 
   defp normalize_string_list(values) when is_list(values) do
     values
-    |> Enum.filter(&(is_binary(&1) and &1 != ""))
+    |> Enum.filter(&(is_binary(&1) and String.trim(&1) != ""))
     |> Enum.uniq()
   end
 

@@ -61,6 +61,55 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
     end
   end
 
+  def verify(root, record) do
+    with true <- valid?(record),
+         {:ok, %{type: :directory}} <- File.lstat(root) do
+      path = Path.join(root, record["attempt_id"] <> ".json")
+
+      with {:error, :enoent} <- File.lstat(path <> ".next"),
+           :ok <- expected_generation(path, record) do
+        :ok
+      else
+        _ -> {:error, :operator_task_dispatch_journal_unavailable}
+      end
+    else
+      _ -> {:error, :operator_task_dispatch_journal_unavailable}
+    end
+  end
+
+  def verify_inventory(root, records) do
+    case File.lstat(root) do
+      {:error, :enoent} when map_size(records) == 0 ->
+        :ok
+
+      {:ok, %{type: :directory}} ->
+        expected = MapSet.new(Map.keys(records), &(&1 <> ".json"))
+
+        with {:ok, names} <- File.ls(root),
+             true <- length(names) == map_size(records) and length(names) <= @max_records,
+             true <- MapSet.new(names) == expected do
+          :ok
+        else
+          _ -> {:error, :operator_task_dispatch_journal_invalid}
+        end
+
+      _ ->
+        {:error, :operator_task_dispatch_journal_unavailable}
+    end
+  end
+
+  def verify_selection(root, records, selected) do
+    # Check directory membership even for empty reads; decode only relevant evidence.
+    with :ok <- verify_inventory(root, records) do
+      Enum.reduce_while(selected, :ok, fn record, :ok ->
+        case verify(root, record) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+      end)
+    end
+  end
+
   def delete(root, record) do
     path = Path.join(root, record["attempt_id"] <> ".json")
 

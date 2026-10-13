@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.Engine
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator
+  alias KyuubikiWeb.Playground.{AgentClient, AgentExecutionGate, AgentJobCancellation}
   alias KyuubikiWeb.WorkflowGraphResponse
 
   @registry KyuubikiWeb.Orchestra.WorkflowRunnerRegistry
@@ -77,6 +78,35 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
     end
   end
 
+  @doc false
+  def stop_failed(job_id) do
+    targets = cancellation_targets(job_id)
+
+    case running(job_id) do
+      {:ok, pid} -> Process.exit(pid, :shutdown)
+      :error -> :ok
+    end
+
+    if match?({:ok, _}, targets), do: request_cancellation(job_id, elem(targets, 1))
+    :ok
+  end
+
+  defp cancellation_targets(job_id) do
+    AgentExecutionGate.cancel_job_targets(job_id)
+  catch
+    :exit, _ -> {:error, :execution_gate_unavailable}
+  end
+
+  defp request_cancellation(job_id, targets) do
+    if targets.endpoints != [] do
+      Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
+        AgentClient.cancel_job(job_id, targets)
+      end)
+    end
+  catch
+    :exit, _ -> :ok
+  end
+
   defp execute(
          job_id,
          claim,
@@ -96,6 +126,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
           fn progress -> apply_progress(job_id, claim, progress) end,
           response_options,
           recover_native_results: claim["generation"] > 1,
+          native_dispatch_evidence: fn action ->
+            WorkflowRecoveryCoordinator.native_dispatch_evidence(job_id, claim, action)
+          end,
+          native_result_checkpoint: fn action ->
+            WorkflowRecoveryCoordinator.native_result_checkpoint(job_id, claim, action)
+          end,
           solve_checkpoint: fn action ->
             WorkflowRecoveryCoordinator.solve_checkpoint(job_id, claim, action)
           end,
@@ -105,7 +141,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
         )
       end)
 
-    case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
+    case await_execution(task, job_id, timeout_ms) do
       {:ok, {:ok, result}} ->
         complete_job(job_id, claim, graph, result, response_options)
 
@@ -132,6 +168,25 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
         if not cancelled?(job_id) do
           fail_job(job_id, claim, "workflow execution timed out after #{timeout_ms} ms")
         end
+    end
+  end
+
+  defp await_execution(task, job_id, timeout_ms) do
+    case Task.yield(task, timeout_ms) do
+      nil ->
+        # Capture the actual dispatch targets before owner DOWN releases their leases.
+        case AgentJobCancellation.stop_dispatch(task, job_id) do
+          {:ok, reply, targets} ->
+            if is_nil(reply), do: request_cancellation(job_id, targets)
+
+            reply
+
+          {:error, _} ->
+            Task.shutdown(task, :brutal_kill)
+        end
+
+      reply ->
+        reply
     end
   end
 

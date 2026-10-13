@@ -434,6 +434,31 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   end
 
   defp handle_endpoint_result(
+         {:error, {:operator_task_dispatch_outcome_unknown, cause}},
+         endpoint,
+         _remaining,
+         _request_id,
+         _request,
+         _on_progress,
+         _opts,
+         _failures
+       ) do
+    case cause do
+      {:agent_transport_failure, _, _} ->
+        :ok = AgentPool.report_failure(endpoint, DistributedRecovery.health_reason(cause))
+
+      {:rpc_error, _, _} ->
+        :ok = AgentPool.report_success(endpoint)
+
+      _ ->
+        :ok
+    end
+
+    # A sealed unknown observation overrides even an idempotent retry hint.
+    {:error, :operator_task_dispatch_outcome_unknown}
+  end
+
+  defp handle_endpoint_result(
          {:error, reason},
          endpoint,
          remaining,

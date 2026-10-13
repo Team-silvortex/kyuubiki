@@ -26,7 +26,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.Orchestra.{
     WorkflowCheckpointStore,
     WorkflowSolveCheckpoint,
-    WorkflowBranchCheckpoint
+    WorkflowBranchCheckpoint,
+    WorkflowNativeResultCheckpoint,
+    WorkflowNativeDispatchEvidence
   }
 
   alias KyuubikiWeb.Storage.FailureBoundary
@@ -80,6 +82,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     GenServer.call(__MODULE__, {:fail, job_id, claim, message}, @call_timeout)
   end
 
+  defdelegate fail_observed(job, message), to: WorkflowRecoveryFailure
+
   def block_native_recovery(job_id, claim, reason)
       when is_binary(job_id) and is_map(claim) do
     block_checkpoint(job_id, claim, :native_workflow_recovery_blocked, reason)
@@ -113,6 +117,24 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     GenServer.call(
       __MODULE__,
       {:checkpoint, WorkflowBranchCheckpoint, job_id, claim, action},
+      @call_timeout
+    )
+  end
+
+  def native_result_checkpoint(job_id, claim, action)
+      when is_binary(job_id) and is_map(claim) do
+    GenServer.call(
+      __MODULE__,
+      {:checkpoint, WorkflowNativeResultCheckpoint, job_id, claim, action},
+      @call_timeout
+    )
+  end
+
+  def native_dispatch_evidence(job_id, claim, action)
+      when is_binary(job_id) and is_map(claim) do
+    GenServer.call(
+      __MODULE__,
+      {:checkpoint, WorkflowNativeDispatchEvidence, job_id, claim, action},
       @call_timeout
     )
   end
@@ -254,7 +276,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   def handle_call({:checkpoint, checkpoint, job_id, claim, action}, _from, state)
-      when checkpoint in [WorkflowSolveCheckpoint, WorkflowBranchCheckpoint] do
+      when checkpoint in [
+             WorkflowSolveCheckpoint,
+             WorkflowBranchCheckpoint,
+             WorkflowNativeResultCheckpoint,
+             WorkflowNativeDispatchEvidence
+           ] do
     result =
       if Ownership.owner?(state),
         do: WorkflowCheckpointStore.access(job_id, claim, action, state.lease, checkpoint),
@@ -277,6 +304,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     reply = Ownership.guarded_write(state, fn -> cancel_recovery(job_id) end)
     {:reply, reply, Ownership.after_write(state, reply)}
   end
+
+  def handle_call({:fail_observed, job, message}, _from, state),
+    do: WorkflowRecoveryFailure.handle_observed(job, message, state)
 
   def handle_call({:delete, job_id}, _from, state) do
     reply = Ownership.guarded_write(state, fn -> Store.delete_with_result(job_id) end)
@@ -521,6 +551,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
              :workflow_recovery_checkpoint_missing_or_invalid,
              :workflow_solve_checkpoint_invalid,
              :workflow_branch_checkpoint_invalid,
+             :workflow_native_result_checkpoint_invalid,
+             :workflow_native_dispatch_evidence_invalid,
              :invalid_workflow_recovery_record,
              :workflow_dispatch_outcome_unconfirmed
            ] ->

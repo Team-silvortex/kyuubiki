@@ -170,39 +170,26 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
 
     assert complete["resume_policy"] == %{"status" => "complete", "next_action" => "archive"}
 
-    partial_execution =
-      execution
-      |> Map.merge(%{
-        "error_count" => 1,
-        "ok_count" => 0,
-        "failed_case_ids" => ["case-a"],
-        "failure_receipts" => [
-          %{
-            "schema_version" => "kyuubiki.control-plane-operator-task-failure/v1",
-            "case_id" => "case-a",
-            "reason_code" => "operator_task_digest_mismatch",
-            "recovery" => %{
-              "required_action" => "rebuild_task_ir_and_recompute_digest"
-            }
-          }
-        ]
-      })
+    batch = put_in(batch, ["tasks", Access.at(0), "task_ir", "config", "tampered"], true)
+    assert {:ok, partial_execution} = OperatorTaskExecutor.execute_batch(batch)
 
     partial = OperatorTaskBatchRun.checkpoint(batch, execution: partial_execution)
 
     assert partial["resume_policy"] == %{
-             "status" => "partial",
-             "next_action" => "retry_failed_cases"
+             "status" => "blocked",
+             "next_action" => "resolve_incomplete_cases"
            }
 
     assert hd(partial["execution"]["failure_receipts"])["case_id"] == "case-a"
 
     assert {:ok, partial_plan} = OperatorTaskBatchRun.resume_plan(batch, partial)
     assert partial_plan["target_case_ids"] == ["case-a"]
+    assert partial_plan["retryable_case_ids"] == []
+    assert partial_plan["repair_required_case_ids"] == ["case-a"]
     assert partial_plan["recovery_actions"] == ["rebuild_task_ir_and_recompute_digest"]
   end
 
-  test "checkpoint resume policy targets readiness-blocked cases separately from errors" do
+  test "incomplete readiness rows remain diagnostic rather than certified recovery evidence" do
     assert {:ok, task_a} = material_shock_task("case-a", 120.0)
 
     batch = %{
@@ -236,14 +223,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
 
     assert checkpoint["resume_policy"] == %{
              "status" => "blocked",
-             "next_action" => "resolve_blocked_cases"
+             "next_action" => "resolve_incomplete_cases"
            }
 
     assert checkpoint["execution"]["readiness_counts"] == %{"blocked" => 1}
     assert checkpoint["execution"]["blocked_readiness_case_ids"] == ["case-a"]
 
     assert {:ok, plan} = OperatorTaskBatchRun.resume_plan(batch, checkpoint)
-    assert plan["next_action"] == "resolve_blocked_cases"
+    assert plan["next_action"] == "resolve_incomplete_cases"
+    assert plan["recovery_evidence_verified"] == false
+    assert plan["recovery_actions"] == []
     assert plan["target_case_ids"] == ["case-a"]
     assert plan["blocked_case_ids"] == ["case-a"]
   end
@@ -285,24 +274,17 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
       ]
     }
 
-    execution = %{
-      "run_id" => "operator-task-batch:execute:test",
-      "run_phase" => "execute",
-      "batch_digest" => OperatorTaskBatchRun.batch_digest(batch),
-      "started_at" => "2026-01-01T00:00:00Z",
-      "finished_at" => "2026-01-01T00:00:01Z",
-      "task_count" => 2,
-      "executed_count" => 2,
-      "ok_count" => 1,
-      "error_count" => 1,
-      "failed_case_ids" => ["case-b"]
-    }
+    batch = put_in(batch, ["tasks", Access.at(1), "task_ir", "config", "tampered"], true)
+    assert {:ok, execution} = OperatorTaskExecutor.execute_batch(batch)
+    assert execution["ok_count"] == 1
+    assert execution["failed_case_ids"] == ["case-b"]
 
     checkpoint = OperatorTaskBatchRun.checkpoint(batch, execution: execution)
 
     assert {:ok, plan} = OperatorTaskBatchRun.resume_plan(batch, checkpoint)
 
-    assert plan["next_action"] == "retry_failed_cases"
+    assert plan["next_action"] == "resolve_incomplete_cases"
+    assert plan["repair_required_case_ids"] == ["case-b"]
     assert plan["target_case_ids"] == ["case-b"]
     assert plan["blocked_case_ids"] == []
   end
@@ -338,10 +320,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutorTest do
     assert receipt["recovery"]["required_action"] == "fix_task_ir_contract_mirror_fields"
 
     checkpoint = OperatorTaskBatchRun.checkpoint(batch, execution: execution)
-    assert checkpoint["resume_policy"]["next_action"] == "retry_failed_cases"
+    assert checkpoint["resume_policy"]["next_action"] == "resolve_incomplete_cases"
 
     assert {:ok, retry_plan} = OperatorTaskBatchRun.resume_plan(batch, checkpoint)
     assert retry_plan["target_case_ids"] == ["case-package"]
+    assert retry_plan["retryable_case_ids"] == []
+    assert retry_plan["repair_required_case_ids"] == ["case-package"]
     assert retry_plan["blocked_case_ids"] == []
     assert retry_plan["recovery_actions"] == ["fix_task_ir_contract_mirror_fields"]
   end

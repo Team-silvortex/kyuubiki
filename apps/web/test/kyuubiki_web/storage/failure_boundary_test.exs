@@ -38,6 +38,34 @@ defmodule KyuubikiWeb.Storage.FailureBoundaryTest do
     assert_raise ArgumentError, fn -> FailureBoundary.run(fn -> raise ArgumentError end) end
   end
 
+  test "an Ecto registry entry lost during repo restart is a bounded storage outage" do
+    {pid, ref} = spawn_monitor(fn -> :ok end)
+    assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
+
+    assert {:error, :analysis_store_unavailable} =
+             FailureBoundary.run(fn -> Ecto.Repo.Registry.lookup(pid) end)
+
+    assert {:error, :custom_unavailable} =
+             FailureBoundary.run(fn -> Ecto.Repo.Registry.lookup(pid) end, :custom_unavailable)
+  end
+
+  test "a missing named repo remains a bounded storage outage" do
+    assert {:error, :analysis_store_unavailable} =
+             FailureBoundary.run(fn -> Ecto.Repo.Registry.lookup(__MODULE__) end)
+  end
+
+  test "unrelated ETS errors including direct registry access are not swallowed" do
+    table = :ets.new(:failure_boundary, [])
+
+    assert_raise ArgumentError, fn ->
+      FailureBoundary.run(fn -> :ets.lookup_element(table, :missing, 4) end)
+    end
+
+    assert_raise ArgumentError, fn ->
+      FailureBoundary.run(fn -> :ets.lookup_element(Ecto.Repo.Registry, self(), 4) end)
+    end
+  end
+
   test "unrelated process failures and storage programming crashes are not swallowed" do
     for reason <- [
           :shutdown,

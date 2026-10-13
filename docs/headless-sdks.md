@@ -1472,14 +1472,14 @@ token, raw address or raw session. A verified Agent response may become
 or explicit capacity rejection becomes `not_dispatched`. Malformed or mismatched
 completion, transport loss and caller death remain unknown or
 `dispatch_boundary_unconfirmed`. Responses are checked with the existing
-task-bound completion gate before retaining a successful observation.
+task-bound completion gate before retaining a successful observation. The first observation is sealed, including unknown outcomes; later conflicts cannot rewrite it.
 
 The journal is a separate bounded runtime sidecar, independent of SQL table
 migrations: `operator-task-dispatches/*.json` under `KYUUBIKI_DATA_DIR` (or the
 existing default runtime data root). One Orchestra process owns each journal
 directory. SQLite, Postgres and memory backends share this file contract.
 It has at most 512 records of at most 4,096 bytes each, plus at most one in-flight
-replacement, and retains at most 128 confirmed-response history records.
+replacement, with a 128-record window for unprotected confirmed-response history.
 Unresolved records are never automatically evicted. Saturation stops new TaskIR
 dispatch with `operator_task_dispatch_journal_full`, rather than deleting
 unconfirmed ownership. Unknown generations, incomplete replacements, corruption,
@@ -1488,7 +1488,7 @@ rollback. Local checksum checks detect accidental corruption, not hostile
 filesystem tampering or cryptographic execution provenance. Atomic file
 replacement and synced contents have local process-restart tests, not power-loss
 or shared-directory multi-writer qualification. Current policy is visible in the
-inspection response, not a new user-editable scheduling or storage setting.
+inspection response, not a new user-editable setting. Identical repeats verify storage without retention writes; conflicting finishes reject only the request. History reads/fences verify inventory and selected records, including empty queries. Detected damage requires repair/reload. Public receipt reads revalidate the exact observation after lookup; legitimate transitions/eviction return `operator_task_dispatch_observation_changed` without poisoning healthy history, while damage remains fail-closed. Errors contain no completion, and reads never authorize replay or renew retention. Managed native workflows retain exact attempt identities before RPC in the private recovery record (512 entries/512 KiB, no payloads/results); missing history after restart blocks, failed commits send no RPC, and unknown completion retains blocked evidence. Legacy native workflows lacking this evidence block explicitly. Active/recovery-blocked or inconsistent parent state protects history within the existing 512-record cap; matching ordinary terminal parents release it. Bounded metadata queries stay outside the journal process; failure stops admission without pruning/quarantine. Concurrent reservations may temporarily over-retain ordinary history within the hard cap. Joint store rollback remains open. See [public receipt revalidation](../reports/operator-dispatch-result-revalidation-20261013.md), [durable attempt evidence](../reports/workflow-native-dispatch-evidence-20261013.md) and [active history](../reports/operator-dispatch-active-retention-20261013.md).
 
 Inspection resolves only the original fingerprint against currently configured
 or registered targets. A changed address/session is not probed; registry mode
@@ -1504,10 +1504,10 @@ generation and cancellation flag; raw Agent diagnostics are not echoed.
 of eventual completion. `request_not_observed_active`, unreachable/replaced
 targets and `no_retained_dispatch` do not prove cancellation or nonexecution.
 Process identity is observed at inspection time, not pinned before dispatch.
-All responses have `automatic_replay_authorized: false` and
-`terminal_result_available: false`; inspection is not a result cache or replay
-authority. Native graph admission blocks ambiguous outcomes regardless of
-idempotent/checkpoint policy. Later owned claims reuse native success only with matching TaskIR, actual parent and original attempt; missing receipts block, never silently re-execute.
+All responses have `automatic_replay_authorized: false` and `terminal_result_available: false`;
+inspection is not a result cache or replay authority. Native graph admission blocks ambiguous outcomes regardless of
+idempotent/checkpoint policy. Later claims require matching TaskIR, parent and original attempt. Managed native successes now retain a private verified handoff before publication: 32 entries, 512 KiB per receipt, 65,536 decoded JSON nodes per receipt and 2 MiB encoded bytes per parent, separate from solve/branch budgets. A later owned generation may reuse it with the Agent offline, but exact journal observation and unique original success remain mandatory. Public recovery exposes `native_result_checkpoint_policy` and `native_result_checkpoint_count`, not payloads. Full/oversize entries are omitted without eviction; missing handoff requires the original Agent receipt, otherwise recovery blocks without reexecution. Failed commits/corruption block even with skip-on-error; ordinary terminal states prune the handoff. See [native result handoff](../reports/workflow-native-result-handoff-20261013.md); controlled local restart evidence is not live Rust/installed/power-loss qualification.
+Multiple dispatched attempts cannot choose a historical success; selection is rechecked after reading. See [attempt selection](../reports/native-workflow-attempt-selection-20261012.md).
 Separately, small typed-solve artifacts are retained privately before publication: 32 entries, 512 KiB per output, 2 MiB encoded bytes per parent, with decoded/container JSON budgets.
 Exact invocation digests and lossless output JSON preserve downstream TaskIR identity; claim/lease checks and atomic writes fence reuse. Ordinary terminal states prune artifacts.
 Oversize output is uncached under the original replay policy; corrupt/changed checkpoints block, even with skip-on-error. Public recovery exposes limits/count, not payloads.

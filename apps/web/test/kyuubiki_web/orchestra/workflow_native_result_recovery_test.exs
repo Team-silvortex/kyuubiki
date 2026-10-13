@@ -155,9 +155,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeResultRecoveryTest do
 
   test "missing selected receipt never falls back to another historical success", ctx do
     spec = spec()
-    seed(ctx, spec)
-    seed(ctx, spec)
-    {:ok, [selected | _]} = Journal.lookup_task(task(spec)["task_id"], ctx.journal)
+    selected = seed(ctx, spec)
+    seed(ctx, spec, "observed_executed", "other-parent")
 
     probe = fn _, query ->
       send(self(), {:selected_read, query["attempt_id"]})

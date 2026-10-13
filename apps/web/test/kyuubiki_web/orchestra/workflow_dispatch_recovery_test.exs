@@ -294,6 +294,50 @@ defmodule KyuubikiWeb.Orchestra.WorkflowDispatchRecoveryTest do
     Fixture.unchanged(fixture)
   end
 
+  for fault <- [:deleted, :replacement, :partial] do
+    test "live #{fault} dispatch storage blocks coordinator recovery before a new claim", ctx do
+      fixture = native_job()
+      attempt = dispatch(fixture.id, "observed_executed")
+      path = Path.join(ctx.root, attempt <> ".json")
+      {:ok, records} = Files.load(ctx.root)
+
+      case unquote(fault) do
+        :deleted ->
+          File.rm!(path)
+
+        :replacement ->
+          assert :ok =
+                   Files.write(
+                     ctx.root,
+                     Map.put(records[attempt], "state", "outcome_unknown"),
+                     records[attempt]
+                   )
+
+        :partial ->
+          File.write!(path <> ".next", "interrupted")
+      end
+
+      before = {File.read(path), File.read(path <> ".next")}
+      pid = Process.whereis(WorkflowRecoveryCoordinator)
+      assert %{"recovered" => 0, "blocked" => 1} = WorkflowRecoveryCoordinator.recover_now()
+      assert Process.whereis(WorkflowRecoveryCoordinator) == pid
+      assert {:ok, %{status: :failed, message: message}} = Store.get(fixture.id)
+      assert message =~ "workflow_dispatch_journal_unavailable"
+      assert {:ok, runtime} = AnalysisResultStore.get(fixture.id)
+      key = WorkflowRecoveryEnvelope.internal_key()
+      assert runtime[key]["state"] == "recovery_blocked"
+      assert runtime[key]["envelope"] == fixture.runtime[key]["envelope"]
+      assert runtime[key]["generation"] == fixture.claim["generation"]
+      assert runtime[key]["attempt"] == fixture.claim["attempt"]
+
+      assert List.last(runtime[key]["history"])["next_action"] ==
+               "restore_dispatch_journal_before_recovery"
+
+      assert :error = WorkflowJobRunner.running(fixture.id)
+      assert {File.read(path), File.read(path <> ".next")} == before
+    end
+  end
+
   test "envelope tampering is rejected before consulting the dispatch journal" do
     fixture = native_job()
     recovery = fixture.runtime[WorkflowRecoveryEnvelope.internal_key()]

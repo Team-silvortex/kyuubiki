@@ -104,6 +104,7 @@
     "config/architecture/module-function-coverage-evidence/workflow-input-bindings.json",
     "config/architecture/module-function-coverage-evidence/workflow-consumed-path-recovery.json",
     "config/architecture/module-function-coverage-evidence/workflow-native-invocation-precision.json",
+    "config/architecture/module-function-coverage-evidence/workflow-native-attempt-selection.json",
     "config/architecture/module-function-coverage-evidence/task-ir-typed-digest.json",
     "config/architecture/module-function-coverage-evidence/task-ir-typed-routing.json",
     "config/architecture/module-function-coverage-evidence/workflow-typed-execution-recovery.json",

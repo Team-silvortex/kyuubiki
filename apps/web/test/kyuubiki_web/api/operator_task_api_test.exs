@@ -415,7 +415,7 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
     assert payload["blocked_case_ids"] == []
   end
 
-  test "builds a readiness-blocked operator task batch resume plan through the service API" do
+  test "contradictory readiness summaries require inspection through the service API" do
     {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
 
     batch = %{
@@ -459,7 +459,7 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
 
     assert checkpoint["resume_policy"] == %{
              "status" => "blocked",
-             "next_action" => "resolve_blocked_cases"
+             "next_action" => "resolve_incomplete_cases"
            }
 
     assert checkpoint["execution"]["blocked_readiness_case_ids"] == ["batch-case-a"]
@@ -475,9 +475,12 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
 
     assert resume_conn.status == 200
     payload = Jason.decode!(resume_conn.resp_body)
-    assert payload["next_action"] == "resolve_blocked_cases"
+    assert payload["next_action"] == "resolve_incomplete_cases"
     assert payload["target_case_ids"] == ["batch-case-a"]
     assert payload["blocked_case_ids"] == ["batch-case-a"]
+    assert payload["recovery_evidence_verified"] == false
+    assert payload["recovery_actions"] == []
+    assert payload["automatic_replay_allowed"] == false
   end
 
   defp fixture_task! do

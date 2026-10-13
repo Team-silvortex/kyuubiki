@@ -190,6 +190,17 @@ defmodule KyuubikiWeb.Playground.AgentJobCancellationTest do
 
     assert AgentJobCancellation.finish_dispatch("cancel-native-receipt", failure) == failure
 
+    for reason <- [
+          :operator_task_dispatch_outcome_unknown,
+          :operator_task_dispatch_evidence_unavailable,
+          {:operator_task_dispatch_outcome_unknown,
+           {:agent_transport_failure, :receive, :closed}},
+          {:operator_task_dispatch_outcome_unknown, {:progress_callback_failed, :exit, "local"}}
+        ] do
+      assert AgentJobCancellation.finish_dispatch("cancel-native-receipt", {:error, reason}) ==
+               {:error, reason}
+    end
+
     assert {:error, {:rpc_error, "cancelled", _}} =
              AgentJobCancellation.finish_dispatch(
                "cancel-native-receipt",

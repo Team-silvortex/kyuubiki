@@ -30,28 +30,26 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchCompletion do
     |> Enum.uniq()
   end
 
-  def complete?(batch, execution, digest, completed) do
-    tasks = Map.get(batch, "tasks", [])
-    rows = Map.get(execution, "results", [])
-    count = length(tasks)
-
-    execution["task_count"] == count and execution["executed_count"] == count and
+  def complete_metadata?(count, execution, digest) do
+    Enum.all?(
+      ~w(task_count executed_count ok_count error_count attempted_count blocked_count skipped_count),
+      &is_integer(execution[&1])
+    ) and
+      execution["task_count"] == count and execution["executed_count"] == count and
       execution["ok_count"] == count and execution["error_count"] == 0 and
-      Map.get(execution, "attempted_count", count) == count and
-      Map.get(execution, "blocked_count", 0) == 0 and
-      Map.get(execution, "skipped_count", 0) == 0 and
-      Map.get(execution, "batch_digest", digest) == digest and
-      Map.get(execution, "run_phase", "execute") == "execute" and
-      Map.get(execution, "status", "executed") == "executed" and
+      execution["attempted_count"] === count and
+      execution["blocked_count"] === 0 and
+      execution["skipped_count"] === 0 and
+      execution["batch_digest"] == digest and
+      execution["run_phase"] == "execute" and
+      execution["status"] == "executed" and
       Map.get(execution, "error_code_counts", %{}) == %{} and
-      Map.get(execution, "readiness_counts", %{"executed" => count}) ==
+      Map.get(execution, "readiness_counts", %{"executed" => count}) ===
         if(count == 0, do: %{}, else: %{"executed" => count}) and
       Enum.all?(
         ~w(failed_case_ids skipped_case_ids error_codes failure_receipts),
         &(Map.get(execution, &1, []) == [])
-      ) and
-      is_list(rows) and length(rows) == count and
-      length(completed) == count
+      )
   end
 
   defp completed_row?(%{"status" => "ok", "result" => result} = row, task)

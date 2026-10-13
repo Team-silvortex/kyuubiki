@@ -59,10 +59,75 @@
       }
     },
     "preparation": {
-      "type": ["object", "null"]
+      "type": ["object", "null"],
+      "description": "Preparation reuse requires batch/phase binding, integer counters, aligned error codes and failure receipts, and compact task_evidence covering each task exactly once. Legacy summaries without task evidence cannot authorize reuse; regenerate explicitly from the original preparation records.",
+      "properties": {
+        "task_evidence": {
+          "type": "array",
+          "description": "Task-bound preparation identities, status and error markers. Does not include numerical inputs or full admission reports.",
+          "items": { "type": "object" }
+        }
+      }
     },
     "execution": {
-      "type": ["object", "null"]
+      "type": ["object", "null"],
+      "description": "Completion and recovery require task-bound evidence, exhaustive disjoint outcome partitions and exact integer counters. Failure receipt permissions are checked against compact recovery evidence on read. Missing or foreign evidence remains diagnostic without recovery advice or automatic replay. Legacy summaries lacking evidence must be explicitly regenerated from original results, not upgraded from saved boolean flags.",
+      "properties": {
+        "completion_evidence": {
+          "type": "object",
+          "required": ["batch_bound", "result_count", "completed_tasks"],
+          "description": "Compact consistency record derived at checkpoint creation. This is not signed provenance or an independently authenticated execution receipt.",
+          "properties": {
+            "batch_bound": { "type": "boolean" },
+            "result_count": { "type": ["integer", "null"], "minimum": 0 },
+            "completed_tasks": { "type": "array", "items": { "type": "object" } }
+          }
+        },
+        "recovery_verified": {
+          "type": "boolean",
+          "description": "Derived consistency marker, revalidated on read; not authenticated provenance or replay permission."
+        },
+        "recovery_evidence_error": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "description": "Static failed-check field for diagnostic-only execution; null when recovery evidence verifies. Rejected input values are not included."
+        },
+        "recovery_evidence": {
+          "type": ["object", "null"],
+          "description": "Task identities and critical failure-receipt fingerprints or compact blocked readiness. Does not duplicate numerical results. Null for diagnostic-only executions; this is not a signature or trusted attempt ledger.",
+          "required": ["failed_tasks", "blocked_tasks"],
+          "properties": {
+            "failed_tasks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["case_id", "task_id", "task_digest", "operator_id", "program_id", "error_code", "receipt_digest"],
+                "properties": {
+                  "receipt_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+                }
+              }
+            },
+            "blocked_tasks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["case_id", "task_id", "task_digest", "operator_id", "program_id", "readiness"],
+                "properties": {
+                  "readiness": {
+                    "type": "object",
+                    "required": ["status", "ready_to_dispatch", "required_action"],
+                    "properties": {
+                      "status": { "enum": ["blocked", "ready_for_package_resolution"] },
+                      "ready_to_dispatch": { "const": false },
+                      "required_action": { "type": "string", "minLength": 1 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "resume_policy": {
       "type": "object",

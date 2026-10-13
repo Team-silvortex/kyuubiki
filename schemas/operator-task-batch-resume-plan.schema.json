@@ -60,6 +60,30 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
     },
+    "recovery_evidence_verified": {
+      "type": "boolean",
+      "description": "Execution recovery evidence is internally consistent. This does not certify provenance, numerical accuracy or automatic continuation. False also covers checkpoints without execution."
+    },
+    "automatic_replay_allowed": {
+      "const": false,
+      "description": "A resume plan is advice only, never permission to silently replay work."
+    },
+    "retryable_case_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Verified failures whose receipt allows explicit retry. The original attempt and current ownership must still be reconciled; continuation_blocked may remain true."
+    },
+    "repair_required_case_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Verified nonretryable failures requiring repair before a fresh submission. Unverified failures do not populate this list."
+    },
+    "continuation_blocked": {
+      "type": "boolean",
+      "description": "True when failure receipts prohibit continuing other tasks or execution recovery is unverified. False is not dispatch permission; the policy, readiness, original attempt and ownership still apply."
+    },
     "resume_policy": {
       "type": "object",
       "required": ["status", "next_action"]

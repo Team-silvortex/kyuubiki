@@ -195,6 +195,124 @@ defmodule KyuubikiWeb.AgentNativeTaskApiTest do
     end
   end
 
+  test "native recovery distinguishes manual retry from repair and unsafe continuation without replay" do
+    task = native_task()
+    {:ok, local} = OperatorTaskIR.build("export.summary_json", %{"value" => 14.0}, %{})
+
+    batch = %{
+      "quality_execution_batch_contract" => "kyuubiki.quality_execution_batch/v1",
+      "tasks" => [
+        %{"case_id" => "bad", "task_ir" => task},
+        %{"case_id" => "peer", "task_ir" => local}
+      ]
+    }
+
+    for retryable <- [true, false], safe <- [true, false] do
+      failure =
+        failure_receipt(task)
+        |> put_in(["recovery", "retryable"], retryable)
+        |> put_in(["recovery", "safe_to_continue_other_tasks"], safe)
+
+      start_agent_response(failure_response(failure))
+      assert {200, execution} = batch_request("execute-batch", %{"batch" => batch})
+      assert_receive {:fake_agent_request, _request}
+
+      assert {200, checkpoint} =
+               batch_request("checkpoint-batch", %{"batch" => batch, "execution" => execution})
+
+      assert {200, plan} =
+               batch_request("resume-plan-batch", %{"batch" => batch, "checkpoint" => checkpoint})
+
+      assert plan["recovery_evidence_verified"] == true
+      assert plan["automatic_replay_allowed"] == false
+      assert plan["continuation_blocked"] == not safe
+      assert plan["retryable_case_ids"] == if(retryable, do: ["bad"], else: [])
+      assert plan["repair_required_case_ids"] == if(retryable, do: [], else: ["bad"])
+
+      assert plan["next_action"] ==
+               if(retryable and safe, do: "retry_failed_cases", else: "resolve_incomplete_cases")
+
+      assert plan["target_case_ids"] == if(safe, do: ["bad"], else: ["bad", "peer"])
+
+      for {field, value} <- [
+            {"retryable", not retryable},
+            {"safe_to_continue_other_tasks", not safe},
+            {"required_action", "rejected-private-value"}
+          ] do
+        changed =
+          checkpoint
+          |> put_in(["execution", "failure_receipts", Access.at(0), "recovery", field], value)
+          |> rehash_checkpoint()
+
+        for route <- ~w(verify-checkpoint-batch resume-plan-batch) do
+          assert {422, rejected} =
+                   batch_request(route, %{"batch" => batch, "checkpoint" => changed})
+
+          assert rejected["error_code"] == "operator_task_checkpoint_evidence_invalid"
+          refute rejected["error"] =~ "rejected-private-value"
+        end
+      end
+
+      assert {200, ^plan} =
+               batch_request("resume-plan-batch", %{"batch" => batch, "checkpoint" => checkpoint})
+
+      for {path, value} <- [
+            {["result", "task_id"], "wrong"},
+            {["result", "operator_task_ir_status"], "executed"},
+            {["result", "failure_receipt"], nil},
+            {["result", "failure_receipt", "recovery", "retryable"], not retryable},
+            {["result"], nil}
+          ] do
+        invalid = put_in(execution, ["results", Access.at(0)] ++ path, value)
+
+        assert {200, diagnostic} =
+                 batch_request("checkpoint-batch", %{"batch" => batch, "execution" => invalid})
+
+        assert {200, blocked} =
+                 batch_request("resume-plan-batch", %{
+                   "batch" => batch,
+                   "checkpoint" => diagnostic
+                 })
+
+        assert blocked["recovery_evidence_verified"] == false
+        assert blocked["next_action"] == "resolve_incomplete_cases"
+        assert blocked["recovery_actions"] == []
+        assert blocked["retryable_case_ids"] == []
+        assert blocked["automatic_replay_allowed"] == false
+      end
+
+      refute_receive {:fake_agent_request, _request}, 20
+    end
+  end
+
+  defp batch_request(route, body) do
+    response =
+      conn(:post, "/api/v1/operator-tasks/" <> route, Jason.encode!(body))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    {response.status, Jason.decode!(response.resp_body)}
+  end
+
+  defp rehash_checkpoint(checkpoint) do
+    digest =
+      checkpoint
+      |> Map.delete("checkpoint_digest")
+      |> legacy_json()
+      |> KyuubikiWeb.CanonicalJson.encode!()
+      |> then(&:crypto.hash(:sha256, &1))
+      |> Base.encode16(case: :lower)
+
+    Map.put(checkpoint, "checkpoint_digest", digest)
+  end
+
+  defp legacy_json(value) when is_map(value),
+    do: Map.new(value, fn {key, nested} -> {key, legacy_json(nested)} end)
+
+  defp legacy_json([]), do: %{}
+  defp legacy_json(value) when is_list(value), do: Enum.map(value, &legacy_json/1)
+  defp legacy_json(value), do: value
+
   test "generic Agent RPC errors keep the existing application-error contract" do
     task = native_task()
 

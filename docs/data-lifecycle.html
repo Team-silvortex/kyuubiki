@@ -90,8 +90,8 @@
           <li><strong>TaskIR dispatch journal:</strong> Orchestra owns the separate
             <code>operator-task-dispatches/*.json</code> sidecar under its configured runtime
             data root, regardless of SQL or memory backend. The directory is single-writer,
-            with at most 512 compact 4-KiB records and one in-flight replacement; confirmed
-            response history is capped at 128 records. No inputs, results or credentials are
+            with at most 512 compact 4-KiB records and one in-flight replacement; unprotected
+            confirmed response history retains 128 records after sequential dispatch. No inputs, results or credentials are
             stored. Unresolved ownership is not a disposable cache: it is never automatically
             pruned. Corruption, incomplete replacement and capacity exhaustion stop new TaskIR
             dispatch instead of silently falling back or deleting unknown work. This sidecar
@@ -101,6 +101,40 @@
             Legacy v1 files load without rewriting; legacy or unbound records expose a null
             job identity and cannot authorize inferred exact cancellation. Receipt retrieval
             remains available, with no bulk migration, extra backups or larger disk budget.
+            Each attempt moves from unconfirmed to one sealed observation only,
+            including unknown outcomes. Identical repeats verify that original file
+            and absence of an incomplete replacement without writing or renewing retention.
+            Invalid or conflicting finish messages reject only the request; real storage
+            failures still stop dispatch. Clock rollback cannot reduce the observation
+            timestamp, and read-only receipt retrieval cannot rewrite an unknown outcome.
+            The public receipt API revalidates the exact selected observation after
+            lookup, including unavailable Agent replies. Changed/evicted observations
+            return <code>operator_task_dispatch_observation_changed</code> without
+            poisoning healthy history; damaged storage retains the existing quarantine.
+            No stale completion is returned, no execution is retried and no retention
+            deadline is renewed. This is a point-in-time integrity check, not a lease
+            over the Agent cache and journal or cross-store atomicity.
+            Live history reads and workflow replay fences check the directory inventory
+            against cached membership and verify only the selected records' contents.
+            Parent fences include terminal and legacy/unbound relevant observations.
+            Even empty reads check membership; new reservations cannot recreate a lost
+            nonempty journal. Detected damage quarantines the journal until explicit
+            repair and reload, without rewriting evidence. Unrelated payload corruption
+            is detected when selected or on full startup validation, not on every read.
+            The journal alone cannot distinguish a missing directory from first use.
+            Coordinator-managed native workflows now also retain independent attempt
+            identities in their existing private recovery record, described below;
+            cross-store atomicity and joint history loss remain separate boundaries.
+            Terminal observations remain protected while the actual parent is active,
+            recovery-blocked, inconsistent or still retains its recovery envelope or
+            attempt bucket. Matching ordinary terminal parents release protection;
+            protected history never raises the total 512-record cap. Compact parent
+            metadata is read outside the journal process, and only unchanged records
+            in that snapshot may be pruned. A failed store lookup rejects dispatch
+            without deleting history or quarantining the healthy journal. Concurrent
+            reservations may temporarily retain extra ordinary history within the hard
+            cap; the next reservation reconciles it. Explicit joint job/result deletion
+            releases protection; missing both stores is not proof against joint rollback.
             Native graph admission checks ambiguous original attempts before persisting a
             recovery claim, including normal startup after rollback to pending. Idempotence
             or checkpoint metadata cannot override an unknown outcome. Blocking retains the
@@ -108,10 +142,83 @@
             corrupt journal is not treated as empty. Purely local graphs remain independent.
             A later authorized graph generation can reuse a successful native node only by
             rebuilding the matching TaskIR, verifying its actual v2 parent and reading its
-            original successful receipt. A missing or invalid selected receipt blocks with
+            original successful receipt or its verified private handoff below. If both
+            sources are unavailable, or the selected receipt is invalid, recovery blocks with
             the execution envelope retained; it never falls back to another execution.
-            Reads add no result archive or disk budget. This is bounded receipt-assisted
-            recovery, not general durable node checkpoints or exactly-once execution.</li>
+            Multiple dispatched attempts for that parent/task cannot select a
+            convenient historical success by timestamp. After reading a uniquely
+            selected receipt, the journal observation is checked again; a changed,
+            evicted or ambiguous selection blocks publication. Unrelated parents
+            and confirmed non-dispatched attempts do not supply competing results.
+            Original Agent receipt reads add no result archive or disk budget. The
+            separate native handoff below has its own explicit bounded budget; neither
+            mechanism grants general node continuation or exactly-once execution.</li>
+          <li><strong>Native workflow dispatch evidence:</strong> before each Agent RPC,
+            persist the reserved attempt ID, task digest/operator/program identity and
+            producer claim through the existing fenced job/result transaction. A sealed
+            private bucket binds the parent and execution envelope, with at most 512
+            entries and 512 KiB; no input, output, endpoint, timestamp or credential copy.
+            Missing attempts after journal restart block admission, including absent or
+            empty directories and replacement by another same-task attempt. Commit-time
+            checks revalidate prior identities so a newly reserved attempt cannot hide
+            lost history. Failed callbacks send no RPC. An unknown post-RPC observation
+            retains blocked recovery rather than discarding its evidence on generic
+            failure; skip-on-error does not bypass it. This also fences the live return
+            path after disconnect, timeout, invalid receipt or a local progress callback
+            failure: a successfully sealed unknown observation cannot return raw success,
+            become a skippable error or retry on another Agent via an idempotent/checkpoint
+            hint. Concurrent cancellation preserves the uncertainty. Transport/protocol
+            health accounting remains separate from local callback failures. Confirmed
+            non-dispatched connection/capacity rejection still permits safe failover.
+            Standalone calls without the trusted pre-RPC evidence callback retain their
+            existing replay protocol; this is not a global replay-policy replacement.
+            See the <a href="../reports/workflow-managed-dispatch-uncertainty-20261013.md">managed uncertainty report</a>.
+            Public recovery exposes policy
+            and count only. Ordinary completion/failure/cancellation prunes the bucket;
+            blocked recovery retains it for explicit inspection or resubmission.
+            Legacy native workflows lacking the bucket are blocked, not backfilled;
+            pure local graphs remain independent. Journal retention is unchanged and
+            can conservatively block active workflows whose required history ages out.
+            Checks are not authenticated provenance, rollback detection across both
+            stores, physical power-loss qualification or an exactly-once guarantee.</li>
+          <li><strong>Native failure finalization:</strong> ordinary coordinator failure
+            now checks the envelope and dispatch fence before pruning private evidence.
+            Unconfirmed attempts, missing/corrupt history or invalid evidence retain the
+            recovery payload as <code>recovery_blocked</code>, with the original failure
+            message and a bounded inspection action. Verified terminal observations and
+            undispatched work retain normal cleanup; local-only graphs do not require
+            the journal. The workflow runner deadline captures its actual dispatch targets
+            before stopping the local waiter, then requests best-effort cancellation.
+            A cancellation acknowledgement cannot prove computation stopped or permit
+            replay. Controlled TCP and coordinator/journal restart tests cover this path.
+            Periodic queue/execution expiry and stale-job scans now use the same owning
+            coordinator and exact scanned job, committing recovery and job state together.
+            Shutdown and targeted cancellation occur only after a successful commit;
+            stale snapshots, terminal recovery or rejected writes cannot stop live work.
+            Standby/unavailable coordinators report an unavailable scan, including for
+            plain jobs. Repo registry disappearance during restart is bounded as a storage
+            outage, not a watchdog crash. Historical inconsistent records are not migrated
+            automatically and remote cancellation is not durable. See the
+            <a href="../reports/workflow-watchdog-finalization-20261013.md">periodic watchdog report</a> and
+            <a href="../reports/workflow-native-failure-finalization-20261013.md">failure-finalization report</a>.</li>
+          <li><strong>Native workflow result handoff:</strong> completed built-in native
+            diagnostic/scoring receipts commit privately before downstream publication,
+            through the existing fenced job/result transaction. Per parent: at most 32
+            entries, 512 KiB per receipt, 65,536 decoded JSON nodes per receipt and 2 MiB
+            total encoded bucket bytes, in addition to solve/branch limits. Lossless
+            receipt JSON, task/attempt identity, exact journal observation digest, parent,
+            envelope and producer claim bind later-generation reuse. Recovery still needs
+            unique successful dispatch history and current ownership; this is not a new
+            receipt endpoint or authority to repair unknown observations. Absent handoff
+            falls back only to the original Agent receipt; unavailable or invalid evidence
+            cannot trigger replay. Full/oversize handoff omits new entries without eviction;
+            storage rejection blocks publication, including skip-on-error. Normal terminal
+            states prune the bucket; recovery-blocked retains it. Public recovery exposes
+            <code>native_result_checkpoint_policy</code> and count, not receipt payloads.
+            Agent retention is unchanged. Local application-restart tests use controlled
+            TCP producers; real Rust Agent, live PostgreSQL, installed and physical
+            power-loss acceptance are not newly qualified. See the
+            <a href="../reports/workflow-native-result-handoff-20261013.md">handoff report</a>.</li>
           <li><strong>Workflow solve-artifact checkpoints:</strong> successful small typed
             solves retain output JSON in the existing private recovery database record,
             not in dispatch files or separate archives. Each active parent has at most

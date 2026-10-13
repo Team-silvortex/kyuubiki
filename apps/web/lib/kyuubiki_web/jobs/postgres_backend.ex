@@ -160,10 +160,12 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   def apply_progress_if_current(attrs, %Job{} = expected) do
     with {:ok, event} <- ProgressEvent.new(attrs),
          {:ok, updated} <- Job.apply_progress(expected, event) do
-      case compare_and_swap(job_attrs(expected), updated) do
-        :ok -> {:ok, updated}
-        :stale -> snapshot_miss(expected.job_id)
-      end
+      atomic_change(fn ->
+        case compare_and_swap(job_attrs(expected), updated) do
+          :ok -> {:ok, updated}
+          :stale -> snapshot_miss(expected.job_id)
+        end
+      end)
     end
   end
 

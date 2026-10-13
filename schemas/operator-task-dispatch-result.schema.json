@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "kyuubiki.operator-task-dispatch-result/v1",
   "title": "Read-only original TaskIR attempt result retrieval",
+  "description": "A point-in-time receipt read, never replay or publication authority. An existing selected journal observation must remain identical and pass disk integrity checks after lookup. Concurrent observation changes or storage loss return an API error without this result envelope; reads do not renew retention or retry execution.",
   "type": "object", "additionalProperties": false,
   "required": ["schema_version", "task_id", "task_digest", "attempt_id", "status", "outcome", "completion", "automatic_replay_authorized", "publication_performed"],
   "properties": {

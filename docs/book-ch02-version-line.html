@@ -46,8 +46,35 @@
           dispatch, retaining repair intent in the batch digest. Shared batch
           admission also rejects malformed task containers and duplicate recovery
           identities before dispatch. Checkpoint inputs and policy consistency
-          receive bounded checks. Full summary/receipt coherence, standalone
-          TaskIR boundaries and producer-side readiness retention remain audit work.
+          receive bounded checks. Preparation counters and task identities now
+          agree with compact persisted evidence; completion and unresolved targets
+          are rechecked on read without copying full results. Failure recovery
+          now checks task identity, Agent receipt mirrors, outcome partitions and
+          retryability/continuation flags. Nonretryable failures require repair;
+          contradictory evidence cannot supply recovery actions or automatic replay.
+          Native node reuse also refuses ambiguous historical attempts and rechecks
+          the selected journal record after reading its original receipt. Drift,
+          eviction or journal loss blocks stale reuse without fallback or replay.
+          Dispatch observations now seal on first completion, including unknown outcomes.
+          Repeats verify storage without rewriting; invalid/conflicting notices reject
+          only that request, while real storage failures continue to block dispatch.
+          Live reads and replay fences also verify directory membership plus selected
+          disk records, so cached success and empty queries cannot hide journal loss.
+          New reservations check membership before writing; no archive or read-time
+          retention renewal is added. Managed native workflows now persist independent
+          attempt identities in the existing private recovery record before each RPC.
+          Missing journal history after restart blocks replay; failed commits send no
+          request, and unknown completions retain blocked evidence. This adds a bounded
+          512-entry/512-KiB private bucket, not another task/result archive. Joint store
+          loss and installed acceptance remain separate work. Active/recovery-blocked
+          parent history is now protected within the existing 512-record cap, while
+          ordinary terminal parents release it. Retention queries run outside the
+          journal process; unavailable storage blocks admission without pruning.
+          Public receipt reads also revalidate the selected observation after lookup.
+          Changed or damaged evidence cannot return a stale completion; legitimate
+          concurrent transitions reject only the read, without execution or renewal.
+          Cross-process attempt ownership, authenticated provenance, standalone TaskIR boundaries
+          and producer-side readiness retention remain audit work.
         </p>
         <ul class="docs-list">
           <li>Native Headless execution requires matching task completion, actual source bindings and contract-owned risk labels before downstream work.</li>
@@ -82,6 +109,9 @@
           <li>A later authorized generation can now reuse an observed successful native node through its original gated receipt and rebuilt TaskIR. Five actual restarts complete the same parents in ten Agent executions without repeated diagnosis; a sixth Agent-cache-loss round blocks with its envelope retained and no replay. Claim/lease checks bracket retrieval and skip-on-error cannot bypass missing recovery evidence. This is bounded receipt-assisted recovery, not general node checkpoints or exactly-once execution.</li>
           <li>Small typed-solve outputs now have a separate bounded artifact checkpoint in the private recovery record: at most 32 entries, 512 KiB per output and 2 MiB encoded bytes per parent. Original JSON numbers survive SQL round trips, with exact invocation and current ownership checks before reuse or publication. Five fresh domain solve/diagnostic/scoring chains restart in fifteen Agent executions without repeated solves. Oversize output is uncached; ordinary terminal states prune checkpoints. Unknown dispatches, side-effect replay restrictions and general node continuation remain outside this scoped mechanism.</li>
           <li>Successful conditions now retain bounded branch decisions before publishing their selected port: 64 entries and 64 KiB per parent, without input/output payloads. Matching later claims reuse the original choice; replayed upstream drift, corruption or failed commits block even with skip-on-error. Thermal/electrostatic true/false chains survive two actual BEAM restarts in six Agent executions. Local transforms and joins still rebuild, and branch records do not authorize replay of ambiguous dispatches or side effects.</li>
+          <li>Managed native diagnostics/scoring now hand off verified success receipts before downstream publication: 32 entries, 512 KiB per receipt and 2 MiB per parent in the private recovery record. Later claims can reuse them with the Agent offline, while retaining exact journal, task, attempt and ownership checks. Missing handoff still requires the original Agent receipt; corruption or failed commits block. Ordinary terminal states prune the bucket. Ten controlled-TCP application-restart cases cover offline continuation and denial, not new live Rust Agent, installed or power-loss qualification.</li>
+          <li>The live managed-native dispatch path now also preserves uncertainty: a sealed unknown observation blocks the parent instead of being skipped or automatically retried on another Agent. Cancellation cannot hide it; local progress failures do not penalize Agent health. Confirmed pre-execution rejection and standalone replay policies remain separate. Controlled TCP and recovery-component restart regressions do not constitute new installed or physical-Agent acceptance.</li>
+          <li>Workflow runner deadlines and ordinary coordinator failure now check dispatch evidence before cleanup. Unconfirmed or damaged evidence remains recovery-blocked; verified terminal outcomes still release it. Periodic watchdog decisions also require ownership and the exact scanned job, committing job/recovery state together before stopping the local runner. Cancellation targets actual dispatched endpoints without treating acknowledgements as proof of stopped computation; unrelated work remains isolated. Historical inconsistent-record migration and durable remote cancellation remain open. This is local controlled-TCP evidence, not physical-Agent qualification.</li>
           <li>Retained macOS and remote Linux source chains exercise actual commits, accepted calculations and withheld replies. Their original metadata and scope are not relabeled as fresh 3.6.0 qualification.</li>
           <li>Earlier modal comparisons remain test-only. Solver retains numerical ownership, Engine/Agent retain execution authority, and installed or durable qualification gaps remain open.</li>
         </ul>

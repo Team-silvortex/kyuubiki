@@ -12,7 +12,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeRecoveryBlockTest do
   end
 
   for reason <-
-        ~w(journal_unavailable dispatch_unconfirmed input_changed dispatch_identity_invalid receipt_unavailable receipt_invalid)a do
+        ~w(journal_unavailable dispatch_unconfirmed input_changed dispatch_identity_invalid dispatch_attempt_ambiguous dispatch_observation_changed dispatch_evidence_missing dispatch_evidence_invalid dispatch_evidence_commit_failed receipt_unavailable receipt_invalid)a do
     test "#{reason} atomically blocks the current claim and retains its execution envelope" do
       fixture = Fixture.claimed_job()
       reason = unquote(reason)
@@ -152,15 +152,24 @@ defmodule KyuubikiWeb.Orchestra.WorkflowNativeRecoveryBlockTest do
       "edges" => [edge("input", "native"), edge("native", "output")]
     }
 
-    error = {:native_workflow_recovery_blocked, :receipt_unavailable}
+    for reason <- [
+          :receipt_unavailable,
+          :dispatch_attempt_ambiguous,
+          :dispatch_observation_changed,
+          :result_checkpoint_invalid,
+          :result_checkpoint_unavailable,
+          :result_checkpoint_commit_failed
+        ] do
+      error = {:native_workflow_recovery_blocked, reason}
 
-    assert {:error, {:workflow_node_error, "native", ^error}} =
-             WorkflowGraphRunner.run(graph, %{"input" => %{"value" => 42}},
-               execute_solve: fn _, _, _ -> flunk("no solve") end,
-               execute_transform: fn _, _, _ -> flunk("no transform") end,
-               execute_extract: fn _, _, _ -> {:error, error} end,
-               execute_export: fn _, _, _ -> flunk("no export") end
-             )
+      assert {:error, {:workflow_node_error, "native", ^error}} =
+               WorkflowGraphRunner.run(graph, %{"input" => %{"value" => 42}},
+                 execute_solve: fn _, _, _ -> flunk("no solve") end,
+                 execute_transform: fn _, _, _ -> flunk("no transform") end,
+                 execute_extract: fn _, _, _ -> {:error, error} end,
+                 execute_export: fn _, _, _ -> flunk("no export") end
+               )
+    end
   end
 
   defp edge(from, to),

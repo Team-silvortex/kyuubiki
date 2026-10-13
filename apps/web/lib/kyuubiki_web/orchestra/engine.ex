@@ -163,6 +163,8 @@ defmodule KyuubikiWeb.Orchestra.Engine do
               WorkflowGraphProvenance.bind_context(orchestration_context, binding),
               on_progress: operator_activity_callback(node, progress_callback),
               before_dispatch: operator_dispatch_callback(node, progress_callback),
+              native_dispatch_evidence: Keyword.get(execution_options, :native_dispatch_evidence),
+              native_result_checkpoint: Keyword.get(execution_options, :native_result_checkpoint),
               native_task_digest_encoding:
                 Keyword.fetch!(execution_options, :native_task_digest_encoding),
               recover_native_results:
@@ -182,6 +184,8 @@ defmodule KyuubikiWeb.Orchestra.Engine do
               WorkflowGraphProvenance.bind_context(orchestration_context, binding),
               on_progress: operator_activity_callback(node, progress_callback),
               before_dispatch: operator_dispatch_callback(node, progress_callback),
+              native_dispatch_evidence: Keyword.get(execution_options, :native_dispatch_evidence),
+              native_result_checkpoint: Keyword.get(execution_options, :native_result_checkpoint),
               native_task_digest_encoding:
                 Keyword.fetch!(execution_options, :native_task_digest_encoding),
               recover_native_results:

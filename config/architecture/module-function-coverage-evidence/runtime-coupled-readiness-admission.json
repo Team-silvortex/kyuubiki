@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Scoped next-round, direct sweep-request, plan and expansion quality/count admission: Rust and Elixir share boundary fixtures and controlled recovery checks. Control-plane-only follow-ups validate direct batch quality evidence, structure, recovery identity uniqueness and checkpoint input/policy consistency. No physical accuracy, authenticated execution provenance, live Agent, installed, remote or durable-recovery qualification.",
+  "summary": "Scoped next-round, direct sweep-request, plan and expansion quality/count admission: Rust and Elixir share boundary fixtures and controlled recovery checks. Control-plane-only follow-ups validate direct batch quality evidence, structure, recovery identity uniqueness, checkpoint input/policy consistency and compact preparation/completion evidence. No physical accuracy, authenticated execution provenance, live Agent, installed, remote or durable-recovery qualification.",
   "evidence_claims": [
     {
       "id": "native-service-coupled-readiness-admission-and-fresh-recovery",
@@ -236,6 +236,67 @@
         "checkpoint API returns actionable structural errors instead of HTTP 500 or dropped evidence",
         "a quality failure anywhere in the batch prevents every task dispatch",
         "2,583 total, 2,512 passed, 71 conditional skips",
+        "No new native Engine test coverage is claimed"
+      ]
+    },
+    {
+      "id": "service-task-batch-checkpoint-evidence-and-unresolved-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_checkpoint_evidence.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_completion.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_run.ex",
+        "apps/web/lib/kyuubiki_web/operator_task_router.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_checkpoint_evidence_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_executor_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_task_batch_admission_api_test.exs",
+        "schemas/operator-task-batch-checkpoint.schema.json",
+        "reports/operator-task-checkpoint-evidence-20261012.md"
+      ],
+      "required_text": [
+        "zero errors alone cannot certify preparation",
+        "preparation counters source identity and task summaries must agree",
+        "successful checkpoint revalidation needs task evidence not a completion flag",
+        "unknown cases remain recovery targets alongside an ordinary task failure",
+        "foreign error-only summaries require inspection rather than direct retry",
+        "checkpoint size does not grow with result payload and caller proof is not adopted",
+        "checkpoint API requires preparation evidence and rejects a rehashed false completion",
+        "2,599 total, 2,528 passed, 71 conditional skips",
+        "This is control-plane consistency, not authenticated execution provenance"
+      ]
+    },
+    {
+      "id": "service-task-batch-failure-recovery-permissions-and-partitions",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_recovery_evidence.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_checkpoint_evidence.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_run.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_task_batch_recovery_evidence_test.exs",
+        "apps/web/test/kyuubiki_web/api/agent_native_task_api_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_task_completion_api_test.exs",
+        "schemas/operator-task-batch-checkpoint.schema.json",
+        "schemas/operator-task-batch-resume-plan.schema.json",
+        "reports/operator-task-batch-failure-recovery-20261012.md"
+      ],
+      "required_text": [
+        "nonretryable task failure stays isolated but requires repair before retry",
+        "failure receipt identity reason and recovery drift cannot authorize recovery",
+        "counter and partition contradictions cannot yield verified recovery advice",
+        "checkpoint verification rechecks failure permissions and counters after rehash",
+        "unverified diagnostic checkpoints round trip without recovering rejected actions",
+        "blocked task identity and required actions are checked independently from failures",
+        "native recovery distinguishes manual retry from repair and unsafe continuation without replay",
+        "2,612 total, 2,541 passed, 71 conditional skips",
+        "This is control-plane consistency, not authenticated execution provenance",
         "No new native Engine test coverage is claimed"
       ]
     }

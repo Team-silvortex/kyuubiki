@@ -7,7 +7,8 @@ defmodule KyuubikiWeb.Playground.AgentTaskRouting do
     :queue_timeout_ms,
     :request_timeout_ms,
     :orchestration,
-    :before_dispatch
+    :before_dispatch,
+    :on_dispatch_reserved
   ]
 
   def for_task(task_ir, opts) do

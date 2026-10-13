@@ -147,7 +147,9 @@ defmodule KyuubikiWeb.WorkflowQualityExecutionRecoveryTest do
     checkpoint = Run.checkpoint(batch, execution: execution)
     assert {:ok, plan} = Run.resume_plan(batch, checkpoint)
     assert plan["target_case_ids"] == ["case-1"]
-    assert plan["next_action"] == "retry_failed_cases"
+    assert plan["next_action"] == "resolve_incomplete_cases"
+    assert plan["repair_required_case_ids"] == ["case-1"]
+    assert plan["retryable_case_ids"] == []
   end
 
   defp execute_requests(owner) do

@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   use GenServer
 
   alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator
   alias KyuubikiWeb.Playground.AgentExecutionGate
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRegistry
@@ -191,15 +192,7 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   defp mark_failed(job, message, stats, counter) do
     result =
       FailureBoundary.run(fn ->
-        Store.apply_progress_if_current(
-          %{
-            job_id: job.job_id,
-            stage: "failed",
-            progress: clamp_progress(job.progress),
-            message: message
-          },
-          job
-        )
+        WorkflowRecoveryCoordinator.fail_observed(job, message)
       end)
 
     case result do
@@ -213,8 +206,17 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
         Map.merge(stats, %{
           available: false,
           reason:
-            if(reason == :analysis_store_unavailable,
-              do: "analysis_store_unavailable",
+            if(
+              reason in [
+                :analysis_store_unavailable,
+                :workflow_coordinator_unavailable,
+                :orchestra_standby,
+                :orchestra_lease_lost,
+                :orchestra_lease_store_unavailable,
+                :invalid_workflow_recovery_record,
+                :workflow_recovery_not_active
+              ],
+              do: Atom.to_string(reason),
               else: "job_progress_write_failed"
             )
         })
@@ -432,10 +434,6 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   defp worst_state(states) do
     Enum.max_by(states, &Map.get(@state_rank, &1, 0), fn -> "healthy" end)
   end
-
-  defp clamp_progress(progress) when is_float(progress), do: max(0.0, min(progress, 1.0))
-  defp clamp_progress(progress) when is_integer(progress), do: clamp_progress(progress * 1.0)
-  defp clamp_progress(_), do: 0.0
 
   defp queue_timeout_ms(job, state) do
     positive_timeout(Map.get(job, :queue_timeout_ms), state.queue_timeout_ms)
