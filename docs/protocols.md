@@ -84,12 +84,83 @@ nonempty identity metadata fails startup. It is not a credential, peer authentic
 global exactly-once guarantee or protection against copied ledgers. Legacy native
 requests without the guard remain accepted but do not have this ownership guarantee.
 
+`durable_execution.store_access` describes `kyuubiki.agent-store-access/v1`.
+Description takes the store mutex without waiting. On contention it reports
+`enabled: true`, `available: false`, `unavailable_reason: store_busy`, with no dynamic
+store counters or identity. Poisoning reports `store_unavailable` and is never bypassed.
+Missing temporary metadata does not invalidate a saved owner fence or authorize an
+unfenced request. Fetch/list/cancel use a 250-ms monotonic mutex-acquisition budget;
+timeout returns RPC `durable_execution_busy`. Its details describe this recovery call:
+`operation_started: false`, `execution_state_known: false`, `identity_check_performed: false`,
+and `automatic_replay_authorized: false`. It is not evidence about the original task,
+not a missing execution or empty index, and not cancellation acknowledgement. No late
+operation is queued. Explicit recovery retries must retain the original Agent/store;
+the native gateway returns failure without result caching or peer reselection.
+The budget does not bound filesystem operations, other locks or reply delivery.
+Admission/receipt writes retain their existing serialized commit boundary.
+Native durable HTTP routes retain valid request-bound RPC failure codes in nullable
+`agent_error_code` (1..128 ASCII alphanumeric, underscore, hyphen or period), alongside
+the existing `error` message. Transport/validation failures have no Agent code.
+The gateway does not forward Agent error details or their retry/ownership advice;
+HTTP 502 retains `automatic_retry: false`, `automatic_replay_authorized: false` and
+original-Agent inspection guidance. Codes are diagnostics only, not task-state,
+store-identity or non-admission evidence. Discovery's transport policy publishes
+`error_diagnostics`. Workbench preserves the bounded code as
+`WorkbenchRequestError.agentErrorCode`, keeps pending handles, and distinguishes
+busy/unavailable/write-failed stores at preflight. Direct submit/cancel/legacy-solve
+failures are not generic retryable operations, including network errors and timeouts.
+Only explicit read-only inspect/list recovery may be retried against the saved owner;
+no automatic retry or handle cleanup is added.
+The disabled-by-default `KYUUBIKI_AGENT_FAULT_INJECTION_STORE_READ_HOLD_FILE` fixture
+and its limits are documented in the linked runtime chapter.
+
 Workbench new-run handles require the store identity. Legacy unfenced handles remain
 pending and cannot be silently adopted or acknowledged. GUI/PWDT recovery uses the saved
 owner, or an explicit `storeId` from the original index for manually tracked executions;
 an explicit owner cannot override a matching local pending handle. The initial index
 read is discovery, not permission to adopt unknown past work; use its identity on later
 pages. Address, gateway and process/digest checks remain in force alongside this guard.
+Recovery actions snapshot caller parameters before awaiting the journal. In-flight
+authority includes control mode even without tokens, plus effective URLs and relevant
+credentials. A detected change or unreadable authority permanently invalidates that
+request: restoring settings requires a fresh explicit inspection, not publication or
+cleanup from the old reply. Managed mode, effective backend and credential writes
+also advance per-dimension in-memory revisions, so a roundtrip between checks cannot
+revive that request. Repeated equivalent writes and irrelevant preferences/credentials
+do not invalidate it. Cleanup and legacy settings scrubbing participate; partial
+writes are checked even when they throw. One window-lifetime storage listener also
+advances revisions for delivered same-origin cross-window local-storage mode and
+gateway changes. Comparing event old/new values catches A-to-B-to-A even when current
+storage already holds A. It never imports credentials or writes configuration/journals.
+Session storage and unrelated preferences are ignored; malformed/oversized relevant
+settings, inaccessible storage or clear notifications conservatively retire requests.
+Relevant event parsing is bounded to 65,536 string code units per value. Query-pinned
+targets ignore stored-target edits. Notifications are asynchronous, not a cross-window
+transaction lock: a reply processed before delivery is outside this fence. Unmanaged
+same-window writes and untracked URL/history changes retain snapshot-only roundtrip
+detection. This does not cancel or replay Agent work.
+
+Terminal acknowledgement carries the original caller guard through scope hashing,
+journal lookup and deletion, alongside the service's own authority check. Browser
+storage checks it before/after database open, when the queued transaction read
+completes, and at delete-request success before commit. Guard failure aborts the
+active transaction instead of only reporting the error after deleting the reservation.
+An already published valid result is not rolled back; a fresh explicit inspection can
+complete cleanup. The desktop bridge checks before/after host discovery and immediately
+before posting deletion; the callback stays local and changes no wire or file format.
+It cannot retract an already dispatched native deletion or undo a completed browser
+commit. Configuration writes are not atomically coupled to the transaction; a change
+delivered after the final active browser check is outside this fence even if commit
+has not yet completed. This is not cross-window/process atomic authorization.
+
+Cancellation acceptance is not a terminal receipt. After a lost reply, inspect the
+saved owner without automatically resending cancellation or migrating the task.
+A synced failed/cancelled receipt survives Agent restart; an admission without a
+terminal receipt remains `outcome_unknown`, not cancelled. The Workbench ordinary
+cancel action also retains shared feedback ownership so late acceptance/failure
+cannot overwrite a newer terminal message within the same job polling epoch.
+The action's own outcome is still returned; pending identities are cleared only by
+validated terminal inspection, not cancellation acceptance or a transport error.
 
 Async durable submission rejected by execution-slot reservation (busy/draining)
 persists a normal `kyuubiki.agent-durable-execution/v1` failed receipt, with nested

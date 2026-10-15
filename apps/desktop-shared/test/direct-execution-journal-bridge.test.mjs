@@ -49,3 +49,49 @@ test("missing desktop host fails closed rather than using a memory journal", asy
   const client = createDirectExecutionJournalClient(host, 5);
   await assert.rejects(client.reserve(intent), /journal_unavailable/); client.dispose();
 });
+
+test("desktop cleanup rechecks caller ownership after its initial shell handshake", async () => {
+  const host = events(), messages = [];
+  Object.assign(host, { parent: { postMessage: (data, origin) => messages.push({ data, origin }) },
+    crypto: globalThis.crypto, location: { search: "?desktopLayout=1" }, setTimeout, clearTimeout });
+  const client = createDirectExecutionJournalClient(host, 1000);
+  let current = true;
+  const pending = client.remove(intent, () => { if (!current) throw new Error("caller retired"); });
+  const outcome = pending.then(() => null, error => error);
+  try {
+    assert.equal(messages.length, 1); assert.equal(messages[0].data.action, "list");
+    current = false;
+    host.emit({ source: host.parent, origin: "tauri://localhost", data: {
+      type: `${protocol}:result`, id: messages[0].data.id, ok: true, result: [intent],
+    } });
+    await settle();
+    assert.equal(messages.length, 1, "no native remove may be sent after ownership was lost during handshake");
+    assert.match((await outcome).message, /caller retired/);
+  } finally { client.dispose(); await outcome; }
+});
+
+test("desktop cleanup checks ownership before discovery and never serializes the guard", async () => {
+  const host = events(), messages = [];
+  Object.assign(host, { parent: { postMessage: (data, origin) => messages.push({ data, origin }) },
+    crypto: globalThis.crypto, location: { search: "?desktopLayout=1" }, setTimeout, clearTimeout });
+  const client = createDirectExecutionJournalClient(host, 1000);
+  try {
+    await assert.rejects(client.remove(intent, () => { throw new Error("already retired"); }), /already retired/);
+    assert.deepEqual(messages, []);
+    const pending = client.remove(intent, () => {});
+    host.emit({ source: host.parent, origin: "tauri://localhost", data: {
+      type: `${protocol}:result`, id: messages[0].data.id, ok: true, result: [intent],
+    } });
+    await settle();
+    const sent = messages[1];
+    assert.equal(sent.origin, "tauri://localhost");
+    assert.deepEqual(Object.keys(sent.data).sort(), ["action", "id", "intent", "type"]);
+    assert.deepEqual(sent.data.intent, intent);
+    host.emit({ source: host.parent, origin: sent.origin, data: {
+      type: `${protocol}:result`, id: sent.data.id, ok: true, result: null,
+    } });
+    await pending;
+    await assert.rejects(client.remove(intent, () => { throw new Error("retired with warm host"); }), /retired with warm host/);
+    assert.equal(messages.length, 2, "a verified shell must not bypass the local deletion guard");
+  } finally { client.dispose(); }
+});

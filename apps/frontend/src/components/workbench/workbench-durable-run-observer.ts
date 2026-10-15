@@ -38,7 +38,7 @@ export async function observeWorkbenchDurableRun(args: {
       setResult(execution.status === "completed" ? execution.response.result : null);
       // Keep the identity on cleanup failure, but don't turn a completed calculation into a submission failure.
       let cleanupPending = false;
-      try { await service.acknowledge(handle, envelope); } catch { cleanupPending = true; }
+      try { await service.acknowledge(handle, envelope, isCurrent); } catch { cleanupPending = true; }
       if (!isCurrent()) throw new Error(`Direct execution observation was superseded: ${handle.execution_id}`);
       if (execution.status === "failed") throw new Error(`${execution.response.error.code}: ${execution.response.error.message}${cleanupPending ? "; direct:journal_cleanup_pending; inspect the original execution" : ""}`);
       setMessage(`direct:completed: ${handle.execution_id}${cleanupPending ? "; recovery journal cleanup pending" : ""}`);

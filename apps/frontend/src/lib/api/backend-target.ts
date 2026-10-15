@@ -1,3 +1,5 @@
+import { advanceWorkbenchAuthorityRevision } from "./authority-revisions";
+
 export const WORKBENCH_API_BASE_URL_STORAGE_KEY = "kyuubiki-workbench-api-base-url";
 export const WORKBENCH_API_BASE_URL_QUERY_KEYS = ["kyuubikiApiBaseUrl", "apiBaseUrl"] as const;
 
@@ -66,12 +68,25 @@ export function persistWorkbenchApiBaseUrl(value: string): string {
   const storage = getBrowserLocalStorage();
   if (!storage) return sanitized;
 
-  if (sanitized) {
-    storage.setItem(WORKBENCH_API_BASE_URL_STORAGE_KEY, sanitized);
-  } else {
-    storage.removeItem(WORKBENCH_API_BASE_URL_STORAGE_KEY);
-  }
+  trackWorkbenchBackendTargetChange(() => {
+    if (sanitized) {
+      storage.setItem(WORKBENCH_API_BASE_URL_STORAGE_KEY, sanitized);
+    } else {
+      storage.removeItem(WORKBENCH_API_BASE_URL_STORAGE_KEY);
+    }
+  });
   return sanitized;
+}
+
+// Wrap synchronous managed writes, including partial writes that subsequently throw.
+export function trackWorkbenchBackendTargetChange<T>(write: () => T): T {
+  const before = resolveWorkbenchBackendTarget();
+  try { return write(); } finally {
+    const after = resolveWorkbenchBackendTarget();
+    if (before.source === "unavailable" || after.source === "unavailable" || before.baseUrl !== after.baseUrl) {
+      advanceWorkbenchAuthorityRevision("backend");
+    }
+  }
 }
 
 export function resolveWorkbenchApiUrl(url: string, target = resolveWorkbenchBackendTarget()): string {

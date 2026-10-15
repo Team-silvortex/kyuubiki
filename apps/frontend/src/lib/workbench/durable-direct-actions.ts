@@ -20,6 +20,8 @@ export type DurableDirectInspection = {
 export function createDurableDirectActions(client: Client, captureAuthority = captureWorkbenchApiAuthority, runService: DurableDirectRunService = workbenchDurableDirectRunService) {
   return async (action: string, payload: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
     if (!["directExecution/pending", "directExecution/list", "directExecution/inspect", "directExecution/cancel"].includes(action)) return null;
+    // Recovery awaits the journal; the caller may reuse its payload in the meantime.
+    payload = { ...payload };
     const allowed = action.endsWith("/list") ? ["endpoint", "after", "storeId"]
       : action.endsWith("/cancel") ? ["endpoint", "executionId", "processInstanceId", "requestDigest", "storeId"] : action.endsWith("/pending") ? ["endpoint"] : ["endpoint", "executionId", "storeId"];
     if (Object.keys(payload).some(key => !allowed.includes(key))) throw new Error("Unexpected direct execution recovery field.");
@@ -78,7 +80,7 @@ export function createDurableDirectActions(client: Client, captureAuthority = ca
         try {
           const handle = (await runService.pending()).find(item => item.endpoint === endpoint && item.execution_id === execution.execution_id);
           if (!current()) throw new Error("Direct execution authority changed.");
-          if (handle) await runService.acknowledge(handle, envelope);
+          if (handle) await runService.acknowledge(handle, envelope, current);
         } catch { result.journal_cleanup_pending = true; }
       }
     }

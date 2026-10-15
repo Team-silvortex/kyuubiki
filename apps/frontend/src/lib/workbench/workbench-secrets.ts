@@ -1,3 +1,5 @@
+import { advanceWorkbenchAuthorityRevision } from "@/lib/api/authority-revisions";
+
 export const WORKBENCH_SECRETS_KEY = "kyuubiki-workbench-secrets";
 
 export type StoredWorkbenchSecrets = {
@@ -14,7 +16,7 @@ export function readInMemoryWorkbenchSecrets(): StoredWorkbenchSecrets {
 }
 
 export function writeInMemoryWorkbenchSecrets(input: StoredWorkbenchSecrets) {
-  inMemoryWorkbenchSecrets = {
+  const next: StoredWorkbenchSecrets = {
     ...(input.controlPlaneApiToken?.trim()
       ? { controlPlaneApiToken: input.controlPlaneApiToken.trim() }
       : {}),
@@ -24,6 +26,10 @@ export function writeInMemoryWorkbenchSecrets(input: StoredWorkbenchSecrets) {
       : {}),
     ...(input.assistantApiKey?.trim() ? { assistantApiKey: input.assistantApiKey.trim() } : {}),
   };
+  for (const key of ["controlPlaneApiToken", "clusterApiToken", "directMeshApiToken"] as const) {
+    if (inMemoryWorkbenchSecrets[key] !== next[key]) advanceWorkbenchAuthorityRevision(key);
+  }
+  inMemoryWorkbenchSecrets = next;
 }
 
 export function scrubPersistedWorkbenchSecrets() {

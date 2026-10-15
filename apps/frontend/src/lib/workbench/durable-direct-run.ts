@@ -50,12 +50,22 @@ export function createDurableDirectRunService({ client = defaultRuntimeApiClient
       const discovery = await client.fetchDirectMeshAgents([endpoint]);
       ctx.check();
       const agents = discovery.agents as unknown as Array<{ host?: string; port?: number; descriptor?: { durable_execution?: {
-        schema_version?: string; enabled?: boolean; admission_blocked_after_write_failure?: boolean; store_id?: string;
+        schema_version?: string; enabled?: boolean; available?: boolean; unavailable_reason?: string;
+        admission_blocked_after_write_failure?: boolean; store_id?: string;
       } } }>;
       const agent = agents?.length === 1 ? agents[0] : undefined, policy = agent?.descriptor?.durable_execution;
       if (!agent || `${agent.host}:${agent.port}` !== endpoint || policy?.schema_version !== "kyuubiki.agent-durable-execution/v1"
-        || policy.enabled !== true || policy.admission_blocked_after_write_failure === true) {
+        || policy.enabled !== true) {
         throw new Error("direct:durable_agent_required: enable the Agent execution store before running. No task was submitted.");
+      }
+      if (policy.available !== undefined && policy.available !== true) {
+        if (policy.available === false && policy.unavailable_reason === "store_busy") {
+          throw new Error("direct:store_busy: the Agent store is busy. Keep existing recovery handles and inspect the original Agent after it clears. No task was submitted.");
+        }
+        throw new Error("direct:store_unavailable: the Agent store is unavailable. Restore the original store before running; keep existing recovery handles. No task was submitted.");
+      }
+      if (policy.admission_blocked_after_write_failure === true) {
+        throw new Error("direct:store_write_failed: a durable commit failed. Inspect the original execution and restore storage before running. No task was submitted.");
       }
       if (typeof policy.store_id !== "string" || !/^[0-9a-f]{32}$/u.test(policy.store_id)) {
         throw new Error("direct:owner_fence_required: update the Agent to expose a persistent store identity. No task was submitted.");
@@ -79,17 +89,21 @@ export function createDurableDirectRunService({ client = defaultRuntimeApiClient
       const entries = await journal.list(); ctx.check();
       return entries.filter(e => e.scope === ctx.scope).map(handleFor);
     },
-    async acknowledge(handle: DurableDirectRecoveryHandle, receipt: DurableDirectEnvelope) {
+    async acknowledge(handle: DurableDirectRecoveryHandle, receipt: DurableDirectEnvelope, isCurrent = () => true) {
+      const checkCaller = () => { if (!isCurrent()) throw new Error("direct:authority_changed"); };
+      checkCaller();
       const pinned = { ...handle }, ctx = await context();
+      const check = () => { checkCaller(); ctx.check(); };
+      check();
       if (!pinned.store_id) throw new Error("direct:owner_fence_required: cannot acknowledge an unfenced legacy execution.");
       if (pinned.gateway_id !== ctx.scope) throw new Error("direct:authority_changed");
       const { execution } = validateDurableDirectEnvelope(receipt, pinned);
       if (!["completed", "failed"].includes(execution.status) || execution.status === "not_found"
         || execution.method !== directMeshMethodForStudyKind(pinned.study_kind)) throw new Error("direct:terminal_receipt_required");
-      const entries = await journal.list(); ctx.check();
+      const entries = await journal.list(); check();
       const intent = entries.find(e => e.scope === ctx.scope && e.execution_id === pinned.execution_id && e.endpoint === pinned.endpoint && e.study_kind === pinned.study_kind && e.store_id === pinned.store_id);
-      if (intent) await journal.remove(intent);
-      ctx.check();
+      if (intent) await journal.remove(intent, check);
+      check();
     },
     async cancel(handle: DurableDirectRecoveryHandle) {
       const pinned = { ...handle }, ctx = await context();

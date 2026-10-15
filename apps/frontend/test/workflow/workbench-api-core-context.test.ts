@@ -42,6 +42,30 @@ test("requestJsonWithContext uses injected backend and auth providers", async ()
   }
 });
 
+test("native recovery errors retain bounded Agent codes through HTTP without retries", async () => {
+  for (const code of ["durable_execution_busy", "x".repeat(129), "retry\nnow", { code: "nested" }]) {
+    for (const suffix of ["", "/inspect", "/list", "/cancel"]) {
+      const seen = { urls: [] as string[], tokens: [] as string[] };
+      const restore = installFetch(new Response(JSON.stringify({ error: "execution store is busy",
+        agent_error_code: code, automatic_replay_authorized: true, automatic_retry: true,
+        details: { required_action: "submit_to_another_agent" },
+      }), { status: 502, headers: { "content-type": "application/json" } }), seen);
+      try {
+        await assert.rejects(requestJsonWithContext(context, `/api/direct-mesh/tasks${suffix}`, { method: "POST" }), error => {
+          assert.ok(error instanceof WorkbenchRequestError);
+          assert.equal(error.agentErrorCode, code === "durable_execution_busy" ? code : undefined);
+          assert.equal(error.retryable, suffix === "/inspect" || suffix === "/list");
+          assert.match(error.recoveryHint, /original Agent/);
+          assert.match(error.recoveryHint, /[Dd]o not resubmit/);
+          assert.doesNotMatch(JSON.stringify(error), /submit_to_another_agent/);
+          return true;
+        });
+        assert.equal(seen.urls.length, 1);
+      } finally { restore(); }
+    }
+  }
+});
+
 test("requestTextWithContext uses injected backend and auth providers", async () => {
   const seen = { urls: [] as string[], tokens: [] as string[] };
   const restoreFetch = installFetch(new Response("ok", { status: 200 }), seen);

@@ -5,6 +5,7 @@ import { createBrowserDirectExecutionJournal, type DirectExecutionIntent, type D
 import { createDurableDirectApiClient, DurableDirectSubmissionRejected, type DurableDirectEnvelope } from "../../src/lib/api/durable-direct-client.ts";
 import { observeWorkbenchDurableRun } from "../../src/components/workbench/workbench-durable-run-observer.ts";
 import { cancelWorkbenchJob } from "../../src/components/workbench/workbench-job-history-controller.ts";
+import { createWorkbenchFeedback, withWorkbenchFeedbackInvalidation } from "../../src/components/workbench/workbench-feedback.ts";
 import { checkpointDigest } from "../../src/lib/workbench/checkpoint-journal.ts";
 import type { WorkbenchStudyResult } from "../../src/lib/workbench/study-run-backend-service-core.ts";
 
@@ -138,6 +139,53 @@ test("old or disabled Agent is rejected before reserving an unqueryable executio
   await assert.rejects(service.submit("axial_bar_1d", input, endpoint), /durable_agent_required/);
   assert.equal(f.entries.length, 0); assert.equal(f.calls.length, 0);
 });
+
+test("busy store metadata is not mistaken for an old Agent or allowed to erase a pending handle", async () => {
+  const f = fixture();
+  const { handle } = await f.service.submit("axial_bar_1d", input, endpoint);
+  const saved = structuredClone(f.entries);
+  for (const identity of [undefined, storeId]) {
+    const service = createDurableDirectRunService({ ...f.options, client: { ...f.client,
+      fetchDirectMeshAgents: async () => ({ agents: [{ host: "127.0.0.1", port: 5001,
+        descriptor: { durable_execution: { schema_version: "kyuubiki.agent-durable-execution/v1",
+          enabled: true, available: false, unavailable_reason: "store_busy", store_id: identity } } }] }) as never,
+    } });
+    await assert.rejects(service.submit("axial_bar_1d", input, endpoint), /direct:store_busy/);
+    assert.deepEqual(await service.pending(), [handle]);
+    assert.deepEqual(f.entries, saved);
+    assert.equal(f.calls.length, 1);
+  }
+});
+
+test("unavailable store and failed commit have distinct preflight errors without submission", async () => {
+  for (const [policy, code] of [
+    [{ available: false, unavailable_reason: "store_unavailable" }, "store_unavailable"],
+    [{ available: true, admission_blocked_after_write_failure: true }, "store_write_failed"],
+  ] as const) {
+    const f = fixture();
+    const service = createDurableDirectRunService({ ...f.options, client: { ...f.client,
+      fetchDirectMeshAgents: async () => ({ agents: [{ host: "127.0.0.1", port: 5001,
+        descriptor: { durable_execution: { schema_version: "kyuubiki.agent-durable-execution/v1",
+          enabled: true, store_id: storeId, ...policy } } }] }) as never,
+    } });
+    await assert.rejects(service.submit("axial_bar_1d", input, endpoint), new RegExp(`direct:${code}`));
+    assert.equal(f.calls.length, 0); assert.equal(f.entries.length, 0);
+  }
+});
+
+test("failed recovery calls retain the pinned handle and never submit or cancel in the background", async () => {
+  const f = fixture();
+  const { handle } = await f.service.submit("axial_bar_1d", input, endpoint);
+  f.setReply(() => { throw new Error("durable_execution_busy"); });
+  await assert.rejects(f.service.inspect(handle), /durable_execution_busy/);
+  await assert.rejects(f.service.cancel(handle), /durable_execution_busy/);
+  assert.deepEqual(await createDurableDirectRunService(f.options).pending(), [handle]);
+  assert.deepEqual(f.calls.map(call => call.path), ["/api/direct-mesh/tasks", "/api/direct-mesh/tasks/inspect", "/api/direct-mesh/tasks/inspect"]);
+  f.setReply(body => report(body.execution_id, "completed"));
+  const receipt = await f.service.inspect(handle);
+  await f.service.acknowledge(handle, receipt);
+  assert.equal(f.entries.length, 0);
+});
 test("observation keeps durable ownership, queries only the original handle, then applies a confirmed result", async () => {
   const f = fixture(); const { handle } = await f.service.submit("axial_bar_1d", input, endpoint);
   const jobs: any[] = [], results: any[] = [], messages: string[] = [];
@@ -181,14 +229,47 @@ test("bounded observation detaches without cancelling, acknowledging or resubmit
 });
 test("ordinary cancel button routes a durable handle without calling Orchestra or pretending it stopped", async () => {
   const f = fixture(); const { handle } = await f.service.submit("axial_bar_1d", input, endpoint);
-  const token = { current: 3 }, messages: string[] = [];
-  const result = await cancelWorkbenchJob({ jobId: `direct-durable-${handle.execution_id}`, directExecution: handle,
+  const token = { current: 3 }, messages: string[] = [], feedback = createWorkbenchFeedback();
+  const result = await cancelWorkbenchJob({ jobId: `direct-durable-${handle.execution_id}`, directExecution: handle, feedback,
     durableDirectService: f.service, jobPollTokenRef: token, jobHistoryBackendService: { cancelJob: async () => assert.fail() } as never,
     labels: { jobCancelled: "cancelled", initialFailed: "failed", requestTimedOut: "timeout" }, refreshJobHistory: async () => assert.fail(),
-    setJob: () => assert.fail(), setResult: () => assert.fail(), setMessage: message => { messages.push(message as string); } });
+    setJob: () => assert.fail(), setResult: () => assert.fail(),
+    setMessage: withWorkbenchFeedbackInvalidation(feedback, message => { messages.push(message as string); }) });
   assert.equal(result.ok, true); assert.equal(token.current, 3); assert.match(messages[0], /cancel_requested/);
   assert.equal(f.entries.length, 1);
 });
+for (const terminal of ["completed", "failed"]) {
+  for (const lostReply of [false, true]) {
+    test(`late cancel ${lostReply ? "failure" : "reply"} cannot overwrite ${terminal} feedback for the same execution`, async () => {
+      const f = fixture(); const { handle } = await f.service.submit("axial_bar_1d", input, endpoint);
+      const feedback = createWorkbenchFeedback(), token = { current: 3 }, messages: unknown[] = [], results: unknown[] = [];
+      const setMessage = withWorkbenchFeedbackInvalidation(feedback, (value: unknown) => { messages.push(value); });
+      let release!: () => void;
+      const gate = new Promise<void>(resolve => { release = resolve; });
+      let cancellations = 0;
+      const args = { jobId: `direct-durable-${handle.execution_id}`, directExecution: handle, feedback,
+        durableDirectService: { ...f.service, cancel: async () => {
+          cancellations++; await gate;
+          if (lostReply) throw new Error("cancel response lost");
+          return { status: "requested" } as never;
+        } }, jobPollTokenRef: token, jobHistoryBackendService: { cancelJob: async () => assert.fail() } as never,
+        labels: { jobCancelled: "cancelled", initialFailed: "failed", requestTimedOut: "timeout" }, refreshJobHistory: async () => assert.fail(),
+        setJob: () => assert.fail(), setResult: () => assert.fail(), setMessage };
+      const cancelling = cancelWorkbenchJob(args);
+      await observeWorkbenchDurableRun({ handle, envelope: report(handle.execution_id, terminal, "cancelled"), service: f.service,
+        isCurrent: () => true, setJob: () => {}, setResult: value => results.push(value), setMessage,
+      }).catch(error => { setMessage(error.message); });
+      const terminalMessages = [...messages];
+      assert.equal(terminalMessages.length, 1);
+      assert.match(String(terminalMessages[0]), terminal === "completed" ? /direct:completed/ : /cancelled/);
+      release();
+      assert.equal((await cancelling).ok, !lostReply);
+      assert.deepEqual(messages, terminalMessages);
+      assert.deepEqual(results, terminal === "completed" ? [{ displacement: 1 }] : [null]);
+      assert.equal(token.current, 3); assert.equal(cancellations, 1); assert.equal(f.entries.length, 0);
+    });
+  }
+}
 test("default gateway scope is a hash, not persisted connection credentials", async () => {
   const f = fixture(); await f.service.submit("axial_bar_1d", input, endpoint);
   assert.equal(f.entries[0].scope, await checkpointDigest(f.options.gatewayIdentity()));

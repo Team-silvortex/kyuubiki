@@ -4,7 +4,8 @@ export type DirectExecutionIntent = {
 export type DirectExecutionJournal = {
   list(): Promise<DirectExecutionIntent[]>;
   reserve(intent: DirectExecutionIntent): Promise<{ intent: DirectExecutionIntent; is_new: boolean }>;
-  remove(intent: DirectExecutionIntent): Promise<void>;
+  // Local deletion guard; native checks stop at dispatch, not the disk commit.
+  remove(intent: DirectExecutionIntent, assertCurrent?: () => void): Promise<void>;
 };
 const kinds = new Set(["axial_bar_1d", "thermal_bar_1d", "heat_bar_1d", "beam_1d", "thermal_beam_1d", "torsion_1d",
   "spring_1d", "spring_2d", "spring_3d", "truss_2d", "truss_3d", "thermal_truss_2d", "thermal_truss_3d", "frame_2d", "thermal_frame_2d",
@@ -103,11 +104,13 @@ export function createDirectExecutionJournalClient(host: Window = window, timeou
       catch (error) { pending.delete(id); host.clearTimeout(timer); reject(error); }
     });
   };
-  const mutate = async (action: "reserve" | "remove", value: DirectExecutionIntent) => {
+  const mutate = async (action: "reserve" | "remove", value: DirectExecutionIntent, assertCurrent?: () => void) => {
     const intent = { ...validateDirectExecutionIntent(value) };
+    assertCurrent?.();
     if (!origin) await send({ action: "list" });
+    assertCurrent?.();
     return send({ action, intent });
   };
-  return { list: () => send({ action: "list" }), reserve: value => mutate("reserve", value), remove: value => mutate("remove", value),
+  return { list: () => send({ action: "list" }), reserve: value => mutate("reserve", value), remove: (value, assertCurrent) => mutate("remove", value, assertCurrent),
     dispose() { disposed = true; host.removeEventListener("message", receive); for (const entry of pending.values()) { host.clearTimeout(entry.timer); entry.reject(new Error("direct:journal_unavailable")); } pending.clear(); } };
 }

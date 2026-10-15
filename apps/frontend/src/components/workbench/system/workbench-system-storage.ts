@@ -1,5 +1,7 @@
 "use client";
 
+import { trackWorkbenchApiConfigurationChange } from "@/lib/api/auth-context";
+
 type StorageBucketDefinition = {
   id: string;
   label: string;
@@ -296,9 +298,11 @@ export function clearWorkbenchStorageBucket(bucketId: string) {
   const keysToRemove = listLocalStorageEntries()
     .map((entry) => entry.key)
     .filter((key) => bucketMatchesKey(bucket, key));
-  for (const key of keysToRemove) {
-    window.localStorage.removeItem(key);
-  }
+  trackWorkbenchApiConfigurationChange(() => {
+    for (const key of keysToRemove) {
+      window.localStorage.removeItem(key);
+    }
+  });
 }
 
 export function clearWorkbenchSafeStorage() {

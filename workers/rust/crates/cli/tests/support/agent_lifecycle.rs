@@ -243,9 +243,14 @@ impl LiveAgent {
                 "KYUUBIKI_AGENT_FAULT_INJECTION_RECEIPT_HOLD_FILE",
                 self.root.join("receipt.hold"),
             );
+            command.env(
+                "KYUUBIKI_AGENT_FAULT_INJECTION_STORE_READ_HOLD_FILE",
+                self.root.join("store-read.hold"),
+            );
         } else {
             command.env_remove("KYUUBIKI_AGENT_EXECUTION_STORE");
             command.env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_RECEIPT_HOLD_FILE");
+            command.env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_STORE_READ_HOLD_FILE");
         }
         if let Some(id) = &self.durable_start_failure {
             command.env(

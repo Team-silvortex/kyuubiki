@@ -12,6 +12,9 @@ use crate::rpc_execution_context::{
 };
 use crate::transport::AgentReply;
 
+#[path = "agent_store_access.rs"]
+mod store_access;
+
 static STORE: OnceLock<Mutex<Store>> = OnceLock::new();
 static OWNERS: OnceLock<Mutex<HashMap<String, crate::agent_lifecycle::ExecutionGuard>>> =
     OnceLock::new();
@@ -26,6 +29,7 @@ const PANIC_MESSAGE: &str =
     "durable worker panicked; result discarded; inspect diagnostics before a new attempt";
 
 pub(crate) fn configure() -> Result<(), String> {
+    store_access::configure()?;
     if let Some(id) = std::env::var_os(PANIC_ENV) {
         let id = id
             .into_string()
@@ -64,10 +68,20 @@ pub(crate) fn configure() -> Result<(), String> {
 
 pub(crate) fn policy() -> Value {
     let mut policy = match STORE.get() {
-        Some(store) => match store.lock() {
-            Ok(store) => store.policy(),
-            Err(_) => {
-                json!({"enabled":true, "available":false, "automatic_replay_authorized":false})
+        Some(store) => match store.try_lock() {
+            Ok(store) => {
+                let mut policy = store.policy();
+                policy["available"] = json!(true);
+                policy
+            }
+            Err(error) => {
+                let mut policy = agent_execution_store::policy(true);
+                policy["available"] = json!(false);
+                policy["unavailable_reason"] = json!(match error {
+                    std::sync::TryLockError::WouldBlock => "store_busy",
+                    std::sync::TryLockError::Poisoned(_) => "store_unavailable",
+                });
+                policy
             }
         },
         None => agent_execution_store::policy(false),
@@ -75,6 +89,8 @@ pub(crate) fn policy() -> Value {
     policy["receipt_fault_injection"] = json!({"enabled":RECEIPT_HOLD.get().is_some(),
         "configuration_env":HOLD_ENV, "phase":"after_receipt_sync_before_transport",
         "scope":"exact_execution_id", "max_hold_seconds":120});
+    policy["store_read_fault_injection"] = store_access::fault_policy();
+    policy["store_access"] = store_access::policy();
     policy["start_fault_injection"] = json!({"enabled":START_FAILURE.get().is_some(),
         "configuration_env":START_FAILURE_ENV, "phase":"before_worker_spawn",
         "scope":"exact_execution_id"});
@@ -114,6 +130,18 @@ fn with_store<T>(f: impl FnOnce(&mut Store) -> Result<T, String>) -> Result<T, S
         .ok_or("durable execution requires KYUUBIKI_AGENT_EXECUTION_STORE; no memory fallback")?;
     let mut store = store.lock().map_err(|_| "execution store is unavailable")?;
     f(&mut store)
+}
+
+fn with_recovery_store<T>(
+    f: impl FnOnce(&mut Store) -> Result<T, String>,
+) -> Result<T, store_access::AccessError> {
+    let store = STORE.get().ok_or_else(|| {
+        store_access::AccessError::Unavailable(
+            "durable execution requires KYUUBIKI_AGENT_EXECUTION_STORE; no memory fallback".into(),
+        )
+    })?;
+    let mut guard = store_access::lock(store)?;
+    f(&mut guard).map_err(Into::into)
 }
 
 pub(crate) fn handle_run(request: RpcRequest, writer: Option<SharedReplyWriter>) -> AgentReply {
@@ -398,31 +426,33 @@ fn wait_after_receipt(execution_id: &str) {
 
 pub(crate) fn handle_fetch(request: RpcRequest) -> AgentReply {
     let result = serde_json::from_value::<DurableAgentExecutionQuery>(request.params)
-        .map_err(|e| e.to_string())
+        .map_err(store_access::AccessError::from)
         .and_then(|query| {
-            with_store(|store| {
+            with_recovery_store(|store| {
+                kyuubiki_protocol::validate_durable_execution_id(&query.execution_id)?;
                 store.check_owner(query.expected_store_id.as_deref())?;
+                store_access::hold_read(&query.execution_id);
                 store.lookup(&query.execution_id)
             })
         });
-    reply(request.id, result)
+    recovery_reply(request.id, result)
 }
 
 pub(crate) fn handle_list(request: RpcRequest) -> AgentReply {
     let result =
         serde_json::from_value::<kyuubiki_protocol::DurableAgentExecutionList>(request.params)
-            .map_err(|e| e.to_string())
-            .and_then(|query| with_store(|store| store.list(&query)));
-    reply(request.id, result)
+            .map_err(store_access::AccessError::from)
+            .and_then(|query| with_recovery_store(|store| store.list(&query)));
+    recovery_reply(request.id, result)
 }
 
 pub(crate) fn handle_cancel(request: RpcRequest) -> AgentReply {
     let result = serde_json::from_value::<kyuubiki_protocol::DurableAgentExecutionCancel>(request.params)
-        .map_err(|e| e.to_string()).and_then(|query| {
+        .map_err(store_access::AccessError::from).and_then(|query| {
             query.validate()?;
             // Hold the receipt boundary while selecting the original live owner. Never resolve
             // a reused transport/job ID and never create a pending cancellation for future work.
-            with_store(|store| {
+            with_recovery_store(|store| {
                 store.check_owner(query.expected_store_id.as_deref())?;
                 let report = store.lookup(&query.execution_id)?;
                 if report["process_instance_id"] != query.process_instance_id
@@ -446,7 +476,27 @@ pub(crate) fn handle_cancel(request: RpcRequest) -> AgentReply {
                     "automatic_replay_authorized":false}))
             })
         });
-    reply(request.id, result)
+    recovery_reply(request.id, result)
+}
+
+fn recovery_reply(id: String, result: Result<Value, store_access::AccessError>) -> AgentReply {
+    match result {
+        Ok(value) => reply(id, Ok(value)),
+        Err(store_access::AccessError::Unavailable(message)) => reply(id, Err(message)),
+        Err(store_access::AccessError::Busy) => AgentReply::Stream(
+            Vec::new(),
+            RpcResponse::error_with_details(
+                id,
+                "durable_execution_busy",
+                "execution store is busy; retry only the same recovery operation on the original Agent",
+                json!({"scope":"recovery_request_only", "operation_started":false,
+                "execution_state_known":false, "identity_check_performed":false,
+                "lock_wait_timeout_ms":store_access::LOCK_WAIT.as_millis(),
+                "automatic_retry":false, "automatic_replay_authorized":false,
+                "required_action":"retry_recovery_on_original_agent"}),
+            ),
+        ),
+    }
 }
 
 fn reply(id: String, result: Result<Value, String>) -> AgentReply {

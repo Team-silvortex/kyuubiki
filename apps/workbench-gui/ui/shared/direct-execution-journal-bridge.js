@@ -2,13 +2,14 @@ const kinds = new Set(["axial_bar_1d", "thermal_bar_1d", "heat_bar_1d", "beam_1d
     "spring_1d", "spring_2d", "spring_3d", "truss_2d", "truss_3d", "thermal_truss_2d", "thermal_truss_3d", "frame_2d", "thermal_frame_2d",
     "plane_triangle_2d", "plane_quad_2d", "heat_plane_triangle_2d", "heat_plane_quad_2d", "thermal_plane_triangle_2d",
     "thermal_plane_quad_2d", "electrostatic_plane_triangle_2d", "electrostatic_plane_quad_2d"]);
-const fields = ["scope", "endpoint", "study_kind", "execution_id", "created_at"];
+const fields = ["scope", "endpoint", "study_kind", "execution_id", "created_at", "store_id"];
 export function validateDirectExecutionIntent(value) {
     const v = value;
     const endpoint = typeof v?.endpoint === "string" ? /^([A-Za-z0-9][A-Za-z0-9.-]*):([0-9]+)$/.exec(v.endpoint) : null;
     if (!v || typeof v !== "object" || Object.keys(v).some(key => !fields.includes(key))
         || typeof v.scope !== "string" || !/^[a-f0-9]{64}$/.test(v.scope)
         || typeof v.execution_id !== "string" || !/^[a-f0-9]{32}$/.test(v.execution_id)
+        || (v.store_id !== undefined && (typeof v.store_id !== "string" || !/^[a-f0-9]{32}$/.test(v.store_id)))
         || !endpoint || v.endpoint.length > 255 || endpoint[1] === "0.0.0.0" || +endpoint[2] < 1 || +endpoint[2] > 65535 || String(+endpoint[2]) !== endpoint[2]
         || !kinds.has(v.study_kind) || !Number.isSafeInteger(v.created_at) || v.created_at < 0 || v.created_at > 8.64e15)
         throw new Error("direct:journal_corrupt");
@@ -138,13 +139,15 @@ export function createDirectExecutionJournalClient(host = window, timeoutMs = 40
             }
         });
     };
-    const mutate = async (action, value) => {
+    const mutate = async (action, value, assertCurrent) => {
         const intent = { ...validateDirectExecutionIntent(value) };
+        assertCurrent?.();
         if (!origin)
             await send({ action: "list" });
+        assertCurrent?.();
         return send({ action, intent });
     };
-    return { list: () => send({ action: "list" }), reserve: value => mutate("reserve", value), remove: value => mutate("remove", value),
+    return { list: () => send({ action: "list" }), reserve: value => mutate("reserve", value), remove: (value, assertCurrent) => mutate("remove", value, assertCurrent),
         dispose() { disposed = true; host.removeEventListener("message", receive); for (const entry of pending.values()) {
             host.clearTimeout(entry.timer);
             entry.reject(new Error("direct:journal_unavailable"));

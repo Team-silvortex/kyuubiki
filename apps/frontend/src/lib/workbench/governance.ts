@@ -148,38 +148,33 @@ export function validateWorkbenchExecutionGovernance(input: {
   };
 }
 
+export function workbenchGovernedAuthSecretKeys(url: string, mode: FrontendRuntimeMode): Array<keyof WorkbenchGovernedSecrets> {
+  if (url.startsWith("/api/direct-mesh")) {
+    return mode === "direct_mesh_gui" ? ["directMeshApiToken"] : [];
+  }
+
+  if (
+    url === "/api/v1/agents/register" ||
+    /^\/api\/v1\/agents\/[^/]+\/heartbeat$/.test(url) ||
+    /^\/api\/v1\/agents\/[^/]+$/.test(url)
+  ) {
+    return mode === "orchestrated_gui" ? ["clusterApiToken", "controlPlaneApiToken"] : [];
+  }
+
+  if (url.startsWith("/api/v1") || url.startsWith("/api/playground") || url === "/api/health") {
+    return mode === "orchestrated_gui" ? ["controlPlaneApiToken"] : [];
+  }
+  return [];
+}
+
 export function buildWorkbenchGovernedAuthHeaders(input: {
   url: string;
   frontendRuntimeMode: FrontendRuntimeMode;
   secrets: WorkbenchGovernedSecrets;
 }) {
-  const controlPlaneApiToken = asTrimmedText(input.secrets.controlPlaneApiToken);
-  const clusterApiToken = asTrimmedText(input.secrets.clusterApiToken);
-  const directMeshApiToken = asTrimmedText(input.secrets.directMeshApiToken);
-
-  if (input.url.startsWith("/api/direct-mesh")) {
-    return input.frontendRuntimeMode === "direct_mesh_gui" && directMeshApiToken
-      ? { "x-kyuubiki-token": directMeshApiToken }
-      : {};
-  }
-
-  if (
-    input.url === "/api/v1/agents/register" ||
-    /^\/api\/v1\/agents\/[^/]+\/heartbeat$/.test(input.url) ||
-    /^\/api\/v1\/agents\/[^/]+$/.test(input.url)
-  ) {
-    if (input.frontendRuntimeMode !== "orchestrated_gui") return {};
-    return clusterApiToken
-      ? { "x-kyuubiki-token": clusterApiToken }
-      : controlPlaneApiToken
-        ? { "x-kyuubiki-token": controlPlaneApiToken }
-        : {};
-  }
-
-  if (input.url.startsWith("/api/v1") || input.url.startsWith("/api/playground") || input.url === "/api/health") {
-    return input.frontendRuntimeMode === "orchestrated_gui" && controlPlaneApiToken
-      ? { "x-kyuubiki-token": controlPlaneApiToken }
-      : {};
+  for (const key of workbenchGovernedAuthSecretKeys(input.url, input.frontendRuntimeMode)) {
+    const token = asTrimmedText(input.secrets[key]);
+    if (token) return { "x-kyuubiki-token": token };
   }
 
   return {};

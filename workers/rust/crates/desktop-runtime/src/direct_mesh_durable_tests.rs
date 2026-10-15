@@ -58,6 +58,14 @@ fn discovery_exposes_transport_limits_even_when_the_agent_is_unavailable() {
     assert_eq!(body["transport_policy"]["solver_total_deadline"], false);
     assert_eq!(body["transport_policy"]["automatic_retry"], false);
     assert_eq!(
+        body["transport_policy"]["error_diagnostics"]["max_agent_code_bytes"],
+        128
+    );
+    assert_eq!(
+        body["transport_policy"]["error_diagnostics"]["agent_details_forwarded"],
+        false
+    );
+    assert_eq!(
         body["selection_policy"],
         crate::direct_mesh_rpc::selection_policy()
     );
@@ -343,6 +351,15 @@ fn recovery_exchange(
     params: Value,
     report: Value,
 ) -> HttpResponse {
+    recovery_rpc_exchange(path, method, params, json!({"ok":true, "result":report}))
+}
+
+fn recovery_rpc_exchange(
+    path: &str,
+    method: &'static str,
+    params: Value,
+    mut response: Value,
+) -> HttpResponse {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let endpoint = listener.local_addr().unwrap().to_string();
     let expected = params.clone();
@@ -358,18 +375,131 @@ fn recovery_exchange(
         let request: Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(request["method"], method);
         assert_eq!(request["params"], expected);
-        let response = serde_json::to_vec(
-            &json!({"rpc_version":1, "id":request["id"], "ok":true,"result":report}),
-        )
-        .unwrap();
+        response["rpc_version"] = json!(1);
+        response["id"] = request["id"].clone();
+        let response = serde_json::to_vec(&response).unwrap();
         stream
             .write_all(&(response.len() as u32).to_be_bytes())
             .unwrap();
         stream.write_all(&response).unwrap();
     });
-    let response = gateway(vec![endpoint]).handle(&request(path, params));
+    let gateway = gateway(vec![endpoint]);
+    let response = gateway.handle(&request(path, params));
     peer.join().unwrap();
+    assert!(gateway.results.lock().unwrap().is_empty());
     response
+}
+
+#[test]
+fn busy_recovery_is_not_an_empty_index_missing_task_or_successful_cancel() {
+    let identity = json!({"execution_id":"a".repeat(32), "expected_store_id":"c".repeat(32)});
+    let mut cancellation = identity.clone();
+    cancellation["process_instance_id"] = json!("process");
+    cancellation["request_digest"] = json!("b".repeat(64));
+    for (path, method, params) in [
+        (
+            "/api/direct-mesh/tasks/inspect",
+            "fetch_durable_agent_execution",
+            identity,
+        ),
+        (
+            "/api/direct-mesh/tasks/list",
+            "list_durable_agent_executions",
+            json!({"limit":24, "after":null, "expected_store_id":"c".repeat(32)}),
+        ),
+        (
+            "/api/direct-mesh/tasks/cancel",
+            "cancel_durable_agent_execution",
+            cancellation,
+        ),
+    ] {
+        let response = recovery_rpc_exchange(
+            path,
+            method,
+            params,
+            json!({"ok":false,
+            "error":{"code":"durable_execution_busy", "message":"execution store is busy",
+                "details":{"operation_started":false,"automatic_replay_authorized":false}}}),
+        );
+        assert_eq!(response.status, 502, "{path}");
+        let body: Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(body["error"], "execution store is busy", "{path}");
+        assert_eq!(body["agent_error_code"], "durable_execution_busy", "{path}");
+        assert_eq!(body["automatic_retry"], false);
+        assert_eq!(body["automatic_replay_authorized"], false);
+        assert!(body.get("execution").is_none());
+        assert!(body.get("executions").is_none());
+        assert!(body.get("cancellation").is_none());
+    }
+}
+
+#[test]
+fn remote_error_diagnostics_cannot_forward_replay_advice_or_become_terminal_evidence() {
+    for code in [
+        "store_unavailable".to_owned(),
+        "x".repeat(129),
+        "retry\nnow".into(),
+    ] {
+        let response = recovery_rpc_exchange(
+            "/api/direct-mesh/tasks/inspect",
+            "fetch_durable_agent_execution",
+            json!({"execution_id":"a".repeat(32), "expected_store_id":"c".repeat(32)}),
+            json!({"ok":false,"error":{"code":code,"message":"failure",
+                "details":{"automatic_replay_authorized":true,"automatic_retry":true,
+                    "execution_started":false,"required_action":"submit_to_another_agent"}}}),
+        );
+        assert_eq!(response.status, 502);
+        let body: Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(
+            body["agent_error_code"],
+            if code == "store_unavailable" {
+                json!(code)
+            } else {
+                Value::Null
+            }
+        );
+        assert_eq!(body["automatic_retry"], false);
+        assert_eq!(body["automatic_replay_authorized"], false);
+        assert_eq!(
+            body["required_action"],
+            "inspect_execution_on_original_agent"
+        );
+        assert!(body.get("details").is_none());
+        assert!(body.get("execution_started").is_none());
+        assert!(body.get("execution").is_none());
+    }
+}
+
+#[test]
+fn invalid_remote_envelopes_and_transport_failures_have_no_agent_error_code() {
+    for reply in [
+        json!({"ok":false, "result":{"status":"not_found"},
+            "error":{"code":"durable_execution_busy","message":"busy"}}),
+        json!({"ok":true, "result":{"agent_error_code":"durable_execution_busy"}}),
+    ] {
+        let response = recovery_rpc_exchange(
+            "/api/direct-mesh/tasks/inspect",
+            "fetch_durable_agent_execution",
+            json!({"execution_id":"a".repeat(32)}),
+            reply,
+        );
+        assert_eq!(response.status, 502);
+        let body: Value = serde_json::from_slice(&response.body).unwrap();
+        assert!(body["agent_error_code"].is_null());
+        assert_eq!(body["automatic_retry"], false);
+        assert_eq!(body["automatic_replay_authorized"], false);
+    }
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let endpoint = listener.local_addr().unwrap().to_string();
+    drop(listener);
+    let response = gateway(vec![endpoint]).handle(&request(
+        "/api/direct-mesh/tasks/inspect",
+        json!({"execution_id":"a".repeat(32)}),
+    ));
+    assert_eq!(response.status, 502);
+    let body: Value = serde_json::from_slice(&response.body).unwrap();
+    assert!(body["agent_error_code"].is_null());
+    assert_eq!(body["automatic_replay_authorized"], false);
 }
 
 #[test]

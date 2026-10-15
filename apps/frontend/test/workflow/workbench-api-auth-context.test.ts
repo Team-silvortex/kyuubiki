@@ -100,3 +100,43 @@ test("API authority follows query precedence and detects governed header removal
     assert.equal(next(), false);
   } finally { writeInMemoryWorkbenchSecrets({}); restore(); }
 });
+
+for (const initial of ["direct_mesh_gui", "orchestrated_gui"]) {
+  test(`API authority fences a token-free mode switch from ${initial}`, () => {
+    const settings = { frontendRuntimeMode: initial };
+    const restore = installWindow(settings);
+    writeInMemoryWorkbenchSecrets({});
+    try {
+      const current = captureWorkbenchApiAuthority("/api/direct-mesh/tasks/inspect", "/api/v1/jobs");
+      assert.equal(current(), true);
+      settings.frontendRuntimeMode = initial === "direct_mesh_gui" ? "orchestrated_gui" : "direct_mesh_gui";
+      assert.equal(current(), false, "mode ownership must not depend on configured tokens");
+    } finally { restore(); }
+  });
+}
+
+test("an observed authority change cannot revive an old response after restoring the gateway", () => {
+  const settings = { frontendRuntimeMode: "direct_mesh_gui", backendApiBaseUrl: "https://original.invalid" };
+  const restore = installWindow(settings);
+  try {
+    const current = captureWorkbenchApiAuthority("/api/direct-mesh/tasks/inspect");
+    settings.backendApiBaseUrl = "https://replacement.invalid";
+    assert.equal(current(), false);
+    settings.backendApiBaseUrl = "https://original.invalid";
+    assert.equal(current(), false);
+    assert.equal(captureWorkbenchApiAuthority("/api/direct-mesh/tasks/inspect")(), true);
+  } finally { restore(); }
+});
+
+test("unreadable authority revokes the old request even after storage recovers", () => {
+  const restore = installWindow({ frontendRuntimeMode: "direct_mesh_gui" });
+  try {
+    const current = captureWorkbenchApiAuthority("/api/direct-mesh/tasks/inspect");
+    const read = window.localStorage.getItem;
+    window.localStorage.getItem = () => { throw new Error("storage unavailable"); };
+    assert.throws(current, /BACKEND_TARGET_UNAVAILABLE/);
+    window.localStorage.getItem = read;
+    assert.equal(current(), false);
+    assert.equal(captureWorkbenchApiAuthority("/api/direct-mesh/tasks/inspect")(), true);
+  } finally { restore(); }
+});

@@ -141,6 +141,18 @@ Original lifecycle permissions and recovery identity fences remain unchanged.
 This is bounded ingress isolation, not authentication or guaranteed recovery when
 the reserve itself is saturated. No operator or engine scheduling logic is added.
 
+Recovery also has a store-mutex boundary, published as
+`durable_execution.store_access` (`kyuubiki.agent-store-access/v1`). Describe and
+heartbeat never wait on this mutex: contention reports unavailable/busy metadata,
+not fabricated counts or identity; clients must retain saved owner fences. Durable
+fetch/list/cancel wait up to a 250-ms monotonic acquisition budget, then return
+`durable_execution_busy` without inspecting state or scheduling any late action.
+This is a failed recovery call, not original-task failure, absence or cancellation
+success. The gateway keeps it a failure and does not reselect/replay/cache a result.
+Admission and receipt commits remain serialized; actual filesystem operations,
+other locks and reply delivery are outside this budget. Poisoned locks fail closed.
+The Agent owns this policy independently of engine/operator code and Orchestra.
+
 `KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS` is the Agent-local admission limit, default
 1, accepted integers 1..=1024. Startup rejects invalid values; changing the
 limit requires a process restart. Both solver RPC and TaskIR use the same

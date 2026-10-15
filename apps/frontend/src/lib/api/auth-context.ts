@@ -1,7 +1,9 @@
 import type { FrontendRuntimeMode } from "@/lib/api/runtime-types";
-import { buildWorkbenchGovernedAuthHeaders } from "@/lib/workbench/governance";
+import { buildWorkbenchGovernedAuthHeaders, workbenchGovernedAuthSecretKeys } from "@/lib/workbench/governance";
 import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/workbench-secrets";
-import { resolveWorkbenchApiUrl } from "./backend-target";
+import { resolveWorkbenchApiUrl, trackWorkbenchBackendTargetChange } from "./backend-target";
+import { advanceWorkbenchAuthorityRevision, readWorkbenchAuthorityRevision, type WorkbenchAuthorityDimension } from "./authority-revisions";
+import { ensureWorkbenchAuthorityStorageTracking } from "./authority-storage-events";
 
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
@@ -11,7 +13,7 @@ type WorkbenchApiAuthSecrets = {
   directMeshApiToken?: string;
 };
 
-function readFrontendRuntimeModeFromWindow(): FrontendRuntimeMode {
+function readStoredControlMode(): FrontendRuntimeMode | null {
   if (typeof window === "undefined") return "orchestrated_gui";
 
   try {
@@ -21,8 +23,22 @@ function readFrontendRuntimeModeFromWindow(): FrontendRuntimeMode {
       : {};
     return parsed.frontendRuntimeMode === "direct_mesh_gui" ? "direct_mesh_gui" : "orchestrated_gui";
   } catch {
-    return "orchestrated_gui";
+    return null;
   }
+}
+
+function readFrontendRuntimeModeFromWindow(): FrontendRuntimeMode {
+  return readStoredControlMode() ?? "orchestrated_gui";
+}
+
+export function trackWorkbenchApiConfigurationChange<T>(write: () => T): T {
+  const before = readStoredControlMode();
+  return trackWorkbenchBackendTargetChange(() => {
+    try { return write(); } finally {
+      const after = readStoredControlMode();
+      if (before === null || after === null || before !== after) advanceWorkbenchAuthorityRevision("mode");
+    }
+  });
 }
 
 function readWorkbenchApiAuthSecrets(): WorkbenchApiAuthSecrets {
@@ -48,8 +64,36 @@ export function buildWorkbenchApiAuthHeaders(url: string) {
 }
 
 export function captureWorkbenchApiAuthority(...urls: string[]) {
-  const scope = () => JSON.stringify(urls.map((url) => [resolveWorkbenchApiUrl(url), buildWorkbenchApiAuthHeaders(url)]));
+  ensureWorkbenchAuthorityStorageTracking();
+  const scope = () => {
+    const mode = readFrontendRuntimeModeFromWindow(), secrets = readWorkbenchApiAuthSecrets();
+    const dimensions = new Set<WorkbenchAuthorityDimension>(["mode"]);
+    for (const url of urls) {
+      if (url.startsWith("/")) dimensions.add("backend");
+      for (const key of workbenchGovernedAuthSecretKeys(url, mode)) {
+        dimensions.add(key);
+        if (secrets[key]) break;
+      }
+    }
+    return {
+      signature: JSON.stringify([mode, urls.map((url) => [resolveWorkbenchApiUrl(url), buildWorkbenchApiAuthHeaders(url)])]),
+      revisions: [...dimensions].map(readWorkbenchAuthorityRevision),
+    };
+  };
   // Kept only for this request's lifetime; never persisted or included in diagnostics.
   const captured = scope();
-  return () => captured === scope();
+  let current = true;
+  return () => {
+    // Restoring settings cannot revive a request already observed to be stale.
+    if (!current) return false;
+    try {
+      const next = scope();
+      current = captured.signature === next.signature && captured.revisions.length === next.revisions.length
+        && captured.revisions.every((revision, index) => revision === next.revisions[index]);
+      return current;
+    } catch (error) {
+      current = false;
+      throw error;
+    }
+  };
 }

@@ -201,16 +201,15 @@ impl DirectMeshGateway {
             params["expected_store_id"] = json!(id);
         }
         // Durable operations stay pinned even during discovery; never migrate their identity.
-        let outcome = crate::direct_mesh_rpc::request(&endpoints[0], method, params).and_then(
-            |(execution, progress)| {
+        let outcome = crate::direct_mesh_rpc::request_detailed(&endpoints[0], method, params)
+            .and_then(|(execution, progress)| {
                 validate_store_identity(&execution, expected_store)?;
                 // The RPC transport already bound a rejection to this exact submit request.
                 if !crate::direct_mesh_admission::is_rejection(&execution) {
                     validate_durable_report(&execution, id)?;
                 }
                 Ok((execution, progress))
-            },
-        );
+            });
         match outcome {
             Ok((execution, _)) => json_response(
                 200,
@@ -219,8 +218,9 @@ impl DirectMeshGateway {
             ),
             Err(error) => json_response(
                 502,
-                json!({"error":error, "execution_id":id,
+                json!({"error":error.message, "agent_error_code":error.agent_code, "execution_id":id,
                 "endpoint":endpoints[0], "automatic_replay_authorized":false,
+                "automatic_retry":false, "gateway_runtime":"rust-native",
                 "required_action":"inspect_execution_on_original_agent"}),
             ),
         }

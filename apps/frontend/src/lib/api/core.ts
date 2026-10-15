@@ -106,13 +106,14 @@ export async function requestJsonWithContext<T>(
       },
       timeoutMs,
       async (response) => {
-        const payload = (await readResponsePayload(response)) as (T & { error?: string; message?: string }) | string | null;
+        const payload = (await readResponsePayload(response)) as (T & { error?: string; message?: string; agent_error_code?: unknown }) | string | null;
 
         if (!response.ok) {
           if (payload && typeof payload === "object") {
             throw createHttpWorkbenchRequestError({
               message: payload.error ?? payload.message ?? `request failed: ${response.status}`,
               responseMessage: payload.error ?? payload.message ?? null,
+              agentErrorCode: payload.agent_error_code,
               statusCode: response.status,
               url: requestUrl,
             });

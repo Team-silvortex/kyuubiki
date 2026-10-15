@@ -532,6 +532,391 @@ and reply delivery can themselves be slow; their execution/write boundaries rema
 separate from receive deadlines. Complete reserve exhaustion can still deny controls.
 The earlier no-reserved-capacity limitation is superseded only within these bounds.
 
+## Follow-Up: Store Contention Must Not Hide The Agent
+
+The ingress reserve exposed the next blocking boundary: descriptor generation and
+durable recovery used the same unbounded execution-store mutex as admission, receipt
+serialization and disk commit. One slow store holder could therefore stall Mesh
+description/heartbeats and consume recovery handlers. A new real-process fixture
+first reproduced this: a held fetch caused description to exceed its two-second
+socket deadline before the fix.
+
+The Agent now publishes `durable_execution.store_access`
+(`kyuubiki.agent-store-access/v1`). Description uses immediate `try_lock`; contention
+reports `enabled: true`, `available: false`, `unavailable_reason: store_busy`, without
+inventing counters or identity. Poisoned locks remain unavailable, never bypassed.
+Fetch/list/exact cancellation share a 250-ms monotonic mutex-acquisition budget.
+Expiry returns `durable_execution_busy`, with `operation_started: false`,
+`execution_state_known: false` and `identity_check_performed: false`. These describe
+the recovery request only, not the original task. There is no delayed action queue,
+automatic recovery retry, task replay or peer reselection. Admission/receipt writes
+retain their serialized durability boundary and the stored record format is unchanged.
+
+Five focused unit cases cover uncontended access, simultaneous expired waiters with
+no late mutation, release within budget, fail-closed poisoning and published policy.
+The local live fixture starts two converged offline-Mesh Agents. It holds one real
+bar task and a fetch's store lock, then checks prompt description and explicit busy
+errors from inspect/list/cancel. After release the task is still running: the expired
+cancel did not execute later. A new explicit cancel produces a persisted failed
+receipt, which remains identical after force-killing and restarting the original
+Agent. The peer has neither that execution nor an active owner. The native gateway
+regression checks that all three busy recovery routes fail without an empty index,
+missing-task result, cancellation acknowledgement or cached success.
+
+The disabled-by-default fault hook uses
+`KYUUBIKI_AGENT_FAULT_INJECTION_STORE_READ_HOLD_FILE`: an explicit absolute path,
+regular file at most 128 bytes, exact execution ID and a ten-second hold budget.
+Unix opens reject final symlinks and avoid FIFO-open blocking. Removing the marker
+releases the fixture; owned processes, threads and temporary stores are cleaned up.
+This is injected lock contention, not a physically stalled disk or power-loss test;
+fault-file I/O itself has no enforced deadline.
+
+The first broad regression also caught an old test assumption: the status poller
+asserted success on every inspection during large receipt serialization. Its bounded
+read-only polling loop now accepts only the explicit busy error, validates its
+no-action/no-known-state/no-replay details and retries the same Agent/execution query.
+Other RPC failures still fail the test. Submission, cancellation and single-shot
+fetch helpers have not gained automatic retries or relaxed result assertions.
+
+Verification on 2026-10-15: 642 selected Rust tests passed (374 CLI unit/live,
+119 desktop-runtime and 149 protocol), with one existing desktop-runtime test
+ignored. This includes the large-response, synchronous/asynchronous durability,
+TaskIR, owner-fence, Mesh discovery, shutdown and ingress suites. These are scoped
+regression results, not repository-wide coverage or benchmark qualification.
+Tensor structure remains complete with four maturity gaps, twenty evidence-grade
+gaps and fifteen P0 gaps; Daji status remains blocked. The new evidence claim is
+local `verified`, not operational multi-host qualification.
+
+Warning-denied Clippy passed for the selected CLI targets and desktop-runtime
+library/tests. Formatting, whitespace, documentation book/inventory and the
+800-line source / 2,000-line document organization checks passed.
+
+The wait budget covers only the store mutex acquisition. Filesystem work after
+acquisition, other locks, scheduler delays and reply delivery remain separate.
+A stuck holder can still stall itself and writers, and repeated contention can
+starve recovery success. Do not infer a total-operation latency SLA, disk-fault
+isolation, task migration or automatic recovery from this change. No version bump,
+commit, push, package, deployment or extra backup tree was made.
+
+## Follow-Up: Recovery Errors Across The Gateway And Workbench
+
+Following store contention through the caller found three contract/UX gaps. The
+native gateway discarded the RPC error code. Workbench mistook busy metadata with
+no store identity for an old Agent needing an upgrade, and could accept unavailable
+metadata if an identity was present. The generic request-error helper also labelled
+direct submission/cancellation timeouts and HTTP 5xx as retryable operations. Current
+recovery callers did not automatically replay them, but that advice was unsafe for
+future consumers and misleading to operators. New regressions reproduced the missing
+code, wrong preflight diagnostic and retry classification before their fixes.
+
+The native transport now retains a bounded diagnostic code after checking the RPC
+envelope, live request identity and deadline. Durable submit/inspect/list/cancel
+routes keep HTTP 502 with the original `error` message and nullable `agent_error_code`.
+Only 1..128 ASCII alphanumeric/underscore/hyphen/period characters are retained.
+Transport failures, malformed envelopes, invalid receipt shapes and rejected codes
+do not claim an Agent error code. The discovery transport policy exposes these rules.
+Peer error details are deliberately not forwarded: even a peer suggesting retry or
+migration cannot overwrite `automatic_retry: false`, `automatic_replay_authorized:
+false` or original-Agent inspection guidance. Codes remain diagnostics, not task
+state, ownership checks, terminal receipts or non-admission evidence.
+
+Workbench carries bounded codes through `WorkbenchRequestError.agentErrorCode`.
+Direct mutations (durable submit, exact cancel and legacy solve) are not generic
+retryable requests after HTTP/network/timeout failure, including reverse-proxy-prefixed
+URLs. Inspect/list retain explicit read-only retry semantics on the saved owner.
+There is no new automatic retry. Preflight distinguishes `direct:store_busy`,
+`direct:store_unavailable` and `direct:store_write_failed`, rejects before reservation
+or dispatch, and never erases an earlier pending identity. Missing legacy identity
+remains a separate fail-closed owner-fence error.
+
+Verification on 2026-10-15:
+
+- 644 selected Rust tests passed: 374 CLI unit/live, 121 desktop-runtime and 149
+  protocol, with one existing desktop-runtime test ignored. Gateway controlled-TCP
+  cases cover diagnostic propagation, contradictory/invalid replies, refused
+  connections, bounded codes and untrusted retry advice. The original two-Agent
+  contention and forced-restart fixture was rerun as part of the CLI selection.
+- 133 selected frontend unit tests passed. They cover preflight classification,
+  HTTP-to-error propagation, no extra fetch, intact pending handles after failed
+  inspect/cancel, explicit later terminal cleanup and existing owner/authority fences.
+- 10 Chromium GUI/PWDT tests passed using an isolated source Workbench and mocked
+  services. The added case reloads IndexedDB-backed pending state, observes busy
+  metadata and failed inspection without resubmission or result replacement, then
+  explicitly recovers the same owner receipt and clears only that handle. The first
+  sandboxed attempt failed in setup because localhost listen was denied; the approved
+  local rerun passed all cases. The fixture closes its browser/services and removes
+  its temporary workspace rather than retaining a build/archive copy.
+- Frontend typecheck and source line guard passed. Tensor structure still has zero
+  structural gaps, four maturity gaps, twenty evidence-grade gaps and fifteen P0 gaps;
+  Daji remains blocked. Evidence remains local `verified`.
+
+These are layered checks, not one installed-WebView-to-real-Agent end-to-end test.
+The browser backend is mocked; no new physical LAN, sustained-contention, Windows,
+power-loss or stalled-device qualification is claimed. No engine/operator algorithm,
+durable record format, replay policy, version, commit, push or installation changed.
+
+## Follow-Up: Lost Cancellation Replies And Late Feedback
+
+Tracing cancellation across the caller found a same-execution feedback race. The
+ordinary cancel controller checked only the job polling epoch. Terminal observation
+does not change that epoch, so a delayed cancellation acknowledgement or network
+failure could overwrite a newer completed/failed message. Four deterministic unit
+cases first reproduced the overwrite and then passed with the fix.
+
+The controller now uses the existing workspace feedback ownership guard alongside
+the polling fence. Newer feedback wins even when job/execution identity is unchanged.
+Cancellation still returns its own success/failure to its caller, keeps observation
+alive, never claims a terminal outcome from acceptance, and never clears pending
+identity metadata on a lost reply. No new state subsystem or engine/operator coupling
+was introduced. Ordinary Orchestra cancellation retains its authoritative job/result
+updates while observing the same feedback guard.
+
+The new native `agent_mesh_cancel_recovery_live` target uses two real Rust Agent
+processes with converged offline Mesh discovery and temporary persistent stores:
+
+- A test-only loopback relay forwards cancellation, observes the original Agent's
+  acknowledgement and drops every response byte before the caller can receive it.
+  After the failed/cancelled receipt is synced, the Agent is force-killed and restarted.
+  Exact-owner inspection returns the same receipt, without replay or peer migration.
+  An explicit later cancel for the old execution cannot cancel a fresh execution
+  reusing the job/transport names.
+- A truncated cancellation frame is disconnected before complete reception. The
+  still-running Agent is force-killed, then restarted from the original store.
+  The admission is `outcome_unknown`, not cancelled; explicit duplicate lookup does
+  not run it again, and the peer can complete independent work without inheriting it.
+
+These are two concrete interruption boundaries, not proof that every cancellation
+instruction or filesystem crash boundary has been exhaustively tested. The first
+case waits for receipt persistence before killing; it does not claim that in-memory
+cancellation intent alone survives termination. Fixtures own/clean their processes,
+stores and sockets and introduce no additional production fault-injection hook.
+
+Verification on 2026-10-15 includes 378 selected CLI unit/live tests (the new target
+has two scenario tests plus two shared fixture checks), and 257 selected frontend
+unit tests. The isolated Chromium GUI/PWDT suite has 15 cases, including four late
+cancel success/failure versus terminal success/failure races and a lost-cancel reply
+with IndexedDB reload, unknown-state retention and later exact terminal cleanup.
+Its initial new cases failed because the test did not accept the required cancel
+confirmation dialog; after fixing the fixture, all 15 passed. These browser checks
+use mocked services and are separate from the real native process tests.
+
+The final rerun passed all 15 cases with cancellation-specific terminal fixtures.
+Another 12 selected centralized cancellation browser cases passed, covering late
+responses, contradictory state, history refresh failure and overlapping request
+deduplication. Desktop-runtime/protocol added 270 passing tests with one existing
+ignored test, bringing the selected Rust total to 648. Frontend typecheck, the new
+native target's warning-denied Clippy, formatting, whitespace, documentation
+book/inventory and project organization checks passed. All touched source/test files
+remain below 800 lines; documents remain below 2,000. The tensor still reports zero
+structural gaps, four maturity gaps, twenty evidence-grade gaps and fifteen P0 gaps;
+Daji readiness remains blocked rather than being promoted by local test counts.
+
+Evidence remains local `verified`, not installed-WebView-to-real-Agent, physical
+multi-host LAN or power-loss qualification. No durable format, replay rule, numerical
+algorithm, version, commit, push, packaging or installation changed.
+
+## Follow-Up: Caller Context Isolation During Recovery
+
+GUI/PWDT recovery previously read execution/process/digest fields from the caller's
+mutable payload after awaiting the pending journal. Reusing the object could switch
+inspection/cancellation to another execution while retaining other original fields.
+The handler now snapshots supported scalar parameters at entry, before any await.
+
+The shared API authority guard previously compared only effective URLs and headers.
+With no configured token, direct-to-Orchestra and reverse mode changes could leave
+both unchanged. The guard now includes control mode independently of credentials.
+An observed mismatch or unreadable authority also latches invalidation: restoring
+configuration does not revive that request. This is not a global configuration epoch;
+an A-to-B-to-A change entirely between checks remains undetected. No guarantee of
+automatic cancellation, task migration or replay is added.
+
+Six new assertions failed against the old implementation: two mutable-payload
+targets, two token-free mode transitions, restored gateway after observed invalidation
+and restored storage after a failed authority check. All pass after the two focused
+production changes. Additional gated tests cover context loss during journal lookup,
+late running/terminal responses and fresh explicit cleanup of the original handle.
+
+Verification on 2026-10-15:
+
+- 475 selected frontend unit tests passed across recovery/run/request/feedback and
+  shared library/admin-controller boundaries. The two selections have 274 and 201
+  tests respectively; the focused 17-test rerun is included, not counted again.
+- All 17 isolated Chromium direct recovery cases passed. Two new cases hold a real
+  browser HTTP response during ordinary execution or manual recovery, change mode
+  through PWDT, then release a terminal receipt. The retired operation rejects;
+  model/result remain unchanged and the original IndexedDB handle remains. Returning
+  to direct mode cannot submit replacement work; a fresh explicit exact inspection
+  alone clears the handle. Neither case sends cancellation or a second submission.
+- Another 12 centralized cancellation browser cases passed. These 29 browser cases
+  use mocked services and are not installed-WebView-to-real-Agent qualification.
+- Frontend typecheck and the 800-line source guard passed. Evidence is attached to
+  the existing caller-journal and Mesh isolation claims without grade promotion.
+- Documentation book/inventory, project organization and whitespace checks passed.
+  Tensor validation still reports zero structural gaps, four maturity gaps, twenty
+  evidence-grade gaps and fifteen P0 gaps; Daji readiness remains blocked.
+
+No Agent, engine, operator, durable format, version, packaging, installation or Git
+history changed in this follow-up. Earlier native process results above remain
+separate evidence; they are not counted as new runs for this caller-side change.
+
+## Follow-Up: Managed Configuration Roundtrip Fences
+
+The preceding snapshot limitation is now closed for this JavaScript realm's managed
+configuration writers. A request can be suspended while settings change A-to-B-to-A;
+the final URL/header/mode values alone no longer let it regain ownership.
+
+Five fixed current in-memory revision identities track mode, effective backend and
+the three governed API credentials. They retain neither secrets nor a change history,
+have no observer registry or polling timer, and add no persistent data. Settings
+persistence, legacy settings scrubbing and explicit settings cleanup track mode and
+effective target changes. The backend setter and in-memory secret setter participate.
+Synchronous mutations are checked in `finally`, including an injected partial write
+that changes storage before throwing. A failed write that changes nothing does not
+invalidate a still-readable unchanged authority.
+
+Header construction and revision dependencies share the existing governance routing
+rules. Relevant credential addition/removal invalidates even when the request started
+with no token. A configured cluster token masks the control-plane fallback until it
+is removed. Theme/language, normalized no-op writes, unused credentials, unchanged
+absolute request URLs and persisted gateway edits masked by query precedence do not
+spuriously retire the request. No engine/operator or Agent-side protocol change is
+needed for this caller-side fence.
+
+Verification on 2026-10-15:
+
+- The initial 14-test regression selection produced 11 failing cases against the
+  snapshot-only implementation. It now has 17 passing cases, including additional
+  gateway write failures and a governed-header route/fallback matrix.
+- 510 selected frontend unit tests passed in the final combined run. This includes
+  the new revision tests plus recovery, ordinary execution, API errors, settings,
+  secrets, storage cleanup and shared admin/library controller coverage.
+- 19 isolated Chromium direct recovery tests passed. The two new roundtrip cases
+  hold an inspection HTTP reply for an ordinary run or manual recovery, switch to
+  Orchestra and back through PWDT, and only then release the completed receipt.
+  The old request rejects; its original pending identity survives; replacement
+  submission is blocked; a fresh explicit inspection can clear that exact handle.
+- Another 12 centralized cancellation browser cases passed. These 31 browser tests
+  use mocked services, not real multi-host Agents or the installed desktop WebView.
+- Frontend typecheck, source line guard, documentation book/inventory, organization
+  and whitespace checks passed. Tensor structure remains valid with zero structural
+  gaps, four maturity gaps, twenty evidence-grade gaps and fifteen P0 gaps. Evidence
+  stays local `verified`; Daji readiness is not promoted.
+
+Unmanaged storage writes, another tab/realm and untracked URL/history mutations still
+rely on response-time snapshot checks. A roundtrip entirely through those bypasses
+is not covered by the new managed revisions. No cross-window fencing, automatic
+cancel/replay, durable workflow resumption, native/physical-LAN rerun, version bump,
+commit, push, packaging or installation is claimed in this follow-up.
+
+## Follow-Up: Delivered Cross-Window Configuration Fences
+
+The preceding cross-tab limitation is narrowed for delivered same-origin storage
+notifications. A second Workbench window can switch mode or its persisted gateway
+A-to-B-to-A while an inspection response is held. Previously the first window could
+accept the old terminal reply and clear its pending handle because its final snapshot
+matched A and the managed revision only observed its own writes.
+
+The shared API guard now installs one storage listener per window before capturing
+authority. It uses the event's old/new values rather than rereading the latest values,
+then advances existing mode/backend revisions. It does not retain a configuration
+history, install per-request listeners, synchronize credentials, mutate settings or
+journals, or cancel/dispatch/replay execution. Relevant settings/gateway event values
+are bounded to 65,536 string code units before parsing. Malformed settings, oversized
+payloads, unavailable storage access and clear notifications fail conservatively.
+Session-storage events, unrelated preferences, equivalent normalized targets and
+query-masked target edits do not spuriously revoke an unchanged request. Absolute
+URLs do not depend on persisted target revisions.
+
+Verification on 2026-10-15:
+
+- The initial 16-case regression selection failed 11 tests against the previous
+  implementation. Its final 19 cases all passed, including malformed backend fields,
+  oversized gateway input and unavailable storage restored after event delivery.
+- All 529 selected frontend unit tests passed, including shared admin/library
+  controllers, ordinary run, durable recovery, cancellation feedback, settings,
+  credentials, request errors and storage cleanup.
+- All 25 isolated Chromium durable recovery cases passed. Six new two-page cases
+  use real browser storage events: mode/gateway roundtrips for ordinary execution and
+  manual recovery, plus URL-pinned and unrelated-preference controls. Each waits for
+  actual notification delivery before releasing the held terminal HTTP response.
+  Invalidated calls preserve the exact IndexedDB handle and current model/result,
+  block replacement submission, and allow fresh explicit inspection to clear only
+  that original handle. No cancellation, second submission or peer-window task call
+  occurs. The two negative controls still complete normally.
+- The first browser run passed 22 of 24 cases. Two gateway fixtures incorrectly
+  expected invalidation despite the fixture URL explicitly pinning its backend.
+  The corrected tests move that target into local storage before starting the request,
+  and retain a separate query-pinned control. Production query precedence was not
+  weakened to make the tests pass.
+- Another 12 selected centralized cancellation browser cases passed, for 37 passing
+  browser cases in this follow-up. Frontend typecheck, the 800-line source guard,
+  documentation book/inventory, project organization and whitespace checks passed.
+  Tensor validation reports zero structural gaps, four maturity gaps, twenty
+  evidence-grade gaps and fifteen P0 gaps; Daji readiness remains blocked.
+
+These are local browser checks with mocked services, not native multi-host LAN,
+installed WebView or power-loss qualification. Storage events are asynchronous: a
+reply processed before its configuration notification arrives is outside this fence.
+No cross-window atomic transaction or persistent global epoch is claimed. Unmanaged
+same-window writes and untracked URL/history changes still rely on response-time
+snapshots. Evidence remains local `verified`; no grade promotion, native runtime
+rerun, Agent/engine/operator protocol change, new persistent data, version bump,
+commit, push, packaging or installation is claimed in this follow-up.
+
+## Follow-Up: Terminal Cleanup Ownership Across Storage Awaits
+
+The terminal acknowledgement path checked authority before calling journal removal
+and after its promise completed, but removal itself could await database opening or
+transaction admission. A context change during that wait was reported only after the
+reservation had already been deleted. The desktop bridge's initial origin-discovery
+handshake had a similar pre-dispatch gap. A separately captured acknowledgement
+context also did not preserve the ordinary observer/manual recovery caller's lifetime.
+
+Ordinary observation and manual recovery now pass their original current-owner guard
+into acknowledgement. It is checked before scope hashing, after hashing and journal
+lookup, and passed together with the service authority check into deletion. The
+browser journal checks before/after opening IndexedDB, on the queued transaction read,
+and on delete-request success while the transaction remains abortable. Guard failure
+aborts that transaction instead of merely reporting stale ownership after deletion.
+The exact identity comparison is unchanged; no new journal, backup or receipt format
+is introduced. A fresh explicit recovery operation can still clear the original handle.
+
+The desktop client checks before host discovery and again before posting removal,
+including an already verified host. Its callback is local only: message fields, origin
+pinning, native commands and Rust journal format remain unchanged. Generated shared UI
+assets were synchronized through the native script runner, not manually edited.
+
+Verification on 2026-10-15:
+
+- Seven new service/caller cleanup tests and two new desktop bridge tests failed
+  against the previous implementation. They pass after the repair. Two additional
+  browser-journal unit cases verify no open for a retired caller and connection closure
+  without transaction creation when ownership is lost during open.
+- 538 selected frontend unit tests passed across recovery, run, authority, requests,
+  cancellation feedback, shared admin/library controllers and storage boundaries.
+  All 17 desktop-shared bridge tests passed, including checkpoint/layout isolation.
+- All 29 isolated Chromium durable recovery cases passed. Four new cases exercise
+  ordinary execution and manual recovery with a real IndexedDB readwrite transaction
+  queued behind another transaction, or held after successful deletion but before
+  commit. A second browser page switches mode away/back through PWDT; after actual
+  storage notification delivery, the held callback resumes and the transaction aborts.
+  The original reservation remains, replacement submission is blocked, fresh explicit
+  inspection clears it, and there is no cancellation, replay or peer-window task call.
+  Ordinary execution may already have published its valid result before cleanup starts;
+  the test does not falsely claim to roll that result back on later owner loss.
+- Frontend typecheck, desktop shared asset synchronization, documentation book/inventory,
+  project organization and whitespace checks passed. All source/test files remain within
+  800 lines and documents within 2,000. The tensor retains zero structural gaps, four
+  maturity gaps, twenty evidence-grade gaps and fifteen P0 gaps; Daji readiness is blocked.
+
+This narrows specific asynchronous gaps, not all storage/authority races. Configuration
+writes and journal commits are not one atomic transaction. A change delivered after
+the final active browser guard check can still race commit; an already dispatched
+native deletion cannot be retracted by this callback. No physical power-loss,
+installed-WebView-to-native-commit or authenticated multi-host LAN qualification is
+claimed. Existing local `verified` evidence is extended without grade promotion. No
+Agent/engine/operator protocol, version, commit, push, package or installation changed.
+
 ## Remaining Boundaries
 
 - No physical LAN/multi-host, physical power-loss, Windows or installed GUI

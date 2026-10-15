@@ -18,6 +18,7 @@ const RPC_TIMEOUT: Duration = Duration::from_secs(15);
 const MAX_FRAME_BYTES: usize = 64 * 1024 * 1024;
 const MAX_METADATA_BYTES: usize = 1024 * 1024;
 const MAX_DURABLE_BYTES: usize = 9 * 1024 * 1024;
+const MAX_AGENT_ERROR_CODE_BYTES: usize = 128;
 static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1);
 const MAX_PROGRESS_FRAMES: usize = 128;
 const MAX_PROGRESS_BYTES: usize = 1024 * 1024;
@@ -43,7 +44,10 @@ pub(crate) fn transport_policy() -> Value {
         "max_solver_frame_bytes":MAX_FRAME_BYTES,
         "max_retained_progress_frames":MAX_PROGRESS_FRAMES, "max_retained_progress_bytes":MAX_PROGRESS_BYTES,
         "progress_retention":"most_recent_bounded_window", "control_progress_allowed":false,
-        "automatic_retry":false})
+        "automatic_retry":false,
+        "error_diagnostics":{"agent_code_field":"agent_error_code",
+            "max_agent_code_bytes":MAX_AGENT_ERROR_CODE_BYTES,
+            "agent_details_forwarded":false, "is_execution_or_owner_evidence":false}})
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -71,6 +75,27 @@ pub(crate) struct SolveResult {
     pub strategy: String,
     pub result: Value,
     pub progress_frames: Vec<Value>,
+}
+
+#[derive(Debug)]
+pub(crate) struct RequestError {
+    pub message: String,
+    pub agent_code: Option<String>,
+}
+
+impl From<String> for RequestError {
+    fn from(message: String) -> Self {
+        Self {
+            message,
+            agent_code: None,
+        }
+    }
+}
+
+impl From<&str> for RequestError {
+    fn from(message: &str) -> Self {
+        message.to_owned().into()
+    }
 }
 
 pub(crate) fn parse_endpoint(value: &str) -> Result<DirectMeshEndpoint, String> {
@@ -221,15 +246,33 @@ pub(crate) fn request(
     method: &str,
     params: Value,
 ) -> Result<(Value, Vec<Value>), String> {
-    request_with_timeout(endpoint, method, params, RPC_TIMEOUT)
+    request_detailed(endpoint, method, params).map_err(|error| error.message)
 }
 
+pub(crate) fn request_detailed(
+    endpoint: &str,
+    method: &str,
+    params: Value,
+) -> Result<(Value, Vec<Value>), RequestError> {
+    exchange_with_timeout(endpoint, method, params, RPC_TIMEOUT)
+}
+
+#[cfg(test)]
 fn request_with_timeout(
     endpoint: &str,
     method: &str,
     params: Value,
     timeout: Duration,
 ) -> Result<(Value, Vec<Value>), String> {
+    exchange_with_timeout(endpoint, method, params, timeout).map_err(|error| error.message)
+}
+
+fn exchange_with_timeout(
+    endpoint: &str,
+    method: &str,
+    params: Value,
+    timeout: Duration,
+) -> Result<(Value, Vec<Value>), RequestError> {
     let deadline = Instant::now() + timeout;
     let parsed = parse_endpoint(endpoint)?;
     let solver = method.starts_with("solve_");
@@ -249,7 +292,7 @@ fn request_with_timeout(
     }))
     .map_err(|error| format!("failed to encode direct mesh request: {error}"))?;
     if payload.len() > MAX_FRAME_BYTES {
-        return Err("direct mesh request exceeds 64 MiB".to_string());
+        return Err("direct mesh request exceeds 64 MiB".into());
     }
     let mut stream = transport::connect(&parsed.endpoint, deadline)?;
     transport::write_before(&mut stream, &(payload.len() as u32).to_be_bytes(), deadline)
@@ -268,9 +311,9 @@ fn request_with_timeout(
         };
         let (frame, bytes) = transport::read_frame(&mut stream, frame_deadline, max_reply)?;
         if frame.get("id").and_then(Value::as_str) != Some(id.as_str()) {
-            return Err(format!(
-                "direct mesh agent {endpoint} returned a mismatched request id"
-            ));
+            return Err(
+                format!("direct mesh agent {endpoint} returned a mismatched request id").into(),
+            );
         }
         if frame.get("event").is_some() {
             if !solver
@@ -312,7 +355,20 @@ fn request_with_timeout(
                 progress.into_iter().map(|(frame, _)| frame).collect(),
             ));
         }
-        return Err(response.error.ok_or("missing direct mesh failure")?.message);
+        transport::remaining(frame_deadline).map_err(|e| e.to_string())?;
+        let error = response.error.ok_or("missing direct mesh failure")?;
+        // Preserve bounded diagnostic codes, never peer-provided retry/ownership instructions.
+        let agent_code = (!error.code.is_empty()
+            && error.code.len() <= MAX_AGENT_ERROR_CODE_BYTES
+            && error
+                .code
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.')))
+        .then_some(error.code);
+        return Err(RequestError {
+            message: error.message,
+            agent_code,
+        });
     }
 }
 

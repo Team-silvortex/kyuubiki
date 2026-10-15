@@ -36,12 +36,13 @@ impl DirectMeshGateway {
         } else {
             "list_durable_agent_executions"
         };
-        let result = crate::direct_mesh_rpc::request(&endpoints[0], method, params.clone())
-            .and_then(|(report, _)| {
-                validate_store_identity(&report, expected_store)?;
-                validate_control_report(&report, &params, cancel)?;
-                Ok(report)
-            });
+        let result =
+            crate::direct_mesh_rpc::request_detailed(&endpoints[0], method, params.clone())
+                .and_then(|(report, _)| {
+                    validate_store_identity(&report, expected_store)?;
+                    validate_control_report(&report, &params, cancel)?;
+                    Ok(report)
+                });
         match result {
             Ok(report) => json_response(
                 200,
@@ -50,7 +51,8 @@ impl DirectMeshGateway {
             ),
             Err(error) => json_response(
                 502,
-                json!({"error":error, "endpoint":endpoints[0],
+                json!({"error":error.message, "agent_error_code":error.agent_code, "endpoint":endpoints[0],
+                "automatic_retry":false, "gateway_runtime":"rust-native",
                 "automatic_replay_authorized":false, "required_action":"inspect_execution_on_original_agent"}),
             ),
         }

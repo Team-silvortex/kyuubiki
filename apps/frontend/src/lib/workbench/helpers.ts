@@ -1,5 +1,6 @@
 import { buildStudyModelPayload } from "@/lib/models/modeler";
 import { KYUUBIKI_PRODUCT_VERSION } from "@/lib/product-version";
+import { trackWorkbenchApiConfigurationChange } from "@/lib/api/auth-context";
 import {
   buildWorkbenchGovernanceConfig,
   normalizeWorkbenchGovernanceRuntime,
@@ -259,7 +260,9 @@ export function safeStorageGetResult(): WorkbenchSettingsReadResult {
 
     if (Object.keys(legacySecrets).length > 0) {
       writeInMemoryWorkbenchSecrets(legacySecrets);
-      window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizeStoredSettings(parsedSettings)));
+      trackWorkbenchApiConfigurationChange(() => {
+        window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizeStoredSettings(parsedSettings)));
+      });
     }
   } catch {
     readable = false;
@@ -335,10 +338,12 @@ export function persistWorkbenchSettings(input: WorkbenchSettingsInput): boolean
   if (typeof window === "undefined") return false;
 
   try {
-    window.localStorage.setItem(
-      WORKBENCH_SETTINGS_KEY,
-      JSON.stringify(sanitizeWorkbenchSettings(input)),
-    );
+    trackWorkbenchApiConfigurationChange(() => {
+      window.localStorage.setItem(
+        WORKBENCH_SETTINGS_KEY,
+        JSON.stringify(sanitizeWorkbenchSettings(input)),
+      );
+    });
     writeInMemoryWorkbenchSecrets(sanitizeWorkbenchSecrets(input));
     scrubPersistedWorkbenchSecrets();
     return true;

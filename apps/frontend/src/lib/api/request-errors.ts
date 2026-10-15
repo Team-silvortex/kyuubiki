@@ -7,11 +7,22 @@ type WorkbenchRequestErrorInput = {
   kind: WorkbenchRequestFailureKind;
   message: string;
   responseMessage?: string | null;
+  agentErrorCode?: unknown;
   statusCode?: number;
   url: string;
 };
 
 const TRANSIENT_HTTP_STATUS_CODES = new Set([408, 425, 429]);
+
+function directOperation(url: string) {
+  let path: string;
+  try { path = new URL(url, "http://workbench.invalid").pathname.replace(/\/+$/u, ""); }
+  catch { return null; }
+  // Configured gateways may live behind a reverse-proxy path prefix.
+  if (["/api/direct-mesh/tasks", "/api/direct-mesh/tasks/cancel", "/api/direct-mesh/solve"].some(route => path.endsWith(route))) return "mutation";
+  if (["/api/direct-mesh/tasks/inspect", "/api/direct-mesh/tasks/list"].some(route => path.endsWith(route))) return "recovery";
+  return null;
+}
 
 function isRetryableHttpStatus(statusCode?: number) {
   return typeof statusCode === "number" &&
@@ -80,6 +91,7 @@ export class WorkbenchRequestError extends Error {
   readonly recoveryHint: string;
   readonly statusCode?: number;
   readonly url: string;
+  readonly agentErrorCode?: string;
 
   constructor(input: WorkbenchRequestErrorInput) {
     super(input.message, input.cause ? { cause: input.cause } : undefined);
@@ -88,17 +100,25 @@ export class WorkbenchRequestError extends Error {
     this.statusCode = input.statusCode;
     this.url = input.url;
     this.responseMessage = input.responseMessage ?? null;
-    this.retryable =
+    this.agentErrorCode = typeof input.agentErrorCode === "string" && /^[A-Za-z0-9_.-]{1,128}$/u.test(input.agentErrorCode)
+      ? input.agentErrorCode : undefined;
+    const operation = directOperation(input.url);
+    this.retryable = operation !== "mutation" && (
       input.kind === "offline" ||
       input.kind === "timeout" ||
-      (input.kind === "http" && isRetryableHttpStatus(input.statusCode));
-    this.recoveryHint = buildRecoveryHint(input.kind, input.statusCode);
+      (input.kind === "http" && isRetryableHttpStatus(input.statusCode)));
+    this.recoveryHint = operation === "mutation"
+      ? "The operation is unconfirmed. Keep the recovery handle and inspect the original Agent/store. Do not resubmit or repeat cancellation blindly; no automatic replay."
+      : operation === "recovery" && this.retryable
+        ? "Recovery query failed; this does not establish task state. Retry only this read on the original Agent/store with the saved identity. Do not resubmit; no automatic replay."
+        : buildRecoveryHint(input.kind, input.statusCode);
   }
 }
 
 export function createHttpWorkbenchRequestError(params: {
   message: string;
   responseMessage?: string | null;
+  agentErrorCode?: unknown;
   statusCode: number;
   url: string;
 }) {
@@ -106,6 +126,7 @@ export function createHttpWorkbenchRequestError(params: {
     kind: "http",
     message: params.message,
     responseMessage: params.responseMessage,
+    agentErrorCode: params.agentErrorCode,
     statusCode: params.statusCode,
     url: params.url,
   });

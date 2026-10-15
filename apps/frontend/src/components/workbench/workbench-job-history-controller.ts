@@ -8,6 +8,7 @@ import { captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
 import { workbenchDurableDirectRunService, type DurableDirectRunService } from "@/lib/workbench/durable-direct-run";
 import { workbenchAdminRecordSources } from "./workbench-admin-record-source";
 import { readWorkbenchCancellationReceipt } from "./workbench-job-cancellation-receipt";
+import type { WorkbenchFeedback } from "./workbench-feedback";
 import {
   clearWorkbenchRuntimeRecoveryIssue, upsertWorkbenchRuntimeRecoveryIssue,
   type WorkbenchRuntimeRecoveryState,
@@ -31,6 +32,7 @@ type JobHistoryControllerLabels = {
 };
 
 type UseWorkbenchJobHistoryControllerArgs = {
+  feedback: WorkbenchFeedback;
   labels: JobHistoryControllerLabels;
   historyScopeLabel: string;
   job: JobEnvelope["job"] | null;
@@ -45,6 +47,7 @@ type UseWorkbenchJobHistoryControllerArgs = {
 };
 
 type CancelWorkbenchJobArgs = {
+  feedback?: WorkbenchFeedback;
   directExecution?: JobState["direct_execution"];
   durableDirectService?: DurableDirectRunService;
   jobId: string;
@@ -85,6 +88,7 @@ export function readWorkbenchJobHistory(payload: unknown): JobState[] {
 }
 
 export async function cancelWorkbenchJob({
+  feedback,
   directExecution,
   durableDirectService = workbenchDurableDirectRunService,
   jobId,
@@ -97,11 +101,12 @@ export async function cancelWorkbenchJob({
   setResult,
 }: CancelWorkbenchJobArgs): Promise<WorkbenchCancellationResult> {
   let observation = jobPollTokenRef.current;
+  const ownsFeedback = feedback?.begin() ?? (() => true);
   try {
     if (directExecution || jobId.startsWith("direct-durable-")) {
       if (!directExecution || jobId !== `direct-durable-${directExecution.execution_id}`) throw new Error("Direct execution cancellation requires its original handle.");
       const receipt = await durableDirectService.cancel(directExecution);
-      if (observation === jobPollTokenRef.current) setMessage(`direct:cancel_${receipt.status}: ${directExecution.execution_id}. Inspect again to confirm the terminal outcome.`);
+      if (observation === jobPollTokenRef.current && ownsFeedback()) setMessage(`direct:cancel_${receipt.status}: ${directExecution.execution_id}. Inspect again to confirm the terminal outcome.`);
       // A registered request is not a terminal receipt: keep observing, do not clear the result or advance the poll token.
       return { ok: true, jobId, ...(observation !== jobPollTokenRef.current ? { contextChanged: true } : {}) };
     }
@@ -110,7 +115,7 @@ export async function cancelWorkbenchJob({
       observation = ++jobPollTokenRef.current;
       setJob(cancelledJob);
       setResult(null);
-      setMessage(labels.jobCancelled);
+      if (ownsFeedback()) setMessage(labels.jobCancelled);
     }
   } catch (error) {
     const message = error instanceof Error
@@ -118,7 +123,8 @@ export async function cancelWorkbenchJob({
         ? labels.requestTimedOut
         : error.message
       : labels.initialFailed;
-    if (observation === jobPollTokenRef.current) setMessage(message);
+    // A terminal receipt can arrive without changing the polling epoch. Its feedback wins.
+    if (observation === jobPollTokenRef.current && ownsFeedback()) setMessage(message);
     return workbenchOperationFailure(new Error(message), labels.initialFailed);
   }
   // A read failure cannot turn a confirmed backend write into a failed cancellation.
@@ -127,6 +133,7 @@ export async function cancelWorkbenchJob({
 }
 
 export function useWorkbenchJobHistoryController({
+  feedback,
   labels,
   historyScopeLabel,
   job,
@@ -184,6 +191,7 @@ export function useWorkbenchJobHistoryController({
     const jobId = job.job_id;
 
     const operation = runWorkbenchTransitionOperation(startTransition, () => cancelWorkbenchJob({
+      feedback,
       jobId,
       directExecution: job?.direct_execution,
       jobHistoryBackendService,
@@ -199,6 +207,7 @@ export function useWorkbenchJobHistoryController({
     void operation.then(release, release);
     return operation;
   }, [
+    feedback,
     job,
     jobHistoryBackendService,
     jobIsActive,

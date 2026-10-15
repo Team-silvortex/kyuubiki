@@ -366,6 +366,29 @@
             Completed/failed records contain the original nested RPC response.
             An interrupted admission without a receipt is unknown, not proof of
             failure before execution. No state grants automatic replay permission.</li>
+          <li><code>durable_execution.store_access</code> publishes the read-only
+            <code>kyuubiki.agent-store-access/v1</code> policy. Description never waits
+            for the execution-store mutex: contention returns <code>enabled: true</code>,
+            <code>available: false</code> and <code>unavailable_reason: store_busy</code>,
+            omitting dynamic counters and store identity rather than inventing empty values.
+            Poisoned locks report <code>store_unavailable</code> and are never bypassed.
+            Keep any previously saved owner fence; temporary metadata absence does not
+            authorize an unfenced submission or adoption of a different store.</li>
+          <li>Fetch, list and exact cancellation wait at most a 250-ms monotonic budget
+            to acquire the store mutex. Contention returns RPC error
+            <code>durable_execution_busy</code>, not <code>not_found</code>, an empty
+            index or cancellation success. Details state <code>operation_started: false</code>,
+            <code>execution_state_known: false</code> and <code>identity_check_performed: false</code>.
+            These describe this recovery request, not the original task. Nothing is queued
+            to execute later. Retry recovery explicitly on the original Agent/store only;
+            no automatic retry, task replay, peer reselection or migration is authorized.
+            The native HTTP gateway preserves failure rather than creating a result.</li>
+          <li>The 250-ms budget bounds mutex acquisition, not filesystem work, other
+            locks, scheduling delays or reply delivery. Admissions and receipt commits
+            retain the existing serialized durability boundary. A stuck filesystem can
+            still stall its holder and writers; description remains responsive to this
+            store lock while other recovery calls fail busy. This is not physical
+            power-loss or sustained-contention qualification.</li>
           <li>Persist the chosen Agent and execution ID on the caller side before
             submitting. Repeat IDs with identical inputs return the existing state or
             receipt; changed inputs are rejected. Retry only against the same Agent
@@ -387,6 +410,19 @@
             the persisted final result. This control neither replays work nor creates
             pending cancellation for a future execution; synchronous wrappers have no
             async owner and are not cancelled through this convenience control.</li>
+          <li>A lost cancellation reply proves neither acceptance nor termination. Inspect
+            the saved Agent/store/execution identity instead of resending or selecting a
+            peer. After forced restart, a synced cancellation failure remains a failed
+            receipt; an admission without a terminal receipt remains
+            <code>outcome_unknown</code>. No in-memory cancellation intent is treated as
+            a durable terminal outcome.</li>
+          <li>For an explicit local fault fixture only, set
+            <code>KYUUBIKI_AGENT_FAULT_INJECTION_STORE_READ_HOLD_FILE</code> to an absolute
+            path before startup. A regular file of at most 128 bytes containing the exact
+            execution ID holds a fetch after owner validation and store-lock acquisition,
+            for a 10-second hold budget or until removed. It is disabled by default and
+            described under <code>store_read_fault_injection</code>. This simulates lock
+            contention, not an actual stalled device; fault-file I/O is not deadline-controlled.</li>
           <li>The Rust HTTP gateway exposes <code>POST /api/direct-mesh/tasks</code>
             with <code>execution_id</code>, <code>study_kind</code>, <code>input</code>,
             and a single allowlisted <code>endpoints</code> entry. Query via
@@ -402,6 +438,24 @@
             RPC fields plus one allowlisted <code>endpoints</code> entry. Both enforce
             the same gateway token and return a validated <code>recovery</code> envelope.
             Neither route uses Orchestra history or the gateway result cache.</li>
+          <li>Native durable-route failures remain HTTP 502, with the diagnostic
+            <code>agent_error_code</code> preserved only from a valid, request-bound
+            RPC failure. Codes are limited to 1..128 ASCII letters, digits,
+            underscore, hyphen or period; transport errors, invalid replies and rejected
+            codes expose null. The original <code>error</code> message remains available.
+            Peer error details are not forwarded, so they cannot override the gateway's
+            <code>automatic_retry: false</code> or <code>automatic_replay_authorized: false</code>.
+            An error code is not an execution receipt, owner echo or proof of non-admission.
+            The discovery transport policy exposes these diagnostic bounds.</li>
+          <li>Workbench distinguishes <code>direct:store_busy</code>,
+            <code>direct:store_unavailable</code> and <code>direct:store_write_failed</code>
+            before reserving or submitting a new task. Temporarily unavailable identity
+            metadata is not an old-Agent upgrade requirement. Saved handles remain intact.
+            The HTTP client exposes bounded codes as <code>WorkbenchRequestError.agentErrorCode</code>.
+            Submit, cancel and legacy solve failures are not generic retryable actions;
+            inspect the original execution instead. Inspect/list may be explicitly
+            retried as reads on that same owner. No client automatically retries an error,
+            clears a handle, substitutes a result or switches peers based on its code.</li>
           <li>The frontend runtime client exposes <code>submitDurableDirectStudy</code>
             and <code>inspectDurableDirectExecution</code>. Its recovery helper saves
             a caller-owned handle before sending, pins gateway and Agent, and only
@@ -455,7 +509,52 @@
             reservation, not the Agent receipt. Unknown/not-found records remain pending.
             Ordinary cancel routes the current direct handle to its original Agent, never
             an Orchestra job ID; cancellation registration does not clear observation or
-            mark the job cancelled. Automatic observation is bounded to 40 inspection reads.</li>
+            mark the job cancelled. Automatic observation is bounded to 40 inspection reads.
+            Cancellation uses the shared feedback ownership guard: a late reply or failure
+            cannot overwrite a newer terminal message even for the same execution and
+            polling epoch. The cancellation action still returns its own outcome; this
+            feedback guard does not cancel, retry or change backend execution.</li>
+          <li>Recovery action parameters are copied before awaiting the local journal;
+            reusing a caller's payload cannot redirect inspection or cancellation.
+            In-flight ownership checks include control mode even when no API token is
+            configured, alongside effective gateway URLs and applicable credentials.
+            A changed context cannot publish a late receipt or authorize journal cleanup.
+            Once a check observes changed or unreadable authority, that request stays
+            invalid even after settings are restored. Return to the original context and
+            explicitly inspect its saved handle; there is no automatic resubmit or cancel.
+            Managed settings, gateway and in-memory credential writes also advance
+            per-dimension session revisions. Switching away and back between reply
+            checks therefore cannot revive an old request. These are five fixed-size
+            in-memory identities, not credentials or a persistent history. Theme/language,
+            unchanged normalized values, unused tokens and query-masked gateway edits
+            do not invalidate unrelated requests. Settings cleanup and legacy scrubbing
+            use the same guard; partial writes that throw still record actual changes.
+            A single window-lifetime storage listener also observes other same-origin
+            windows' local-storage settings and gateway changes. It compares event
+            old/new values, so a delivered switch-away-and-back notification retires
+            the old request even if storage already holds the original value. It never
+            imports another window's credentials or replays work. Session storage and
+            unrelated preferences are ignored; malformed/oversized relevant settings,
+            inaccessible storage and clear notifications conservatively revoke old
+            authority. Event parsing is bounded to 65,536 string code units per value.
+            Storage events are asynchronous, not a cross-window transaction lock:
+            replies processed before notification delivery are not covered by this
+            fence. Unmanaged same-window storage writes and untracked URL/history
+            mutations still have only snapshot-based roundtrip detection.</li>
+          <li>Terminal receipt cleanup retains the original observation/recovery guard
+            through its asynchronous scope and journal reads; it cannot adopt a newer
+            caller context. Browser deletion rechecks before/after database open, after
+            its queued transaction read, and on delete-request success while the
+            transaction can still abort. A rejected guard aborts that transaction and
+            preserves the exact reservation for fresh explicit inspection. An already
+            published valid numerical result is not rolled back by cleanup failure.
+            The desktop bridge checks before and after its initial host handshake and
+            before posting deletion, without serializing the guard or credentials.
+            Configuration writes are not atomic with storage commits: a change delivered
+            after the final active browser check, or after native deletion was dispatched,
+            cannot be promised to undo deletion. These are local commit-boundary checks,
+            not a cross-process authorization transaction or physical durability guarantee;
+            uncertain cleanup never authorizes automatic resubmission.</li>
           <li>The ledger stores at most 1,024 admissions, 8 MiB per encoded receipt,
             and 128 MiB of retained record bytes, with capacity reserved for active
             receipts. It keeps no model-input copies or backup generations. Capacity
@@ -478,6 +577,10 @@
           tracks the separate Agent index, exact-owner cancellation and GUI/PWDT checks.
           The <a href="../reports/workbench-durable-direct-run-20261013.md">default-run report</a>
           adds native caller process-kill, browser reload and ordinary run/cancel coverage.
+          The <a href="../reports/agent-lan-mesh-recovery-20261013.md">Mesh recovery report</a>
+          also covers lost cancellation replies, truncated cancellation requests, local
+          forced restarts, same-execution feedback races and late receipt isolation after
+          token-free control-mode changes and roundtrips in a separate browser fixture.
         </p>
       </section>
 

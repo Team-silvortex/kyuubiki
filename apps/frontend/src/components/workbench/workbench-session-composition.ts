@@ -21,6 +21,7 @@ type WorkbenchSessionCompositionProps = Record<string, any> & { language: string
 
 export function useWorkbenchSessionComposition(props: WorkbenchSessionCompositionProps) {
   const jobHistoryController = useWorkbenchJobHistoryController({
+    feedback: props.feedback,
     historyScopeLabel: props.t.tabs.jobs,
     labels: {
       jobCancelled: props.t.jobCancelled,

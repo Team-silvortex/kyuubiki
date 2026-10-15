@@ -48,12 +48,28 @@ pub(crate) fn wait_status(
 ) -> Result<Value, Box<dyn Error>> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
-        let report = fetch(agent, id)?;
-        if report["status"] == status {
-            return Ok(report);
+        let response = agent.request(
+            "inspect",
+            "fetch_durable_agent_execution",
+            json!({"execution_id":id.to_string().repeat(32)}),
+        )?;
+        // Poll only this read operation. Busy is neither a task state nor permission to replay.
+        if response["ok"] == false && response["error"]["code"] == "durable_execution_busy" {
+            assert_eq!(response["id"], "inspect");
+            assert_eq!(response["error"]["details"]["operation_started"], false);
+            assert_eq!(response["error"]["details"]["execution_state_known"], false);
+            assert_eq!(
+                response["error"]["details"]["automatic_replay_authorized"],
+                false
+            );
+        } else {
+            let report = successful_result(&response, "inspect");
+            if report["status"] == status {
+                return Ok(report.clone());
+            }
         }
         if Instant::now() >= deadline {
-            return Err(format!("expected {status}, got {report}").into());
+            return Err(format!("expected {status}, got {response}").into());
         }
         thread::sleep(Duration::from_millis(10));
     }
