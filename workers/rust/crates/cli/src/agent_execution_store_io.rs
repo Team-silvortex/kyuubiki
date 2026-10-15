@@ -100,15 +100,64 @@ pub(super) fn write<T: Serialize + DeserializeOwned>(
     value: &T,
     limit: usize,
 ) -> Result<u64, String> {
+    let prepared = prepare(value, limit).map_err(|error| error.to_string())?;
+    commit(root, name, prepared)
+}
+
+pub(super) struct PreparedRecord(Vec<u8>);
+
+#[derive(Debug)]
+pub(super) enum PreparationError {
+    ByteLimit,
+    Encoding(String),
+    RestartDecode(String),
+}
+
+impl PreparationError {
+    pub(super) fn reason(&self) -> &'static str {
+        match self {
+            Self::ByteLimit => "byte_limit",
+            Self::Encoding(_) => "serialization",
+            Self::RestartDecode(_) => "restart_decode",
+        }
+    }
+}
+
+impl std::fmt::Display for PreparationError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ByteLimit => formatter.write_str("execution receipt exceeds byte limit"),
+            Self::Encoding(message) | Self::RestartDecode(message) => formatter.write_str(message),
+        }
+    }
+}
+
+pub(super) fn prepare<T: Serialize + DeserializeOwned>(
+    value: &T,
+    limit: usize,
+) -> Result<PreparedRecord, PreparationError> {
     let mut bytes = LimitedBuffer {
         bytes: Vec::new(),
         limit,
+        exceeded: false,
     };
-    serde_json::to_writer(&mut bytes, value).map_err(|e| e.to_string())?;
+    if let Err(error) = serde_json::to_writer(&mut bytes, value) {
+        return Err(if bytes.exceeded {
+            PreparationError::ByteLimit
+        } else {
+            PreparationError::Encoding(error.to_string())
+        });
+    }
     // Do not acknowledge a payload which the restart reader cannot decode (for
     // example a deeply nested external-operator result beyond the parser limit).
-    serde_json::from_slice::<T>(&bytes.bytes).map_err(|e| e.to_string())?;
-    let digest = format!("{:x}\n", Sha256::digest(&bytes.bytes));
+    serde_json::from_slice::<T>(&bytes.bytes)
+        .map_err(|error| PreparationError::RestartDecode(error.to_string()))?;
+    Ok(PreparedRecord(bytes.bytes))
+}
+
+pub(super) fn commit(root: &Path, name: &str, prepared: PreparedRecord) -> Result<u64, String> {
+    let bytes = prepared.0;
+    let digest = format!("{:x}\n", Sha256::digest(&bytes));
     let path = root.join(name);
     if fs::symlink_metadata(&path).is_ok() {
         return Err("refusing to overwrite an immutable execution record".into());
@@ -117,13 +166,13 @@ pub(super) fn write<T: Serialize + DeserializeOwned>(
     let outcome = (|| {
         let mut file = open_private(&pending, true)?;
         file.write_all(digest.as_bytes())
-            .and_then(|_| file.write_all(&bytes.bytes))
+            .and_then(|_| file.write_all(&bytes))
             .and_then(|_| file.sync_all())
             .map_err(|e| e.to_string())?;
         drop(file);
         fs::rename(&pending, &path).map_err(|e| e.to_string())?;
         sync_directory(root)?;
-        Ok((bytes.bytes.len() + digest.len()) as u64)
+        Ok((bytes.len() + digest.len()) as u64)
     })();
     if outcome.is_err() {
         let _ = fs::remove_file(pending);
@@ -147,11 +196,13 @@ pub(super) fn sync_directory(_path: &Path) -> Result<(), String> {
 struct LimitedBuffer {
     bytes: Vec<u8>,
     limit: usize,
+    exceeded: bool,
 }
 
 impl Write for LimitedBuffer {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
         if bytes.len() > self.limit.saturating_sub(self.bytes.len()) {
+            self.exceeded = true;
             return Err(std::io::Error::other(
                 "execution receipt exceeds byte limit",
             ));

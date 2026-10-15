@@ -12,6 +12,8 @@ const MAX_BYTES: u64 = 64 * 1024;
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct DirectExecutionIntent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub store_id: Option<String>,
     pub scope: String,
     pub endpoint: String,
     pub study_kind: String,
@@ -45,6 +47,7 @@ impl DirectExecutionIntent {
     fn validate(&self) -> Result<(), String> {
         let endpoint = crate::direct_mesh_rpc::parse_endpoint(&self.endpoint);
         if !hash(&self.scope, 64)
+            || self.store_id.as_deref().is_some_and(|id| !hash(id, 32))
             || !hash(&self.execution_id, 32)
             || !endpoint.is_ok_and(|value| value.endpoint == self.endpoint)
             || self.endpoint.len() > 255

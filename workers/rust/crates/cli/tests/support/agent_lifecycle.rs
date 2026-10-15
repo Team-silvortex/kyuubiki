@@ -39,9 +39,31 @@ pub(crate) struct LiveAgent {
     retain_evidence: bool,
     orchestrator_url: Option<String>,
     durable_store: bool,
+    durable_start_failure: Option<String>,
+    durable_panic: Option<String>,
+    mesh: Option<(String, Vec<String>, u64)>,
+    ingress_limits: Option<[String; 4]>,
 }
 
 impl LiveAgent {
+    pub(crate) fn start_with_durable_panic(id: &str) -> Result<Self, Box<dyn Error>> {
+        let mut agent = Self::start()?;
+        agent.stop_process()?;
+        agent.durable_store = true;
+        agent.durable_panic = Some(id.into());
+        agent.start_process()?;
+        Ok(agent)
+    }
+
+    pub(crate) fn start_with_durable_start_failure(id: &str) -> Result<Self, Box<dyn Error>> {
+        let mut agent = Self::start()?;
+        agent.stop_process()?;
+        agent.durable_store = true;
+        agent.durable_start_failure = Some(id.into());
+        agent.start_process()?;
+        Ok(agent)
+    }
+
     pub(crate) fn start_with_durable_store() -> Result<Self, Box<dyn Error>> {
         let mut agent = Self::start()?;
         agent.stop_process()?;
@@ -124,6 +146,10 @@ impl LiveAgent {
             retain_evidence: evidence_root.is_some(),
             orchestrator_url: None,
             durable_store: false,
+            durable_start_failure: None,
+            durable_panic: None,
+            mesh: None,
+            ingress_limits: None,
         };
         agent.start_process()?;
         Ok(agent)
@@ -144,6 +170,20 @@ impl LiveAgent {
         let binary = std::env::var_os("KYUUBIKI_TEST_AGENT_BINARY")
             .unwrap_or_else(|| env!("CARGO_BIN_EXE_kyuubiki-cli").into());
         let mut command = Command::new(binary);
+        for (index, name) in [
+            "KYUUBIKI_AGENT_MAX_REQUEST_BYTES",
+            "KYUUBIKI_AGENT_MAX_IN_FLIGHT_REQUEST_BYTES",
+            "KYUUBIKI_AGENT_REQUEST_TIMEOUT_MS",
+            "KYUUBIKI_AGENT_MAX_CONNECTIONS",
+        ]
+        .iter()
+        .enumerate()
+        {
+            command.env_remove(name);
+            if let Some(limits) = &self.ingress_limits {
+                command.env(name, &limits[index]);
+            }
+        }
         command
             .args([
                 "agent",
@@ -179,6 +219,21 @@ impl LiveAgent {
         } else {
             command.env_remove("KYUUBIKI_ORCHESTRATOR_URL");
         }
+        command
+            .env_remove("KYUUBIKI_AGENT_PEERS")
+            .env_remove("KYUUBIKI_AGENT_CLUSTER_ID")
+            .env_remove("KYUUBIKI_AGENT_REGISTER_INTERVAL_MS");
+        if let Some((cluster, peers, interval)) = &self.mesh {
+            command.args([
+                "--cluster-id",
+                cluster,
+                "--register-interval-ms",
+                &interval.to_string(),
+            ]);
+            for peer in peers {
+                command.args(["--peer", peer]);
+            }
+        }
         if self.durable_store {
             command.env(
                 "KYUUBIKI_AGENT_EXECUTION_STORE",
@@ -192,6 +247,22 @@ impl LiveAgent {
             command.env_remove("KYUUBIKI_AGENT_EXECUTION_STORE");
             command.env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_RECEIPT_HOLD_FILE");
         }
+        if let Some(id) = &self.durable_start_failure {
+            command.env(
+                "KYUUBIKI_AGENT_FAULT_INJECTION_START_FAILURE_EXECUTION_ID",
+                id,
+            );
+        } else {
+            command.env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_START_FAILURE_EXECUTION_ID");
+        }
+        if let Some(id) = &self.durable_panic {
+            command.env(
+                "KYUUBIKI_AGENT_FAULT_INJECTION_DURABLE_PANIC_EXECUTION_ID",
+                id,
+            );
+        } else {
+            command.env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_DURABLE_PANIC_EXECUTION_ID");
+        }
         let child = command.spawn()?;
         self.child = Some(child);
         self.wait_until_ready(Duration::from_secs(30))
@@ -203,6 +274,19 @@ impl LiveAgent {
         self.start_process()
     }
 
+    pub(crate) fn restart_in_mesh(
+        &mut self,
+        cluster: &str,
+        peers: Vec<String>,
+        interval_ms: u64,
+    ) -> Result<(), Box<dyn Error>> {
+        self.stop_process()?;
+        self.orchestrator_url = None;
+        self.durable_store = true;
+        self.mesh = Some((cluster.into(), peers, interval_ms));
+        self.start_process()
+    }
+
     pub(crate) fn stop_process(&mut self) -> Result<(), Box<dyn Error>> {
         if let Some(mut child) = self.child.take() {
             if child.try_wait()?.is_none() {
@@ -211,6 +295,23 @@ impl LiveAgent {
             child.wait()?;
         }
         Ok(())
+    }
+
+    pub(crate) fn restart_with_ingress_limits(
+        &mut self,
+        frame_bytes: usize,
+        in_flight_bytes: usize,
+        timeout_ms: u64,
+        connections: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        self.stop_process()?;
+        self.ingress_limits = Some([
+            frame_bytes.to_string(),
+            in_flight_bytes.to_string(),
+            timeout_ms.to_string(),
+            connections.to_string(),
+        ]);
+        self.start_process()
     }
 
     #[cfg(unix)]

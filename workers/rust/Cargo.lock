@@ -545,6 +545,7 @@ version = "3.6.0"
 dependencies = [
  "ctrlc",
  "fs2",
+ "getrandom 0.4.3",
  "kyuubiki-engine",
  "kyuubiki-headless-sdk",
  "kyuubiki-installer",
@@ -571,6 +572,7 @@ dependencies = [
  "chrono",
  "fs2",
  "kyuubiki-platform",
+ "kyuubiki-protocol",
  "libc",
  "serde",
  "serde_json",

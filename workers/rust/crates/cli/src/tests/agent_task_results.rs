@@ -151,3 +151,131 @@ fn retention_policy_matches_the_exchange_contract_and_rpc_descriptor() {
             .contains(&parsed)
     );
 }
+
+fn reservation(store: &Arc<Mutex<Store>>, id: Identity, generation: u64) -> Reservation {
+    store
+        .lock()
+        .unwrap()
+        .begin(id.clone(), generation, Instant::now());
+    Reservation {
+        identity: id,
+        generation,
+        store: Arc::clone(store),
+        finished: false,
+    }
+}
+
+#[test]
+fn abandoned_reservation_clears_pending_without_inventing_a_receipt() {
+    let store = Arc::new(Mutex::new(Store::default()));
+    let id = identity(1);
+    let owner = reservation(&store, id.clone(), 1);
+    drop(owner);
+    let (status, generation, response) = store.lock().unwrap().lookup(&id, Instant::now());
+    assert_eq!(status, "result_not_retained");
+    assert_eq!(generation, Some(1));
+    assert!(response.is_none());
+    assert_eq!(store.lock().unwrap().bytes, 0);
+}
+
+#[test]
+fn unwind_before_response_cleans_up_only_its_own_pending_reservation() {
+    let store = Arc::new(Mutex::new(Store::default()));
+    let other = reservation(&store, identity(2), 2);
+    let unwound = std::panic::catch_unwind(|| {
+        let _owner = reservation(&store, identity(1), 1);
+        panic!("before a task result exists");
+    });
+    assert!(unwound.is_err());
+    assert_eq!(
+        store.lock().unwrap().lookup(&identity(1), Instant::now()).0,
+        "result_not_retained"
+    );
+    assert_eq!(
+        store.lock().unwrap().lookup(&identity(2), Instant::now()).0,
+        "pending"
+    );
+    drop(other);
+}
+
+#[test]
+fn abandoned_owner_cannot_change_replaced_ambiguous_expired_or_terminal_entries() {
+    for scenario in [
+        "generation",
+        "identity",
+        "ambiguous",
+        "expired",
+        "evicted",
+        "terminal",
+    ] {
+        let store = Arc::new(Mutex::new(Store::default()));
+        let id = identity(1);
+        let owner = reservation(&store, id.clone(), 1);
+        let expected = {
+            let mut store = store.lock().unwrap();
+            match scenario {
+                "generation" => store.entries[0].generation = 2,
+                "identity" => store.entries[0].identity.task_digest = "b".repeat(64),
+                "ambiguous" => store.begin(id.clone(), 2, Instant::now()),
+                "expired" => store.entries[0].created = Instant::now() - TTL,
+                "evicted" => store.remove_first(),
+                "terminal" => store.finish(&id, 1, Some(vec![1, 2]), Instant::now()),
+                _ => unreachable!(),
+            }
+            store.prune(Instant::now());
+            (
+                store.entries.front().map(|e| {
+                    (
+                        e.identity.clone(),
+                        e.generation,
+                        e.status,
+                        e.response.clone(),
+                    )
+                }),
+                store.bytes,
+            )
+        };
+        drop(owner);
+        let store = store.lock().unwrap();
+        let actual = (
+            store.entries.front().map(|e| {
+                (
+                    e.identity.clone(),
+                    e.generation,
+                    e.status,
+                    e.response.clone(),
+                )
+            }),
+            store.bytes,
+        );
+        assert_eq!(actual, expected, "{scenario}");
+    }
+}
+
+#[test]
+fn committed_json_receipts_keep_the_same_bounds_and_survive_reservation_drop() {
+    let store = Arc::new(Mutex::new(Store::default()));
+    for (n, response) in [
+        RpcResponse::success("request", json!({"value":1})),
+        RpcResponse::error("request", "failed", "worker failed"),
+        RpcResponse::success("request", json!({"payload":"x".repeat(MAX_ENTRY_BYTES)})),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let owner = reservation(&store, identity(n), n as u64);
+        let committed = serde_json::to_value(response).unwrap();
+        finish(Some(owner), &committed);
+        let (status, _, encoded) = store.lock().unwrap().lookup(&identity(n), Instant::now());
+        if n == 2 {
+            assert_eq!(status, "result_not_retained");
+            assert!(encoded.is_none());
+        } else {
+            assert_eq!(status, "receipt_retained");
+            assert_eq!(
+                serde_json::from_slice::<Value>(&encoded.unwrap()).unwrap(),
+                committed
+            );
+        }
+    }
+}

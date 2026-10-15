@@ -15,12 +15,19 @@ impl DirectMeshGateway {
                 );
             }
         };
-        let params = if cancel {
+        let expected_store = match expected_store_id(&body) {
+            Ok(expected) => expected,
+            Err(error) => return json_response(400, json!({"error":error})),
+        };
+        let mut params = if cancel {
             json!({"execution_id":body.get("execution_id"), "process_instance_id":body.get("process_instance_id"),
                 "request_digest":body.get("request_digest")})
         } else {
             json!({"limit":body.get("limit"), "after":body.get("after")})
         };
+        if let Some(id) = expected_store {
+            params["expected_store_id"] = json!(id);
+        }
         if let Err(error) = validate_query(&params, cancel) {
             return json_response(400, json!({"error":error}));
         }
@@ -31,6 +38,7 @@ impl DirectMeshGateway {
         };
         let result = crate::direct_mesh_rpc::request(&endpoints[0], method, params.clone())
             .and_then(|(report, _)| {
+                validate_store_identity(&report, expected_store)?;
                 validate_control_report(&report, &params, cancel)?;
                 Ok(report)
             });

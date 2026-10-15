@@ -7,41 +7,14 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 #[allow(dead_code)]
-#[path = "support/agent_lifecycle.rs"]
+#[path = "support/agent_durable.rs"]
 mod support;
 use support::*;
-
-fn task(id: char, job: &str) -> Value {
-    json!({"execution_id":id.to_string().repeat(32), "method":"solve_bar_1d", "params":solver_params(job)})
-}
-
-fn fetch(agent: &LiveAgent, id: char) -> Result<Value, Box<dyn Error>> {
-    let response = agent.request(
-        "inspect",
-        "fetch_durable_agent_execution",
-        json!({"execution_id":id.to_string().repeat(32)}),
-    )?;
-    Ok(successful_result(&response, "inspect").clone())
-}
-
-fn wait_status(agent: &LiveAgent, id: char, status: &str) -> Result<Value, Box<dyn Error>> {
-    let deadline = Instant::now() + Duration::from_secs(10);
-    loop {
-        let report = fetch(agent, id)?;
-        if report["status"] == status {
-            return Ok(report);
-        }
-        if Instant::now() >= deadline {
-            return Err(format!("expected {status}, got {report}").into());
-        }
-        thread::sleep(Duration::from_millis(10));
-    }
-}
 
 #[test]
 fn async_admission_returns_while_held_and_duplicates_do_not_consume_capacity()
 -> Result<(), Box<dyn Error>> {
-    let agent = LiveAgent::start_with_durable_store()?;
+    let mut agent = LiveAgent::start_with_durable_store()?;
     fs::write(&agent.hold_path, "async-held")?;
     let response = agent.request(
         "submit",
@@ -64,19 +37,65 @@ fn async_admission_returns_while_held_and_duplicates_do_not_consume_capacity()
     )?;
     assert_eq!(conflict["ok"], false);
     let full = agent.request("full", "submit_durable_agent_task", task('b', "capacity"))?;
-    assert_eq!(full["ok"], false);
+    let rejected = successful_result(&full, "full");
+    assert_eq!(
+        rejected["schema_version"],
+        kyuubiki_protocol::DURABLE_AGENT_EXECUTION_SCHEMA
+    );
+    assert_eq!(rejected["status"], "failed");
+    assert_eq!(rejected["execution_id"], "b".repeat(32));
+    assert_eq!(rejected["request_id"], "full");
+    assert_eq!(
+        rejected["response"]["error"]["code"],
+        "durable_admission_rejected"
+    );
+    assert_eq!(
+        rejected["response"]["error"]["details"]["execution_started"],
+        false
+    );
+    assert_eq!(rejected["automatic_replay_authorized"], false);
     assert!(
-        full["error"]["message"]
+        rejected["response"]["error"]["message"]
             .as_str()
             .unwrap()
             .contains("agent_at_capacity")
     );
-    assert_eq!(fetch(&agent, 'b')?["status"], "not_found");
+    assert_eq!(fetch(&agent, 'b')?, *rejected);
+    assert_eq!(
+        lifecycle(&agent, "after-rejection")?["active_execution_count"],
+        1
+    );
     fs::remove_file(&agent.hold_path)?;
     let report = wait_status(&agent, 'a', "completed")?;
     assert_eq!(report["response"]["id"], "submit");
     assert_eq!(report["response"]["result"]["max_stress"], 10.0);
     wait_for_lifecycle(&agent, "accepting", 0)?;
+    agent.stop_process()?;
+    agent.start_process()?;
+    assert_eq!(fetch(&agent, 'b')?, *rejected);
+    let duplicate = agent.request(
+        "must-not-run",
+        "submit_durable_agent_task",
+        task('b', "capacity"),
+    )?;
+    assert_eq!(*successful_result(&duplicate, "must-not-run"), *rejected);
+    assert_eq!(
+        lifecycle(&agent, "rejected-retry")?["active_execution_count"],
+        0
+    );
+    let manual = agent.request(
+        "manual-new-run",
+        "submit_durable_agent_task",
+        task('c', "capacity"),
+    )?;
+    assert_eq!(
+        successful_result(&manual, "manual-new-run")["status"],
+        "running"
+    );
+    assert_eq!(
+        wait_status(&agent, 'c', "completed")?["response"]["id"],
+        "manual-new-run"
+    );
     Ok(())
 }
 
@@ -112,6 +131,64 @@ fn lost_admission_connection_does_not_cancel_worker_and_original_receipt_survive
 }
 
 #[test]
+fn lost_rejection_reply_survives_force_kill_and_never_reexecutes_the_rejected_identity()
+-> Result<(), Box<dyn Error>> {
+    let mut agent = LiveAgent::start_with_durable_store()?;
+    fs::write(&agent.hold_path, "keep-busy")?;
+    let first = agent.request("busy", "submit_durable_agent_task", task('a', "keep-busy"))?;
+    assert_eq!(successful_result(&first, "busy")["status"], "running");
+    let receipt_hold = agent.root.join("receipt.hold");
+    fs::write(&receipt_hold, "b".repeat(32))?;
+    let payload = serde_json::to_vec(&json!({"rpc_version":RPC_VERSION,
+        "id":"rejection-not-received", "method":"submit_durable_agent_task", "params":task('b', "rejected")}))?;
+    let mut socket = TcpStream::connect(("127.0.0.1", agent.port))?;
+    socket.write_all(&(payload.len() as u32).to_be_bytes())?;
+    socket.write_all(&payload)?;
+    // The exact-ID hook holds delivery after receipt sync. The caller never reads a reply.
+    let rejected = wait_status(&agent, 'b', "failed")?;
+    assert_eq!(rejected["response"]["id"], "rejection-not-received");
+    assert_eq!(
+        rejected["response"]["error"]["code"],
+        "durable_admission_rejected"
+    );
+    assert_eq!(
+        rejected["response"]["error"]["details"]["execution_started"],
+        false
+    );
+    assert_eq!(
+        lifecycle(&agent, "one-real-task")?["active_execution_count"],
+        1
+    );
+    agent.stop_process()?;
+    drop(socket);
+    fs::remove_file(receipt_hold)?;
+    for _ in 0..2 {
+        agent.start_process()?;
+        assert_eq!(fetch(&agent, 'b')?, rejected);
+        assert_eq!(fetch(&agent, 'a')?["status"], "outcome_unknown");
+        for method in ["submit_durable_agent_task", "run_durable_agent_task"] {
+            let duplicate = agent.request("not-a-new-attempt", method, task('b', "rejected"))?;
+            assert_eq!(
+                *successful_result(&duplicate, "not-a-new-attempt"),
+                rejected
+            );
+        }
+        let index = agent.request(
+            "index",
+            "list_durable_agent_executions",
+            json!({"limit":24}),
+        )?;
+        let records = successful_result(&index, "index")["executions"]
+            .as_array()
+            .unwrap();
+        assert!(records.iter().any(|r| r["execution_id"] == "b".repeat(32)));
+        assert_eq!(lifecycle(&agent, "no-replay")?["active_execution_count"], 0);
+        agent.stop_process()?;
+    }
+    Ok(())
+}
+
+#[test]
 fn killing_async_worker_before_receipt_never_authorizes_replay() -> Result<(), Box<dyn Error>> {
     let mut agent = LiveAgent::start_with_durable_store()?;
     fs::write(&agent.hold_path, "kill-async")?;
@@ -133,7 +210,7 @@ fn killing_async_worker_before_receipt_never_authorizes_replay() -> Result<(), B
 }
 
 #[test]
-fn drain_waits_for_durable_owner_and_rejects_new_work_without_admitting_it()
+fn drain_waits_for_durable_owner_and_persists_rejection_without_executing_it()
 -> Result<(), Box<dyn Error>> {
     let agent = LiveAgent::start_with_durable_store()?;
     fs::write(agent.root.join("receipt.hold"), "e".repeat(32))?;
@@ -162,14 +239,18 @@ fn drain_waits_for_durable_owner_and_rejects_new_work_without_admitting_it()
         "submit_durable_agent_task",
         task('f', "draining"),
     )?;
-    assert_eq!(blocked["ok"], false);
+    assert_eq!(successful_result(&blocked, "blocked")["status"], "failed");
+    assert_eq!(
+        blocked["result"]["response"]["error"]["code"],
+        "durable_admission_rejected"
+    );
     assert!(
-        blocked["error"]["message"]
+        blocked["result"]["response"]["error"]["message"]
             .as_str()
             .unwrap()
             .contains("agent_draining")
     );
-    assert_eq!(fetch(&agent, 'f')?["status"], "not_found");
+    assert_eq!(fetch(&agent, 'f')?["status"], "failed");
     fs::remove_file(agent.root.join("receipt.hold"))?;
     wait_for_lifecycle(&agent, "quiescent", 0)?;
     Ok(())
@@ -275,6 +356,170 @@ fn asynchronous_native_task_ir_uses_the_reserved_engine_guard() -> Result<(), Bo
     assert_eq!(result["max_stress"], 10.0);
     assert!((result["tip_displacement"].as_f64().unwrap() - 0.01).abs() < 1e-12);
     wait_for_lifecycle(&agent, "accepting", 0)?;
+    Ok(())
+}
+
+#[test]
+fn worker_start_failure_retains_terminal_identity_and_releases_the_exact_owner()
+-> Result<(), Box<dyn Error>> {
+    let agent = LiveAgent::start_with_durable_start_failure(&"7".repeat(32))?;
+    // If this job reached the engine, the request would remain held rather than fail to start.
+    fs::write(&agent.hold_path, "start-failure")?;
+    let response = agent.request(
+        "start",
+        "submit_durable_agent_task",
+        task('7', "start-failure"),
+    )?;
+    let failed = successful_result(&response, "start");
+    assert_eq!(failed["status"], "failed");
+    assert_eq!(failed["response"]["id"], "start");
+    assert_eq!(
+        failed["response"]["error"]["code"],
+        "durable_execution_start_failed"
+    );
+    assert_eq!(
+        failed["response"]["error"]["details"],
+        json!({
+            "phase":"before_engine_dispatch", "execution_started":false,
+            "automatic_replay_authorized":false
+        })
+    );
+    assert_eq!(failed["automatic_replay_authorized"], false);
+    assert_eq!(fetch(&agent, '7')?, *failed);
+    wait_for_lifecycle(&agent, "accepting", 0)?;
+    let descriptor = agent.request("descriptor", "describe_agent", json!({}))?;
+    let watchdog = &successful_result(&descriptor, "descriptor")["watchdog"];
+    assert_eq!(watchdog["total_completed_execution_count"], 0);
+    assert!(
+        watchdog["recent_failures"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|failure| failure["request_id"] == "start"
+                && failure["reason_code"] == "durable_execution_start_failed")
+    );
+    for method in ["submit_durable_agent_task", "run_durable_agent_task"] {
+        let duplicate = agent.request("duplicate", method, task('7', "start-failure"))?;
+        assert_eq!(*successful_result(&duplicate, "duplicate"), *failed);
+    }
+    let conflict = agent.request(
+        "conflict",
+        "submit_durable_agent_task",
+        task('7', "different"),
+    )?;
+    assert_eq!(conflict["ok"], false);
+    // Reuse the transport/job IDs, but not the durable execution identity.
+    let next = agent.request(
+        "start",
+        "submit_durable_agent_task",
+        task('8', "start-failure"),
+    )?;
+    assert_eq!(successful_result(&next, "start")["status"], "running");
+    let cancel = agent.request("old-cancel", "cancel_durable_agent_execution", json!({
+        "execution_id":failed["execution_id"], "process_instance_id":failed["process_instance_id"],
+        "request_digest":failed["request_digest"]
+    }))?;
+    assert_eq!(
+        successful_result(&cancel, "old-cancel")["status"],
+        "not_running"
+    );
+    assert_eq!(lifecycle(&agent, "new-owner")?["active_execution_count"], 1);
+    fs::remove_file(&agent.hold_path)?;
+    assert_eq!(
+        wait_status(&agent, '8', "completed")?["response"]["result"]["max_stress"],
+        10.0
+    );
+    wait_for_lifecycle(&agent, "accepting", 0)?;
+    Ok(())
+}
+
+#[test]
+fn worker_start_failure_survives_kill_before_reply_without_replay() -> Result<(), Box<dyn Error>> {
+    let mut agent = LiveAgent::start_with_durable_start_failure(&"7".repeat(32))?;
+    let hold = agent.root.join("receipt.hold");
+    fs::write(&hold, "7".repeat(32))?;
+    let payload = serde_json::to_vec(
+        &json!({"rpc_version":RPC_VERSION, "id":"unreceived-start-failure",
+        "method":"submit_durable_agent_task", "params":task('7', "never-dispatched")}),
+    )?;
+    let mut socket = TcpStream::connect(("127.0.0.1", agent.port))?;
+    socket.write_all(&(payload.len() as u32).to_be_bytes())?;
+    socket.write_all(&payload)?;
+    let failed = wait_status(&agent, '7', "failed")?;
+    assert_eq!(failed["response"]["id"], "unreceived-start-failure");
+    assert_eq!(
+        failed["response"]["error"]["code"],
+        "durable_execution_start_failed"
+    );
+    assert_eq!(
+        lifecycle(&agent, "retained-owner")?["active_execution_count"],
+        1
+    );
+    let drain = agent.request(
+        "drain",
+        "begin_agent_drain",
+        json!({"controller_id":"test", "reason":"test"}),
+    )?;
+    assert_eq!(successful_result(&drain, "drain")["safe_to_replace"], false);
+    agent.stop_process()?;
+    drop(socket);
+    fs::remove_file(hold)?;
+    for _ in 0..2 {
+        agent.start_process()?;
+        assert_eq!(fetch(&agent, '7')?, failed);
+        for method in ["submit_durable_agent_task", "run_durable_agent_task"] {
+            let duplicate = agent.request("retry", method, task('7', "never-dispatched"))?;
+            assert_eq!(*successful_result(&duplicate, "retry"), failed);
+        }
+        assert_eq!(lifecycle(&agent, "no-replay")?["active_execution_count"], 0);
+        agent.stop_process()?;
+    }
+    Ok(())
+}
+
+#[test]
+fn worker_start_failure_with_failed_receipt_commit_stays_unknown_and_fences_admission()
+-> Result<(), Box<dyn Error>> {
+    let mut agent = LiveAgent::start_with_durable_start_failure(&"7".repeat(32))?;
+    let obstruction = agent
+        .root
+        .join("executions")
+        .join(format!("{}.receipt.next", "7".repeat(32)));
+    fs::create_dir(&obstruction)?;
+    let response = agent.request(
+        "commit-failed",
+        "submit_durable_agent_task",
+        task('7', "no-start"),
+    )?;
+    assert_eq!(response["ok"], false);
+    assert_eq!(response["error"]["code"], "durable_execution_unavailable");
+    assert_eq!(
+        response["error"]["details"]["automatic_replay_authorized"],
+        false
+    );
+    assert_eq!(fetch(&agent, '7')?["status"], "outcome_unknown");
+    wait_for_lifecycle(&agent, "accepting", 0)?;
+    // Removing the obstruction is not permission to forget an uncertain commit in this process.
+    fs::remove_dir(&obstruction)?;
+    let blocked = agent.request("blocked", "submit_durable_agent_task", task('8', "new"))?;
+    assert_eq!(blocked["ok"], false);
+    assert_eq!(fetch(&agent, '8')?["status"], "not_found");
+    agent.stop_process()?;
+    agent.start_process()?;
+    for method in ["submit_durable_agent_task", "run_durable_agent_task"] {
+        let duplicate = agent.request("inspect-only", method, task('7', "no-start"))?;
+        let report = successful_result(&duplicate, "inspect-only");
+        assert_eq!(report["status"], "outcome_unknown");
+        assert_eq!(report["automatic_replay_authorized"], false);
+        assert!(report["response"].is_null());
+    }
+    assert_eq!(lifecycle(&agent, "no-replay")?["active_execution_count"], 0);
+    let manual = agent.request("manual", "submit_durable_agent_task", task('8', "new"))?;
+    assert_eq!(successful_result(&manual, "manual")["status"], "running");
+    assert_eq!(
+        wait_status(&agent, '8', "completed")?["response"]["result"]["max_stress"],
+        10.0
+    );
     Ok(())
 }
 

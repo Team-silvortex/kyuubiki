@@ -45,7 +45,7 @@ use kyuubiki_solver::{
 use crate::agent_reply_writer::SharedReplyWriter;
 use crate::agent_state::agent_descriptor_payload;
 use crate::rpc_execution::{handle_operator_task_ir, run_solver};
-use crate::rpc_execution_context::ExecutionContext;
+use crate::rpc_execution_context::{DeferredTaskReceipt, DurableTransportOwner, ExecutionContext};
 use crate::transport::AgentReply;
 
 pub(crate) fn handle_request(request: RpcRequest, writer: Option<SharedReplyWriter>) -> AgentReply {
@@ -55,11 +55,20 @@ pub(crate) fn handle_request(request: RpcRequest, writer: Option<SharedReplyWrit
 pub(crate) fn handle_reserved_request(
     request: RpcRequest,
     guard: crate::agent_lifecycle::ExecutionGuard,
+    retained: &DeferredTaskReceipt,
 ) -> AgentReply {
-    handle_request_in(request, ExecutionContext::Durable(guard))
+    handle_request_in(request, ExecutionContext::Durable(guard, retained))
 }
 
-fn handle_request_in(request: RpcRequest, writer: ExecutionContext) -> AgentReply {
+pub(crate) fn handle_durable_request(
+    request: RpcRequest,
+    owner: &DurableTransportOwner,
+    retained: &DeferredTaskReceipt,
+) -> AgentReply {
+    handle_request_in(request, ExecutionContext::DurableTransport(owner, retained))
+}
+
+fn handle_request_in(request: RpcRequest, writer: ExecutionContext<'_>) -> AgentReply {
     if let Err(error) = validate_rpc_request_envelope(&request) {
         let response_id = if error.code == RpcEnvelopeErrorCode::InvalidRequestId {
             "unknown".to_string()

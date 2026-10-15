@@ -4,31 +4,53 @@ import { usingWorkbench, invoke, openWorkbench, installProjectWorkbenchTestHooks
 
 installProjectWorkbenchTestHooks();
 const endpoint = "127.0.0.1:5001";
+const storeId = "c".repeat(32);
 const entry = { schema_version: "kyuubiki.agent-durable-execution/v1", execution_id: "a".repeat(32),
   request_id: "request", request_digest: "b".repeat(64), process_instance_id: "original-process", method: "solve_bar_1d" };
 
 async function setupRun(page, loseReply = false) {
-  const calls = [], state = { id: "", status: "running", input: null };
+  const calls = [], state = { id: "", status: "running", input: null, reject: false, loseReply,
+    loseInspection: false, receiptStoreId: storeId, failureCode: "durable_admission_rejected" };
   await page.route("**/api/direct-mesh/agents", route => route.fulfill({ json: { mode: "direct_mesh_gui", discovery: "manual", endpoint_count: 1,
     agents: [{ id: "agent", host: "127.0.0.1", port: 5001, descriptor: {
       program: "kyuubiki-cli", role: "solver", runtime: { runtime_mode: "standalone", headless: true, peers: [] },
       protocol: { name: "kyuubiki.solver-rpc/v1", rpc_version: 1, transport: { kind: "tcp" }, methods: ["submit_durable_agent_task", "fetch_durable_agent_execution"] },
-      capabilities: [], deployment_modes: ["local"], durable_execution: { schema_version: entry.schema_version, enabled: true },
+      capabilities: [], deployment_modes: ["local"], durable_execution: { schema_version: entry.schema_version, enabled: true, store_id: storeId },
     } }] } }));
   await page.route(/\/api\/direct-mesh\/tasks(?:\/inspect)?$/, async route => {
     const body = route.request().postDataJSON(), path = new URL(route.request().url()).pathname;
     calls.push({ path, body });
     assert.deepEqual(body.endpoints, [endpoint]);
+    assert.equal(body.expected_store_id, storeId);
     if (path.endsWith("/tasks")) {
       state.id = body.execution_id; state.input = body.input;
-      if (loseReply) return route.abort("failed");
-    } else assert.equal(body.execution_id, state.id);
+      if (state.loseReply) return route.abort("failed");
+      if (state.reject) return route.fulfill({ json: { endpoint, gateway_runtime: "rust-native", execution: {
+        ...entry, schema_version: "kyuubiki.agent-durable-admission-rejection/v1", execution_id: state.id,
+        store_id: storeId,
+        status: "not_admitted", reason: "store_capacity", message: "execution store full",
+        execution_started: false, automatic_replay_authorized: false,
+      } } });
+    } else {
+      assert.equal(body.execution_id, state.id);
+      if (state.loseInspection) { state.loseInspection = false; return route.abort("failed"); }
+    }
     const result = { tip_displacement: 0, reaction_force: 0, max_displacement: 0, max_stress: 0,
       nodes: [{ index: 0, x: 0, displacement: 0 }, { index: 1, x: 1, displacement: 0 }],
       elements: [{ index: 0, x1: 0, x2: 1, strain: 0, stress: 0, axial_force: 0 }], input: state.input };
     await route.fulfill({ json: { endpoint, gateway_runtime: "rust-native", execution: {
       ...entry, execution_id: state.id, status: state.status, automatic_replay_authorized: false, resumable: false,
-      response: state.status === "completed" ? { rpc_version: 1, id: entry.request_id, ok: true, result } : null,
+      store_id: state.receiptStoreId,
+      response: state.status === "completed" ? { rpc_version: 1, id: entry.request_id, ok: true, result }
+        : state.status === "failed" ? { rpc_version: 1, id: entry.request_id, ok: false, error: {
+          code: state.failureCode, message: "execution failed", details: {
+            automatic_replay_authorized: false,
+            ...(state.failureCode === "durable_execution_panicked" ? {
+              phase: "async_worker_unwind", execution_may_have_started: true,
+              partial_result_discarded: true, external_effects_rolled_back: false,
+            } : { reason: "execution_unavailable", execution_started: false }),
+          },
+        } } : null,
     } } });
   });
   await openWorkbench(page);
@@ -76,6 +98,93 @@ test("lost run reply survives browser reload; a second run cannot submit and rec
   });
 });
 
+test("PWDT rejected run clears IndexedDB reservation and permits only a new explicit run after reload", { timeout: 120_000 }, async () => {
+  await usingWorkbench(async page => {
+    const { calls, state } = await setupRun(page);
+    state.reject = true;
+    await assert.rejects(invoke(page, "job/run"), /not_admitted/);
+    const rejectedId = state.id;
+    assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().hasResult), false);
+    assert.deepEqual((await invoke(page, "directExecution/pending", { endpoint })).handles, []);
+    assert.equal(calls.length, 1, "rejection must not trigger retry or inspection");
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+    assert.deepEqual((await invoke(page, "directExecution/pending", { endpoint })).handles, []);
+    assert.equal(calls.length, 1);
+    state.reject = false; state.status = "completed";
+    const result = await invoke(page, "job/run");
+    assert.equal(result.completion, "terminal");
+    assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().hasResult), true);
+    assert.notEqual(state.id, rejectedId); assert.equal(calls.length, 2);
+  });
+});
+
+for (const fault of ["lost rejection reply", "interrupted journal cleanup"]) {
+  test(`retained rejection recovers after ${fault} and reload without repeating computation`, { timeout: 120_000 }, async () => {
+    await usingWorkbench(async page => {
+      const { calls, state } = await setupRun(page, fault === "lost rejection reply");
+      state.status = "failed";
+      if (fault === "interrupted journal cleanup") await page.evaluate(() => {
+        const original = IDBObjectStore.prototype.delete;
+        IDBObjectStore.prototype.delete = function(key) {
+          if (this.transaction.db.name === "kyuubiki-direct-execution" && this.name === "pending") {
+            throw new DOMException("injected journal write interruption", "UnknownError");
+          }
+          return original.call(this, key);
+        };
+      });
+      await assert.rejects(invoke(page, "job/run"), fault === "lost rejection reply"
+        ? /Submission unconfirmed/ : /durable_admission_rejected:.*journal_cleanup_pending/);
+      const original = (await invoke(page, "directExecution/pending", { endpoint })).handles[0];
+      assert.equal(original.execution_id, state.id); assert.equal(calls.length, 1);
+      await page.reload({ waitUntil: "networkidle" });
+      await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+      assert.deepEqual((await invoke(page, "directExecution/pending", { endpoint })).handles, [original]);
+      await assert.rejects(invoke(page, "job/run"), /recovery_required/);
+      assert.equal(calls.length, 1);
+      const recovered = await invoke(page, "directExecution/inspect", { endpoint, executionId: original.execution_id });
+      assert.equal(recovered.execution.status, "failed");
+      assert.equal(recovered.execution.error_code, "durable_admission_rejected");
+      assert.equal(recovered.execution.automatic_replay_authorized, false);
+      assert.equal(recovered.journal_cleanup_pending, undefined);
+      assert.deepEqual((await invoke(page, "directExecution/pending", { endpoint })).handles, []);
+      assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().hasResult), false);
+      assert.deepEqual(calls.map(c => c.path), ["/api/direct-mesh/tasks", "/api/direct-mesh/tasks/inspect"]);
+      state.loseReply = false; state.status = "completed";
+      assert.equal((await invoke(page, "job/run")).completion, "terminal");
+      assert.notEqual(state.id, original.execution_id); assert.equal(calls.length, 3);
+    });
+  });
+}
+
+test("worker panic after detached observation survives reload without publishing or replaying a result", { timeout: 120_000 }, async () => {
+  await usingWorkbench(async page => {
+    const { calls, state } = await setupRun(page);
+    state.loseInspection = true;
+    await assert.rejects(invoke(page, "job/run"));
+    const [original] = (await invoke(page, "directExecution/pending", { endpoint })).handles;
+    assert.equal(original.execution_id, state.id);
+    assert.deepEqual(calls.map(c => c.path), ["/api/direct-mesh/tasks", "/api/direct-mesh/tasks/inspect"]);
+    state.status = "failed"; state.failureCode = "durable_execution_panicked";
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+    assert.deepEqual((await invoke(page, "directExecution/pending", { endpoint })).handles, [original]);
+    await assert.rejects(invoke(page, "job/run"), /recovery_required/);
+    const recovered = await invoke(page, "directExecution/inspect", { endpoint, executionId: original.execution_id });
+    assert.equal(recovered.execution.status, "failed");
+    assert.equal(recovered.execution.error_code, "durable_execution_panicked");
+    assert.equal(recovered.execution.has_result, false);
+    assert.equal(recovered.execution.automatic_replay_authorized, false);
+    assert.deepEqual((await invoke(page, "directExecution/pending", { endpoint })).handles, []);
+    assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().hasResult), false);
+    assert.equal(calls.filter(c => c.path.endsWith("/tasks")).length, 1);
+    state.status = "completed";
+    assert.equal((await invoke(page, "job/run")).completion, "terminal");
+    assert.notEqual(state.id, original.execution_id);
+    assert.equal(calls.filter(c => c.path.endsWith("/tasks")).length, 2);
+  });
+});
+
 async function setup(page) {
   page.setDefaultTimeout(10_000);
   const calls = [], state = { status: "running", failCancel: false };
@@ -86,9 +195,12 @@ async function setup(page) {
     assert.deepEqual(body.endpoints, [endpoint]);
     const envelope = { endpoint, gateway_runtime: "rust-native" };
     if (path.endsWith("/list")) return route.fulfill({ json: { ...envelope, recovery: {
+      store_id: storeId,
       schema_version: "kyuubiki.agent-durable-execution-index/v1", executions: [entry], next_cursor: null, automatic_replay_authorized: false,
     } } });
+    assert.equal(body.expected_store_id, storeId);
     if (path.endsWith("/inspect")) return route.fulfill({ json: { ...envelope, execution: {
+      store_id: storeId,
       ...entry, status: state.status, automatic_replay_authorized: false, resumable: false,
       response: state.status === "failed" ? { rpc_version: 1, id: entry.request_id, ok: false, error: { code: "cancelled", message: "cancelled at safe point" } } : null,
     } } });
@@ -97,6 +209,7 @@ async function setup(page) {
     assert.equal(body.process_instance_id, entry.process_instance_id);
     assert.equal(body.request_digest, entry.request_digest);
     return route.fulfill({ json: { ...envelope, recovery: {
+      store_id: storeId,
       schema_version: "kyuubiki.agent-durable-cancellation/v1", execution_id: entry.execution_id,
       process_instance_id: entry.process_instance_id, request_digest: entry.request_digest,
       status: "requested", cancel_registered: true, execution_terminal_confirmed: false, automatic_replay_authorized: false,
@@ -144,6 +257,8 @@ test("GUI durable recovery lists, inspects and cancels through PWDT without repl
 test("uncertain cancellation is not retried, and unknown receipts never enable cancel or replay", { timeout: 120_000 }, async () => {
   await usingWorkbench(async page => {
     const { panel, calls, state } = await setup(page);
+    await panel.getByRole("button", { name: "Read First Page" }).click();
+    await panel.getByLabel("Select Execution").selectOption(entry.execution_id);
     await panel.getByLabel("Execution ID", { exact: true }).fill(entry.execution_id);
     await panel.getByRole("button", { name: "Inspect Receipt" }).click();
     await panel.getByRole("status").filter({ hasText: /^Running$/ }).waitFor();
@@ -157,9 +272,29 @@ test("uncertain cancellation is not retried, and unknown receipts never enable c
     await panel.getByRole("button", { name: "Inspect Receipt" }).click();
     await panel.getByRole("status").filter({ hasText: /Outcome unknown/ }).waitFor();
     assert.equal(await panel.getByRole("button", { name: "Request Cancellation" }).isDisabled(), true);
-    const receipt = await invoke(page, "directExecution/inspect", { endpoint, executionId: entry.execution_id });
+    const receipt = await invoke(page, "directExecution/inspect", { endpoint, executionId: entry.execution_id, storeId });
     assert.equal(receipt.execution.status, "outcome_unknown");
     assert.equal(receipt.execution.automatic_replay_authorized, false);
-    assert.ok(calls.every(call => /\/(inspect|cancel)$/.test(call.path)));
+    assert.ok(calls.every(call => /\/(list|inspect|cancel)$/.test(call.path)));
+  });
+});
+
+test("reloaded PWDT recovery rejects a foreign store receipt without clearing the original handle", { timeout: 120_000 }, async () => {
+  await usingWorkbench(async page => {
+    const { calls, state } = await setupRun(page, true);
+    await assert.rejects(invoke(page, "job/run"), /Submission unconfirmed/);
+    const [original] = (await invoke(page, "directExecution/pending", { endpoint })).handles;
+    assert.equal(original.store_id, storeId);
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+    state.receiptStoreId = "d".repeat(32); state.status = "completed";
+    await assert.rejects(invoke(page, "directExecution/inspect", { endpoint, executionId: original.execution_id }), /store identity mismatch/);
+    assert.deepEqual((await invoke(page, "directExecution/pending", { endpoint })).handles, [original]);
+    assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().hasResult), false);
+    await assert.rejects(invoke(page, "job/run"), /recovery_required/);
+    assert.equal(calls.filter(call => call.path.endsWith("/tasks")).length, 1);
+    state.receiptStoreId = storeId;
+    assert.equal((await invoke(page, "directExecution/inspect", { endpoint, executionId: original.execution_id })).execution.status, "completed");
+    assert.deepEqual((await invoke(page, "directExecution/pending", { endpoint })).handles, []);
   });
 });

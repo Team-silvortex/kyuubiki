@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use kyuubiki_protocol::{RpcRequest, RpcResponse};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 const SCHEMA: &str = "kyuubiki.agent-task-result-retention/v1";
@@ -163,14 +163,28 @@ fn entry_bytes(entry: &Entry) -> usize {
     entry.response.as_ref().map_or(0, |bytes| bytes.len())
 }
 
-fn store() -> &'static Mutex<Store> {
-    static STORE: OnceLock<Mutex<Store>> = OnceLock::new();
-    STORE.get_or_init(|| Mutex::new(Store::default()))
+fn store() -> &'static Arc<Mutex<Store>> {
+    static STORE: OnceLock<Arc<Mutex<Store>>> = OnceLock::new();
+    STORE.get_or_init(|| Arc::new(Mutex::new(Store::default())))
 }
 
 pub(crate) struct Reservation {
     identity: Identity,
     generation: u64,
+    store: Arc<Mutex<Store>>,
+    finished: bool,
+}
+
+impl Drop for Reservation {
+    fn drop(&mut self) {
+        if !self.finished {
+            // Unwind or a failed durable commit must not leave phantom pending work.
+            // Store::finish fences stale owners and never replaces a terminal receipt.
+            if let Ok(mut store) = self.store.lock() {
+                store.finish(&self.identity, self.generation, None, Instant::now());
+            }
+        }
+    }
 }
 
 pub(crate) fn begin(request: &RpcRequest, generation: u64) -> Option<Reservation> {
@@ -182,15 +196,17 @@ pub(crate) fn begin(request: &RpcRequest, generation: u64) -> Option<Reservation
     Some(Reservation {
         identity,
         generation,
+        store: Arc::clone(store()),
+        finished: false,
     })
 }
 
-pub(crate) fn finish(reservation: Option<Reservation>, response: &RpcResponse) {
-    let Some(reservation) = reservation else {
+pub(crate) fn finish<T: Serialize + ?Sized>(reservation: Option<Reservation>, response: &T) {
+    let Some(mut reservation) = reservation else {
         return;
     };
     let encoded = encode_bounded(response).ok();
-    if let Ok(mut store) = store().lock() {
+    if let Ok(mut store) = reservation.store.lock() {
         store.finish(
             &reservation.identity,
             reservation.generation,
@@ -198,6 +214,7 @@ pub(crate) fn finish(reservation: Option<Reservation>, response: &RpcResponse) {
             Instant::now(),
         );
     }
+    reservation.finished = true;
 }
 
 pub(crate) fn policy() -> Value {
@@ -266,7 +283,7 @@ impl Write for BoundedWriter {
     }
 }
 
-fn encode_bounded(response: &RpcResponse) -> serde_json::Result<Vec<u8>> {
+fn encode_bounded<T: Serialize + ?Sized>(response: &T) -> serde_json::Result<Vec<u8>> {
     let mut writer = BoundedWriter(Vec::new());
     serde_json::to_writer(&mut writer, response)?;
     Ok(writer.0)

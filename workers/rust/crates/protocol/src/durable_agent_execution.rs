@@ -6,16 +6,22 @@ use crate::{RpcMethod, task_digest_v2};
 pub const DURABLE_AGENT_EXECUTION_SCHEMA: &str = "kyuubiki.agent-durable-execution/v1";
 pub const DURABLE_AGENT_INDEX_SCHEMA: &str = "kyuubiki.agent-durable-execution-index/v1";
 pub const DURABLE_AGENT_CANCELLATION_SCHEMA: &str = "kyuubiki.agent-durable-cancellation/v1";
+pub const DURABLE_AGENT_REJECTION_SCHEMA: &str = "kyuubiki.agent-durable-admission-rejection/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DurableAgentExecutionList {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_store_id: Option<String>,
     pub limit: usize,
     pub after: Option<String>,
 }
 
 impl DurableAgentExecutionList {
     pub fn validate(&self) -> Result<(), String> {
+        if let Some(id) = &self.expected_store_id {
+            validate_durable_execution_id(id)?;
+        }
         if !(1..=64).contains(&self.limit) {
             return Err("execution index limit must be between 1 and 64".into());
         }
@@ -29,6 +35,8 @@ impl DurableAgentExecutionList {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DurableAgentExecutionCancel {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_store_id: Option<String>,
     pub execution_id: String,
     pub process_instance_id: String,
     pub request_digest: String,
@@ -36,6 +44,9 @@ pub struct DurableAgentExecutionCancel {
 
 impl DurableAgentExecutionCancel {
     pub fn validate(&self) -> Result<(), String> {
+        if let Some(id) = &self.expected_store_id {
+            validate_durable_execution_id(id)?;
+        }
         validate_durable_execution_id(&self.execution_id)?;
         if self.process_instance_id.is_empty()
             || self.process_instance_id.len() > 256
@@ -56,6 +67,8 @@ impl DurableAgentExecutionCancel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DurableAgentTask {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_store_id: Option<String>,
     pub execution_id: String,
     pub method: RpcMethod,
     pub params: Value,
@@ -64,6 +77,8 @@ pub struct DurableAgentTask {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DurableAgentExecutionQuery {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_store_id: Option<String>,
     pub execution_id: String,
 }
 
@@ -81,6 +96,9 @@ pub fn validate_durable_execution_id(id: &str) -> Result<(), String> {
 
 impl DurableAgentTask {
     pub fn validate(&self) -> Result<(), String> {
+        if let Some(id) = &self.expected_store_id {
+            validate_durable_execution_id(id)?;
+        }
         validate_durable_execution_id(&self.execution_id)?;
         let method = serde_json::to_value(&self.method).map_err(|error| error.to_string())?;
         let solver = method
@@ -111,6 +129,7 @@ mod tests {
     #[test]
     fn durable_identity_binds_method_and_lossless_inputs_not_transport_id() {
         let mut task = DurableAgentTask {
+            expected_store_id: None,
             execution_id: "a".repeat(32),
             method: RpcMethod::SolveBar1d,
             params: json!({"tip_force": 1.0000000000000002}),
@@ -118,6 +137,11 @@ mod tests {
         let digest = task.request_digest().unwrap();
         task.execution_id = "b".repeat(32);
         assert_eq!(digest, task.request_digest().unwrap());
+        task.expected_store_id = Some("c".repeat(32));
+        assert_eq!(digest, task.request_digest().unwrap());
+        task.expected_store_id = Some("invalid".into());
+        assert!(task.request_digest().is_err());
+        task.expected_store_id = None;
         task.params["tip_force"] = json!(1.0000000000000004);
         assert_ne!(digest, task.request_digest().unwrap());
         task.method = RpcMethod::Ping;

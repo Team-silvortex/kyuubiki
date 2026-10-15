@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 ctrlc = { version = "3.5.2", features = ["termination"] }
 fs2 = "0.4"
+getrandom = "0.4"
 kyuubiki-engine = { path = "../engine" }
 kyuubiki-headless-sdk = { path = "../headless-sdk" }
 kyuubiki-installer = { path = "../installer" }

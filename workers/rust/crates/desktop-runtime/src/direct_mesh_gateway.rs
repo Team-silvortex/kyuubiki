@@ -132,6 +132,8 @@ impl DirectMeshGateway {
                 "gateway_contract": "kyuubiki.frontend-runtime-gateway/direct-mesh-v1",
                 "gateway_runtime": "rust-native",
                 "discovery": "manual",
+                "transport_policy": crate::direct_mesh_rpc::transport_policy(),
+                "selection_policy": crate::direct_mesh_rpc::selection_policy(),
                 "endpoint_count": endpoints.len(),
                 "agents": agents,
             }),
@@ -169,7 +171,11 @@ impl DirectMeshGateway {
             }
             Err(error) => return json_response(400, json!({"error":error})),
         };
-        let (method, params) = if submit {
+        let expected_store = match expected_store_id(&body) {
+            Ok(expected) => expected,
+            Err(error) => return json_response(400, json!({"error":error})),
+        };
+        let (method, mut params) = if submit {
             let method = match body
                 .get("study_kind")
                 .and_then(Value::as_str)
@@ -191,10 +197,17 @@ impl DirectMeshGateway {
         } else {
             ("fetch_durable_agent_execution", json!({"execution_id":id}))
         };
-        // Never use the multi-endpoint solver failover after an uncertain dispatch.
+        if let Some(id) = expected_store {
+            params["expected_store_id"] = json!(id);
+        }
+        // Durable operations stay pinned even during discovery; never migrate their identity.
         let outcome = crate::direct_mesh_rpc::request(&endpoints[0], method, params).and_then(
             |(execution, progress)| {
-                validate_durable_report(&execution, id)?;
+                validate_store_identity(&execution, expected_store)?;
+                // The RPC transport already bound a rejection to this exact submit request.
+                if !crate::direct_mesh_admission::is_rejection(&execution) {
+                    validate_durable_report(&execution, id)?;
+                }
                 Ok((execution, progress))
             },
         );
@@ -250,7 +263,14 @@ impl DirectMeshGateway {
         let started_at = Utc::now().to_rfc3339();
         let solved = match solve(method, input, &endpoints, selection_mode) {
             Ok(solved) => solved,
-            Err(error) => return json_response(502, json!({"error": error})),
+            Err(error) => {
+                return json_response(
+                    502,
+                    json!({"error": error,
+                "automatic_replay_authorized":false,
+                "selection_policy":crate::direct_mesh_rpc::selection_policy()}),
+                );
+            }
         };
         let completed_at = Utc::now().to_rfc3339();
         let job_id = format!(
@@ -284,6 +304,8 @@ impl DirectMeshGateway {
                     "endpoint": solved.endpoint,
                     "strategy": solved.strategy,
                     "progress_frames": solved.progress_frames,
+                    "transport_policy": crate::direct_mesh_rpc::transport_policy(),
+                    "selection_policy": crate::direct_mesh_rpc::selection_policy(),
                 },
                 "gateway_contract": "kyuubiki.frontend-runtime-gateway/direct-mesh-v1",
                 "gateway_runtime": "rust-native",
@@ -403,6 +425,33 @@ impl DirectMeshGateway {
     }
 }
 
+fn expected_store_id(body: &Map<String, Value>) -> Result<Option<&str>, String> {
+    match body.get("expected_store_id") {
+        None => Ok(None),
+        Some(Value::String(id)) if store_identity(id) => Ok(Some(id)),
+        _ => Err("expected_store_id must be a 32-character lowercase hex identity".into()),
+    }
+}
+
+fn store_identity(id: &str) -> bool {
+    id.len() == 32
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+}
+
+fn validate_store_identity(report: &Value, expected: Option<&str>) -> Result<(), String> {
+    if report.get("store_id").is_some() && !report["store_id"].as_str().is_some_and(store_identity)
+        || expected.is_some_and(|id| report["store_id"] != id)
+    {
+        return Err(
+            "Agent store identity mismatch; restore the original owner; no replay authorized"
+                .into(),
+        );
+    }
+    Ok(())
+}
+
 fn validate_durable_report(report: &Value, id: &str) -> Result<(), String> {
     let status = report.get("status").and_then(Value::as_str);
     let response = &report["response"];
@@ -431,8 +480,12 @@ fn validate_durable_report(report: &Value, id: &str) -> Result<(), String> {
         Some("failed") => {
             response["ok"] == false
                 && response["result"].is_null()
-                && response["error"]["code"].is_string()
-                && response["error"]["message"].is_string()
+                && response["error"]["code"]
+                    .as_str()
+                    .is_some_and(|value| !value.trim().is_empty())
+                && response["error"]["message"]
+                    .as_str()
+                    .is_some_and(|value| !value.trim().is_empty())
                 && terminal_identity
         }
         Some("running" | "outcome_unknown" | "not_found") => response.is_null(),

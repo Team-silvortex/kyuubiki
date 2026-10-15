@@ -29,8 +29,213 @@
           <li><strong>local workstation</strong>: frontend + orchestrator + local Rust agents.</li>
           <li><strong>cloud control plane</strong>: browser and orchestrator with remote persistence and external agents.</li>
           <li><strong>distributed control plane</strong>: separated control plane with remotely deployed solver nodes.</li>
-          <li><strong>headless peer mesh</strong>: future or selective mode where Rust agents can cluster without GUI or Phoenix on the hot path.</li>
+          <li><strong>headless LAN peer mesh</strong>: explicit-seed discovery and direct Rust Agent execution without GUI or Orchestra. Distributed workflow recovery is not implied.</li>
         </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="lan-peer-mesh">
+        <h2>LAN Mesh: decentralized Agents</h2>
+        <p class="docs-copy">
+          Each node owns its native engine and, when configured, its own durable execution
+          store. Discovery is an Agent control-layer concern, not an operator or solver
+          implementation. No Orchestra, Phoenix, Node runtime, elected master or shared
+          execution directory is required. This is explicit-seed gossip, not multicast
+          discovery or an autonomous distributed workflow scheduler.
+        </p>
+        <ul class="docs-list">
+          <li>Start each Agent with the same <code>--cluster-id</code> and at least one
+            <code>--peer host:port</code>. Use mutually reachable LAN addresses or local
+            DNS names, not another machine's loopback address. Configure the listener
+            and <code>--advertise-host</code> for that network. Each machine needs its
+            own writable execution-store directory and network access rules. Installer
+            remains the deployment/lifecycle owner; discovery does not install software.</li>
+          <li><code>--peer</code> and an Orchestra URL are mutually exclusive. Startup
+            rejects mixed authority before opening a ledger. A peer descriptor must
+            match the exact cluster ID (including absent versus configured IDs), report
+            <code>peer_mesh</code>/<code>offline_mesh</code>, and have no Orchestra
+            binding or session. An incompatible seed cannot introduce further peers.</li>
+          <li>The read-only <code>describe_agent.peer_discovery</code> policy reports
+            <code>kyuubiki.agent-peer-discovery/v1</code>. At most 64 candidates are
+            retained; each round probes at most eight in rotation. Each query has a
+            1,500-ms total DNS/connect/write/read budget and a 1-MiB response-frame cap.
+            At most two unresolved DNS workers can remain outstanding. Late DNS results
+            cannot connect. The configured interval is clamped to 1,000-300,000 ms,
+            and stopping the discovery loop interrupts its interval sleep.</li>
+          <li>At most two direct probes run concurrently, with no overlapping rounds.
+            The coordinator publishes each completed compatible response or failure
+            without waiting for other probes in the round. The read-only policy exposes
+            <code>max_concurrent_probes</code> and
+            <code>state_publication=after_each_probe_completion</code>. If a worker
+            cannot start, the remaining worker drains the bounded queue; if neither
+            starts, probing falls back to bounded serial requests. Shutdown stops
+            starting queued probes, discards results after observing the stop, and
+            joins in-flight probe workers within their existing request deadlines.
+            System DNS lookups remain separately bounded and cannot be cancelled.</li>
+          <li>Probe order is a bounded FIFO, separate from the sorted display list.
+            Selected addresses move to the tail; newly learned or readmitted
+            candidates join the tail without overtaking waiting peers. Retirement
+            removes only the retired address from the queue. A continuously retained
+            peer is selected within at most eight complete running rounds, even while
+            membership changes. The read-only policy exposes <code>probe_order</code>,
+            <code>max_probe_rounds_for_retained_peer</code> and
+            <code>probe_round_bound_scope</code>. This is not a wall-clock freshness
+            guarantee: connection deadlines and the configured interval still apply.
+            Concurrent completion/publication order can differ from selection order;
+            two slow probes can still delay candidates waiting behind them.</li>
+          <li>Unprobed seeds are not healthy. Advertised peers are hints, not health
+            evidence or permission to execute. Only a compatible direct response marks
+            a peer healthy; failures degrade it without changing the local authority.
+            <code>cluster_size</code> means self plus known candidates, not a live
+            quorum. Discovery state is process-local and rebuilt from seeds after restart.
+            The health score describes retained candidates, not complete cluster availability
+            or task recoverability; removing a failed hint can increase it.</li>
+          <li>Configured seeds remain until reconfiguration. A learned candidate is
+            retired after three consecutive failed direct probes, followed by a
+            60-second monotonic cooldown. Neighbor hints cannot reset failures or bypass
+            the cooldown. On re-admission it starts unprobed and needs a new compatible
+            response. The cooldown table holds at most 128 addresses; when full, further
+            failed candidates stay visible until a cooldown slot expires. These limits
+            are read-only fields of <code>peer_discovery</code>. Retirement changes only
+            discovery metadata, never task records, ownership or replay permission.
+            Full configured-seed lists and sustained churn can still delay new discovery;
+            this is not large-cluster qualification.</li>
+          <li>Choose an execution owner before submitting a durable task. Persist the
+            original endpoint, execution ID, persistent <code>store_id</code> and returned identity for inspection and
+            cancellation. IDs and receipts are Agent-local, not a globally replicated
+            ledger. A restarted interrupted execution remains <code>outcome_unknown</code>;
+            peer loss does not authorize resubmitting it to another Agent. Cancelling
+            with a different Agent's process identity is rejected.</li>
+          <li>An address is not an Agent identity: DHCP, port reuse or reinstall can put
+            a different ledger at the same endpoint. Pin the descriptor's
+            <code>durable_execution.store_id</code> before dispatch and send
+            <code>expected_store_id</code> on submit, inspect, list and cancel. A mismatch
+            is rejected before admission, duplicate lookup or cancellation. Reopening
+            the original store preserves its identity; creating a new store does not.
+            Native gateways and guarded clients also reject missing or foreign echoes.</li>
+          <li>The older <code>/api/direct-mesh/solve</code> route selects an eligible
+            Agent using fresh read-only discovery for each new task, then dispatches once.
+            Both <code>first_reachable</code> and <code>healthiest</code> require the
+            current solver RPC protocol, the requested method, an explicit valid
+            accepting lifecycle and configured available execution capacity. Missing
+            metadata is not silently treated as ready. Health only ranks eligible
+            candidates. If none qualifies, the gateway reports rejection reasons and
+            sends no solver request. A missing reply or
+            solver error cannot trigger cross-Agent retry, and failed discovery cannot
+            trigger blind dispatch. It still has a process-local result cache, not a
+            durable receipt. For restart-safe records use the pinned
+            <code>/api/direct-mesh/tasks</code> contract.</li>
+          <li>The read-only <code>kyuubiki.direct-mesh-selection/v1</code> policy appears
+            as <code>selection_policy</code> in discovery and solve errors, and as
+            <code>direct_mesh.selection_policy</code> on solve success. Lifecycle and
+            admission counts are sampled separately, so the larger count is used.
+            Discovery does not reserve a slot: the Agent still makes the final atomic
+            admission decision. Eligibility is not authentication or recovery proof.
+            Pinned durable inspection, listing and cancellation do not reselect an
+            owner or require new-work eligibility; busy/draining owners can still
+            expose original uncertain receipts while ingress remains available.</li>
+          <li>The native gateway publishes <code>kyuubiki.direct-mesh-transport/v1</code>
+            in discovery's <code>transport_policy</code> and solve responses'
+            <code>direct_mesh.transport_policy</code>. Describe, async submit, receipt
+            lookup, index and cancellation share a 15-second total exchange budget,
+            including DNS capacity wait, resolution, connection, writes and reads.
+            Partial headers or payloads cannot renew it. These control methods reject
+            progress frames and malformed, contradictory or wrong-version RPC replies.</li>
+          <li>Gateway DNS has at most four outstanding workers. Waiting callers share
+            their existing deadline, and timed-out DNS workers keep their slots until
+            they actually finish; late resolution cannot connect. At most eight
+            resolved addresses are considered, each with at most 500 ms to connect.
+            Reply frames are limited to 1 MiB for metadata, 9 MiB for durable submit/
+            receipt lookup, and 64 MiB for legacy solver results. These are encoded
+            limits, not a claim of identical process heap usage.</li>
+          <li>Legacy solves retain a 15-second deadline per complete frame rather than
+            the control operation's total deadline, so normal long-running solves can
+            continue with valid progress. Only the newest 128 progress frames and at
+            most 1 MiB of normalized encoded progress are retained; earlier telemetry
+            is dropped. The final solver result is not truncated. Continuous valid
+            heartbeats can still keep a legacy solve open; this is not a whole-job
+            deadline or proof of numerical progress. Transport failure never authorizes
+            cancellation confirmation, caller-journal cleanup or cross-Agent replay.</li>
+        </ul>
+        <p class="docs-copy">
+          Local tests run three real Rust Agent processes in a ring, execute bar solves,
+          forcibly terminate one owner, verify that the other two continue, and rejoin
+          the original owner without replaying its uncertain work. Separate tests cover
+          foreign-cluster hints, cancellation identity, same-address ledger replacement
+          and bounded shutdown. This is
+          loopback multi-process evidence, not physical multi-host, power-loss or
+          authenticated-LAN qualification. A cluster name is not authentication:
+          the raw Agent listener still requires a trusted network boundary. Cross-node
+          workflow journaling, ownership transfer and network-partition handling remain
+          separate work; peer discovery alone does not provide those guarantees.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section" id="native-agent-ingress">
+        <h2>Native Agent request admission</h2>
+        <p class="docs-copy">
+          Standalone, Orchestra-bound and Mesh Agents share the same native TCP
+          ingress limits. Read <code>describe_agent.request_ingress</code> or the
+          registration/heartbeat payload for <code>kyuubiki.agent-request-ingress/v1</code>,
+          effective limits, active connection count and reserved raw request bytes.
+          Configured connection/aggregate-byte limits cover the general pool; a small
+          fixed recovery reserve is reported separately and in total limits.
+          Changes require a process restart; invalid configuration rejects startup.
+        </p>
+        <ul class="docs-list">
+          <li><code>KYUUBIKI_AGENT_MAX_REQUEST_BYTES</code>: default 268435456
+            (256 MiB), accepted 1 through 536870912 (512 MiB). Empty or oversized
+            frame lengths are rejected before allocating or waiting for the body.</li>
+          <li><code>KYUUBIKI_AGENT_MAX_IN_FLIGHT_REQUEST_BYTES</code>: default
+            536870912 (512 MiB), accepted 1 through 1073741824 (1 GiB), and at least
+            the per-request limit. Reservation precedes allocation and is retained
+            through dispatch/reply, then released on completion, error or unwinding.</li>
+          <li><code>KYUUBIKI_AGENT_REQUEST_TIMEOUT_MS</code>: default 30000,
+            accepted 1 through 300000. Idle, header and body reads share one total
+            budget per request; fragments cannot renew it. This is not a solver
+            deadline. A persistent connection gets a new budget after the prior
+            request and its response finish.</li>
+          <li><code>KYUUBIKI_AGENT_MAX_CONNECTIONS</code>: default 64, accepted
+            1 through 256 general connections. After both general and recovery slots
+            fill, excess sockets close without spawning handlers or entering an
+            application queue. A handler spawn failure releases its
+            socket/slot without shutting down the listener.</li>
+          <li><code>request_ingress.recovery_reserve</code> publishes the read-only
+            <code>kyuubiki.agent-recovery-ingress/v1</code> policy on the same listener:
+            four additional connections, four in-flight reserved requests, at most
+            16 KiB per reserved frame (or the smaller configured request limit), and
+            at most four times that frame size in reserved encoded bytes. Defaults
+            therefore permit 68 total handlers and 512 MiB + 64 KiB retained input.
+            <code>max_total_connections</code> and
+            <code>max_total_in_flight_request_bytes</code> expose these total bounds;
+            aggregate usage includes both pools, with general/reserve counters also visible.</li>
+          <li>Connection overflow is control-only for that socket's entire lifetime,
+            even after general capacity returns. General byte-budget overflow can use
+            the reserve for that frame only. Reserved reception gets at most 1,000 ms
+            (or the smaller configured timeout) from the original frame-receive start,
+            including idle/header/body. Falling back does not reset that clock.
+            Partial input, decode failures and unwinding return reserved permits.</li>
+          <li>The explicit <code>allowed_methods</code> list covers ping/description,
+            lifecycle inspection/drain/resume, durable inspect/list/cancel, operator
+            result lookup and existing execution/job cancellation. Normal RPC validation,
+            loopback-only lifecycle mutation and identity/store fences still apply.
+            Solver, TaskIR, durable submission and other methods cannot use the reserve:
+            a valid forbidden request receives <code>agent_recovery_ingress_only</code>
+            and the connection closes without task admission. No client-side alternate
+            port, hidden retry, owner transfer or automatic task replay is introduced.</li>
+        </ul>
+        <p class="docs-copy">
+          Invalid framing, size overflow, exhausted total capacity and receive timeout close the
+          connection before dispatch. No task receipt or automatic retry is created.
+          A complete invalid JSON frame can return <code>invalid_json</code> without
+          corrupting framing for the next request. Clients must still preserve a
+          durable handle after an uncertain submission: a generic disconnect alone
+          does not prove that admission never happened. The byte budget covers encoded
+          input, not decoded objects, solver memory or whole-process RSS. The recovery
+          reserve can itself be occupied by slow or abusive callers. Reply deadlines
+          remain separate, and there is no sustained-overload availability guarantee
+          or authenticated LAN protection. Configure limits
+          for expected payload size and transfer time, not merely node count.
+        </p>
       </section>
 
       <section class="docs-card docs-section" id="standalone-durable-execution">
@@ -47,6 +252,14 @@
             already exist. The Agent creates the final directory; Unix permissions
             must be owner-only. One Agent process holds its exclusive directory lock.
             No implicit home-directory store or memory fallback is created.</li>
+          <li>The existing <code>owner.lock</code> stores a synced, checksummed random
+            32-hex-character identity. An empty legacy lock is initialized once; a
+            nonempty invalid identity fails startup rather than being silently replaced.
+            The descriptor, receipts, index, cancellation and live admission rejection
+            expose <code>store_id</code>. This is non-secret routing identity, not
+            authentication; copying a complete ledger copies its identity. Old native
+            clients can omit <code>expected_store_id</code>, but then have no protection
+            against a different ledger taking over the address.</li>
           <li>The desktop-managed runtime now provisions a separate
             <code>agent-executions/agent-&lt;port&gt;</code> under its writable state on Agent
             startup. Override the parent with <code>KYUUBIKI_AGENT_EXECUTION_STORE_ROOT</code>,
@@ -60,12 +273,93 @@
             <code>run_operator_task_ir</code> also uses this boundary. The Agent writes
             and syncs the admission before dispatch, and the checksummed final receipt
             before returning. The engine and operator implementations stay unchanged.</li>
+          <li>The synchronous durable owner retains its execution state through receipt
+            commit, then through network response delivery. Successfully sending an error
+            response is not successful execution: a failed receipt commit records
+            <code>durable_receipt_commit_failed</code> in the live watchdog unless that
+            generation already has an earlier failure (such as cancellation). That earlier
+            cause is preserved. The ledger remains <code>outcome_unknown</code>, not a
+            fabricated terminal failure. Synchronous unwinding releases the owner with
+            a live <code>durable_execution_aborted</code> diagnostic but does not commit
+            a panic receipt. These diagnostics are not restart-safe completion proof.</li>
           <li><code>submit_durable_agent_task</code> accepts the same task but returns
             after reserving an execution slot and syncing admission, without waiting
             for computation. Its worker has no submitting socket, so losing that
             connection does not cancel the task. Existing capacity, drain, watchdog
             and exact cancellation rules still apply. The slot stays owned through
             receipt commit; no unbounded background queue is introduced.</li>
+          <li>If the Agent cannot reserve an execution slot (for example busy or draining),
+            it commits the task identity and a failed receipt before replying, without
+            queuing or calling the engine. The normal execution schema has
+            <code>status: failed</code> and nested error code
+            <code>durable_admission_rejected</code>, with
+            <code>details.execution_started: false</code>. The same ID stays terminal
+            after restart; duplicate submits return that failure and changed inputs are
+            rejected. The receipt is queryable/indexed even if the submit reply was lost.
+            This records a pre-execution failure, not a numerical solver failure.</li>
+          <li>If admission succeeds but owner setup or worker startup fails before the task
+            is handed to the worker, the Agent commits a failed receipt with
+            <code>durable_execution_start_failed</code>,
+            <code>details.phase: before_engine_dispatch</code> and
+            <code>details.execution_started: false</code>. A bounded ownership handoff
+            keeps the slot and admission in the Agent's submit handler until thread creation
+            succeeds; failed creation cannot drop them before receipt commit. The receipt
+            survives tested process termination and duplicates do not re-execute. Commit
+            failure remains uncertain; a missing receipt after restart is never inferred
+            to mean execution did not start. This does not change any solver implementation.</li>
+          <li>An asynchronous worker that unwinds from a Rust panic discards its response
+            and commits <code>durable_execution_panicked</code> as a failed receipt, while
+            retaining the execution slot through the commit attempt. This means the attempt
+            failed, not that nothing ran: <code>execution_may_have_started: true</code> and
+            <code>external_effects_rolled_back: false</code> are explicit. The fixed receipt
+            message does not copy the panic payload. No result or automatic replay is
+            authorized. Shared locks are never unpoisoned by this handler. This boundary
+            excludes ledger commits, synchronous execution, aborts, memory exhaustion and
+            process termination; missing receipts after those events stay unknown.</li>
+          <li>For both synchronous and asynchronous durable TaskIR execution,
+            <code>fetch_operator_task_result</code> publishes only the response from the
+            committed durable receipt, not the solver's earlier return value. An async
+            panic therefore exposes the same failed response through both recovery paths.
+            A failed commit abandons any still-pending cache entry as
+            <code>result_not_retained</code>, without publishing success. This remains a
+            bounded process-local cache: expiry, eviction, ambiguous attempt identities
+            and restart can make it unavailable. Duplicate durable submissions never
+            rebuild it or re-execute the task. Ordinary non-durable TaskIR execution
+            retains its existing completion-before-delivery behavior.</li>
+          <li>If a returned response violates the RPC response contract, exceeds the receipt
+            byte limit, cannot serialize, or cannot be decoded by the restart reader, the Agent discards that response
+            before writing any receipt payload. It commits a small failed receipt with
+            <code>durable_response_unrecordable</code> and a reason of
+            <code>invalid_response</code>, <code>byte_limit</code>, <code>serialization</code>
+            or <code>restart_decode</code>.
+            Only that successful commit makes the failure authoritative; other tasks can
+            then proceed without restarting the Agent. The cache and watchdog follow the
+            committed failure rather than the discarded solver response. This does not
+            prove that nothing executed or that external effects were rolled back, and
+            duplicates never re-execute. If the small failure receipt itself cannot commit,
+            the execution remains unknown and new durable admissions stay blocked. The
+            size limit is unchanged; this is failure isolation, not large-result storage.</li>
+          <li>A valid checksum is not enough to establish a terminal result. New and retained
+            responses must have the supported RPC version, the original request identity,
+            and exactly one valid success or failure state. Successful durable execution
+            requires a non-null top-level result; nested null fields remain valid. Failure
+            code and message must be nonblank. An invalid existing receipt causes an
+            inspection error, not a replacement failure receipt or permission to replay.
+            The file and caller recovery identity remain intact. The admission index and
+            unrelated valid executions stay usable. The native gateway and frontend also
+            reject blank failure evidence before accepting a terminal receipt.</li>
+          <li>When the ledger itself lacks capacity, an asynchronous submit may return
+            <code>kyuubiki.agent-durable-admission-rejection/v1</code> with
+            <code>status: not_admitted</code>, <code>execution_started: false</code>,
+            <code>automatic_replay_authorized: false</code>, and reason
+            <code>store_capacity</code>. Clients also recognize the earlier transient
+            <code>execution_unavailable</code> decision. Its execution ID, method, input digest, process identity and
+            live RPC request ID bind the decision to this exchange. This is a successful
+            admission decision exchange, not a successful computation or a persisted
+            execution receipt. The native gateway verifies that binding before forwarding.
+            Existing identities, conflicting inputs, corrupt storage and write failures
+            never become this definitive rejection; an ordinary RPC/HTTP error is not proof
+            of non-admission.</li>
           <li><code>fetch_durable_agent_execution</code> queries that exact ID.
             States are <code>not_found</code>, <code>running</code>,
             <code>completed</code>, <code>failed</code>, or <code>outcome_unknown</code>.
@@ -118,19 +412,41 @@
             fail closed, without a synchronous fallback. Multi-Agent selection still uses
             its existing synchronous route and has not acquired this recovery guarantee.</li>
           <li>Before dispatch, the Workbench stores only the execution ID, endpoint,
-            study kind, gateway-address digest and creation time. Desktop uses the native
+            persistent Agent store identity, study kind, gateway-address digest and creation time. Desktop uses the native
             <code>desktop-direct-execution.json</code> journal; normal browsers use
             <code>kyuubiki-direct-execution</code> IndexedDB with strict durability requested.
             Desktop host failure never falls back to browser storage. There is no RAM fallback,
             model copy or token persisted. Limits are 64 pending identities and 64 KiB for
             the native journal; one pending reservation per gateway/Agent blocks duplicate
             runs across views. Browser storage remains subject to browser/user eviction.</li>
+          <li>New Workbench submissions require a valid persistent Agent identity before
+            saving the handle and dispatching. Old handles without it remain visible
+            and block replacement runs; inspect, cancel and acknowledgement fail closed.
+            Never attach the currently reachable Agent's identity to an old handle to
+            bypass this check. Restore the original evidence or explicitly retire the
+            development state with its callers stopped.</li>
+          <li>A validated live rejection releases only the newly reserved caller identity,
+            permitting a later explicit run with a fresh ID; it never automatically retries.
+            A connection change after local reservation but before dispatch also releases
+            only that caller's unsent reservation. For a retained busy/drain failure,
+            a lost reply or interrupted local cleanup can be reconciled by explicitly
+            inspecting the original terminal receipt; this does not change the model/result.
+            Lost transient capacity decisions, failed local reservation acknowledgement
+            and incomplete receipt writes remain conservative: no replay and no deletion
+            based on <code>not_found</code>. Transient decisions cannot be reconstructed
+            from absence after restart. Every retained failure consumes one entry within
+            the existing ledger limits, without separate backups or automatic eviction.
+            A failed cleanup is reported as <code>direct:journal_cleanup_pending</code>,
+            not success or permission to bypass the journal.</li>
           <li>In direct mode, open Workbench <strong>System &gt; Runtime &gt; Direct
             Execution Recovery</strong>. The panel is collapsed and performs no reads
             until requested. It lists 24 admissions per page, inspects one receipt,
             and asks for confirmation before cancellation. GUI and PWDT share
             <code>directExecution/pending</code>, <code>directExecution/list</code>, <code>directExecution/inspect</code>, and
-            <code>directExecution/cancel</code>. Inspection returns bounded status/identity
+            <code>directExecution/cancel</code>. Pending handles supply their saved owner;
+            manual inspect/cancel requires <code>storeId</code> from the original index.
+            Subsequent pages use the same <code>storeId</code>. A supplied identity may
+            not override an existing pending handle. Inspection returns bounded status/identity
             metadata to action history, not numerical result arrays. It does not replace
             the current model or result. Unknown, not-found and transport failures never
             authorize resubmission. Ordinary synchronous solves do not appear in this

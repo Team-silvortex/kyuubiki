@@ -7,7 +7,10 @@ use crate::{agent_fault_injection, agent_lifecycle};
 use kyuubiki_protocol::{RpcMethod, RpcRequest, RpcResponse};
 use serde::{Serialize, de::DeserializeOwned};
 
-pub(crate) fn handle_operator_task_ir(request: RpcRequest, writer: ExecutionContext) -> AgentReply {
+pub(crate) fn handle_operator_task_ir(
+    request: RpcRequest,
+    writer: ExecutionContext<'_>,
+) -> AgentReply {
     let request_id = request.id.clone();
     let maybe_job_id = extract_job_id(&request.params);
     let guard = match writer.begin(
@@ -18,7 +21,7 @@ pub(crate) fn handle_operator_task_ir(request: RpcRequest, writer: ExecutionCont
         Ok(guard) => guard,
         Err(error) => return execution_admission_error(request_id, error),
     };
-    let retained = crate::agent_task_results::begin(&request, guard.generation());
+    let retained = writer.begin_task_retention(&request, guard.generation());
     let reply = execute_operator_task_ir(request, writer, guard);
     let AgentReply::Stream(_, response) = &reply;
     crate::agent_task_results::finish(retained, response);
@@ -27,7 +30,7 @@ pub(crate) fn handle_operator_task_ir(request: RpcRequest, writer: ExecutionCont
 
 fn execute_operator_task_ir(
     request: RpcRequest,
-    writer: ExecutionContext,
+    writer: ExecutionContext<'_>,
     guard: agent_lifecycle::ExecutionGuard,
 ) -> AgentReply {
     let request_id = request.id;
@@ -111,7 +114,7 @@ fn publish_operator_task_result(
     request_id: String,
     guard: agent_lifecycle::ExecutionGuard,
     heartbeat: Option<HeartbeatHandle>,
-    writer: &ExecutionContext,
+    writer: &ExecutionContext<'_>,
     result: serde_json::Value,
     task_ir: Option<&serde_json::Value>,
 ) -> AgentReply {
@@ -181,7 +184,7 @@ fn bind_failure_report(
 
 pub(crate) fn run_solver<Request, ResultValue, NodeCount, Solver>(
     request: RpcRequest,
-    writer: ExecutionContext,
+    writer: ExecutionContext<'_>,
     model_name: &str,
     serialize_label: &str,
     node_count: NodeCount,
@@ -214,7 +217,7 @@ where
 
 fn execute_solver<Request, ResultValue, NodeCount, Solver>(
     request: RpcRequest,
-    writer: ExecutionContext,
+    writer: ExecutionContext<'_>,
     guard: agent_lifecycle::ExecutionGuard,
     model_name: &str,
     serialize_label: &str,

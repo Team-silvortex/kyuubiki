@@ -21,6 +21,7 @@ impl Drop for Fixture {
 }
 fn intent(id: usize) -> DirectExecutionIntent {
     DirectExecutionIntent {
+        store_id: None,
         scope: "a".repeat(64),
         endpoint: format!("agent-{id}:5001"),
         study_kind: "axial_bar_1d".into(),
@@ -30,6 +31,30 @@ fn intent(id: usize) -> DirectExecutionIntent {
 }
 fn reserve(store: &Store, intent: DirectExecutionIntent) -> Result<serde_json::Value, String> {
     store.handle(DirectExecutionJournalRequest::Reserve { intent })
+}
+#[test]
+fn persistent_owner_is_preserved_and_foreign_owner_cannot_clear_reservation() {
+    let f = Fixture::new();
+    let mut original = intent(1);
+    original.store_id = Some("c".repeat(32));
+    reserve(&f.store(), original.clone()).unwrap();
+    assert_eq!(f.store().read().unwrap(), [original.clone()]);
+    let mut foreign = original.clone();
+    foreign.store_id = Some("d".repeat(32));
+    assert_eq!(
+        reserve(&f.store(), foreign.clone()).unwrap()["intent"]["store_id"],
+        "c".repeat(32)
+    );
+    f.store()
+        .handle(DirectExecutionJournalRequest::Remove { intent: foreign })
+        .unwrap();
+    assert_eq!(f.store().read().unwrap(), [original.clone()]);
+    let mut legacy = original.clone();
+    legacy.store_id = None;
+    f.store()
+        .handle(DirectExecutionJournalRequest::Remove { intent: legacy })
+        .unwrap();
+    assert_eq!(f.store().read().unwrap(), [original]);
 }
 #[test]
 fn reopened_journal_blocks_duplicate_dispatch_and_removal_requires_exact_identity() {

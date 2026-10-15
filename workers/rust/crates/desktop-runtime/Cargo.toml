@@ -8,6 +8,7 @@ license.workspace = true
 chrono = "0.4"
 fs2 = "0.4"
 kyuubiki-platform = { path = "../platform" }
+kyuubiki-protocol = { path = "../protocol" }
 libc = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }

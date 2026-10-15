@@ -1,5 +1,6 @@
 import {
   validateDurableDirectHandle,
+  DurableDirectSubmissionRejected,
   type DurableDirectApiClient,
   type DurableDirectEnvelope,
   type DurableDirectRecoveryHandle,
@@ -22,10 +23,17 @@ type Options = {
   gatewayId: () => string;
   // The owner supplies its durable storage boundary. No implicit localStorage or RAM fallback.
   saveHandle: (handle: DurableDirectRecoveryHandle) => Promise<void>;
+  releaseUnsubmittedHandle?: (handle: DurableDirectRecoveryHandle) => Promise<void>;
   newId?: () => string;
 };
 
-export function createDurableDirectRecovery({ client, gatewayId, saveHandle, newId = () => crypto.randomUUID().replaceAll("-", "") }: Options) {
+export function createDurableDirectRecovery({ client, gatewayId, saveHandle, releaseUnsubmittedHandle, newId = () => crypto.randomUUID().replaceAll("-", "") }: Options) {
+  async function release(handle: DurableDirectRecoveryHandle) {
+    try { await releaseUnsubmittedHandle?.(handle); }
+    catch (cause) {
+      throw new Error(`direct:journal_cleanup_pending: no execution started for ${handle.execution_id} at ${handle.endpoint}, but its local reservation could not be removed. No automatic retry.`, { cause });
+    }
+  }
   function validate(handle: DurableDirectRecoveryHandle) {
     validateDurableDirectHandle(handle);
     if (handle.schema_version !== "kyuubiki.direct-execution-handle/v1"
@@ -46,23 +54,34 @@ export function createDurableDirectRecovery({ client, gatewayId, saveHandle, new
   }
 
   return {
-    async submit<TResult>(studyKind: DirectMeshStudyKind, input: Record<string, unknown>, endpoint: string) {
+    async submit<TResult>(studyKind: DirectMeshStudyKind, input: Record<string, unknown>, endpoint: string, storeId?: string) {
       const handle: DurableDirectRecoveryHandle = Object.freeze({
         schema_version: "kyuubiki.direct-execution-handle/v1",
         execution_id: newId(), endpoint, gateway_id: gatewayId(), study_kind: studyKind,
+        ...(storeId === undefined ? {} : { store_id: storeId }),
       });
       validate(handle);
       // Snapshot before awaiting storage; edits to the model must not alter a pending submission.
       const snapshot = structuredClone(input);
       await saveHandle(handle);
-      validate(handle);
+      try { validate(handle); }
+      catch (cause) { await release(handle); throw cause; }
+      let envelope: DurableDirectEnvelope<TResult>;
       try {
-        const envelope = await client.submitDurableDirectStudy<TResult>(handle, studyKind, snapshot);
-        validate(handle);
-        return { handle, envelope };
+        envelope = await client.submitDurableDirectStudy<TResult>(handle, studyKind, snapshot);
       } catch (cause) {
+        if (cause instanceof DurableDirectSubmissionRejected && cause.handle.execution_id === handle.execution_id
+          && cause.handle.endpoint === handle.endpoint && cause.handle.store_id === handle.store_id
+          && cause.method === directMeshMethodForStudyKind(studyKind)) {
+          // Only a validated live submit decision may release a reservation, never not_found.
+          try { validate(handle); } catch { throw new DurableDirectSubmissionUncertain(handle, cause); }
+          await release(handle);
+          throw cause;
+        }
         throw new DurableDirectSubmissionUncertain(handle, cause);
       }
+      try { validate(handle); } catch (cause) { throw new DurableDirectSubmissionUncertain(handle, cause); }
+      return { handle, envelope };
     },
     inspect,
   };

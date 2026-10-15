@@ -16,6 +16,7 @@ mod agent_execution_store;
 mod agent_fault_injection;
 mod agent_headless_bridge;
 mod agent_http;
+mod agent_ingress;
 mod agent_lifecycle;
 mod agent_lifecycle_rpc;
 mod agent_mesh;
@@ -63,7 +64,7 @@ use operator_package_runtime::initialize_operator_package_runtime;
 #[cfg(test)]
 use rpc::handle_request;
 use rpc::handle_request_from_peer;
-use transport::{AgentReply, FrameReadError, read_frame, write_agent_reply};
+use transport::{AgentReply, FrameReadError, write_agent_reply};
 use worker::run_worker;
 
 #[derive(Deserialize)]
@@ -87,6 +88,8 @@ fn main() {
 }
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
+    agent_mesh::validate_mesh_config(config)?;
+    agent_ingress::configure()?;
     agent_durable_execution::configure()?;
     agent_lifecycle::configure_execution_capacity()?;
     let reply_timeout = agent_reply_writer::timeout_from_env()?;
@@ -103,7 +106,7 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
         .map_err(|error| format!("failed to bind {}:{}: {error}", config.host, config.port))?;
     let watchdog = AgentWatchdogRuntimeHandle::maybe_spawn(&config)?;
     let registration = AgentRegistrationHandle::maybe_spawn(&config);
-    let peer_mesh = PeerMeshHandle::maybe_spawn(&config);
+    let peer_mesh = PeerMeshHandle::maybe_spawn(&config)?;
 
     let trigger = shutdown.trigger();
     thread::Builder::new()
@@ -140,26 +143,43 @@ fn accept_connections(listener: TcpListener, reply_timeout: Duration) -> Result<
             Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
             Err(error) => return Err(format!("failed to accept connection: {error}")),
         };
-        thread::Builder::new()
+        let Some(permit) = agent_ingress::current().admit_connection() else {
+            // Do not queue sockets or spawn threads when the ingress capacity is full.
+            drop(stream);
+            continue;
+        };
+        if let Err(error) = thread::Builder::new()
             .name("kyuubiki-agent-rpc".to_string())
             .spawn(move || {
-                if let Err(error) = handle_connection(stream, reply_timeout) {
+                if let Err(error) = handle_connection(stream, reply_timeout, &permit) {
                     eprintln!("agent connection error: {error}");
                 }
             })
-            .map_err(|error| format!("failed to spawn agent connection handler: {error}"))?;
+        {
+            // Dropping the failed spawn's closure releases both socket and capacity.
+            eprintln!(
+                "agent connection handler unavailable: kind={:?}",
+                error.kind()
+            );
+        }
     }
 
     Ok(())
 }
 
-fn handle_connection(mut stream: TcpStream, reply_timeout: Duration) -> Result<(), String> {
+fn handle_connection(
+    mut stream: TcpStream,
+    reply_timeout: Duration,
+    permit: &agent_ingress::ConnectionPermit,
+) -> Result<(), String> {
     let peer_is_loopback = stream
         .peer_addr()
         .map(|address| address.ip().is_loopback())
         .unwrap_or(false);
     loop {
-        let payload = match read_frame(&mut stream) {
+        let frame = match agent_ingress::current()
+            .read_connection_frame(&mut stream, permit.recovery_only)
+        {
             Ok(payload) => payload,
             Err(FrameReadError::ConnectionClosed) => break,
             Err(FrameReadError::Io(error)) => {
@@ -174,7 +194,24 @@ fn handle_connection(mut stream: TcpStream, reply_timeout: Duration) -> Result<(
             reply_timeout,
         ));
 
-        let response = match decode_rpc_request(&payload) {
+        let mut close_after_reply = false;
+        // Reserved capacity never grants execution, including on persistent sockets.
+        let response = match decode_rpc_request(&frame.payload) {
+            Ok(request)
+                if frame.recovery_only
+                    && kyuubiki_protocol::validate_rpc_request_envelope(&request).is_ok()
+                    && !agent_ingress::allows_recovery_method(&request.method) =>
+            {
+                close_after_reply = true;
+                AgentReply::Stream(
+                    Vec::new(),
+                    RpcResponse::error(
+                        request.id,
+                        "agent_recovery_ingress_only",
+                        "recovery reserve does not admit this method; request was not dispatched",
+                    ),
+                )
+            }
             Ok(request) => {
                 handle_request_from_peer(request, Some(writer.clone()), peer_is_loopback)
             }
@@ -185,6 +222,10 @@ fn handle_connection(mut stream: TcpStream, reply_timeout: Duration) -> Result<(
         };
 
         write_agent_reply(&writer, response)?;
+        drop(frame);
+        if close_after_reply {
+            break;
+        }
     }
 
     Ok(())

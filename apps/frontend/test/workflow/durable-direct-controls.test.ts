@@ -7,6 +7,8 @@ import { handleWorkbenchScriptStateAction } from "../../src/components/workbench
 import { getWorkbenchScriptActionDefinition } from "../../src/lib/scripting/workbench-script-runtime.ts";
 
 const endpoint = "127.0.0.1:5001";
+const storeId = "c".repeat(32);
+const emptyJournal = { pending: async () => [] } as never;
 const entry = { schema_version: "kyuubiki.agent-durable-execution/v1", execution_id: "a".repeat(32),
   process_instance_id: "incarnation", request_id: "request", request_digest: "b".repeat(64), method: "solve_bar_1d" };
 const target = { endpoint, execution_id: entry.execution_id, process_instance_id: entry.process_instance_id, request_digest: entry.request_digest };
@@ -19,6 +21,7 @@ function cancel(): any { return { gateway_runtime: "rust-native", endpoint, reco
   status: "requested", cancel_registered: true, execution_terminal_confirmed: false, automatic_replay_authorized: false,
 } }; }
 function inspect(status = "running"): any { return { gateway_runtime: "rust-native", endpoint, execution: {
+  store_id: storeId,
   ...entry, status, resumable: false, automatic_replay_authorized: false,
   response: status === "completed" ? { rpc_version: 1, id: entry.request_id, ok: true, result: { huge: "x".repeat(200_000) } } : null,
 } }; }
@@ -88,9 +91,9 @@ test("invalid queries never reach the network and an uncertain cancel is never r
 test("GUI and PWDT use the same recovery action handler without Orchestra fetches or model replacement", async () => {
   const routes: string[] = [];
   const client = createRuntimeApiClient(async <T>(url: string) => { routes.push(url); return inspect("completed") as T; });
-  const actions = createDurableDirectActions(client, () => () => true);
+  const actions = createDurableDirectActions(client, () => () => true, emptyJournal);
   const result = await handleWorkbenchScriptStateAction({
-    action: "directExecution/inspect", payload: { endpoint, executionId: entry.execution_id }, durableDirectActions: actions,
+    action: "directExecution/inspect", payload: { endpoint, executionId: entry.execution_id, storeId }, durableDirectActions: actions,
     setResult: () => assert.fail("must not replace result"), runAnalysis: () => assert.fail("must not rerun"),
   } as any);
   assert.equal((result!.execution as any).has_result, true);
@@ -103,20 +106,65 @@ test("GUI and PWDT use the same recovery action handler without Orchestra fetche
 test("late responses are fenced when gateway authority changes", async () => {
   let current = true;
   const client = createRuntimeApiClient(async <T>() => { current = false; return inspect() as T; });
-  const actions = createDurableDirectActions(client, () => () => current);
-  await assert.rejects(actions("directExecution/inspect", { endpoint, executionId: entry.execution_id }), /authority changed/);
+  const actions = createDurableDirectActions(client, () => () => current, emptyJournal);
+  await assert.rejects(actions("directExecution/inspect", { endpoint, executionId: entry.execution_id, storeId }), /authority changed/);
 });
 
 test("unknown and not-found statuses stay explicit; unsupported actions and payloads cannot dispatch", async () => {
   let status = "outcome_unknown", calls = 0;
   const client = createRuntimeApiClient(async <T>() => { calls++; return inspect(status) as T; });
-  const actions = createDurableDirectActions(client, () => () => true);
+  const actions = createDurableDirectActions(client, () => () => true, emptyJournal);
   for (status of ["outcome_unknown", "not_found"]) {
-    const result = await actions("directExecution/inspect", { endpoint, executionId: entry.execution_id });
+    const result = await actions("directExecution/inspect", { endpoint, executionId: entry.execution_id, storeId });
     assert.equal((result!.execution as any).status, status);
     assert.equal((result!.execution as any).has_result, false);
   }
   assert.equal(await actions("job/run", {}), null);
   await assert.rejects(actions("directExecution/inspect", { endpoint, executionId: entry.execution_id, retry: true }));
   assert.equal(calls, 2);
+});
+
+test("GUI and PWDT cannot override or downgrade a saved store fence", async () => {
+  const calls: any[] = [];
+  const client = createRuntimeApiClient(async <T>(url: string, init?: RequestInit) => {
+    calls.push(JSON.parse(init!.body as string)); return inspect() as T;
+  });
+  const saved = { endpoint, execution_id: entry.execution_id, store_id: storeId };
+  const actions = createDurableDirectActions(client, () => () => true, { pending: async () => [saved] } as never);
+  await actions("directExecution/inspect", { endpoint, executionId: entry.execution_id });
+  assert.equal(calls[0].expected_store_id, storeId);
+  await assert.rejects(actions("directExecution/inspect", { endpoint, executionId: entry.execution_id, storeId: "d".repeat(32) }), /owner_fence_required/);
+  const legacy = createDurableDirectActions(client, () => () => true, { pending: async () => [{ ...saved, store_id: undefined }] } as never);
+  await assert.rejects(legacy("directExecution/inspect", { endpoint, executionId: entry.execution_id, storeId }), /owner_fence_required/);
+  assert.equal(calls.length, 1);
+});
+
+test("manual recovery needs an explicit owner and control clients enforce owner echoes", async () => {
+  const calls: any[] = [];
+  const client = createRuntimeApiClient(async <T>(url: string, init?: RequestInit) => {
+    calls.push(JSON.parse(init!.body as string)); return (url.endsWith("list") ? index() : cancel()) as T;
+  });
+  const actions = createDurableDirectActions(client, () => () => true, emptyJournal);
+  await assert.rejects(actions("directExecution/inspect", { endpoint, executionId: entry.execution_id }), /owner_fence_required/);
+  assert.equal(calls.length, 0);
+  await assert.rejects(client.listDurableDirectExecutions(endpoint, 24, null, storeId), /store identity mismatch/);
+  await assert.rejects(client.cancelDurableDirectExecution({ ...target, store_id: storeId }), /store identity mismatch/);
+  assert.equal(calls.length, 2); assert.ok(calls.every(body => body.expected_store_id === storeId));
+});
+
+test("PWDT pagination cannot silently switch or drop the original index owner", async () => {
+  const calls: any[] = [];
+  let owner = storeId;
+  const client = createRuntimeApiClient(async <T>(url: string, init?: RequestInit) => {
+    calls.push(JSON.parse(init!.body as string));
+    const value = index(); value.recovery.store_id = owner;
+    value.recovery.executions = []; return value as T;
+  });
+  const actions = createDurableDirectActions(client, () => () => true, emptyJournal);
+  assert.equal((await actions("directExecution/list", { endpoint }))?.ok, true);
+  await assert.rejects(actions("directExecution/list", { endpoint, after: entry.execution_id }), /owner_fence_required/);
+  assert.equal(calls.length, 1);
+  owner = "d".repeat(32);
+  await assert.rejects(actions("directExecution/list", { endpoint, after: entry.execution_id, storeId }), /store identity mismatch/);
+  assert.equal(calls.length, 2); assert.equal(calls[1].expected_store_id, storeId);
 });

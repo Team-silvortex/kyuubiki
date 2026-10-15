@@ -1,4 +1,4 @@
-import { DURABLE_DIRECT_SCHEMA, validateDurableDirectHandle, type DurableDirectHandle } from "./durable-direct-client.ts";
+import { DURABLE_DIRECT_SCHEMA, validateDurableDirectHandle, validateDurableStoreIdentity, type DurableDirectHandle } from "./durable-direct-client.ts";
 
 export type DurableDirectIndexEntry = {
   schema_version: typeof DURABLE_DIRECT_SCHEMA;
@@ -9,6 +9,7 @@ export type DurableDirectIndexEntry = {
   method: string;
 };
 export type DurableDirectIndex = {
+  store_id?: string;
   schema_version: "kyuubiki.agent-durable-execution-index/v1";
   executions: DurableDirectIndexEntry[];
   next_cursor: string | null;
@@ -16,6 +17,7 @@ export type DurableDirectIndex = {
 };
 export type DurableDirectCancelTarget = DurableDirectHandle & Pick<DurableDirectIndexEntry, "process_instance_id" | "request_digest">;
 export type DurableDirectCancellation = {
+  store_id?: string;
   schema_version: "kyuubiki.agent-durable-cancellation/v1";
   execution_id: string;
   process_instance_id: string;
@@ -31,8 +33,9 @@ const hex = (value: unknown, length: number) => typeof value === "string" && val
 const text = (value: unknown) => typeof value === "string" && value.length > 0 && new TextEncoder().encode(value).length <= 256;
 const record = (value: unknown): Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 
-export function validateDurableDirectIndex(value: unknown, endpoint: string, limit: number, after: string | null): Envelope<DurableDirectIndex> {
+export function validateDurableDirectIndex(value: unknown, endpoint: string, limit: number, after: string | null, storeId?: string): Envelope<DurableDirectIndex> {
   const envelope = record(value), index = record(envelope.recovery);
+  validateDurableStoreIdentity(index, storeId);
   const rows = index.executions;
   if (envelope.gateway_runtime !== "rust-native" || envelope.endpoint !== endpoint
     || index.schema_version !== "kyuubiki.agent-durable-execution-index/v1" || index.automatic_replay_authorized !== false
@@ -54,6 +57,7 @@ export function validateDurableDirectIndex(value: unknown, endpoint: string, lim
 
 export function validateDurableDirectCancellation(value: unknown, target: DurableDirectCancelTarget): Envelope<DurableDirectCancellation> {
   const envelope = record(value), receipt = record(envelope.recovery);
+  validateDurableStoreIdentity(receipt, target.store_id);
   if (envelope.gateway_runtime !== "rust-native" || envelope.endpoint !== target.endpoint
     || receipt.schema_version !== "kyuubiki.agent-durable-cancellation/v1"
     || receipt.execution_id !== target.execution_id || receipt.process_instance_id !== target.process_instance_id
@@ -71,10 +75,10 @@ export function createDurableDirectControlClient(request: Request) {
     return request<unknown>(path, { method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   }
   return {
-    async listDurableDirectExecutions(endpoint: string, limit = 24, after: string | null = null) {
-      validateDurableDirectHandle({ execution_id: "0".repeat(32), endpoint });
+    async listDurableDirectExecutions(endpoint: string, limit = 24, after: string | null = null, storeId?: string) {
+      validateDurableDirectHandle({ execution_id: "0".repeat(32), endpoint, store_id: storeId });
       if (!Number.isInteger(limit) || limit < 1 || limit > 64 || (after !== null && !hex(after, 32))) throw new Error("Invalid durable execution page.");
-      return validateDurableDirectIndex(await exchange("/api/direct-mesh/tasks/list", { endpoints: [endpoint], limit, after }), endpoint, limit, after);
+      return validateDurableDirectIndex(await exchange("/api/direct-mesh/tasks/list", { endpoints: [endpoint], limit, after, expected_store_id: storeId }), endpoint, limit, after, storeId);
     },
     async cancelDurableDirectExecution(target: DurableDirectCancelTarget) {
       const pinned = { ...target };
@@ -83,6 +87,7 @@ export function createDurableDirectControlClient(request: Request) {
       return validateDurableDirectCancellation(await exchange("/api/direct-mesh/tasks/cancel", {
         endpoints: [pinned.endpoint], execution_id: pinned.execution_id,
         process_instance_id: pinned.process_instance_id, request_digest: pinned.request_digest,
+        expected_store_id: pinned.store_id,
       }), pinned);
     },
   };

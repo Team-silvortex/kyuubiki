@@ -72,6 +72,108 @@ The current generic/runtime methods are:
   execution-store configuration required; see the
   [standalone durable execution contract](book-ch04-runtime-modes.html#standalone-durable-execution))
 
+Durable requests accept optional `expected_store_id`, a 32-character lowercase hex
+identity from `describe_agent.durable_execution.store_id`. Submit (sync and async),
+inspect, index and cancellation reject a foreign store before operating. Reports and
+live admission decisions echo `store_id`; guarded gateways/clients reject missing or
+foreign echoes. The guard does not alter the task's numerical request digest. Persist
+it with the original endpoint and execution ID before submission, not after reconnect.
+This prevents accidental address reuse from redirecting recovery to another ledger.
+The identity survives process restart in the synced, checksummed `owner.lock`; corrupt
+nonempty identity metadata fails startup. It is not a credential, peer authentication,
+global exactly-once guarantee or protection against copied ledgers. Legacy native
+requests without the guard remain accepted but do not have this ownership guarantee.
+
+Workbench new-run handles require the store identity. Legacy unfenced handles remain
+pending and cannot be silently adopted or acknowledged. GUI/PWDT recovery uses the saved
+owner, or an explicit `storeId` from the original index for manually tracked executions;
+an explicit owner cannot override a matching local pending handle. The initial index
+read is discovery, not permission to adopt unknown past work; use its identity on later
+pages. Address, gateway and process/digest checks remain in force alongside this guard.
+
+Async durable submission rejected by execution-slot reservation (busy/draining)
+persists a normal `kyuubiki.agent-durable-execution/v1` failed receipt, with nested
+error code `durable_admission_rejected` and `details.execution_started: false`.
+No engine dispatch or queue is created. The receipt can be inspected after a lost
+reply or restart; duplicate IDs return the original failure, not a fresh execution.
+Failure of either identity or receipt commit remains an uncertain storage error.
+
+After admission, confirmed owner/worker startup failure before ownership transfer
+also persists a normal failed receipt: `durable_execution_start_failed`, with
+`details.phase: before_engine_dispatch`, `details.execution_started: false`, and
+`details.automatic_replay_authorized: false`. The Agent's submit handler retains its execution slot
+until this receipt commit finishes. Failure to commit does not produce a terminal
+claim; an interrupted admission stays unknown after restart. Original IDs never
+authorize another invocation, even after transient startup conditions have cleared.
+The descriptor exposes this policy and the opt-in exact-ID test hook
+`KYUUBIKI_AGENT_FAULT_INJECTION_START_FAILURE_EXECUTION_ID` (32 lowercase hex
+characters), which simulates failure before spawning the worker, not a solver fault.
+
+The async worker catches Rust unwinds around request execution, outside ledger
+locks/commits. After unwinding it commits `durable_execution_panicked` as a failed
+receipt, with `phase: async_worker_unwind`, `execution_may_have_started: true`,
+`partial_result_discarded: true`, `external_effects_rolled_back: false` and
+`automatic_replay_authorized: false`. It does not claim non-execution, numerical
+validity, or rollback. The fixed message excludes the arbitrary panic payload;
+the existing local panic hook/logging policy is unchanged. Poisoned shared locks
+remain unavailable. Aborts, memory exhaustion, synchronous requests, process kills
+and failed receipt commits are not converted into a caught-panic receipt.
+`KYUUBIKI_AGENT_FAULT_INJECTION_DURABLE_PANIC_EXECUTION_ID` is an opt-in exact-ID hook
+that panics after dispatch returns, before committing the durable response. It does
+not inject into every solver algorithm, and the descriptor exposes its activation.
+
+For synchronous and asynchronous durable TaskIR, `fetch_operator_task_result` publishes
+only the committed durable receipt's nested RPC response. The descriptor exposes this
+under `durable_execution.task_result_cache`, with `publication_boundary:
+durable_receipt_commit` and `response_source: committed_receipt`. A failed commit leaves
+no successful cached result: a still-pending reservation becomes `result_not_retained`.
+Caught async panic failures and cancellations return the same response through both
+recovery paths. The existing identity/generation fences, TTL and byte/count limits still
+apply; restart loses this cache, and duplicate durable submissions do not rebuild it.
+Ordinary non-durable TaskIR retains its completion-before-delivery cache boundary.
+
+Synchronous `run_durable_agent_task` exposes its lifecycle policy under
+`durable_execution.synchronous_execution`. Its execution owner stays live through
+receipt commit, then through transport delivery. A failed commit records live watchdog
+code `durable_receipt_commit_failed`; sending the resulting RPC error cannot count as
+successful execution. An earlier generation-bound solver/cancellation failure is
+preserved instead of overwritten or counted twice. Synchronous unwind records only a
+live `durable_execution_aborted` diagnostic, not a persisted panic receipt. Neither
+diagnostic converts a missing receipt from `outcome_unknown` to durable failure proof.
+
+Response preparation is separated from receipt-file commit. A response-contract,
+bounded-encoding or restart-decoding rejection produces a compact failed response with code
+`durable_response_unrecordable`, phase `receipt_validation`, and reason `byte_limit`,
+`serialization`, `restart_decode` or `invalid_response`. Its details explicitly include
+`execution_may_have_started: true`, `original_response_discarded: true`,
+`external_effects_rolled_back: false` and `automatic_replay_authorized: false`.
+Only successful commit of that replacement permits a terminal `failed` report and
+continued independent admissions. Failed replacement commit remains unknown and blocks
+new admissions; it is never retried with another payload. Both durable modes, the TaskIR
+cache and live completion accounting use the committed response. The descriptor exposes
+the limits and this policy under `durable_execution.response_rejection`. Original solver
+or cancellation diagnostics already recorded in the watchdog keep their first cause.
+
+Both write preparation and retained-receipt inspection validate the RPC version and
+mutually exclusive result/error state. A durable success requires a non-null top-level
+result (JSON null decodes as an absent `Option<Value>`); nested nulls and non-null
+scalar/array results are not rejected by this envelope check. Failure code and message
+must contain non-whitespace text. An original request-ID mismatch is still an identity
+error, never converted into a compact failure for another request. An already retained
+invalid response causes inspection/duplicate/cancellation to fail without rewriting its
+file or authorizing replay. Its admission remains indexable and unrelated work may
+continue. The descriptor exposes this as `response_rejection.invalid_retained_receipt`.
+The native gateway and frontend reject blank failure evidence too; invalid receipts
+cannot authorize removal of the caller's recovery journal entry.
+
+Ledger-capacity rejection can return `kyuubiki.agent-durable-admission-rejection/v1`
+as its RPC result (`ok: true` means the admission exchange completed, not that a
+computation succeeded). `status: not_admitted` binds the execution, method,
+digest, producer and current RPC request ID. Only validated capacity/reservation
+rejection before ledger admission permits retiring the caller's new reservation; generic
+errors, write failures and `not_found` never grant that permission. No automatic
+replay is authorized, and this transient decision is not an execution lookup record.
+
 Examples of solver methods are (query `describe_agent` for the complete list):
 
 - `solve_bar_1d`
@@ -83,6 +185,67 @@ Progress and runtime liveness are streamed back as RPC frames:
 
 - `progress`
 - `heartbeat`
+
+The native direct gateway validates terminal and progress envelopes through the shared
+Rust protocol validators. Its discovery response publishes `transport_policy` with
+schema `kyuubiki.direct-mesh-transport/v1`; legacy solve responses expose the same policy
+under `direct_mesh`. Control RPCs (describe, async durable submit, inspect, list, cancel)
+have one 15-second exchange deadline and reject progress streams. Partial TCP reads do
+not extend the deadline. DNS is limited to four outstanding workers, including late
+resolvers after caller timeout; queued callers wait only within the original budget.
+At most eight resolved unicast addresses are tried, with 500 ms per connect attempt.
+
+Encoded response-frame caps are 1 MiB for describe/index/cancel, 9 MiB for async durable
+submit/inspect (including retained results), and 64 MiB for legacy solver replies.
+The legacy solver path deliberately uses a renewable per-complete-frame 15-second
+deadline, not a new whole-job time limit. Its returned progress history is the most
+recent window, capped at 128 validated frames and 1 MiB of normalized encoded data;
+numerical results are not truncated. These limits do not bound decoded heap usage to
+exactly the same byte count. A peer sending endless valid solver heartbeats can still
+keep that legacy operation open. No automatic retry, inferred cancellation or terminal
+receipt is created from transport failure; retain the original durable handle.
+
+Native Agent inbound framing is bounded independently of gateway/discovery outbound
+transport. All three runtime modes expose `request_ingress`
+(`kyuubiki.agent-request-ingress/v1`) in describe and registration/heartbeat payloads.
+General-pool defaults are a 256-MiB encoded request, 512-MiB aggregate reserved request
+bytes, 64 simultaneous connection handlers and a 30-second idle/header/body receive budget.
+The receive deadline is per request, not a solver timeout; fragments cannot renew it.
+The encoded-byte reservation spans dispatch/reply and releases on completion, error
+or unwinding. After the general pool and bounded recovery reserve fill, excess
+connections close without an application queue. Malformed framing, exhausted total
+byte/request capacity and timeouts close before dispatch. Partial input
+cannot admit a task. Complete malformed JSON retains the existing `invalid_json`
+response and persistent-connection framing.
+
+The policy lists the four configuration environment variables and effective limits;
+startup rejects invalid values and changes require restart. See the
+[native Agent ingress configuration](book-ch04-runtime-modes.html#native-agent-ingress)
+for accepted ranges. These limits are not authentication or exact heap/RSS caps.
+A lost connection after a client submitted
+work still has an uncertain outcome and never authorizes replay or journal deletion.
+
+`request_ingress.recovery_reserve` (`kyuubiki.agent-recovery-ingress/v1`) is a fixed,
+read-only same-port reserve: four extra connection handlers and four concurrent
+reserved frames, each at most min(configured frame limit, 16 KiB). Total reserved
+bytes cannot exceed four times that bound; defaults add at most 64 KiB. The top-level
+`max_total_connections` and `max_total_in_flight_request_bytes` include both pools,
+as do active/byte usage counters; general and reserve usage are also exposed separately.
+Connection overflow stays control-only until socket close, even if general slots
+return. Byte-budget fallback on a general connection applies to that frame only.
+Reserved receive time is min(configured timeout, 1,000 ms), measured from the original
+frame-read start without renewal on fallback or fragments. Reservations last through
+reply and release on errors/unwind. Solver execution and response writing have their
+own boundaries, not this receive timeout.
+
+The reserve allowlist contains ping, Agent/lifecycle description, drain/resume,
+durable inspection/list/cancel, operator-result lookup and execution/job cancellation.
+It never admits solver, TaskIR or durable submission, including duplicate submissions.
+A valid disallowed request returns `agent_recovery_ingress_only` and closes its socket
+without dispatch. Existing envelope validation, host-loopback lifecycle restrictions
+and store/process/digest fences are unchanged. No alternate client port or replay is
+required. These bounded resources improve recovery under general-pool exhaustion,
+not availability under sustained hostile traffic or concurrent reserve exhaustion.
 
 Solver agents also self-describe their runtime topology:
 
@@ -96,12 +259,67 @@ Solver agents also self-describe their runtime topology:
 
 In peer-mesh mode the current behavior is intentionally lightweight:
 
-- each agent starts from configured seed peers
-- it periodically calls `describe_agent` on those peers
-- it merges the returned peer lists into its own runtime view
+- Each Agent starts from explicit seeds, with at most 64 known candidates and eight
+  rotating probes per round. Mixed Orchestra binding and peer configuration is rejected.
+- `max_concurrent_probes` is 2 and `overlapping_probe_rounds` is false. The coordinator
+  publishes results as probes finish (`state_publication=after_each_probe_completion`),
+  rather than waiting for slower peers to complete the round. Completion order may
+  differ from FIFO selection order. Two slow in-flight requests can still delay
+  queued candidates. Worker creation failure uses the remaining worker or bounded
+  serial fallback; this does not grant an extra query budget or retry a task.
+- `shutdown_probes=stop_queue_and_join_in_flight`: after observing stop, no queued
+  probe is started or completed result published. Scoped probe workers are joined
+  before shutdown or another round. In-flight requests retain their original deadlines;
+  underlying system DNS lookups are separately bounded, not cancellable.
+- Probe scheduling is independent of sorted descriptor presentation. The read-only
+  `probe_order` is `retained_fifo_new_candidates_at_tail`; removal preserves waiting
+  order and newly learned/readmitted peers join the tail. Each continuously retained
+  peer is selected within `max_probe_rounds_for_retained_peer` (8) complete running
+  rounds. `probe_round_bound_scope` is `complete_running_rounds_not_wall_time`:
+  this does not override query timeouts, the configured interval, shutdown or restart.
+- `describe_agent.peer_discovery` publishes the read-only
+  `kyuubiki.agent-peer-discovery/v1` policy. A query has a 1,500-ms total deadline,
+  a 1-MiB response cap, bounded DNS workers, exact response identity and RPC validation.
+- Only an exact cluster match and unbound `offline_mesh` authority can contribute
+  peer hints. Hints never grant execution permission or establish health; each peer
+  needs a direct compatible response. `cluster_size` counts candidates, not quorum.
+- Configured seeds remain until reconfiguration. Learned candidates retire after
+  three consecutive failed direct probes and enter a 60-second process-monotonic
+  cooldown. Hints cannot reset failure counts or shorten/extend the cooldown. Rejoining
+  candidates start unprobed, without inherited health. `peer_discovery` exposes
+  `learned_peer_failure_threshold`, `learned_peer_cooldown_ms`,
+  `configured_seed_retention`, `max_retired_peer_cooldowns` (128),
+  `retirement_when_cooldown_full` (`retain_failed_candidate`), `cooldown_clock` and
+  `candidate_retirement_scope` (`discovery_only`). Cooldown saturation retains further
+  failed candidates until slots expire, rather than forgetting recent retirements.
+  These are discovery bounds, not guaranteed new-peer admission under sustained churn.
+  `health_score_scope` is `retained_candidates_not_task_recovery`: scores cover retained
+  candidates, not lost tasks or complete cluster availability.
+- Discovery topology is process-local. Each configured execution ledger belongs to
+  one Agent; execution IDs are not globally unique reservations across the mesh.
+  Candidate retirement never removes ledger records or redirects pinned recovery.
+  An unknown interrupted task must stay pinned to its original owner, not be replayed
+  on another peer. Cross-node recovery and authenticated peer identity are not provided.
+- The native gateway's legacy multi-endpoint solve refreshes descriptors and filters
+  eligibility before applying `first_reachable` or `healthiest`: current solver RPC
+  protocol, advertised requested method, explicit valid accepting lifecycle and
+  configured available execution capacity are required. Missing metadata fails closed;
+  health ranks only eligible candidates. Separately sampled lifecycle/admission active
+  counts are combined using their maximum, not assumed to match. No eligible candidate
+  means no solver request. The read-only `kyuubiki.direct-mesh-selection/v1` is exposed
+  as `selection_policy` in discovery/errors and `direct_mesh.selection_policy` on
+  solve success. Discovery does not reserve a slot or establish authentication.
+- Legacy dispatch never retries another endpoint after failure. Its result cache is
+  not durable; the durable task route requires one explicitly pinned endpoint.
+  New-work eligibility does not gate pinned inspection/list/cancel. Busy/draining
+  owners remain queryable while transport capacity permits, and an uncertain receipt
+  stays uncertain rather than being replayed or upgraded by a good health score.
 
 This gives Kyuubiki a gossip-lite LAN discovery layer without introducing a
 hard dependency on Phoenix for solver-to-solver awareness.
+The raw listener remains trusted-network-only; cluster IDs are not credentials.
+See the [LAN Mesh runtime chapter](book-ch04-runtime-modes.html#lan-peer-mesh) for
+deployment boundaries and the distinction between discovery and workflow recovery.
 
 ## Why this matters
 

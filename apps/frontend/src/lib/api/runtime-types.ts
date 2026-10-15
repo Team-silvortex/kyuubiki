@@ -350,11 +350,31 @@ export type RegisteredAgentRegistryPayload = {
 export type FrontendRuntimeMode = "orchestrated_gui" | "direct_mesh_gui";
 export type DirectMeshSelectionMode = "first_reachable" | "healthiest";
 
+export type DirectMeshTransportPolicy = {
+  schema_version: "kyuubiki.direct-mesh-transport/v1";
+  control_request_timeout_ms: number;
+  solver_frame_timeout_ms: number;
+  solver_total_deadline: false;
+  max_pending_dns_lookups: number;
+  max_resolved_addresses: number;
+  connect_attempt_timeout_ms: number;
+  dns_capacity_policy: "wait_within_request_deadline";
+  max_metadata_frame_bytes: number;
+  max_durable_frame_bytes: number;
+  max_solver_frame_bytes: number;
+  max_retained_progress_frames: number;
+  max_retained_progress_bytes: number;
+  progress_retention: "most_recent_bounded_window";
+  control_progress_allowed: false;
+  automatic_retry: false;
+};
+
 export type DirectMeshAgentListPayload = {
   mode: FrontendRuntimeMode;
   discovery: string;
   endpoint_count: number;
   agents: ProtocolAgentDescriptor[];
+  transport_policy?: DirectMeshTransportPolicy;
 };
 
 export type DirectMeshSolveEnvelope<TResult = unknown> = {
@@ -364,5 +384,6 @@ export type DirectMeshSolveEnvelope<TResult = unknown> = {
     endpoint: string;
     strategy: DirectMeshSelectionMode;
     progress_frames: Array<Record<string, unknown>>;
+    transport_policy?: DirectMeshTransportPolicy;
   };
 };

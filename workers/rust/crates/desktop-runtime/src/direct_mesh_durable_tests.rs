@@ -1,4 +1,6 @@
 use super::*;
+#[path = "direct_mesh_owner_tests.rs"]
+mod owner_tests;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::thread;
@@ -35,6 +37,146 @@ fn report() -> Value {
         "status":"outcome_unknown", "request_id":"original", "process_instance_id":"process",
         "request_digest":"b".repeat(64), "method":"solve_bar_1d", "resumable":false,
         "response":null})
+}
+
+#[test]
+fn discovery_exposes_transport_limits_even_when_the_agent_is_unavailable() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let endpoint = listener.local_addr().unwrap().to_string();
+    drop(listener);
+    let response = gateway(vec![endpoint]).handle(&request("/api/direct-mesh/agents", json!({})));
+    assert_eq!(response.status, 200);
+    let body: Value = serde_json::from_slice(&response.body).unwrap();
+    assert_eq!(
+        body["transport_policy"],
+        crate::direct_mesh_rpc::transport_policy()
+    );
+    assert_eq!(
+        body["transport_policy"]["control_request_timeout_ms"],
+        15_000
+    );
+    assert_eq!(body["transport_policy"]["solver_total_deadline"], false);
+    assert_eq!(body["transport_policy"]["automatic_retry"], false);
+    assert_eq!(
+        body["selection_policy"],
+        crate::direct_mesh_rpc::selection_policy()
+    );
+    assert!(body["agents"][0]["descriptor_error"].is_string());
+}
+
+#[test]
+fn busy_or_draining_owner_still_allows_pinned_durable_recovery() {
+    for draining in [false, true] {
+        let mut descriptor =
+            serde_json::to_value(kyuubiki_protocol::AgentDescriptor::solver_agent_default())
+                .unwrap();
+        descriptor["execution_admission"] = json!({
+            "schema_version":"kyuubiki.agent-execution-admission/v1", "configured":true,
+            "max_active_executions":1, "active_execution_count":if draining {0} else {1}
+        });
+        if draining {
+            descriptor["lifecycle"]["state"] = json!("quiescent");
+            descriptor["lifecycle"]["accepting_new_work"] = json!(false);
+            descriptor["lifecycle"]["quiescent"] = json!(true);
+            descriptor["lifecycle"]["safe_to_replace"] = json!(true);
+            descriptor["lifecycle"]["drain_generation"] = json!(1);
+            descriptor["lifecycle"]["drain_owner_id"] = json!("controller");
+            descriptor["lifecycle"]["drain_reason"] = json!("replacement");
+            descriptor["lifecycle"]["drain_started_unix_ms"] = json!(1);
+        } else {
+            descriptor["lifecycle"]["active_execution_count"] = json!(1);
+        }
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = listener.local_addr().unwrap().to_string();
+        listener.set_nonblocking(true).unwrap();
+        let peer = thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let mut methods = Vec::new();
+            while methods.len() < 3 {
+                let (mut stream, _) = match listener.accept() {
+                    Ok(socket) => socket,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        assert!(
+                            Instant::now() < deadline,
+                            "missing recovery request: {methods:?}"
+                        );
+                        thread::sleep(Duration::from_millis(5));
+                        continue;
+                    }
+                    Err(error) => panic!("recovery peer accept: {error}"),
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                stream
+                    .set_write_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut header = [0; 4];
+                stream.read_exact(&mut header).unwrap();
+                let length = u32::from_be_bytes(header) as usize;
+                assert!(length <= 4096);
+                let mut bytes = vec![0; length];
+                stream.read_exact(&mut bytes).unwrap();
+                let request: Value = serde_json::from_slice(&bytes).unwrap();
+                let method = request["method"].as_str().unwrap();
+                methods.push(method.to_owned());
+                let result = match method {
+                    "describe_agent" => descriptor.clone(),
+                    "fetch_durable_agent_execution" => {
+                        assert_eq!(request["params"]["expected_store_id"], "c".repeat(32));
+                        assert_eq!(request["params"]["execution_id"], "a".repeat(32));
+                        let mut result = report();
+                        result["store_id"] = json!("c".repeat(32));
+                        result
+                    }
+                    other => panic!("owner must not receive a new task: {other}"),
+                };
+                let bytes = serde_json::to_vec(&json!({
+                    "rpc_version":1, "id":request["id"], "ok":true, "result":result
+                }))
+                .unwrap();
+                stream
+                    .write_all(&(bytes.len() as u32).to_be_bytes())
+                    .unwrap();
+                stream.write_all(&bytes).unwrap();
+            }
+            methods
+        });
+        let gateway = gateway(vec![endpoint.clone()]);
+        let discovered = gateway.handle(&request("/api/direct-mesh/agents", json!({})));
+        assert_eq!(discovered.status, 200);
+        let rejected = gateway.handle(&request("/api/direct-mesh/solve", input()));
+        assert_eq!(rejected.status, 502);
+        let rejected: Value = serde_json::from_slice(&rejected.body).unwrap();
+        assert!(rejected["error"].as_str().unwrap().contains(if draining {
+            "lifecycle_not_accepting"
+        } else {
+            "execution_at_capacity"
+        }));
+        assert_eq!(rejected["automatic_replay_authorized"], false);
+        let response = gateway.handle(&request(
+            "/api/direct-mesh/tasks/inspect",
+            json!({
+                "execution_id":"a".repeat(32), "expected_store_id":"c".repeat(32)
+            }),
+        ));
+        let methods = peer.join().unwrap();
+        assert_eq!(
+            methods,
+            [
+                "describe_agent",
+                "describe_agent",
+                "fetch_durable_agent_execution"
+            ]
+        );
+        assert_eq!(response.status, 200);
+        let body: Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(body["endpoint"], endpoint);
+        assert_eq!(body["execution"]["status"], "outcome_unknown");
+        assert_eq!(body["execution"]["automatic_replay_authorized"], false);
+        assert!(gateway.results.lock().unwrap().is_empty());
+    }
 }
 
 #[test]
@@ -172,6 +314,29 @@ fn durable_reports_bind_identity_schema_and_terminal_evidence() {
     assert!(validate_durable_report(&completed, &id).is_err());
 }
 
+#[test]
+fn durable_gateway_rejects_blank_failure_evidence_without_retry() {
+    for field in ["code", "message"] {
+        for blank in ["", " ", "\t\r\n", "\u{2003}"] {
+            let mut failed = report();
+            failed["status"] = json!("failed");
+            failed["response"] = json!({"rpc_version":1, "id":"original", "ok":false,
+                "error":{"code":"solve_failed", "message":"solver failed"}});
+            failed["response"]["error"][field] = json!(blank);
+            let response = recovery_exchange(
+                "/api/direct-mesh/tasks/inspect",
+                "fetch_durable_agent_execution",
+                json!({"execution_id":"a".repeat(32)}),
+                failed,
+            );
+            assert_eq!(response.status, 502, "{field}: {blank:?}");
+            let body: Value = serde_json::from_slice(&response.body).unwrap();
+            assert_eq!(body["automatic_replay_authorized"], false);
+            assert_eq!(body["execution_id"], "a".repeat(32));
+        }
+    }
+}
+
 fn recovery_exchange(
     path: &str,
     method: &'static str,
@@ -292,5 +457,89 @@ fn durable_recovery_rejects_invalid_requests_and_unauthorized_peers_before_conne
         let mut req = request(path, json!({"limit":24}));
         req.headers.clear();
         assert_eq!(gateway.handle(&req).status, 401);
+    }
+}
+
+fn rejection_exchange(
+    path: &str,
+    change: impl FnOnce(&mut Value) + Send + 'static,
+) -> HttpResponse {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let endpoint = listener.local_addr().unwrap().to_string();
+    let peer = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
+        let mut header = [0; 4];
+        stream.read_exact(&mut header).unwrap();
+        let mut payload = vec![0; u32::from_be_bytes(header) as usize];
+        stream.read_exact(&mut payload).unwrap();
+        let request: Value = serde_json::from_slice(&payload).unwrap();
+        let mut response = json!({"rpc_version":1, "id":request["id"], "ok":true, "result":{
+            "schema_version":"kyuubiki.agent-durable-admission-rejection/v1",
+            "status":"not_admitted", "execution_id":"a".repeat(32), "method":"solve_bar_1d",
+            "request_id":request["id"], "process_instance_id":"producer", "request_digest":"b".repeat(64),
+            "reason":"execution_unavailable", "message":"agent_at_capacity", "execution_started":false,
+            "automatic_replay_authorized":false
+        }});
+        change(&mut response);
+        let payload = serde_json::to_vec(&response).unwrap();
+        stream
+            .write_all(&(payload.len() as u32).to_be_bytes())
+            .unwrap();
+        stream.write_all(&payload).unwrap();
+    });
+    let gateway = gateway(vec![endpoint]);
+    let response = gateway.handle(&request(path, input()));
+    peer.join().unwrap();
+    assert!(gateway.results.lock().unwrap().is_empty());
+    response
+}
+
+#[test]
+fn rejection_is_bound_to_the_live_submit_exchange_not_an_execution_lookup() {
+    let response = rejection_exchange("/api/direct-mesh/tasks", |_| {});
+    assert_eq!(response.status, 200);
+    let value: Value = serde_json::from_slice(&response.body).unwrap();
+    assert_eq!(value["execution"]["status"], "not_admitted");
+    assert_eq!(
+        rejection_exchange("/api/direct-mesh/tasks/inspect", |_| {}).status,
+        502
+    );
+}
+
+#[test]
+fn malformed_or_unbound_rejection_never_authorizes_caller_cleanup() {
+    for (field, value) in [
+        ("request_id", json!("foreign-request")),
+        ("execution_id", json!("b".repeat(32))),
+        ("method", json!("solve_beam_1d")),
+        ("schema_version", json!("unknown")),
+        ("execution_started", json!(true)),
+        ("automatic_replay_authorized", json!(true)),
+        ("request_digest", json!("bad")),
+        ("process_instance_id", json!("")),
+        ("reason", json!("corrupt_store")),
+        ("message", json!("")),
+        ("response", json!({"ok":true})),
+    ] {
+        let response = rejection_exchange("/api/direct-mesh/tasks", move |v| {
+            v["result"][field] = value
+        });
+        assert_eq!(response.status, 502, "{field}");
+        let body: Value = serde_json::from_slice(&response.body).unwrap();
+        assert_eq!(body["execution_id"], "a".repeat(32));
+        assert_eq!(body["automatic_replay_authorized"], false);
+    }
+    for (field, value) in [
+        ("id", json!("other")),
+        ("rpc_version", json!(2)),
+        ("error", json!({"code":"failed"})),
+    ] {
+        assert_eq!(
+            rejection_exchange("/api/direct-mesh/tasks", move |v| v[field] = value).status,
+            502
+        );
     }
 }

@@ -1,7 +1,14 @@
-use std::io::{Read, Write};
-use std::net::{TcpStream, ToSocketAddrs};
+use std::collections::VecDeque;
+#[cfg(test)]
+use std::io::Write;
+#[cfg(test)]
+use std::net::TcpStream;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+use kyuubiki_protocol::{
+    RpcProgress, RpcResponse, validate_rpc_progress_envelope, validate_rpc_response_envelope,
+};
 
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -9,7 +16,35 @@ use serde_json::{Value, json};
 const RPC_VERSION: u64 = 1;
 const RPC_TIMEOUT: Duration = Duration::from_secs(15);
 const MAX_FRAME_BYTES: usize = 64 * 1024 * 1024;
+const MAX_METADATA_BYTES: usize = 1024 * 1024;
+const MAX_DURABLE_BYTES: usize = 9 * 1024 * 1024;
 static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1);
+const MAX_PROGRESS_FRAMES: usize = 128;
+const MAX_PROGRESS_BYTES: usize = 1024 * 1024;
+
+#[path = "direct_mesh_selection.rs"]
+mod selection;
+#[path = "direct_mesh_transport.rs"]
+mod transport;
+
+pub(crate) fn selection_policy() -> Value {
+    selection::policy()
+}
+
+pub(crate) fn transport_policy() -> Value {
+    json!({"schema_version":"kyuubiki.direct-mesh-transport/v1",
+        "control_request_timeout_ms":RPC_TIMEOUT.as_millis(),
+        "solver_frame_timeout_ms":RPC_TIMEOUT.as_millis(), "solver_total_deadline":false,
+        "max_pending_dns_lookups":transport::MAX_RESOLVERS,
+        "max_resolved_addresses":transport::MAX_ADDRESSES,
+        "connect_attempt_timeout_ms":transport::CONNECT_TIMEOUT.as_millis(),
+        "dns_capacity_policy":"wait_within_request_deadline",
+        "max_metadata_frame_bytes":MAX_METADATA_BYTES, "max_durable_frame_bytes":MAX_DURABLE_BYTES,
+        "max_solver_frame_bytes":MAX_FRAME_BYTES,
+        "max_retained_progress_frames":MAX_PROGRESS_FRAMES, "max_retained_progress_bytes":MAX_PROGRESS_BYTES,
+        "progress_retention":"most_recent_bounded_window", "control_progress_allowed":false,
+        "automatic_retry":false})
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct DirectMeshEndpoint {
@@ -99,40 +134,46 @@ pub(crate) fn solve(
     endpoints: &[String],
     selection_mode: &str,
 ) -> Result<SolveResult, String> {
-    let mut agents = describe_agents(endpoints)
-        .into_iter()
-        .filter(|agent| agent.descriptor_error.is_none())
-        .collect::<Vec<_>>();
-    if selection_mode == "healthiest" {
-        agents.sort_by(|left, right| {
-            health_score(right)
-                .partial_cmp(&health_score(left))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+    if !matches!(selection_mode, "first_reachable" | "healthiest") {
+        return Err("invalid direct mesh selection mode; no task dispatched".into());
     }
-    let ordered = if agents.is_empty() {
-        endpoints.to_vec()
-    } else {
-        agents
-            .iter()
-            .map(|agent| format!("{}:{}", agent.host, agent.port))
-            .collect()
-    };
-    let mut last_error = None;
-    for endpoint in ordered {
-        match request(&endpoint, method, params.clone()) {
-            Ok((result, progress_frames)) => {
-                return Ok(SolveResult {
-                    endpoint,
-                    strategy: selection_mode.to_string(),
-                    result,
-                    progress_frames,
-                });
-            }
-            Err(error) => last_error = Some(error),
+    let mut agents = Vec::new();
+    let mut rejected = Vec::new();
+    for agent in describe_agents(endpoints) {
+        let eligibility = if agent.descriptor_error.is_some() {
+            Err("descriptor_unavailable")
+        } else {
+            agent
+                .descriptor
+                .as_ref()
+                .ok_or("descriptor_missing")
+                .and_then(|descriptor| selection::eligible_score(descriptor, method))
+        };
+        match eligibility {
+            Ok(score) => agents.push((agent, score)),
+            Err(reason) => rejected.push(format!("{}:{}={reason}", agent.host, agent.port)),
         }
     }
-    Err(last_error.unwrap_or_else(|| "no reachable direct mesh agents".to_string()))
+    if selection_mode == "healthiest" {
+        agents.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
+    }
+    let (selected, _) = agents.first().ok_or_else(|| {
+        format!(
+            "no eligible direct mesh agents; no task dispatched; {}",
+            rejected.join(", ")
+        )
+    })?;
+    let endpoint = format!("{}:{}", selected.host, selected.port);
+    // Selection is read-only. Once dispatch begins, a lost reply cannot authorize migration.
+    let (result, progress_frames) = request(&endpoint, method, params).map_err(|error| {
+        format!("direct mesh dispatch at {endpoint} failed: {error}; execution outcome may be unknown; automatic cross-agent replay disabled")
+    })?;
+    Ok(SolveResult {
+        endpoint,
+        strategy: selection_mode.to_string(),
+        result,
+        progress_frames,
+    })
 }
 
 fn describe_agent(endpoint: &str) -> AgentSummary {
@@ -180,12 +221,25 @@ pub(crate) fn request(
     method: &str,
     params: Value,
 ) -> Result<(Value, Vec<Value>), String> {
+    request_with_timeout(endpoint, method, params, RPC_TIMEOUT)
+}
+
+fn request_with_timeout(
+    endpoint: &str,
+    method: &str,
+    params: Value,
+    timeout: Duration,
+) -> Result<(Value, Vec<Value>), String> {
+    let deadline = Instant::now() + timeout;
     let parsed = parse_endpoint(endpoint)?;
-    let mut stream = connect(&parsed)?;
-    stream
-        .set_read_timeout(Some(RPC_TIMEOUT))
-        .and_then(|_| stream.set_write_timeout(Some(RPC_TIMEOUT)))
-        .map_err(|error| format!("failed to configure direct mesh socket: {error}"))?;
+    let solver = method.starts_with("solve_");
+    let max_reply = match method {
+        "describe_agent" | "list_durable_agent_executions" | "cancel_durable_agent_execution" => {
+            MAX_METADATA_BYTES
+        }
+        "submit_durable_agent_task" | "fetch_durable_agent_execution" => MAX_DURABLE_BYTES,
+        _ => MAX_FRAME_BYTES,
+    };
     let id = request_id();
     let payload = serde_json::to_vec(&json!({
         "rpc_version": RPC_VERSION,
@@ -197,75 +251,79 @@ pub(crate) fn request(
     if payload.len() > MAX_FRAME_BYTES {
         return Err("direct mesh request exceeds 64 MiB".to_string());
     }
-    stream
-        .write_all(&(payload.len() as u32).to_be_bytes())
-        .and_then(|_| stream.write_all(&payload))
+    let mut stream = transport::connect(&parsed.endpoint, deadline)?;
+    transport::write_before(&mut stream, &(payload.len() as u32).to_be_bytes(), deadline)
+        .and_then(|_| transport::write_before(&mut stream, &payload, deadline))
         .map_err(|error| format!("failed to write direct mesh request to {endpoint}: {error}"))?;
 
-    let mut progress = Vec::new();
+    let mut progress = VecDeque::<(Value, usize)>::new();
+    let mut progress_bytes = 0;
     loop {
-        let frame = read_frame(&mut stream, endpoint)?;
+        // Legacy solves may legitimately emit progress for longer than the control deadline.
+        // Only a complete frame renews that budget; partial bytes can never keep it alive.
+        let frame_deadline = if solver {
+            Instant::now() + timeout
+        } else {
+            deadline
+        };
+        let (frame, bytes) = transport::read_frame(&mut stream, frame_deadline, max_reply)?;
         if frame.get("id").and_then(Value::as_str) != Some(id.as_str()) {
             return Err(format!(
                 "direct mesh agent {endpoint} returned a mismatched request id"
             ));
         }
         if frame.get("event").is_some() {
-            progress.push(frame);
+            if !solver
+                || bytes > MAX_PROGRESS_BYTES
+                || ["ok", "result", "error"]
+                    .iter()
+                    .any(|key| frame.get(key).is_some())
+            {
+                return Err("unexpected or oversized direct mesh progress frame".into());
+            }
+            let event: RpcProgress = serde_json::from_value(frame).map_err(|e| e.to_string())?;
+            validate_rpc_progress_envelope(&event).map_err(|e| e.message)?;
+            let frame = serde_json::to_value(event).map_err(|e| e.to_string())?;
+            let bytes = serde_json::to_vec(&frame).map_err(|e| e.to_string())?.len();
+            if bytes > MAX_PROGRESS_BYTES {
+                return Err("normalized direct mesh progress exceeds limit".into());
+            }
+            while progress.len() >= MAX_PROGRESS_FRAMES
+                || progress_bytes + bytes > MAX_PROGRESS_BYTES
+            {
+                if let Some((_, size)) = progress.pop_front() {
+                    progress_bytes -= size;
+                }
+            }
+            progress_bytes += bytes;
+            progress.push_back((frame, bytes));
             continue;
         }
-        if frame.get("ok").and_then(Value::as_bool) == Some(true) {
+        let response: RpcResponse = serde_json::from_value(frame).map_err(|e| e.to_string())?;
+        validate_rpc_response_envelope(&response).map_err(|e| e.message)?;
+        if response.ok {
+            let result = response.result.ok_or("missing direct mesh result")?;
+            if crate::direct_mesh_admission::is_rejection(&result) {
+                crate::direct_mesh_admission::validate_rejection(&result, method, &params, &id)?;
+            }
+            transport::remaining(frame_deadline).map_err(|e| e.to_string())?;
             return Ok((
-                frame.get("result").cloned().unwrap_or(Value::Null),
-                progress,
+                result,
+                progress.into_iter().map(|(frame, _)| frame).collect(),
             ));
         }
-        let message = frame
-            .pointer("/error/message")
-            .and_then(Value::as_str)
-            .unwrap_or("direct mesh rpc failed");
-        return Err(message.to_string());
+        return Err(response.error.ok_or("missing direct mesh failure")?.message);
     }
 }
 
-fn read_frame(stream: &mut TcpStream, endpoint: &str) -> Result<Value, String> {
-    let mut header = [0_u8; 4];
-    stream
-        .read_exact(&mut header)
-        .map_err(|error| format!("failed to read direct mesh frame from {endpoint}: {error}"))?;
-    let length = u32::from_be_bytes(header) as usize;
-    if length == 0 || length > MAX_FRAME_BYTES {
-        return Err(format!(
-            "direct mesh agent {endpoint} returned an invalid frame length"
-        ));
-    }
-    let mut payload = vec![0_u8; length];
-    stream
-        .read_exact(&mut payload)
-        .map_err(|error| format!("failed to read direct mesh payload from {endpoint}: {error}"))?;
-    serde_json::from_slice(&payload)
-        .map_err(|error| format!("direct mesh agent {endpoint} returned invalid JSON: {error}"))
-}
-
-fn connect(endpoint: &DirectMeshEndpoint) -> Result<TcpStream, String> {
-    let addresses = endpoint
-        .endpoint
-        .to_socket_addrs()
-        .map_err(|error| format!("failed to resolve {}: {error}", endpoint.endpoint))?;
-    let mut last_error = None;
-    for address in addresses {
-        match TcpStream::connect_timeout(&address, RPC_TIMEOUT) {
-            Ok(stream) => return Ok(stream),
-            Err(error) => last_error = Some(error),
-        }
-    }
-    Err(format!(
-        "failed to connect to direct mesh agent {}: {}",
-        endpoint.endpoint,
-        last_error
-            .map(|error| error.to_string())
-            .unwrap_or_else(|| "no address".to_string())
-    ))
+#[cfg(test)]
+fn read_frame(stream: &mut TcpStream, _endpoint: &str) -> Result<Value, String> {
+    transport::read_frame(
+        stream,
+        Instant::now() + Duration::from_secs(2),
+        MAX_FRAME_BYTES,
+    )
+    .map(|(frame, _)| frame)
 }
 
 fn valid_host(host: &str) -> bool {
@@ -299,15 +357,6 @@ fn valid_hostname_label(label: &str) -> bool {
             .is_some_and(u8::is_ascii_alphanumeric)
 }
 
-fn health_score(agent: &AgentSummary) -> f64 {
-    agent
-        .descriptor
-        .as_ref()
-        .and_then(|value| value.pointer("/runtime/health_score"))
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0)
-}
-
 fn request_id() -> String {
     let epoch = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -316,6 +365,14 @@ fn request_id() -> String {
     let sequence = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed);
     format!("native-{epoch:x}-{sequence:x}")
 }
+
+#[cfg(test)]
+#[path = "direct_mesh_dispatch_tests.rs"]
+mod dispatch_tests;
+
+#[cfg(test)]
+#[path = "direct_mesh_transport_tests.rs"]
+mod transport_tests;
 
 #[cfg(test)]
 mod tests {

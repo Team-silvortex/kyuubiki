@@ -56,6 +56,10 @@ export function DurableDirectRecoveryPanel({ language, endpointsText, backendTar
       const current = captureWorkbenchApiAuthority("/api/direct-mesh/tasks/inspect");
       ownsAuthority = () => { try { return current(); } catch { return false; } };
       const payload: Record<string, unknown> = kind === "list" ? { endpoint, after } : kind === "pending" ? { endpoint } : { endpoint, executionId };
+      const storeId = kind === "cancel" ? selected?.store_id
+        : kind === "list" ? (after ? index?.store_id : undefined)
+        : handles.find(handle => handle.execution_id === executionId)?.store_id ?? index?.store_id;
+      if (storeId && kind !== "pending") payload.storeId = storeId;
       if (kind === "cancel") {
         if (selected?.status !== "running" || selected.execution_id !== executionId) throw new Error(copy.unchecked);
         payload.processInstanceId = selected.process_instance_id; payload.requestDigest = selected.request_digest;

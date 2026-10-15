@@ -10,6 +10,7 @@ mod audit_log;
 mod checkpoint_journal;
 mod direct_execution_journal;
 pub use direct_execution_journal::{DirectExecutionJournalRequest, direct_execution_journal};
+mod direct_mesh_admission;
 mod direct_mesh_gateway;
 mod direct_mesh_rpc;
 mod frontend_http;

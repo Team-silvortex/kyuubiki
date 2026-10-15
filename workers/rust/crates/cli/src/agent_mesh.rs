@@ -1,13 +1,12 @@
 use std::collections::HashMap;
-use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use kyuubiki_protocol::{
-    AgentDescriptor, ClusterPeerDescriptor, RPC_VERSION, RpcMethod, RpcRequest, RpcResponse,
-};
+use kyuubiki_protocol::{AgentDescriptor, ClusterPeerDescriptor};
+#[cfg(test)]
+use kyuubiki_protocol::{RpcRequest, RpcResponse};
 
 use crate::agent_control_link;
 use crate::agent_http::{
@@ -15,7 +14,23 @@ use crate::agent_http::{
 };
 use crate::agent_state::{registration_payload_for_session, runtime_descriptor};
 use crate::config::AgentConfig;
+#[cfg(test)]
 use crate::transport::{frame_error_message, read_frame, write_frame};
+
+#[path = "agent_peer_rpc.rs"]
+mod peer_rpc;
+#[cfg(test)]
+use peer_rpc::request_agent_descriptor;
+
+#[path = "agent_mesh_candidates.rs"]
+mod candidates;
+use candidates::CandidatePool;
+
+#[path = "agent_mesh_probe.rs"]
+mod probe;
+
+const MAX_PEERS: usize = 64;
+const PROBES_PER_ROUND: usize = 8;
 
 const MIN_REGISTER_INTERVAL_MS: u64 = 100;
 const MAX_REGISTER_INTERVAL_MS: u64 = 300_000;
@@ -162,58 +177,65 @@ fn normalized_registration_interval_ms(configured: u64) -> u64 {
 }
 
 impl PeerMeshHandle {
-    pub(crate) fn maybe_spawn(config: &AgentConfig) -> Option<Self> {
+    pub(crate) fn maybe_spawn(config: &AgentConfig) -> Result<Option<Self>, String> {
+        validate_mesh_config(config)?;
         if config.peers.is_empty() {
-            return None;
+            return Ok(None);
         }
 
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = Arc::clone(&running);
-        let seed_peers = normalize_peer_addresses(config.peers.clone());
+        let seed_peers = configured_peers(config);
         let self_addresses = self_addresses(config);
         let cluster_id = config.cluster_id.clone();
-        let sync_interval_ms = config.register_interval_ms.max(1_000);
+        let sync_interval_ms = config
+            .register_interval_ms
+            .clamp(1_000, MAX_REGISTER_INTERVAL_MS);
 
-        let join_handle = thread::spawn(move || {
-            let mut known_peers = seed_peers;
-            let mut peer_failures: HashMap<String, u32> = HashMap::new();
-            let mut peer_last_seen: HashMap<String, u64> = HashMap::new();
+        let join_handle = thread::Builder::new()
+            .name("agent-peer-mesh".into())
+            .spawn(move || {
+                let mut candidates = CandidatePool::new(seed_peers, self_addresses);
 
-            while running_clone.load(Ordering::SeqCst) {
-                let mut discovered = known_peers.clone();
-
-                for peer in known_peers.clone() {
-                    if let Ok(descriptor) = request_agent_descriptor(&peer) {
-                        discovered.extend(
-                            descriptor
-                                .runtime
-                                .peers
-                                .into_iter()
-                                .map(|peer| peer.address),
+                while running_clone.load(Ordering::SeqCst) {
+                    let round = candidates.next_round();
+                    probe::probe_round(round, &running_clone, |peer, result| {
+                        if let Ok(descriptor) = result
+                            && compatible_peer(&descriptor, cluster_id.as_deref())
+                        {
+                            candidates.record_success(
+                                &peer,
+                                descriptor.runtime.peers,
+                                Instant::now(),
+                                unix_now_s(),
+                            );
+                        } else {
+                            candidates.record_failure(&peer);
+                        }
+                        update_runtime_mesh(
+                            cluster_id.clone(),
+                            candidates.finish_round(Instant::now()),
                         );
-                        peer_failures.insert(peer.clone(), 0);
-                        peer_last_seen.insert(peer, unix_now_s());
-                    } else {
-                        let failure_count = peer_failures.entry(peer).or_insert(0);
-                        *failure_count += 1;
+                    });
+
+                    if running_clone.load(Ordering::SeqCst) {
+                        update_runtime_mesh(
+                            cluster_id.clone(),
+                            candidates.finish_round(Instant::now()),
+                        );
+                    }
+
+                    if !sleep_while_running(&running_clone, sync_interval_ms) {
+                        break;
                     }
                 }
+            })
+            .map_err(|error| format!("failed to spawn peer mesh: {error}"))?;
 
-                known_peers =
-                    filter_self_peers(normalize_peer_addresses(discovered), &self_addresses);
-                update_runtime_mesh(
-                    cluster_id.clone(),
-                    build_peer_descriptors(&known_peers, &peer_failures, &peer_last_seen),
-                );
-
-                thread::sleep(Duration::from_millis(sync_interval_ms));
-            }
-        });
-
-        Some(Self {
+        Ok(Some(Self {
             running,
             join_handle: Some(join_handle),
-        })
+        }))
     }
 
     pub(crate) fn stop(mut self) {
@@ -225,23 +247,99 @@ impl PeerMeshHandle {
     }
 }
 
+pub(crate) fn validate_mesh_config(config: &AgentConfig) -> Result<(), String> {
+    if config.peers.is_empty() {
+        return Ok(());
+    }
+    if config.orchestrator_url.is_some() {
+        return Err("peer mesh and Orchestra binding are mutually exclusive".into());
+    }
+    if config.peers.len() > MAX_PEERS {
+        return Err("peer mesh supports at most 64 configured peers".into());
+    }
+    if config.cluster_id.as_ref().is_some_and(|id| {
+        id.trim().is_empty() || id.len() > 256 || id.chars().any(char::is_control)
+    }) {
+        return Err(
+            "mesh cluster identity must be nonblank, control-free and at most 256 bytes".into(),
+        );
+    }
+    for peer in &config.peers {
+        peer_rpc::normalize_endpoint(peer)?;
+    }
+    Ok(())
+}
+
+pub(crate) fn configured_peers(config: &AgentConfig) -> Vec<String> {
+    filter_self_peers(
+        normalize_peer_addresses(config.peers.clone()),
+        &self_addresses(config),
+    )
+}
+
+fn compatible_peer(descriptor: &AgentDescriptor, cluster_id: Option<&str>) -> bool {
+    descriptor.runtime.cluster_id.as_deref() == cluster_id
+        && descriptor.runtime.runtime_mode == "peer_mesh"
+        && descriptor.authority.control_mode == "offline_mesh"
+        && descriptor.authority.authority_mode == "offline_mesh"
+        && descriptor.authority.orchestrator_id.is_none()
+        && descriptor.authority.orchestrator_session_id.is_none()
+        && !descriptor.authority.accepts_multi_orchestrator_binding
+        && descriptor.runtime.peers.len() <= MAX_PEERS
+}
+
+pub(crate) fn peer_mesh_policy() -> serde_json::Value {
+    serde_json::json!({"schema_version":"kyuubiki.agent-peer-discovery/v1",
+        "max_known_peers":MAX_PEERS, "probes_per_round":PROBES_PER_ROUND,
+        "max_concurrent_probes":probe::MAX_CONCURRENT_PROBES,
+        "state_publication":"after_each_probe_completion",
+        "probe_worker_failure":"remaining_worker_or_bounded_serial_fallback",
+        "shutdown_probes":"stop_queue_and_join_in_flight",
+        "overlapping_probe_rounds":false,
+        "probe_order":"retained_fifo_new_candidates_at_tail",
+        "max_probe_rounds_for_retained_peer":MAX_PEERS.div_ceil(PROBES_PER_ROUND),
+        "probe_round_bound_scope":"complete_running_rounds_not_wall_time",
+        "configured_seed_retention":"until_reconfiguration",
+        "learned_peer_failure_threshold":candidates::FAILURE_THRESHOLD,
+        "learned_peer_cooldown_ms":candidates::COOLDOWN_MS,
+        "max_retired_peer_cooldowns":candidates::MAX_RETIRED,
+        "retirement_when_cooldown_full":"retain_failed_candidate",
+        "candidate_retirement_scope":"discovery_only",
+        "cooldown_clock":"process_monotonic",
+        "request_timeout_ms":peer_rpc::REQUEST_TIMEOUT_MS, "max_frame_bytes":peer_rpc::MAX_FRAME_BYTES,
+        "max_pending_dns_lookups":peer_rpc::MAX_RESOLVERS, "cluster_match":"exact_including_unset",
+        "authority":"offline_mesh_only", "trusted_network_required":true,
+        "cluster_id_is_authentication":false, "hint_is_execution_authorization":false,
+        "task_replication":false, "automatic_cross_peer_replay":false,
+        "cluster_size":"self_plus_known_candidates_not_live_quorum",
+        "health_score_scope":"retained_candidates_not_task_recovery",
+        "topology_persistence":"process_local_rebuilt_from_configured_seeds"})
+}
+
 fn self_addresses(config: &AgentConfig) -> Vec<String> {
     let advertise_host = config
         .advertise_host
         .clone()
         .unwrap_or_else(|| config.host.clone());
 
-    normalize_peer_addresses(vec![
-        format!("{}:{}", config.host, config.port),
-        format!("{}:{}", advertise_host, config.port),
-    ])
+    let endpoint = |host: &str| match host.parse::<std::net::IpAddr>() {
+        Ok(ip) => std::net::SocketAddr::new(ip, config.port).to_string(),
+        Err(_) => format!("{host}:{}", config.port),
+    };
+    let mut addresses = vec![endpoint(&config.host), endpoint(&advertise_host)];
+    if config.host == "0.0.0.0" || config.host == "::" {
+        addresses.extend([
+            format!("127.0.0.1:{}", config.port),
+            format!("[::1]:{}", config.port),
+        ]);
+    }
+    normalize_peer_addresses(addresses)
 }
 
 pub(crate) fn normalize_peer_addresses(peers: Vec<String>) -> Vec<String> {
     let mut normalized = peers
         .into_iter()
-        .map(|peer| peer.trim().to_string())
-        .filter(|peer| !peer.is_empty())
+        .filter_map(|peer| peer_rpc::normalize_endpoint(&peer).ok())
         .collect::<Vec<_>>();
     normalized.sort();
     normalized.dedup();
@@ -288,13 +386,10 @@ pub(crate) fn build_peer_descriptors(
 }
 
 fn update_runtime_mesh(cluster_id: Option<String>, peers: Vec<ClusterPeerDescriptor>) {
-    if let Ok(mut current) = runtime_descriptor().lock() {
-        current.runtime.cluster_id = cluster_id;
-        current.runtime.runtime_mode = if peers.is_empty() {
-            "standalone".to_string()
-        } else {
-            "peer_mesh".to_string()
-        };
+    if let Ok(mut current) = runtime_descriptor().lock()
+        && current.runtime.runtime_mode == "peer_mesh"
+        && current.runtime.cluster_id == cluster_id
+    {
         current.runtime.headless = true;
         current.runtime.cluster_size = 1 + peers.len();
         current.runtime.health_score = compute_cluster_health_score(&peers);
@@ -324,51 +419,15 @@ fn unix_now_s() -> u64 {
         .unwrap_or(0)
 }
 
-fn request_agent_descriptor(address: &str) -> Result<AgentDescriptor, String> {
-    let mut stream = TcpStream::connect(address)
-        .map_err(|error| format!("failed to connect to peer {address}: {error}"))?;
-    let _ = stream.set_read_timeout(Some(Duration::from_millis(1_500)));
-    let _ = stream.set_write_timeout(Some(Duration::from_millis(1_500)));
-
-    let request = RpcRequest {
-        rpc_version: RPC_VERSION,
-        id: "peer-describe".to_string(),
-        method: RpcMethod::DescribeAgent,
-        params: serde_json::json!({}),
-    };
-
-    let payload = serde_json::to_vec(&request)
-        .map_err(|error| format!("failed to encode peer describe request: {error}"))?;
-    write_frame(&mut stream, &payload)
-        .map_err(|error| format!("failed to write peer request frame: {error}"))?;
-
-    let response_payload = read_frame(&mut stream).map_err(|error| {
-        format!(
-            "failed to read peer response: {}",
-            frame_error_message(error)
-        )
-    })?;
-
-    let response: RpcResponse = serde_json::from_slice(&response_payload)
-        .map_err(|error| format!("failed to decode peer response: {error}"))?;
-
-    if !response.ok {
-        let error = response
-            .error
-            .map(|error| format!("{}: {}", error.code, error.message))
-            .unwrap_or_else(|| "unknown peer error".to_string());
-        return Err(format!("peer describe failed: {error}"));
-    }
-
-    serde_json::from_value(response.result.unwrap_or_default())
-        .map_err(|error| format!("failed to decode peer descriptor: {error}"))
-}
+#[cfg(test)]
+#[path = "tests/agent_mesh_reliability.rs"]
+mod reliability_tests;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::{ErrorKind, Read, Write};
-    use std::net::TcpListener;
+    use std::net::{TcpListener, TcpStream};
     use std::sync::Mutex;
     use std::time::Instant;
 

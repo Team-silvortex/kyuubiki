@@ -390,15 +390,15 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
   },
   {
     id: "directExecution/inspect", category: "job", risk: "normal",
-    summary: { en: "Inspect a durable execution receipt without replacing the current model or result.",
-      zh: "检查直连执行回执，不覆盖当前模型或结果；未知状态不授权重算。" },
-    payloadExample: { endpoint: "127.0.0.1:5001", executionId: "a".repeat(32) },
+    summary: { en: "Inspect a receipt using its saved owner or the original index storeId; never adopt a replacement Agent.",
+      zh: "按保存的账本身份或原始索引的 storeId 查询回执，不自动接管替换节点、不重算。" },
+    payloadExample: { endpoint: "127.0.0.1:5001", executionId: "a".repeat(32), storeId: "c".repeat(32) },
   },
   {
     id: "directExecution/cancel", category: "job", risk: "sensitive", requiresConfirmation: true,
     summary: { en: "Request cancellation of the inspected async owner; inspect again for a terminal receipt.",
       zh: "仅向已核对的异步执行实例请求取消；须再次查询才能确认最终状态。" },
-    payloadExample: { endpoint: "127.0.0.1:5001", executionId: "a".repeat(32), processInstanceId: "from-inspection", requestDigest: "b".repeat(64) },
+    payloadExample: { endpoint: "127.0.0.1:5001", executionId: "a".repeat(32), storeId: "c".repeat(32), processInstanceId: "from-inspection", requestDigest: "b".repeat(64) },
   },
   {
     id: "macro/run",

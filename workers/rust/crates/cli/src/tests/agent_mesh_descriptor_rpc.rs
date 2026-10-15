@@ -264,7 +264,7 @@ fn builds_peer_mesh_runtime_descriptor() {
     assert_eq!(descriptor.runtime.cluster_id.as_deref(), Some("lan-a"));
     assert!(descriptor.runtime.headless);
     assert_eq!(descriptor.runtime.cluster_size, 3);
-    assert_eq!(descriptor.runtime.health_score, 100);
+    assert_eq!(descriptor.runtime.health_score, 0);
     assert_eq!(descriptor.runtime.peers.len(), 2);
     assert_eq!(descriptor.runtime.peers[0].status, "seed");
     assert_eq!(descriptor.authority.control_mode, "offline_mesh");

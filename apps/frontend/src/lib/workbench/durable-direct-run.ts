@@ -16,7 +16,8 @@ export function directExecutionGatewayIdentity() {
 }
 function handleFor(intent: DirectExecutionIntent): DurableDirectRecoveryHandle {
   return { schema_version: "kyuubiki.direct-execution-handle/v1", execution_id: intent.execution_id,
-    endpoint: intent.endpoint, gateway_id: intent.scope, study_kind: intent.study_kind as DirectMeshStudyKind };
+    endpoint: intent.endpoint, gateway_id: intent.scope, study_kind: intent.study_kind as DirectMeshStudyKind,
+    ...(intent.store_id === undefined ? {} : { store_id: intent.store_id }) };
 }
 export function createDurableDirectRunService({ client = defaultRuntimeApiClient, journal = workbenchDirectExecutionJournal,
   gatewayIdentity = directExecutionGatewayIdentity, captureAuthority = captureWorkbenchApiAuthority,
@@ -33,6 +34,7 @@ export function createDurableDirectRunService({ client = defaultRuntimeApiClient
   }
   async function inspect<TResult>(handle: DurableDirectRecoveryHandle): Promise<DurableDirectEnvelope<TResult>> {
     const pinned = { ...handle }, ctx = await context();
+    if (!pinned.store_id) throw new Error("direct:owner_fence_required: legacy handle has no pinned Agent store; keep the reservation for explicit recovery.");
     if (pinned.gateway_id !== ctx.scope) throw new Error("Restore the original gateway before inspecting this execution.");
     const recovery = createDurableDirectRecovery({ client, gatewayId: () => ctx.scope, saveHandle: async () => { throw new Error("Read only"); } });
     const envelope = await recovery.inspect<TResult>(pinned);
@@ -48,21 +50,28 @@ export function createDurableDirectRunService({ client = defaultRuntimeApiClient
       const discovery = await client.fetchDirectMeshAgents([endpoint]);
       ctx.check();
       const agents = discovery.agents as unknown as Array<{ host?: string; port?: number; descriptor?: { durable_execution?: {
-        schema_version?: string; enabled?: boolean; admission_blocked_after_write_failure?: boolean;
+        schema_version?: string; enabled?: boolean; admission_blocked_after_write_failure?: boolean; store_id?: string;
       } } }>;
       const agent = agents?.length === 1 ? agents[0] : undefined, policy = agent?.descriptor?.durable_execution;
       if (!agent || `${agent.host}:${agent.port}` !== endpoint || policy?.schema_version !== "kyuubiki.agent-durable-execution/v1"
         || policy.enabled !== true || policy.admission_blocked_after_write_failure === true) {
         throw new Error("direct:durable_agent_required: enable the Agent execution store before running. No task was submitted.");
       }
+      if (typeof policy.store_id !== "string" || !/^[0-9a-f]{32}$/u.test(policy.store_id)) {
+        throw new Error("direct:owner_fence_required: update the Agent to expose a persistent store identity. No task was submitted.");
+      }
+      let ownedIntent: DirectExecutionIntent | undefined;
       const recovery = createDurableDirectRecovery({ client, gatewayId: () => { ctx.check(); return ctx.scope; }, newId,
         saveHandle: async handle => {
           const reserved = await journal.reserve({ scope: ctx.scope, endpoint: handle.endpoint, study_kind: handle.study_kind,
-            execution_id: handle.execution_id, created_at: Date.now() });
-          ctx.check();
+            execution_id: handle.execution_id, created_at: Date.now(), store_id: handle.store_id });
           if (!reserved.is_new) throw new Error(`direct:recovery_required: ${reserved.intent.execution_id} at ${endpoint}. Inspect the original execution before starting another run.`);
+          ownedIntent = reserved.intent;
+        }, releaseUnsubmittedHandle: async handle => {
+          if (!ownedIntent || ownedIntent.execution_id !== handle.execution_id) throw new Error("direct:journal_identity_mismatch");
+          await journal.remove(ownedIntent);
         } });
-      return recovery.submit<TResult>(studyKind, snapshot, endpoint);
+      return recovery.submit<TResult>(studyKind, snapshot, endpoint, policy.store_id);
     },
     inspect,
     async pending() {
@@ -72,12 +81,13 @@ export function createDurableDirectRunService({ client = defaultRuntimeApiClient
     },
     async acknowledge(handle: DurableDirectRecoveryHandle, receipt: DurableDirectEnvelope) {
       const pinned = { ...handle }, ctx = await context();
+      if (!pinned.store_id) throw new Error("direct:owner_fence_required: cannot acknowledge an unfenced legacy execution.");
       if (pinned.gateway_id !== ctx.scope) throw new Error("direct:authority_changed");
       const { execution } = validateDurableDirectEnvelope(receipt, pinned);
       if (!["completed", "failed"].includes(execution.status) || execution.status === "not_found"
         || execution.method !== directMeshMethodForStudyKind(pinned.study_kind)) throw new Error("direct:terminal_receipt_required");
       const entries = await journal.list(); ctx.check();
-      const intent = entries.find(e => e.scope === ctx.scope && e.execution_id === pinned.execution_id && e.endpoint === pinned.endpoint && e.study_kind === pinned.study_kind);
+      const intent = entries.find(e => e.scope === ctx.scope && e.execution_id === pinned.execution_id && e.endpoint === pinned.endpoint && e.study_kind === pinned.study_kind && e.store_id === pinned.store_id);
       if (intent) await journal.remove(intent);
       ctx.check();
     },
@@ -86,6 +96,7 @@ export function createDurableDirectRunService({ client = defaultRuntimeApiClient
       const { execution } = await inspect(pinned); ctx.check();
       if (execution.status !== "running") throw new Error(`direct:not_running: ${execution.status}. Inspect the original execution.`);
       const value = await client.cancelDurableDirectExecution({ endpoint: pinned.endpoint, execution_id: pinned.execution_id,
+        store_id: pinned.store_id,
         request_digest: execution.request_digest, process_instance_id: execution.process_instance_id });
       ctx.check();
       return value.recovery;

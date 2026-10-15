@@ -55,8 +55,8 @@ pub use benchmark_surface::{
 };
 pub use durable_agent_execution::{
     DURABLE_AGENT_CANCELLATION_SCHEMA, DURABLE_AGENT_EXECUTION_SCHEMA, DURABLE_AGENT_INDEX_SCHEMA,
-    DurableAgentExecutionCancel, DurableAgentExecutionList, DurableAgentExecutionQuery,
-    DurableAgentTask, validate_durable_execution_id,
+    DURABLE_AGENT_REJECTION_SCHEMA, DurableAgentExecutionCancel, DurableAgentExecutionList,
+    DurableAgentExecutionQuery, DurableAgentTask, validate_durable_execution_id,
 };
 pub use job::{
     JOB_ID_MAX_BYTES, Job, JobStatus, PROGRESS_MESSAGE_MAX_BYTES, ProgressEvent,

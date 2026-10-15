@@ -289,6 +289,18 @@
             cache or the legacy direct-GUI result cache. Unix process-kill tests are
             not physical-power-loss or Windows directory-durability qualification.
             See <a href="./book-ch04-runtime-modes.html#standalone-durable-execution">the direct execution contract</a>.</li>
+          <li><strong>Persistent direct execution ownership:</strong> the existing
+            <code>owner.lock</code> contains one fixed-size, non-secret random identity
+            and checksum, synced before publication. It is preserved across restart,
+            not rotated with each process. Empty legacy locks initialize once; nonempty
+            corrupt/truncated identities fail startup without rewriting them. Deleting
+            or emptying the identity does not recover old ownership: new guarded callers
+            will reject the replacement identity. Copies of the entire ledger share
+            an identity and must not be used as independent nodes. Workbench records
+            only this extra <code>store_id</code> in its existing bounded pending journal,
+            with no input copies or backup generation. Old unfenced entries stay pending
+            and are not automatically adopted. Explicit development reset must retire
+            old callers; these identifiers are not credentials or an anti-tamper system.</li>
           <li><strong>Native workflow result handoff:</strong> completed built-in native
             diagnostic/scoring receipts commit privately before downstream publication,
             through the existing fenced job/result transaction. Per parent: at most 32
@@ -750,14 +762,64 @@
           tested page reloads but is not a guarantee against browser/user eviction. Desktop
           never downgrades to that storage. Gateway addresses are hashed for scoping; live
           request authorization remains in memory and is checked across asynchronous work.</p>
-        <p>A matching completed/failed receipt can retire its exact caller identity. Unknown
-          or missing Agent receipts cannot. Recovery inspection never overwrites the active
+        <p>A matching completed/failed receipt can retire its exact caller identity. A validated
+          live <code>not_admitted</code> decision also releases the newly reserved identity,
+          as does a locally confirmed pre-dispatch connection change. These do not delete
+          Agent history or trigger a retry. Unknown or missing Agent receipts cannot authorize
+          cleanup. Busy/draining rejection now uses the existing identity plus terminal
+          failed receipt files, with <code>durable_admission_rejected</code> and
+          <code>execution_started: false</code>. Confirmed owner/worker startup failures
+          before dispatch use the same files with <code>durable_execution_start_failed</code>;
+          the reserved slot is retained through the receipt commit attempt. These count toward the same 1,024-entry
+          and 128-MiB limits, retain no input copies, and survive tested process termination.
+          Lost replies or failed local removal can be reconciled by inspecting that exact
+          retained failure. A partial commit remains unknown. Ledger-capacity rejection is
+          still transient. Caught asynchronous worker panics retain a bounded failed receipt
+          with <code>durable_execution_panicked</code>, never a partial result or raw panic
+          payload. That receipt does not attest rollback of external effects, and it is
+          unavailable if the commit fails or the process terminates first. A lost capacity
+          reply or local reservation acknowledgement remains pending. There is no separate
+          rejection database or backup generation.
+          Recovery inspection never overwrites the active
           model/result. The Agent ledger is separate, bounded and immutable; stop the Agent
           and retire callers before deleting disposable development ledgers. Default managed
           Agent stores live at <code>&lt;runtime-state&gt;/agent-executions/agent-&lt;port&gt;</code>;
           the configurable parent is <code>KYUUBIKI_AGENT_EXECUTION_STORE_ROOT</code>.
           Do not treat either journal as routine cache. See the
           <a href="./book-ch04-runtime-modes.html#standalone-durable-execution">runtime recovery contract</a>.</p>
+        <p>Durable TaskIR execution reserves a process-local result-cache entry but publishes
+          its response only after the authoritative receipt commits, in both sync and async
+          modes. It serializes that committed response under the existing cache byte limit;
+          no second disk store or model snapshot is added. Commit failure or an abandoned
+          owner clears only its matching pending reservation to
+          <code>result_not_retained</code>. Cleanup cannot overwrite a newer generation,
+          ambiguous identity or terminal entry, nor resurrect an expired/evicted entry.
+          Restart discards the cache; duplicate durable submissions read the ledger without
+          rebuilding it. The cache is an optional recovery aid, not a replacement for the ledger.</p>
+        <p>Synchronous durable execution keeps a live execution owner through its receipt
+          commit and transport response. A failed commit cannot increase the successful
+          execution count merely because the error reply was delivered. The live watchdog
+          records <code>durable_receipt_commit_failed</code>, or preserves an earlier
+          terminal cause for that generation. Unwinding without commit records
+          <code>durable_execution_aborted</code> locally. Neither diagnostic replaces a
+          missing durable receipt: after restart the admitted execution is still unknown.
+          This adds no disk files, backup copies or replay permission.</p>
+        <p>A response that violates the RPC response contract, exceeds the durable receipt
+          size limit or fails serialization or restart-decoding checks is rejected before its receipt is written. It is replaced
+          by a small, normally checksummed failed receipt with
+          <code>durable_response_unrecordable</code>. The original response is discarded,
+          not truncated, split into hidden files or copied into a backup. The record counts
+          against the same entry/byte limits. After it commits, later independent tasks may
+          run in the same process. If that commit also fails, the ordinary unknown-outcome
+          and admission-blocking protections still apply. Oversized data is never published
+          as a valid partial result; this policy does not add large-result artifact support.</p>
+        <p>An existing checksummed receipt must also pass response-contract validation on
+          read. Unsupported RPC versions, contradictory success/error states, null top-level
+          successful results and blank failure evidence do not establish a valid terminal
+          outcome. These records are not silently rewritten, deleted or migrated into
+          failure receipts. Inspection fails and caller recovery metadata remains pending;
+          the admission index and independent healthy tasks remain available. This adds no
+          quarantine copies, backups, automatic cleanup or replay permission.</p>
       </section>
 
       <section class="docs-card docs-section" id="project-migration">

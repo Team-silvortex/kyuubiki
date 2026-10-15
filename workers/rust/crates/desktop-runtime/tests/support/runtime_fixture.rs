@@ -30,7 +30,9 @@ impl RuntimeFixture {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let base = std::env::temp_dir().join(format!(
+        // macOS exposes its temp directory through /var -> /private/var. Use the real
+        // parent so managed-ledger tests retain the production no-symlink boundary.
+        let base = std::env::temp_dir().canonicalize().unwrap().join(format!(
             "kyuubiki-lifecycle-{}-{stamp}-{sequence}",
             std::process::id()
         ));

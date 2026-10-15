@@ -1,4 +1,6 @@
-use std::io::{Read, Write};
+#[cfg(test)]
+use std::io::Read;
+use std::io::Write;
 use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -28,26 +30,14 @@ pub(crate) struct HeartbeatHandle {
     join_handle: Option<thread::JoinHandle<()>>,
 }
 
+#[cfg(test)]
 pub(crate) fn read_frame(stream: &mut TcpStream) -> Result<Vec<u8>, FrameReadError> {
-    let mut header = [0_u8; 4];
-
-    match stream.read_exact(&mut header) {
-        Ok(()) => {}
-        Err(error) if error.kind() == std::io::ErrorKind::UnexpectedEof => {
-            return Err(FrameReadError::ConnectionClosed);
-        }
-        Err(error) => return Err(FrameReadError::Io(error)),
-    }
-
-    let frame_length = u32::from_be_bytes(header) as usize;
-    let mut payload = vec![0_u8; frame_length];
-    stream
-        .read_exact(&mut payload)
-        .map_err(FrameReadError::Io)?;
-
-    Ok(payload)
+    crate::agent_ingress::current()
+        .read_frame(stream)
+        .map(|frame| frame.payload)
 }
 
+#[cfg(test)]
 pub(crate) fn write_frame(stream: &mut TcpStream, payload: &[u8]) -> std::io::Result<()> {
     let frame_length = u32::try_from(payload.len()).map_err(|_| {
         std::io::Error::new(
@@ -60,6 +50,7 @@ pub(crate) fn write_frame(stream: &mut TcpStream, payload: &[u8]) -> std::io::Re
     stream.write_all(payload)
 }
 
+#[cfg(test)]
 pub(crate) fn frame_error_message(error: FrameReadError) -> String {
     match error {
         FrameReadError::ConnectionClosed => "connection closed".to_string(),

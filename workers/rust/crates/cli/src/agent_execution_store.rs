@@ -5,10 +5,13 @@ use std::path::{Path, PathBuf};
 use fs2::FileExt;
 use kyuubiki_protocol::{
     DURABLE_AGENT_EXECUTION_SCHEMA, DurableAgentTask, RpcResponse, validate_durable_execution_id,
+    validate_rpc_response_envelope,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+#[path = "agent_execution_store_identity.rs"]
+mod identity;
 #[path = "agent_execution_store_io.rs"]
 mod io;
 
@@ -36,13 +39,50 @@ struct Receipt {
     response: RpcResponse,
 }
 
+impl Receipt {
+    fn prepare(&self) -> Result<io::PreparedRecord, &'static str> {
+        validate_response(&self.response).map_err(|_| "invalid_response")?;
+        io::prepare(self, MAX_RECEIPT_BYTES).map_err(|error| error.reason())
+    }
+}
+
+fn validate_response(response: &RpcResponse) -> Result<(), String> {
+    validate_rpc_response_envelope(response)
+        .map_err(|error| format!("invalid durable response: {}", error.message))?;
+    // JSON null decodes to None for Option<Value>; it cannot be a durable solver result.
+    if response.ok && response.result.as_ref().is_some_and(Value::is_null) {
+        return Err(
+            "invalid durable response: successful execution requires a non-null result".into(),
+        );
+    }
+    Ok(())
+}
+
 pub(crate) enum Admission {
     New(Record),
     Existing(Value),
 }
 
+pub(crate) enum AdmissionFailure {
+    Rejected(Value),
+    Uncertain(String),
+}
+
+impl From<String> for AdmissionFailure {
+    fn from(message: String) -> Self {
+        Self::Uncertain(message)
+    }
+}
+
+impl From<&str> for AdmissionFailure {
+    fn from(message: &str) -> Self {
+        Self::Uncertain(message.into())
+    }
+}
+
 pub(crate) struct Store {
     root: PathBuf,
+    store_id: String,
     _lock: File,
     active: HashSet<String>,
     bytes: u64,
@@ -55,14 +95,16 @@ impl Store {
     pub fn open(root: &Path) -> Result<Self, String> {
         io::prepare_root(root)?;
         let lock_path = root.join("owner.lock");
-        let lock = match io::open_private(&lock_path, true) {
+        let mut lock = match io::open_private(&lock_path, true) {
             Ok(file) => file,
             Err(_) => io::open_private(&lock_path, false)?,
         };
         lock.try_lock_exclusive()
             .map_err(|e| format!("execution store is already owned: {e}"))?;
+        let store_id = identity::load_or_create(&mut lock, root)?;
         let mut store = Self {
             root: root.to_path_buf(),
+            store_id,
             _lock: lock,
             active: HashSet::new(),
             bytes: 0,
@@ -130,6 +172,13 @@ impl Store {
     ) -> Result<Admission, String> {
         self.admit_with(task, process, request_id, || Ok(()))
             .map(|(admission, _)| admission)
+            .map_err(|error| match error {
+                AdmissionFailure::Rejected(report) => report["message"]
+                    .as_str()
+                    .unwrap_or("admission rejected")
+                    .into(),
+                AdmissionFailure::Uncertain(message) => message,
+            })
     }
 
     pub fn admit_with<T>(
@@ -138,27 +187,25 @@ impl Store {
         process: &str,
         request_id: &str,
         reserve: impl FnOnce() -> Result<T, String>,
-    ) -> Result<(Admission, Option<T>), String> {
+    ) -> Result<(Admission, Option<T>), AdmissionFailure> {
         let digest = task.request_digest()?;
+        self.check_owner(task.expected_store_id.as_deref())?;
         if let Some(record) = self.record(&task.execution_id)? {
             if record.request_digest != digest {
                 return Err("execution_id is already bound to different inputs or method".into());
             }
             return self
                 .lookup_record(&record)
-                .map(|report| (Admission::Existing(report), None));
+                .map(|report| (Admission::Existing(report), None))
+                .map_err(Into::into);
         }
-        if fs::symlink_metadata(self.root.join(format!("{}.receipt", task.execution_id))).is_ok() {
-            return Err("orphan receipt blocks reuse of execution_id".into());
+        match fs::symlink_metadata(self.root.join(format!("{}.receipt", task.execution_id))) {
+            Ok(_) => return Err("orphan receipt blocks reuse of execution_id".into()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.to_string().into()),
         }
-        let reserved_bytes = (self.active.len() as u64 + 1) * (MAX_RECEIPT_BYTES as u64 + 65);
-        if self.write_failed
-            || self.entries >= MAX_ENTRIES
-            || self.bytes + reserved_bytes + MAX_RECORD_BYTES as u64 + 65 > MAX_TOTAL_BYTES
-        {
-            return Err(
-                "execution store admission blocked by capacity or a previous write failure".into(),
-            );
+        if self.write_failed {
+            return Err("execution store admission blocked by a previous write failure".into());
         }
         let record = Record {
             schema_version: DURABLE_AGENT_EXECUTION_SCHEMA.into(),
@@ -172,12 +219,58 @@ impl Store {
                 .ok_or("invalid method")?
                 .into(),
         };
+        let rejected = |reason: &str, message: String| {
+            let mut report =
+                serde_json::to_value(&record).expect("serializable admission identity");
+            report["schema_version"] = json!(kyuubiki_protocol::DURABLE_AGENT_REJECTION_SCHEMA);
+            report["status"] = json!("not_admitted");
+            report["reason"] = json!(reason);
+            report["message"] = json!(message);
+            report["execution_started"] = json!(false);
+            report["automatic_replay_authorized"] = json!(false);
+            report["store_id"] = json!(self.store_id);
+            AdmissionFailure::Rejected(report)
+        };
+        let reserved_bytes = (self.active.len() as u64 + 1) * (MAX_RECEIPT_BYTES as u64 + 65);
+        if self.entries >= MAX_ENTRIES
+            || self.bytes + reserved_bytes + MAX_RECORD_BYTES as u64 + 65 > MAX_TOTAL_BYTES
+        {
+            return Err(rejected(
+                "store_capacity",
+                "execution store admission blocked by capacity".into(),
+            ));
+        }
         // Reserve before persisting admission, but never reserve on a duplicate lookup.
-        let reservation = reserve()?;
+        let reservation = match reserve() {
+            Ok(reservation) => reservation,
+            Err(message) => {
+                // Retain this identity as terminal without obtaining a slot or calling the engine.
+                // If either commit fails, the caller must inspect; absence is never a safe retry.
+                self.persist_admission(&record)?;
+                let response = RpcResponse::error_with_details(
+                    record.request_id.clone(),
+                    "durable_admission_rejected",
+                    message,
+                    json!({"reason":"execution_unavailable", "execution_started":false,
+                        "automatic_replay_authorized":false}),
+                );
+                let report = self.finish(&record, response);
+                self.abandon(&record.execution_id);
+                if report.is_err() {
+                    self.write_failed = true;
+                }
+                return Ok((Admission::Existing(report?), None));
+            }
+        };
+        self.persist_admission(&record)?;
+        Ok((Admission::New(record), Some(reservation)))
+    }
+
+    fn persist_admission(&mut self, record: &Record) -> Result<(), String> {
         match io::write(
             &self.root,
-            &format!("{}.admission", task.execution_id),
-            &record,
+            &format!("{}.admission", record.execution_id),
+            record,
             MAX_RECORD_BYTES,
         ) {
             Ok(bytes) => self.bytes += bytes,
@@ -188,7 +281,7 @@ impl Store {
         }
         self.entries += 1;
         self.active.insert(record.execution_id.clone());
-        Ok((Admission::New(record), Some(reservation)))
+        Ok(())
     }
 
     pub fn finish(&mut self, record: &Record, response: RpcResponse) -> Result<Value, String> {
@@ -198,16 +291,34 @@ impl Store {
         {
             return Err("execution receipt does not match its active admission".into());
         }
-        let receipt = Receipt {
+        let mut receipt = Receipt {
             record: record.clone(),
             response,
         };
-        let outcome = io::write(
-            &self.root,
-            &format!("{}.receipt", record.execution_id),
-            &receipt,
-            MAX_RECEIPT_BYTES,
-        );
+        let outcome = (|| {
+            let prepared = match receipt.prepare() {
+                Ok(prepared) => prepared,
+                Err(reason) => {
+                    // Preparation has no filesystem side effects. Isolate an invalid response
+                    // without mistaking it for a storage failure or retaining its large payload.
+                    receipt.response = RpcResponse::error_with_details(
+                        record.request_id.clone(),
+                        "durable_response_unrecordable",
+                        "execution response cannot be retained within durable receipt policy; response discarded",
+                        json!({"phase":"receipt_validation", "reason":reason,
+                            "max_receipt_bytes":MAX_RECEIPT_BYTES, "execution_may_have_started":true,
+                            "original_response_discarded":true, "external_effects_rolled_back":false,
+                            "automatic_replay_authorized":false}),
+                    );
+                    receipt.prepare().map_err(str::to_string)?
+                }
+            };
+            io::commit(
+                &self.root,
+                &format!("{}.receipt", record.execution_id),
+                prepared,
+            )
+        })();
         self.active.remove(&record.execution_id);
         match outcome {
             Ok(bytes) => self.bytes += bytes,
@@ -229,7 +340,7 @@ impl Store {
         match self.record(id)? {
             Some(record) => self.lookup_record(&record),
             None => Ok(
-                json!({"schema_version":DURABLE_AGENT_EXECUTION_SCHEMA, "execution_id":id,
+                json!({"schema_version":DURABLE_AGENT_EXECUTION_SCHEMA, "execution_id":id, "store_id":self.store_id,
                 "status":"not_found", "automatic_replay_authorized":false}),
             ),
         }
@@ -240,6 +351,7 @@ impl Store {
         query: &kyuubiki_protocol::DurableAgentExecutionList,
     ) -> Result<Value, String> {
         query.validate()?;
+        self.check_owner(query.expected_store_id.as_deref())?;
         let mut ids = Vec::new();
         for (count, entry) in fs::read_dir(&self.root)
             .map_err(|e| e.to_string())?
@@ -272,7 +384,7 @@ impl Store {
         Ok(
             json!({"schema_version":kyuubiki_protocol::DURABLE_AGENT_INDEX_SCHEMA,
             "executions":records, "next_cursor":if more { ids.last() } else { None },
-            "automatic_replay_authorized":false}),
+            "automatic_replay_authorized":false, "store_id":self.store_id}),
         )
     }
 
@@ -303,6 +415,7 @@ impl Store {
             if receipt.record != *record || receipt.response.id != record.request_id {
                 return Err("execution receipt identity mismatch".into());
             }
+            validate_response(&receipt.response)?;
             Ok(self.report(record, Some(receipt.response)))
         } else {
             Ok(self.report(record, None))
@@ -317,6 +430,7 @@ impl Store {
             None => "outcome_unknown",
         };
         json!({"schema_version": DURABLE_AGENT_EXECUTION_SCHEMA,
+            "store_id":self.store_id,
             "execution_id":record.execution_id, "request_digest":record.request_digest,
             "request_id":record.request_id, "process_instance_id":record.process_instance_id,
             "method":record.method, "status":status, "response":response,
@@ -325,12 +439,23 @@ impl Store {
 
     pub fn policy(&self) -> Value {
         let mut policy = policy(true);
+        policy["store_id"] = json!(self.store_id);
         policy["directory"] = json!(self.root);
         policy["stored_entries"] = json!(self.entries);
         policy["stored_bytes"] = json!(self.bytes);
         policy["active_reservations"] = json!(self.active.len());
         policy["admission_blocked_after_write_failure"] = json!(self.write_failed);
         policy
+    }
+
+    pub fn check_owner(&self, expected: Option<&str>) -> Result<(), String> {
+        if let Some(expected) = expected {
+            kyuubiki_protocol::validate_durable_execution_id(expected)?;
+            if expected != self.store_id {
+                return Err("durable execution store identity mismatch; restore the original Agent store; no replay authorized".into());
+            }
+        }
+        Ok(())
     }
 }
 
@@ -340,7 +465,16 @@ pub(crate) fn policy(enabled: bool) -> Value {
         "max_entries":MAX_ENTRIES, "max_receipt_bytes":MAX_RECEIPT_BYTES, "max_total_bytes":MAX_TOTAL_BYTES,
         "automatic_eviction":false, "capacity_policy":"reject_new_admission",
         "survives_agent_restart":enabled, "automatic_replay_authorized":false,
+        "owner_fence":{"request_field":"expected_store_id", "response_field":"store_id",
+            "identity_file":"owner.lock", "survives_restart":true, "is_authentication":false,
+            "legacy_unfenced_requests":true, "mismatch_policy":"reject_before_operation"},
         "directory_sync":cfg!(unix), "physical_power_loss_qualified":false,
+        "response_rejection":{"code":"durable_response_unrecordable",
+            "reasons":["byte_limit", "serialization", "restart_decode", "invalid_response"],
+            "original_response_retained":false, "compact_receipt_commit_required":true,
+            "blocks_other_admissions_after_commit":false,
+            "invalid_retained_receipt":"inspect_error_without_rewrite_or_replay",
+            "commit_failure":"outcome_unknown_and_block_new_admissions"},
         "completion_boundary":if cfg!(unix) { "receipt_file_and_directory_sync_before_transport" }
             else { "receipt_file_sync_before_transport" },
         "recovery_policy":"retained_receipt_or_outcome_unknown_no_replay"})

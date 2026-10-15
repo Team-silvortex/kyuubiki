@@ -59,16 +59,15 @@ pub(crate) fn store_deployment_readiness(readiness: AgentDeploymentReadiness) {
 pub(crate) fn build_agent_descriptor(config: &AgentConfig) -> AgentDescriptor {
     let mut descriptor = AgentDescriptor::solver_agent_default();
     let runtime_mode = agent_runtime_mode(config);
+    let peers = crate::agent_mesh::configured_peers(config);
     descriptor.runtime = AgentClusterDescriptor {
         cluster_id: config.cluster_id.clone(),
         runtime_mode: runtime_mode.to_string(),
         headless: true,
-        cluster_size: 1 + config.peers.len(),
-        health_score: 100,
-        peers: config
-            .peers
-            .iter()
-            .cloned()
+        cluster_size: 1 + peers.len(),
+        health_score: if peers.is_empty() { 100 } else { 0 },
+        peers: peers
+            .into_iter()
             .map(|address| ClusterPeerDescriptor {
                 address,
                 status: "seed".to_string(),
@@ -162,6 +161,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "health_score": descriptor.runtime.health_score,
         "watchdog": agent_watchdog::snapshot(),
         "reply_delivery": crate::agent_reply_writer::snapshot(),
+        "request_ingress": crate::agent_ingress::snapshot(),
         "shutdown_policy": crate::agent_shutdown::snapshot(),
         "lifecycle": agent_lifecycle::snapshot(),
         "execution_admission": agent_lifecycle::execution_admission_snapshot(),
@@ -190,6 +190,11 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
         serde_json::to_value(agent_descriptor()).expect("agent descriptor should serialize");
 
     if let Some(object) = payload.as_object_mut() {
+        object.insert(
+            "peer_discovery".into(),
+            crate::agent_mesh::peer_mesh_policy(),
+        );
+        object.insert("request_ingress".into(), crate::agent_ingress::snapshot());
         object.insert(
             "solver_control".into(),
             crate::agent_execution_control::snapshot(),

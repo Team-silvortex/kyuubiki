@@ -40,7 +40,7 @@ export async function observeWorkbenchDurableRun(args: {
       let cleanupPending = false;
       try { await service.acknowledge(handle, envelope); } catch { cleanupPending = true; }
       if (!isCurrent()) throw new Error(`Direct execution observation was superseded: ${handle.execution_id}`);
-      if (execution.status === "failed") throw new Error(`${execution.response.error.code}: ${execution.response.error.message}`);
+      if (execution.status === "failed") throw new Error(`${execution.response.error.code}: ${execution.response.error.message}${cleanupPending ? "; direct:journal_cleanup_pending; inspect the original execution" : ""}`);
       setMessage(`direct:completed: ${handle.execution_id}${cleanupPending ? "; recovery journal cleanup pending" : ""}`);
       return { ok: true as const, backend: "direct_mesh" as const, completion: "terminal" as const, jobId, status: "completed" as const };
     }

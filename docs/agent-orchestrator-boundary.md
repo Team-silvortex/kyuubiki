@@ -119,6 +119,28 @@ one-second sleep to each short job. A blocked heartbeat write is also bounded.
 
 ## Native Execution Capacity And Orphaned Work
 
+Native TCP ingress is bounded separately from execution admission. The
+`request_ingress` policy (`kyuubiki.agent-request-ingress/v1`) publishes the active
+connection/raw-request-byte counts and effective limits in describe and heartbeat
+payloads. General-pool defaults are 64 handlers, 256 MiB per encoded request, 512 MiB in aggregate
+and 30 seconds total for idle/header/body reads. The receive deadline does not run
+through solver execution. Capacity reservations release on error, timeout or unwind;
+handler creation failure does not tear down the listener. See the
+[runtime configuration](book-ch04-runtime-modes.html#native-agent-ingress) for all
+four environment variables and their accepted ranges. These bounds do not replace
+authentication, decoded-memory limits, task admission or durable owner fencing.
+
+The same listener has a read-only recovery reserve: four extra handlers, four
+in-flight requests, at most 16 KiB per frame (capped by the configured request limit)
+and a receive deadline of at most 1,000 ms from the original frame-read start. The
+`recovery_reserve` policy exposes its method allowlist, limits and counters; top-level
+total limits include both pools. Overflow sockets remain control-only even when the
+general pool recovers; ordinary sockets may use reserved bytes only for control
+frames. Solver/TaskIR/durable submission never dispatch through this reserve.
+Original lifecycle permissions and recovery identity fences remain unchanged.
+This is bounded ingress isolation, not authentication or guaranteed recovery when
+the reserve itself is saturated. No operator or engine scheduling logic is added.
+
 `KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS` is the Agent-local admission limit, default
 1, accepted integers 1..=1024. Startup rejects invalid values; changing the
 limit requires a process restart. Both solver RPC and TaskIR use the same
@@ -126,6 +148,15 @@ locked lifecycle count. The slot remains reserved until the last execution /
 response lease is dropped, including failure and cancellation. Ping, inspection
 and lifecycle controls do not consume execution slots. This is not a limit on
 TCP connections, request bytes, or every background thread.
+
+The native direct-Mesh gateway checks explicit protocol/method support, accepting
+lifecycle and available capacity before ranking new legacy dispatch candidates.
+Its `kyuubiki.direct-mesh-selection/v1` policy describes a fresh read-only snapshot,
+not a reserved execution lease or authentication. Separately observed lifecycle and
+admission counts use their maximum. Final admission stays Agent-local; a dispatch
+failure never triggers cross-peer retry. Pinned durable inspection/list/cancel bypass
+new-work selection, so draining or saturated execution slots do not themselves block
+recovery queries. Ingress capacity and transport availability remain separate limits.
 
 A full Agent rejects new work with `agent_at_capacity` before execution, rather
 than relying exclusively on Orchestra's in-memory scheduling ledger. Descriptor
