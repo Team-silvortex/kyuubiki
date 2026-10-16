@@ -38,6 +38,7 @@ fn identity_survives_store_reopen_and_cleanup_requires_exact_request() {
     assert!(original.is_new);
     let mut retry = intent(1);
     retry.request_id = "another-random-request-0001".into();
+    retry.created_at += 1;
     let recovered = f.store().reserve(retry).unwrap();
     assert!(!recovered.is_new);
     assert_eq!(original.intent, recovered.intent);
@@ -49,6 +50,29 @@ fn identity_survives_store_reopen_and_cleanup_requires_exact_request() {
         .remove(&original.intent.key, &original.intent.request_id)
         .unwrap();
     assert!(f.store().read().unwrap().is_empty());
+}
+
+#[test]
+fn same_key_reservation_rejects_foreign_identity_without_rewriting() {
+    let f = Fixture::new();
+    let store = f.store();
+    let original = intent(1);
+    store.reserve(original.clone()).unwrap();
+    let before = fs::read(f.0.join(FILE)).unwrap();
+    for field in ["scope", "operation", "parent"] {
+        let mut conflicting = original.clone();
+        match field {
+            "scope" => conflicting.scope = "b".repeat(64),
+            "operation" => conflicting.operation = "version".into(),
+            _ => conflicting.parent_id = "another-project".into(),
+        }
+        assert_eq!(
+            store.reserve(conflicting).err().unwrap(),
+            "checkpoint:journal_corrupt"
+        );
+        assert_eq!(fs::read(f.0.join(FILE)).unwrap(), before);
+        assert_eq!(store.read().unwrap(), vec![original.clone()]);
+    }
 }
 
 #[test]

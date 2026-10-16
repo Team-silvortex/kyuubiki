@@ -11,6 +11,8 @@ mod maturity;
 mod qualifications;
 #[cfg(test)]
 mod recalibration_tests;
+#[cfg(test)]
+mod recovery_recalibration_tests;
 mod release_readiness;
 mod self_test;
 

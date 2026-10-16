@@ -30,89 +30,71 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The current calibration checkpoint is `daji 3.4.5`, reviewed October 4, 2026.
-Historical follow-ups remain retained evidence at their original scope and
-version; this review does not rerun product qualification. See the
-[3.4.5 progress summary](current-line.md#daji-345-checkpoint) for recent source
-changes that must not be confused with release readiness.
+The current review is October 16, 2026 for the `daji-3-6-hardening` profile.
+Source metadata is still `daji 3.6.0`; commit `301ba02c` is titled 3.6.4.
+This is a retained-evidence review, not a version bump or installed qualification.
+The [calibration record](../reports/tensor-recalibration-20261016.md) preserves
+that provenance and the [current-line entry](current-line.md) separates source
+progress from the last installed baseline.
 
-The hardening profile now follows `daji 3.6.x`, retaining tensor v5 and all 224
-calibration claims (222 proven, two partial). The request-reassembly and banded
-candidate follow-ups below add two verified claims, now 226 (224 proven, two partial), without
-closing a qualified target. The September 13 v4-to-v5 correction removed
-the misleading 77/77 result by requiring dimension-local and named-scenario
-proof. This review adds the missing current modal production obligations,
-without changing existing grades, release thresholds or platform requirements.
+All 386 earlier claims are preserved. One verified local desktop binding brings
+the total to 387: 384 proven, two partial, one open. Hub/Installer execution and
+contract evidence no longer remains merely declared when the matching mock-IPC
+tests have actually run. Shared UI reaches its verified target; no installed
+or operational promotion follows from this correction.
 
-| Measure | Before October 4 scope review | Recalibrated current v5 |
+| Measure | Same-tree before review | October 16 calibration |
 | --- | ---: | ---: |
 | Required coordinates | 77 | 77 |
-| Coordinates meeting every configured target | 61 (79.2%) | 58 (75.3%) |
+| Coordinates meeting every configured target | 57 (74.0%) | 55 (71.4%) |
 | Structural gaps | 0 | 0 |
-| Dimension-presence gaps | 4 | 4 |
-| Below-target or scope-incomplete coordinates | 16 | 19 |
-| P0 coordinates at target | 44 / 55 | 41 / 55 |
-| P1 coordinates at target | 22 / 22 | 17 / 22 |
-| Dimension-score progress | 91.3% | 91.3% |
-| Explicit scenario requirements met | 6 / 20 | 10 / 32 |
+| Required-dimension presence gaps | 4 | 2 |
+| Below-target or scope-incomplete coordinates | 20 | 22 |
+| P0 coordinates at target | 40 / 55 | 38 / 55 |
+| P1 coordinates at target | 17 / 22 | 17 / 22 |
+| Dimension-score progress | 92.0% | 94.0% |
+| Named scenarios at target | 10 / 33 | 17 / 46 |
 
-The 22 open scenarios overlap coordinates; do not add them to the 19 coordinate
-gaps. These percentages are not test/code coverage, supported-physics coverage,
-or reliability probabilities. The 32-scenario registry is the current reviewed
-hardening subset, not a complete inventory of every configuration. Release
-readiness remains `blocked`, now for coordinate-local gaps as well as the
-independent external usability gate. Structural checks remain advisory for
-evidence depth; this recalibration does not enable a release claim.
+Thirteen new scenarios preserve seven scoped achievements and expose six open
+obligations. New gaps in native Agent security, Mesh benchmark and installed typed
+Orchestra workflows outweigh the one closed shared-UI coordinate. No feature was
+removed. The 29 open scenarios overlap the 22 coordinate gaps. Neither percentage
+is code/test coverage, supported physics or reliability; the registry remains a
+reviewed subset. Release qualification stays `blocked` and the independent
+usability release gate remains false. Thresholds and priority weights are unchanged.
 
-The twelve new solver scopes retain four verified results: public bounded
-single-mode admission, normalized candidate research, wide-QR/beam candidate
-research and isolated local candidate cost. Eight production obligations remain
-open. Earlier grid/beam research recovered five of six fixtures; the separate
-banded initializer below now recovers all six candidates, not production
-recovery or a qualified cumulative pipeline budget. The
-newly exposed coordinates are `runtime-engine-solver/solver_execution`,
-`runtime-engine-solver/validation` and `runtime-agent-cli/solver_execution`.
-Existing Headless and benchmark gaps now also carry named modal obligations.
-
-The current release queue starts with `hub-shell/product_surface` and
-`installer-shell/product_surface`, then `workbench-shell/product_surface`.
-Their `declared` bottlenecks mean that execution/contract evidence is not
-explicitly proven at the required strength in the matching dimensions, not
-that the applications cannot run. Installed startup evidence remains visible
-under `best_available_grade` and its named scenario. First audit and bind the
-appropriate existing proof; do not blindly rewrite working functionality or
-promote claim metadata solely to restore a green score.
+The release-weighted queue now begins with `sdk-headless/sdk_headless`,
+`runtime-protocol/sdk_operator`, `workbench-shell/validation`, then
+`runtime-engine-solver/validation`. The two missing required dimensions are
+protocol Worker-SDK security and Workbench/Headless execution evidence.
+PWDT is not the Headless SDK; audit their actual shared-backend contract instead
+of treating GUI automation as proof for both or deleting the mapping to turn green.
 
 | Workstream | Coordinates | Next acceptance boundary |
 | --- | --- | --- |
-| Product proof and platform closure | `hub-shell/product_surface`, `installer-shell/product_surface`, `workbench-shell/product_surface`, `desktop-shared-ui/product_surface` | Review exact execution/contract claims; retain real Windows installed journeys separately from macOS/Linux startup. |
-| Modal production reliability | `runtime-engine-solver/solver_execution`, `runtime-engine-solver/validation` | Qualify heterogeneous production recovery, strict physical readback, multimode behavior, independently rebuilt requests, cancellation and healthy replay; candidate helpers are not production admission. |
-| Complete modal execution journey | `runtime-engine-solver/benchmark`, `runtime-agent-cli/solver_execution`, `sdk-headless/sdk_headless` | Bound and measure the entire production pipeline, then qualify actual Agent TaskIR/RPC and official Rust Headless study journeys with independent output checks. |
-| Protocol and engine evidence | `runtime-protocol/sdk_operator`, `runtime-protocol/solver_execution`, `runtime-engine-solver/benchmark` | Bind or obtain security/contract proof per required dimension; existing numerical or scale evidence must not substitute. |
-| Headless independence | `sdk-headless/sdk_headless`, `workbench-shell/sdk_headless` | Retain source-detached Python and Elixir research journeys; audit Workbench/Headless boundary execution and contract evidence separately from Rust-only installed proof. |
-| Data lifecycle | `orchestra-control-plane/persistence_provenance`, `runtime-installer/persistence_provenance`, `runtime-installer/deployment_update`, `installer-shell/deployment_update` | Qualify PostgreSQL revision-2 replay, consistent database plus external-artifact restore, compatibility-gated activation and the visible Installer upgrade journey. |
-| GUI recovery | `workbench-shell/persistence_provenance`, `workbench-shell/validation` | Extend verified macOS App-exit receipt recovery to sustained/interrupted-write qualification; Windows remains separately open. |
-| Windows control and updates | `runtime-agent-cli/runtime_api`, `runtime-installer/deployment_update` | Retain the installed Agent/Orchestra round trip and complete desktop-set update/rollback. |
+| Native LAN authorization | `runtime-agent-cli/security` | Authenticate peer/controller admission and recovery, revoke authority, preserve single-Orchestra versus offline Mesh exclusivity; cluster/store labels are not credentials. |
+| Installed direct recovery | `workbench-shell/persistence_provenance`, `workbench-shell/validation` | Matching macOS shell/frontend/native journal plus real Agent, lost replies, App reopen, two-window cleanup and foreign-ledger rejection. |
+| Physical Mesh and load | `runtime-agent-cli/runtime_api`, `runtime-agent-cli/benchmark` | Real authenticated multi-host partition/rejoin, owner-pinned recovery, sustained ingress/churn, tail latency and memory/descriptor bounds. |
+| Durable native and typed workflow recovery | `runtime-agent-cli/solver_execution`, `orchestra-control-plane/workflow_composition` | Separate disposable host-power-loss tests from process kill; qualify installed typed continuation with remote Agent and default database policy. |
+| Numerical production and cost | `runtime-engine-solver/validation`, `runtime-engine-solver/solver_execution`, `runtime-engine-solver/benchmark` | Keep modal physical publication, multimode, independent reassembly, cumulative budgets and real Agent/SDK studies open; candidate experiments are not production qualification. |
+| SDK and protocol | `sdk-headless/sdk_headless`, `runtime-protocol/sdk_operator`, `workbench-shell/sdk_headless` | Installed Python/Elixir studies and exact protocol security/execution evidence, without conflating Worker SDK, Headless and PWDT. |
+| Data and platform closure | Installer/Orchestra persistence and deployment; desktop product surfaces | Revision-two PostgreSQL replay, consistent generation restore, compatibility-gated activation and Windows installed journeys retain their original targets. |
 
-The native macOS SQLite revision-2 migration and explicit-key PWDT checkpoint
-replay are retained `verified` achievements. They do not close PostgreSQL,
-whole-generation restore, GUI recovery without a caller-retained key, or
-installed fault injection. The original scenarios remain machine-readable in
-`config/architecture/module-function-coverage-evidence/current-qualification-scopes.json`;
-current modal scopes are in
-`config/architecture/module-function-coverage-evidence/current-solver-qualification-scopes.json`.
-The global release queue still starts with product-proof gaps. For the current
-calculation mainline, begin with the modal production validation and recovery
-scopes, then the cumulative budget and actual Agent/Headless path. Keep the
-other release obligations visible rather than changing weights to hide them.
+For the current recovery mainline, prioritize native LAN authorization, installed
+macOS direct recovery, then authenticated multi-host fault/load qualification.
+This is an engineering-risk ordering, not a change to the release score weights.
+Preserve the verified local Orchestra, standalone Agent, Mesh, browser and native
+storage evidence separately. No blind replay, automatic migration, consensus or
+distributed DAG guarantee follows from discovery or a healthy peer list.
 
-The generated JSON contains every coordinate's `dimension_grades`,
-`qualification_requirements` and `qualification_gaps`, with the full queue at
-`release_readiness.planning_queue`. The generated Markdown lists all scenarios
-and their acceptance conditions. Read the [book chapter](book-ch03-architecture-boundaries.html#tensor-calibration)
-for the scoring rules and evidence limitations.
-See [the October 4 calibration record](../reports/tensor-recalibration-20261004.md)
-for the before/after snapshot and explicitly retained limits.
+The new registry is
+`config/architecture/module-function-coverage-evidence/current-recovery-qualification-scopes.json`.
+Existing general and modal scenario registries remain in force. The JSON report
+contains `dimension_grades`, `qualification_requirements`, `qualification_gaps`
+and `release_readiness.planning_queue`; the
+[HTML chapter](book-ch03-architecture-boundaries.html#tensor-calibration) explains
+their limits. The dated follow-ups below keep their historical counts; they are
+not the current calibration snapshot.
 
 ### Modal Request-Reassembly Follow-Up
 

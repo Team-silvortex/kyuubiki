@@ -3,6 +3,10 @@ import test from "node:test";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+
+const require = createRequire(new URL("../../apps/frontend/package.json", import.meta.url));
+const ts = require("typescript");
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const APPS = [
@@ -32,16 +36,54 @@ function valuesFrom(source, pattern) {
   return new Set([...source.matchAll(pattern)].map((match) => match[1]));
 }
 
+function reachableUiSources(uiRoot, read = (file) => readFileSync(file, "utf8")) {
+  const sources = new Map();
+  const visit = (file) => {
+    assert.ok(file.startsWith(`${uiRoot}${path.sep}`) && file.endsWith(".js"), `untracked UI module: ${file}`);
+    if (sources.has(file)) return;
+    const source = read(file);
+    sources.set(file, source);
+    const syntax = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+    assert.equal(syntax.parseDiagnostics.length, 0, `invalid UI module: ${file}`);
+    const walk = (node) => {
+      let reference;
+      if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) reference = node.moduleSpecifier;
+      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        reference = node.arguments[0];
+        assert.ok(reference && (ts.isStringLiteral(reference) || ts.isNoSubstitutionTemplateLiteral(reference)),
+          `nonliteral UI import needs explicit coverage: ${file}`);
+      }
+      if (reference) {
+        assert.ok(ts.isStringLiteral(reference) || ts.isNoSubstitutionTemplateLiteral(reference));
+        assert.ok(reference.text.startsWith("./") || reference.text.startsWith("../"), `nonlocal UI import: ${file}`);
+        visit(path.resolve(path.dirname(file), reference.text));
+      }
+      ts.forEachChild(node, walk);
+    };
+    walk(syntax);
+  };
+  const html = read(path.join(uiRoot, "index.html"));
+  const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/giu)];
+  assert.ok(scripts.length > 0, "desktop entry must declare its scripts");
+  for (const [, attributes, inline] of scripts) {
+    const src = attributes.match(/\bsrc\s*=\s*["']([^"']+)["']/iu)?.[1];
+    assert.ok(src && !inline.trim(), "inline desktop scripts need explicit coverage");
+    visit(path.resolve(uiRoot, src));
+  }
+  return sources;
+}
+
 function appSources(app) {
   const appRoot = path.join(ROOT, "apps", app.directory);
   const tauriRoot = path.join(appRoot, "src-tauri");
-  const uiFiles = walkFiles(path.join(appRoot, "ui"), ".js");
+  // Shared assets can be shipped but unused; only loaded modules own native calls.
+  const uiSources = reachableUiSources(path.join(appRoot, "ui"));
   const rustFiles = walkFiles(path.join(tauriRoot, "src"), ".rs");
   const permissionFiles = walkFiles(path.join(tauriRoot, "permissions"), ".toml");
   return {
     appRoot,
     tauriRoot,
-    ui: readFiles(uiFiles),
+    ui: [...uiSources.values()].join("\n"),
     rust: readFiles(rustFiles),
     permissions: readFiles(permissionFiles),
     capability: JSON.parse(readFileSync(path.join(tauriRoot, "capabilities/main.json"), "utf8")),
@@ -122,6 +164,43 @@ function acceptedGuardedActions(rust) {
 function missingValues(expected, actual) {
   return [...expected].filter((value) => !actual.has(value)).sort();
 }
+
+test("IPC reachability follows static, re-export and literal dynamic imports, not unused copies", () => {
+  const root = path.join(ROOT, "virtual-ui"), files = {
+    "index.html": '<script type="module" src="./app.js"></script><script src="./probe.js"></script>',
+    "app.js": 'import "./shared.js"; export { value } from "./reexport.js"; import("./lazy.js"); const text = "import fake from unused.js";',
+    "shared.js": 'import "./app.js"; invoke("shared_command");',
+    "reexport.js": 'export const value = 1; invokeTauri("reexport_command");',
+    "lazy.js": 'invoke("lazy_command");',
+    "probe.js": 'invoke("probe_command");',
+    "unused.js": 'invoke("unused_command");',
+  };
+  const read = (file) => { const value = files[path.relative(root, file)]; assert.notEqual(value, undefined); return value; };
+  const reachable = reachableUiSources(root, read);
+  assert.equal(reachable.size, 5);
+  assert.deepEqual([...directInvocations([...reachable.values()].join("\n"))].sort(),
+    ["lazy_command", "probe_command", "reexport_command", "shared_command"]);
+  files["app.js"] += ' import "./unused.js";';
+  assert.ok(directInvocations([...reachableUiSources(root, read).values()].join("\n")).has("unused_command"));
+});
+
+test("IPC reachability fails closed on unresolved or nonliteral modules", () => {
+  const root = path.join(ROOT, "virtual-ui");
+  for (const source of ['import(missing);', 'import "./missing.js";', 'import "../outside.js";', 'import "package";']) {
+    assert.throws(() => reachableUiSources(root, file => {
+      if (file.endsWith("index.html")) return '<script type="module" src="./app.js"></script>';
+      if (file.endsWith("app.js")) return source;
+      throw new Error("missing module");
+    }));
+  }
+});
+
+test("only Workbench loads the direct execution journal host", () => {
+  for (const app of APPS) {
+    const sources = reachableUiSources(path.join(ROOT, "apps", app.directory, "ui"));
+    assert.equal([...sources.keys()].some(file => file.endsWith("direct-execution-journal-bridge.js")), app.router === "workbench");
+  }
+});
 
 for (const app of APPS) {
   test(`${app.name} closes every direct UI-to-Tauri IPC chain`, () => {

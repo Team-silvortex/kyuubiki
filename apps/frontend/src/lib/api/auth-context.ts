@@ -4,6 +4,7 @@ import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/workbench-secrets"
 import { resolveWorkbenchApiUrl, trackWorkbenchBackendTargetChange } from "./backend-target";
 import { advanceWorkbenchAuthorityRevision, readWorkbenchAuthorityRevision, type WorkbenchAuthorityDimension } from "./authority-revisions";
 import { ensureWorkbenchAuthorityStorageTracking } from "./authority-storage-events";
+import { captureWorkbenchDocumentAuthority } from "./authority-document-lifecycle";
 
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
@@ -65,6 +66,7 @@ export function buildWorkbenchApiAuthHeaders(url: string) {
 
 export function captureWorkbenchApiAuthority(...urls: string[]) {
   ensureWorkbenchAuthorityStorageTracking();
+  const documentCurrent = captureWorkbenchDocumentAuthority();
   const scope = () => {
     const mode = readFrontendRuntimeModeFromWindow(), secrets = readWorkbenchApiAuthSecrets();
     const dimensions = new Set<WorkbenchAuthorityDimension>(["mode"]);
@@ -87,6 +89,7 @@ export function captureWorkbenchApiAuthority(...urls: string[]) {
     // Restoring settings cannot revive a request already observed to be stale.
     if (!current) return false;
     try {
+      if (!documentCurrent()) { current = false; return false; }
       const next = scope();
       current = captured.signature === next.signature && captured.revisions.length === next.revisions.length
         && captured.revisions.every((revision, index) => revision === next.revisions[index]);

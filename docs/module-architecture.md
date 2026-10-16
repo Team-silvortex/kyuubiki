@@ -142,10 +142,12 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
-The October 4, 2026 recalibration retains tensor v5 and updates the hardening
-profile to `daji 3.4.x`, with source checkpoint `daji 3.4.5`. All 224 retained
-claims are preserved. A registered command is a test plan, not evidence of
-execution. The coordinate grade is the
+The October 16, 2026 recalibration retains tensor v5 and updates the hardening
+profile to `daji-3-6-hardening`, with source metadata checkpoint `daji 3.6.0`.
+The commit subject at `301ba02c` says 3.6.4; this review does not relabel source
+packages or historical installations. All 386 prior claims remain, with one
+local desktop verification binding added, for 387 total. A registered command
+is a test plan, not evidence of execution. The coordinate grade is the
 minimum proven strength across its required dimensions, not its best single
 claim. `best_available_grade` preserves that stronger retained claim without
 broadcasting it to other dimensions. P0/P1/P2 criticality and external release
@@ -165,25 +167,31 @@ that scenario. These bindings need human evidence review: the checker validates
 coordinates, dimensions, files and anchors, not the truth or freshness of an
 installed run. The registry is not an exhaustive scenario inventory.
 
-The reviewed scenario inventory now has 32 requirements: ten meet their bound
-targets and 22 remain open. Twelve current solver scopes distinguish retained
-public single-mode admission, verified test-only candidate recovery and local
-candidate timing from qualified production physical publication, multimode
-recovery, independent reassembly, whole-pipeline budgets and actual Agent/Rust
-Headless journeys. The four retained solver successes do not close the eight
-new production obligations. Existing truss/thermal scale or installed evidence
-cannot substitute for these named modal scopes.
+The reviewed scenario inventory now has 46 requirements: seventeen meet their
+bound targets and 29 remain open. Thirteen new requirements preserve seven
+scoped control/recovery achievements and expose six installed, authenticated
+multi-host, power-loss and sustained-load obligations. Orchestra validation now
+explicitly requires recovery evidence. Existing modal scopes, Windows requirements
+and deployment/data obligations are preserved, not replaced by the current focus.
 
-Of 77 required coordinates, 58 meet every configured target. The 19 coordinate
-gaps overlap the 22 scenario gaps; neither count is a code coverage percentage
-or a statement that those modules cannot run. The three newly exposed gaps are
-`runtime-engine-solver/solver_execution`, `runtime-engine-solver/validation`
-and `runtime-agent-cli/solver_execution`. No solver algorithm or evidence grade
-was changed by this recalibration.
+Of 77 required coordinates, 55 meet every configured target (71.4%). Required
+dimension-presence gaps fall from four to two; scope/grade gaps rise from twenty
+to 22. Correctly bound local desktop tests close shared-UI product proof, while
+native Agent security, Mesh benchmark and installed typed Orchestra workflow
+requirements expose three previously unnamed coordinate gaps. No product
+capability was removed. Dimension-score progress is 94.0%, not test coverage,
+supported physics or a reliability probability. The 29 scenario gaps overlap
+the 22 coordinate gaps and must not be added together.
 
 See the [book's current calibration](book-ch03-architecture-boundaries.html#tensor-calibration)
 and [hardening queue](weakness-roadmap.md#current-tensor-status) for the dated
 baseline and its limits.
+
+The [October 16 review](../reports/tensor-recalibration-20261016.md) records the
+unchanged release weighting and separate recovery-mainline priorities. Native
+Agent LAN authorization, matching installed direct-recovery and real Mesh fault
+and load tests remain necessary; process kill is not power loss. The following
+solver follow-ups preserve their original October counts as historical records.
 
 The later [public request-reassembly follow-up](../reports/modal-request-reassembly-reliability-20261004.md)
 adds one verified claim, for 225 retained claims. Solver alone owns bounded

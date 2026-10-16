@@ -7,6 +7,7 @@ import { observeWorkbenchDurableRun } from "../../src/components/workbench/workb
 import { cancelWorkbenchJob } from "../../src/components/workbench/workbench-job-history-controller.ts";
 import { createWorkbenchFeedback, withWorkbenchFeedbackInvalidation } from "../../src/components/workbench/workbench-feedback.ts";
 import { checkpointDigest } from "../../src/lib/workbench/checkpoint-journal.ts";
+import { captureWorkbenchApiAuthority } from "../../src/lib/api/auth-context.ts";
 import type { WorkbenchStudyResult } from "../../src/lib/workbench/study-run-backend-service-core.ts";
 
 const endpoint = "127.0.0.1:5001", id = "a".repeat(32);
@@ -101,6 +102,37 @@ test("authority changed during persistence releases only the new unsent identity
   await assert.rejects(service.submit("axial_bar_1d", input, endpoint), /authority_changed/);
   assert.equal(f.calls.length, 0); assert.equal(f.entries.length, 0);
 });
+for (const phase of ["reservation", "submission receipt"]) {
+  test(`document lifecycle during ${phase} cannot resume the original submission`, async () => {
+    const previous = globalThis.window, events = new EventTarget(), f = fixture();
+    globalThis.window = { location: { search: "" }, localStorage: { getItem: () => null },
+      addEventListener: events.addEventListener.bind(events),
+    } as unknown as Window & typeof globalThis;
+    const restore = () => { events.dispatchEvent(new Event("pagehide")); events.dispatchEvent(new Event("pageshow")); };
+    const journal = { ...f.journal, reserve: async (intent: DirectExecutionIntent) => {
+      const result = await f.journal.reserve(intent);
+      if (phase === "reservation") restore();
+      return result;
+    } };
+    const service = createDurableDirectRunService({ ...f.options, journal, captureAuthority: captureWorkbenchApiAuthority });
+    try {
+      if (phase === "submission receipt") f.setReply(body => { restore(); return report(body.execution_id, "completed"); });
+      await assert.rejects(service.submit("axial_bar_1d", input, endpoint),
+        phase === "reservation" ? /authority_changed/ : /Submission unconfirmed/);
+      assert.equal(f.calls.length, phase === "reservation" ? 0 : 1);
+      // Only this invocation's confirmed, unsent reservation may be released.
+      assert.equal(f.entries.length, phase === "reservation" ? 0 : 1);
+      if (phase === "submission receipt") {
+        const [handle] = await service.pending();
+        assert.equal(handle.execution_id, f.calls[0].body.execution_id);
+        f.setReply(body => report(body.execution_id, "completed"));
+        await service.acknowledge(handle, await service.inspect(handle));
+        assert.equal(f.entries.length, 0);
+        assert.deepEqual(f.calls.map(call => call.path), ["/api/direct-mesh/tasks", "/api/direct-mesh/tasks/inspect"]);
+      }
+    } finally { globalThis.window = previous; }
+  });
+}
 test("model edits during the async scope digest cannot change the captured request", async () => {
   const f = fixture(), mutable = { ...input };
   const pending = f.service.submit("axial_bar_1d", mutable, endpoint); mutable.tip_force = 99;

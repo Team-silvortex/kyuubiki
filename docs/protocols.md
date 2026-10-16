@@ -153,6 +153,65 @@ commit. Configuration writes are not atomically coupled to the transaction; a ch
 delivered after the final active browser check is outside this fence even if commit
 has not yet completed. This is not cross-window/process atomic authorization.
 
+Desktop journal hosts also snapshot request identities and invalidate previously
+accepted queue entries on iframe load, host pagehide or disposal. Source/detachment
+checks run again immediately before native dispatch and replies. Frame load needs
+its own generation because a WindowProxy survives document navigation. Pageshow
+allows fresh requests, not revival of retired ones; the eight-request queue bound
+is retained until outstanding native work drains. The UI message envelopes are now
+`kyuubiki:direct-execution-journal/v2` and `kyuubiki:checkpoint-recovery/v2`:
+`connect` accepts only type, request ID and action, performs no native call, and
+returns a random in-memory session ID with a null result. All journal operations,
+including list, require that session. Load/pagehide rotates it before later delivery;
+an old or missing session never reaches native storage. Expiry returns only the
+old token with a generic unavailable error, not the new session. A delayed handshake
+has no journal side effects; clients accept its response only for a pending random
+request ID from the pinned parent origin. No v1 or unfenced fallback is supported.
+Client pagehide rejects pending operations and handshake waiters; pageshow permits
+fresh explicit calls. One shared handshake and an eight-logical-operation cap bound
+the client. Session expiry never automatically retries a journal operation; a later
+explicit call may reconnect. Shell and embedded frontend must update together.
+Session IDs are not credentials and never enter native payloads, files or URLs;
+native journal formats, commands and Agent protocols remain unchanged.
+After awaiting a successful reply, the client rechecks its captured document generation
+and optional caller guard before returning the result. Even an already acknowledged
+write cannot authorize a retired continuation; rejection does not undo that write.
+Late replies are suppressed but already dispatched native calls can still commit.
+Explicit reinspection, not replay, reconciles that case. This is not navigation-start
+atomicity or Agent authentication; client timeout alone does not cancel queued work.
+Real iframe navigation with mocked native invocation verifies the local host boundary,
+not installed-WebView or disk durability, power loss, or atomic cross-process authority.
+
+Workbench API authority captures additionally bind to the active document lifetime.
+Pagehide retires old guards; pageshow enables new captures, never old or suspended ones.
+One window-scoped listener pair tracks this boundary without persisted state or
+per-request listeners. Visibility changes, blur and beforeunload alone do not revoke it.
+Direct durable run/recovery callers recheck the guard at their existing await boundaries:
+confirmed unsent reservations may be released, but a submitted execution with a rejected
+late response retains its original identity for explicit inspection. This is not transport
+cancellation, universal raw-HTTP fencing, or a guarantee of browser BFCache behavior.
+
+Model-checkpoint saves and recovery use the same injected API-authority capture,
+without embedding frontend credentials or lifecycle state in journal records. The
+guard follows hashing, reservation, server responses, recovered-version validation
+and conditional cleanup. The browser removal guard runs before/after database open,
+after the transaction read and at delete success before commit; failure aborts an
+active transaction. Desktop removal carries only the existing key/request ID on
+the wire; its guard remains local. Late or retired calls retain uncertain identities
+and never automatically replay a save. A fresh explicit save retry still uses the
+original idempotency key; read-only recovery uses GET and performs no checkpoint POST.
+Storage-only cleanup failure does not reclassify a validated commit as failed. A
+retired continuation rejects delivery but cannot roll back server or native commits.
+
+Checkpoint reservation replies are validated at both desktop bridge ends and again
+before save transport. The reserved key, scope, operation and parent must match the
+requested snapshot. `isNew: true` additionally requires the same request ID and
+creation time; `isNew: false` preserves the earlier reservation's ID/time. Browser
+transactions apply the same collision contract as Rust storage and snapshot metadata
+before asynchronous database open. Conflicts or malformed replies fail closed with
+`checkpoint:journal_corrupt`, without checkpoint POST, cleanup or record overwrite.
+No journal format change, automatic repair or cross-Agent deduplication is implied.
+
 Cancellation acceptance is not a terminal receipt. After a lost reply, inspect the
 saved owner without automatically resending cancellation or migrating the task.
 A synced failed/cancelled receipt survives Agent restart; an admission without a

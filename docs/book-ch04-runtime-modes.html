@@ -541,6 +541,18 @@
             replies processed before notification delivery are not covered by this
             fence. Unmanaged same-window storage writes and untracked URL/history
             mutations still have only snapshot-based roundtrip detection.</li>
+          <li>API authority captures also belong to one active document lifetime.
+            An observed pagehide retires existing guards even if pageshow arrives before
+            the next guard check; calls captured while suspended cannot become valid
+            after restoration. Fresh explicit calls may inspect the original execution.
+            Ordinary backgrounding, blur and a cancelled navigation do not retire work.
+            One lifecycle listener pair is shared per window, with no persisted epochs
+            or per-request listeners. Direct submission checks this guard around storage
+            and transport: only its own confirmed unsent reservation may be released;
+            an already submitted execution keeps its identity when a late reply is rejected.
+            This covers callers using the authority guard, not every raw HTTP request.
+            Chromium/PWDT tests use controlled page-transition events and mocked Agent
+            responses; they do not qualify actual BFCache restoration or installed WebView.</li>
           <li>Terminal receipt cleanup retains the original observation/recovery guard
             through its asynchronous scope and journal reads; it cannot adopt a newer
             caller context. Browser deletion rechecks before/after database open, after
@@ -550,11 +562,42 @@
             published valid numerical result is not rolled back by cleanup failure.
             The desktop bridge checks before and after its initial host handshake and
             before posting deletion, without serializing the guard or credentials.
+            It rechecks again after the reply await before handing success to the caller.
             Configuration writes are not atomic with storage commits: a change delivered
             after the final active browser check, or after native deletion was dispatched,
             cannot be promised to undo deletion. These are local commit-boundary checks,
             not a cross-process authorization transaction or physical durability guarantee;
             uncertain cleanup never authorizes automatic resubmission.</li>
+          <li>Desktop direct-execution and model-checkpoint journal hosts snapshot request
+            metadata and page ownership before queueing. An iframe load retires previously
+            accepted requests even when its WindowProxy identity is unchanged. Host pagehide
+            retires and suspends requests; pageshow accepts fresh requests without reviving
+            the old queue. Detached/replaced frames and disposed hosts also fail the
+            dispatch/reply check. Retired queued operations never reach native storage,
+            and late success or failure cannot reply to the replacement document.
+            The eight-request bound remains occupied until earlier native work drains;
+            reload cannot reset it to admit unbounded work. Fresh explicit inspection can
+            reconcile a reservation already committed by an in-flight native call.
+            Both UI bridges use v2 envelopes: a metadata-free connect handshake performs
+            no native call, and every journal read or mutation must echo the host's current
+            random session identity. Load/pagehide rotates that identity, so an old message
+            first delivered after replacement is rejected before native dispatch. An old
+            handshake can only receive a no-data response; a new client ignores its
+            unmatched request ID. No v1 or missing-session fallback is allowed. Client
+            pagehide rejects pending work, including handshake waiters; pageshow permits
+            fresh explicit operations without automatic replay. One shared handshake and
+            at most eight logical calls bound client state. Expiry rejects the current
+            operation; only a later explicit call reconnects. Pair the updated embedded
+            frontend with the updated desktop shell; native journal files need no migration.
+            Session identities live only in memory, not in URLs, journals or credentials.
+            A reply already received but not yet returned to the caller is checked against
+            lifecycle and caller ownership again. Pagehide, disposal or guard loss in that
+            interval rejects the continuation without sending rollback or replay commands.
+            This is not Agent authentication or navigation-start atomicity: calls dispatched
+            before an observed lifecycle change can still commit. Client timeout alone
+            does not withdraw queued work or roll back native storage. Local Chromium tests use
+            real cross-origin iframe navigation but mocked native invocation, not installed
+            WebView, physical disk or power-loss qualification.</li>
           <li>The ledger stores at most 1,024 admissions, 8 MiB per encoded receipt,
             and 128 MiB of retained record bytes, with capacity reserved for active
             receipts. It keeps no model-input copies or backup generations. Capacity

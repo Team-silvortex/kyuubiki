@@ -917,6 +917,299 @@ installed-WebView-to-native-commit or authenticated multi-host LAN qualification
 claimed. Existing local `verified` evidence is extended without grade promotion. No
 Agent/engine/operator protocol, version, commit, push, package or installation changed.
 
+## Follow-Up: Desktop Journal Queue Ownership Across Document Reload
+
+Verification date: 2026-10-16. The desktop direct-execution and model-checkpoint
+hosts validated the iframe at message receipt, but queued native calls checked
+only disposal. A replacement or reload could therefore let an accepted old reserve
+or remove reach native storage later. A real iframe keeps the same WindowProxy
+across navigation, so source identity alone also allowed old results into the new
+document. Checkpoint queue payloads and response IDs additionally retained mutable
+event-object fields instead of request snapshots.
+
+Both hosts now capture validated metadata, response ID, source and a fixed-size
+document-generation identity before queueing. Frame load retires that identity;
+host pagehide retires and suspends it, and pageshow permits only fresh requests.
+The queue rechecks generation, connection, source and disposal before native
+dispatch and replies. Disposing removes all installed listeners. Retired queued
+operations do not invoke storage; late success and error replies are suppressed.
+The original eight-slot limit and serial native execution remain: loading another
+document does not reset occupied capacity behind outstanding work. Fresh explicit
+reads and cleanup still work after the old queue drains. No persistent generation
+history, backup, timer, new command, wire format or journal schema was introduced.
+
+Verification:
+
+- The initial 16 lifecycle unit cases reproduced 14 failures on the old hosts;
+  only the two existing disposal cases already passed. After the repair and four
+  additional snapshot/capacity controls, all 20 new lifecycle cases pass. All 37
+  desktop-shared unit tests pass, including unchanged checkpoint/layout clients.
+- Eight isolated Chromium cases use real cross-origin iframe messages and navigation,
+  explicitly asserting stable WindowProxy identity. They cover both hosts, held native
+  reads/reservations, and reload/no-reload controls. Native invocation and the ledger
+  are mocked. Reload blocks queued reserve/remove and old replies, preserves any
+  already-started reservation, and permits a new explicit read and removal. Unchanged
+  documents still drain in order. Each test closes its browser context.
+- The first existing desktop GUI suite passed 45 of 47 cases. Both failures were
+  static call-chain false positives: the scanner treated unused copied Workbench
+  journal code as Hub/Installer native calls. It now traverses actual HTML script
+  entries and static/re-export/literal-dynamic imports with the existing TypeScript
+  parser. Cycles are bounded; unresolved, escaping or nonliteral imports fail closed
+  instead of silently disappearing from coverage. Three focused controls verify
+  module reachability and that only Workbench loads the journal host. No Hub or
+  Installer native permissions were widened. This remains a literal-command static
+  check, not complete dataflow proof of every computed IPC command.
+- The native test runner now includes both journal bridge suites plus the new unit
+  and browser lifecycle tests. Its rebuilt full desktop GUI suite passed 82 of 82
+  cases, including the 37 shared tests and eight new browser cases; these counts
+  overlap and must not be added as independent coverage.
+- Frontend typecheck, generated desktop-shared synchronization, Rust formatting,
+  documentation book/inventory, project organization and whitespace checks passed.
+  Tensor validation retains zero structural gaps, four maturity gaps, twenty
+  evidence-grade gaps and fifteen P0 gaps; Daji readiness remains blocked. The
+  separate lifecycle claim is local `verified`, not new installed-app evidence.
+
+At this stage, before the v2 follow-up below, the fence covered requests already
+accepted before an observed lifecycle change,
+not navigation-start atomicity. An old document's message first delivered after
+the replacement load is not fenced by a document-session nonce; no such protocol
+was added. Client timeout alone does not withdraw queued work. Native calls already
+dispatched can still commit, and a blocked native call still holds the serial queue;
+reply suppression is not rollback or cancellation. Configuration-only changes are
+handled by the separate caller-authority guard, not this page-generation check.
+No physical disk/power-loss, installed WebView, actual Agent process or authenticated
+multi-host LAN qualification was run here. No Agent/engine/operator protocol, version,
+commit, push, package or installation changed.
+
+## Follow-Up: Session-Fenced Journal Messages After Navigation
+
+Verification date: 2026-10-16. Six new regressions held old list/reserve/remove
+messages until after a replacement load. All six failed with the prior host:
+receipt-time generation capture incorrectly gave the late old message the new
+document's authority. Both bridges now use v2 UI envelopes with an explicit
+metadata-free connect handshake and an in-memory random host session identity.
+
+Connect never invokes native storage or returns journal data. All journal operations,
+including reads, require the current session. Load/pagehide rotates that identity;
+old-session messages are rejected before queue admission, with only the old token
+echoed and a generic unavailable error. The existing generation/connection guards
+still retire requests already queued and suppress late results. A delayed connect
+is harmless to the journal: a new client ignores its unrelated random request ID.
+There is no v1 or missing-session fallback. Native commands, journal data formats,
+Agent protocols and execution identities are unchanged. Shell and embedded frontend
+must be updated together; stored reservations need no migration.
+
+The shared UI-only session client pins the parent origin, checks response sessions,
+deduplicates handshake probes and bounds logical operations, including handshake
+waiters, to eight. Pagehide rejects all pending calls and retires waiting continuations.
+Pageshow permits fresh explicit operations without replay. Session expiry fails the
+current operation; only a later explicit call reconnects. Checkpoint reserve now
+also snapshots caller metadata before handshake awaits. Sessions are not persisted,
+put into URLs, sent to native commands or treated as Agent authentication credentials.
+
+Verification:
+
+- All 57 desktop-shared unit tests passed, including the six initially failing
+  late-delivery cases, v1/unfenced rejection, handshake bounds, response-session
+  validation, suspended/restored clients, no automatic retry and metadata snapshots.
+- All 16 Chromium lifecycle tests passed. Eight new cases hold a real cross-origin
+  MessageEvent before host receipt, navigate the iframe with the same WindowProxy,
+  then deliver the held event. Old connect/list/reserve/remove messages make zero
+  native calls. A real newly loaded client then connects, reads the retained entry
+  and explicitly removes it. This is controlled delayed-delivery fault injection,
+  not a claim that Chromium naturally reproduced that timing. Native storage remains
+  mocked, while origin, navigation, event source and client-host messaging are real.
+- The rebuilt native runner's full desktop GUI suite passed 110 of 110 cases,
+  including the 57 shared tests and 16 lifecycle browser cases. Counts overlap.
+  All 17 selected Rust desktop asset-sync and bundle-staging tests passed. The new
+  shared client is included in the native mirror manifest for all three shells.
+- Cross-layer source tests exposed an integration error during implementation:
+  generated browser JS resolved the shared client, but direct TS source imports
+  looked for a nonexistent JS source file. Two selected frontend suites failed to
+  import it. Source now imports TS explicitly, with the shared compiler rewriting
+  relative import extensions to JS. Generated output was unchanged by that repair.
+  All 210 selected frontend recovery/checkpoint/authority/error tests then passed,
+  as did frontend typecheck and the 800-line source guard.
+
+This closes post-load stale-session delivery, not navigation-start atomicity or
+physical durability. An initial iframe load can also retire pre-load work; callers
+must explicitly inspect again rather than silently replay. Already dispatched
+native calls may still commit, and a blocked native call still holds the serial
+queue. Client timeout alone does not cancel host work. This run did not qualify
+installed WebView, actual native journal commit, power loss, authenticated multi-host
+LAN or distributed ownership transfer. Evidence remains local `verified`; there is
+no operational-grade promotion, version bump, commit, push, packaging or installation.
+
+## Follow-Up: Reply Delivery And Document Authority
+
+Verification date: 2026-10-16. A received journal response had already left the
+pending-message map but had not yet returned through its promise continuation.
+Pagehide/disposal could retire that client in this interval without preventing
+successful delivery. Seven new shared-client regressions failed before the repair,
+including caller-guard loss after a deletion acknowledgement.
+
+The shared client now checks the captured generation and optional caller guard again
+after the reply await. Stale continuations reject without issuing cleanup, rollback
+or replay commands. A native write may already have committed; this check does not
+claim to retract it. Session, file and Agent protocol versions are unchanged.
+
+The higher-level API authority guard had a separate gap: identical gateway/mode/token
+settings after page restoration could preserve old calls. Five lifecycle unit cases
+and both new Chromium/PWDT call-chain cases failed before the repair. In the ordinary
+run browser case, the old terminal response was published as a completed result.
+
+Authority captures now include a window-scoped active lifetime and generation. An
+observed pagehide retires the generation; pageshow enables fresh captures without
+reviving old ones, even when no guard ran while suspended. Captures made while
+suspended remain invalid. Background visibility changes, blur, beforeunload alone
+and duplicate pageshow are negative controls, not cancellation triggers. Each window
+installs one listener pair, not one per request; 1,000 retirement/capture cycles keep
+that bound. Nothing is written to disk, URLs or credentials for this fence.
+
+Verification:
+
+- All 64 desktop-shared tests passed, including the seven initially failing reply
+  continuation checks. Generated shared assets for the three shells are synchronized.
+- The full desktop GUI regression passed 117 of 117 cases, including those 64 shared
+  tests and 16 cross-origin iframe lifecycle cases; these counts overlap.
+- All 219 selected frontend direct recovery, checkpoint, authority and error tests
+  passed. Two direct-run service cases distinguish confirmed unsent reservation
+  cleanup from already-submitted uncertainty: the latter retains its original ID
+  until a fresh explicit inspection returns a validated terminal receipt.
+- All 67 API-focused unit tests passed (overlapping the selected frontend suite).
+- All 31 Workbench durable-direct Chromium tests passed. The two new ordinary-run
+  and manual-recovery cases hold a response, inject pagehide/pageshow, then release
+  it. Neither publishes the retired result or removes its saved owner. A second run
+  is blocked; fresh explicit inspection reconciles the exact original identity.
+  Assertions permit only one submission, no cancellation and two inspection calls.
+- Frontend typecheck and the 800-line source guard passed.
+- Documentation book/inventory, shared-asset synchronization, project organization
+  and whitespace checks passed. Tensor validation retains zero structural gaps,
+  four maturity gaps, twenty evidence-grade gaps and fifteen P0 gaps; Daji remains
+  blocked. Evidence remains local `verified`, not installed or operational promotion.
+
+The new Workbench cases use the real UI/PWDT/service/IndexedDB chain with mocked
+Agent responses and controlled PageTransitionEvent injection. They do not exercise
+actual browser BFCache restoration, installed WebView, native journal disk commits,
+physical power loss or authenticated multi-host Mesh. The API fence protects callers
+that capture and check authority, not every raw HTTP call. At this stage, before the
+checkpoint follow-up below, its retry/recovery pipeline was not covered. Already
+dispatched side effects remain possible. No version
+bump, commit, push, package or installation was performed.
+
+## Follow-Up: Checkpoint Caller Authority And Conditional Cleanup
+
+Verification date: 2026-10-16. Checkpoint recovery compared only current scope text,
+so a connection or document roundtrip could preserve an old call. Conditional
+journal removal did not accept a caller guard. Save retry also removed its identity
+after success without rechecking the authority captured before submission.
+
+Before repair, all twelve new service/storage boundary tests failed. Two of three
+new Chromium recovery cases also failed: check and acknowledgement accepted a late
+response after injected pagehide/pageshow. The open-version UI already rejected
+through its outer guard; a separate service test showed that the recovery service
+itself still needed to carry its guard through version validation.
+
+The generic checkpoint services now accept an injected authority capture shared by
+save/retry and recovery. The Workbench adapter supplies the existing API guard for
+project, model, version and checkpoint routes. Neither journal scope nor format
+changes; generic non-GUI users can supply their own guard. Hashing, reservation,
+dispatch, response handling and cleanup retain the original capture. A rejected
+late save response does not imply rollback: the exact original request identity
+remains available for a later explicit idempotent retry or read-only reconciliation.
+Restored callers cannot turn an old coalesced in-flight save into a new submission.
+
+Conditional removal carries a local callback through the browser/native adapter.
+IndexedDB checks before/after open, after transaction read, and on delete success
+while the transaction is still abortable. A failed guard aborts rather than merely
+reporting an error after deleting the identity. Desktop checks reuse the shared
+handshake/dispatch/reply fence without serializing callbacks or credentials. Failure
+after an actual commit cannot undo it; the service still rejects a retired caller's
+success delivery. Storage-only cleanup failure under unchanged authority preserves
+the existing behavior: a validated server commit is not reported as a failed save.
+
+Verification:
+
+- All 254 selected frontend direct/checkpoint/API/project-service/error tests passed,
+  including fourteen new service/storage cases and prior retry/coalescing behavior.
+- All 67 shared desktop tests passed, including new checkpoint guard checks before
+  discovery, during handshake and after acknowledgement.
+- The full desktop GUI regression passed 120 of 120 cases, including those 67
+  shared tests and the 16 iframe lifecycle cases; these counts overlap.
+- Both checkpoint Chromium suites passed 22 of 22 cases. Seven new cases cover
+  page-lifecycle retirement during check/acknowledge/open, model save and Save As,
+  and actual IndexedDB transaction abort at read success and delete success. Fresh
+  explicit recovery clears only the original identity with no checkpoint POST.
+- Typecheck initially caught a missing optional request-ID field in a new test's
+  generic input type. After correcting the test definition, frontend typecheck and
+  the 800-line source guard passed. Shared generated assets are synchronized.
+- Documentation book/inventory, organization and whitespace checks passed. The
+  tensor's renamed shared-test reference was synchronized; validation retains zero
+  structural gaps, four maturity gaps, twenty evidence-grade gaps and fifteen P0
+  gaps, with Daji blocked. This adds local verified evidence, not operational grade.
+
+The browser uses real PWDT, service and IndexedDB code with controlled lifecycle
+events and a mocked checkpoint service. This is not actual BFCache, installed
+WebView, native disk/power-loss, authenticated multi-host Mesh or distributed
+ownership qualification. Checks are not atomic with external configuration writes
+or native commits; already dispatched work can finish. No snapshots, backups,
+automatic replay, version bump, commit, push, packaging or installation were added.
+
+## Follow-Up: Checkpoint Reservation Identity Parity
+
+Verification date: 2026-10-16. Rust rejected a same-key reservation with a foreign
+scope, operation or parent, but the browser journal returned it as an existing
+reservation. Browser validation also retained the caller's mutable object across
+database open. Desktop bridge replies checked the parent identity but accepted a
+new reservation with a changed request ID or timestamp; save retry trusted adapter
+replies without independent validation.
+
+Before repair, eleven of thirteen new frontend unit cases failed, as did four of
+six new desktop host/client cases. Both sets included passing legitimate-existing
+reservation controls. All three new real-Chromium cases also failed: injected
+same-key scope, operation or parent conflicts still allowed a checkpoint POST.
+The service already used a mocked backend; this demonstrates an incorrect local
+dispatch decision, not a compromise or failure observed on a physical server.
+
+One shared reservation validator now checks key/scope/operation/parent identity.
+New reservations must echo request ID and creation time exactly; existing ones
+keep their original ID/time. Browser reserve snapshots metadata before opening the
+database, and conflicts abort the read/write transaction without replacement.
+Both desktop bridge ends validate responses, and save retry independently checks
+them against a separate request snapshot before POST. A failed validation releases
+only the memory coalescing slot, not the durable record. The native journal format,
+IPC envelope version and actual Rust storage algorithm are unchanged.
+
+Verification:
+
+- Selected frontend direct/checkpoint/API/project-service/error tests: 267/267,
+  including thirteen new reservation cases. Shape errors, adapter mutation, caller
+  mutation during database open and legitimate original-ID reuse are covered.
+- Shared desktop tests: 73/73, including six new host/client cases for changed new
+  request IDs/timestamps and valid existing reservations.
+- Full desktop GUI regression: 126/126, including the 73 shared tests and sixteen
+  real-iframe navigation/lifecycle cases. These counts overlap.
+- Both checkpoint Chromium suites: 25/25. The three new conflict cases retain the
+  injected record, send no POST, and create no model version. Restoring only the
+  test-injected corruption allows a fresh explicit retry with the original request
+  ID, one committed version and normal conditional cleanup.
+- Rust desktop-runtime checkpoint journal tests: 8/8 on local macOS. An added
+  native parity case verifies all three identity conflicts preserve the exact file
+  bytes; the reopen test now also verifies the original timestamp is retained.
+- Frontend typecheck, the 800-line source guard, shared-asset synchronization and
+  documentation book/inventory checks passed. Rust formatting, project organization
+  and whitespace checks passed. Tensor validation retains zero structural gaps,
+  four maturity gaps, twenty evidence-grade gaps and fifteen P0 gaps; Daji remains
+  blocked. The new scoped contract claim does not promote operational maturity.
+
+Evidence remains local `verified`. Chromium exercises real PWDT/save/IndexedDB code
+against a mocked checkpoint service; desktop bridge tests mock native invocation.
+The separate Rust tests exercise local temporary files, not an installed App or
+mid-commit kill/power-loss qualification. This is not authenticated multi-host Mesh,
+distributed deduplication or atomic cross-window API authorization. No automatic
+repair, replay, eviction, backup series, format migration, commit, push, version
+bump, packaging or installation was performed.
+
 ## Remaining Boundaries
 
 - No physical LAN/multi-host, physical power-loss, Windows or installed GUI

@@ -1,3 +1,5 @@
+import { createJournalSessionClient, validJournalSession } from "./journal-session-client.ts";
+
 export type DirectExecutionIntent = {
   scope: string; endpoint: string; study_kind: string; execution_id: string; created_at: number; store_id?: string;
 };
@@ -31,9 +33,8 @@ export function validateDirectExecutionList(value: unknown): DirectExecutionInte
     || new Set(entries.map(e => e.execution_id)).size !== entries.length) throw new Error("direct:journal_corrupt");
   return entries;
 }
-const protocol = "kyuubiki:direct-execution-journal/v1";
+const protocol = "kyuubiki:direct-execution-journal/v2";
 const frameOrigin = "http://127.0.0.1:3000";
-const shellOrigins = new Set(["tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"]);
 const codes = new Set(["direct:journal_corrupt", "direct:journal_busy", "direct:journal_full", "direct:journal_unsafe_path"]);
 type Request = { action: "list" } | { action: "reserve" | "remove"; intent: DirectExecutionIntent };
 function validateResult(request: Request, result: any) {
@@ -48,69 +49,67 @@ function validateResult(request: Request, result: any) {
 }
 export function installDirectExecutionJournalHost(frame: HTMLIFrameElement,
   invoke: (command: string, payload?: Record<string, unknown>) => Promise<unknown>, host: Window = window) {
-  let disposed = false, queued = 0;
+  let disposed = false, suspended = false, queued = 0, generation = Symbol();
+  let session = host.crypto.randomUUID();
   let tail = Promise.resolve();
+  const retire = () => { generation = Symbol(); session = host.crypto.randomUUID(); };
+  const hide = () => { suspended = true; retire(); };
+  const show = () => { suspended = false; };
   const receive = (event: MessageEvent) => {
     const data = event.data;
-    if (disposed || event.source !== frame.contentWindow || event.origin !== frameOrigin || data?.type !== protocol
-      || typeof data.id !== "string" || !/^[A-Za-z0-9-]{1,80}$/.test(data.id)
-      || !["list", "reserve", "remove"].includes(data.action) || Object.keys(data).some(key => !["type", "id", "action", "intent"].includes(key))) return;
+    if (disposed || suspended || !frame.isConnected || !frame.contentWindow || event.source !== frame.contentWindow || event.origin !== frameOrigin || data?.type !== protocol
+      || typeof data.id !== "string" || !/^[A-Za-z0-9-]{1,80}$/.test(data.id)) return;
+    if (data.action === "connect") {
+      if (Object.keys(data).some(key => !["type", "id", "action"].includes(key))) return;
+      try { (event.source as Window).postMessage({ type: `${protocol}:result`, id: data.id, ok: true, session, result: null }, frameOrigin); }
+      catch { /* A handshake has no native side effects. */ }
+      return;
+    }
+    if (!validJournalSession(data.session) || !["list", "reserve", "remove"].includes(data.action)
+      || Object.keys(data).some(key => !["type", "id", "action", "intent", "session"].includes(key))) return;
+    if (data.session !== session) {
+      try { (event.source as Window).postMessage({ type: `${protocol}:result`, id: data.id, session: data.session,
+        ok: false, error: "direct:journal_unavailable", expired: true }, frameOrigin); }
+      catch { /* The old document may already be gone. */ }
+      return;
+    }
     let request: Request;
     try {
       if (data.action === "list") { if (data.intent !== undefined) return; request = { action: "list" }; }
       else request = { action: data.action, intent: { ...validateDirectExecutionIntent(data.intent) } };
     } catch { return; }
-    const source = event.source as Window;
+    const source = event.source as Window, capturedGeneration = generation, id = data.id, capturedSession = session;
+    // WindowProxy identity survives navigation; load retires the old document's queue.
+    const current = () => !disposed && !suspended && frame.isConnected && source === frame.contentWindow && capturedGeneration === generation;
     const reply = (payload: object) => {
-      try { if (!disposed && source === frame.contentWindow) source.postMessage({ type: `${protocol}:result`, id: data.id, ...payload }, frameOrigin); }
+      try { if (current()) source.postMessage({ type: `${protocol}:result`, id, session: capturedSession, ...payload }, frameOrigin); }
       catch { /* Closing the frame does not roll back a committed reservation. */ }
     };
     if (queued >= 8) { reply({ ok: false, error: "direct:journal_busy" }); return; }
     queued++;
     tail = tail.then(async () => {
-      if (disposed) return;
+      if (!current()) return;
       try { reply({ ok: true, result: validateResult(request, await invoke("direct_execution_journal", { payload: request })) }); }
       catch (error) { const code = String(error).replace(/^Error: /, ""); reply({ ok: false, error: codes.has(code) ? code : "direct:journal_unavailable" }); }
     }).finally(() => { queued--; });
   };
   host.addEventListener("message", receive);
-  return () => { disposed = true; host.removeEventListener("message", receive); };
+  host.addEventListener("pagehide", hide);
+  host.addEventListener("pageshow", show);
+  frame.addEventListener("load", retire);
+  return () => {
+    disposed = true; host.removeEventListener("message", receive);
+    host.removeEventListener("pagehide", hide); host.removeEventListener("pageshow", show);
+    frame.removeEventListener("load", retire);
+  };
 }
 export function createDirectExecutionJournalClient(host: Window = window, timeoutMs = 4000): (DirectExecutionJournal & { dispose(): void }) | null {
   if (host.parent === host || new URLSearchParams(host.location.search).get("desktopLayout") !== "1") return null;
-  let origin: string | null = null, disposed = false;
-  const pending = new Map<string, { request: Request; timer: number; resolve: (value: any) => void; reject: (error: Error) => void }>();
-  const receive = (event: MessageEvent) => {
-    if (event.source !== host.parent || !shellOrigins.has(event.origin) || (origin && origin !== event.origin)) return;
-    const data = event.data;
-    if (data?.type !== `${protocol}:result` || typeof data.id !== "string") return;
-    const entry = pending.get(data.id);
-    if (!entry) return;
-    pending.delete(data.id); host.clearTimeout(entry.timer);
-    try {
-      if (data.ok !== true) throw new Error(codes.has(data.error) ? data.error : "direct:journal_unavailable");
-      const result = validateResult(entry.request, data.result);
-      origin = event.origin; entry.resolve(result);
-    } catch (error) { entry.reject(error as Error); }
-  };
-  host.addEventListener("message", receive);
-  const send = (request: Request): Promise<any> => {
-    if (disposed || pending.size >= 8 || (request.action !== "list" && !origin)) return Promise.reject(new Error("direct:journal_unavailable"));
-    return new Promise((resolve, reject) => {
-      const id = host.crypto.randomUUID();
-      const timer = host.setTimeout(() => { pending.delete(id); reject(new Error("direct:journal_unavailable")); }, timeoutMs);
-      pending.set(id, { request, timer, resolve, reject });
-      try { host.parent.postMessage({ type: protocol, id, ...request }, origin ?? "*"); }
-      catch (error) { pending.delete(id); host.clearTimeout(timer); reject(error); }
-    });
-  };
+  const client = createJournalSessionClient(host, timeoutMs, protocol, "direct", codes, validateResult);
   const mutate = async (action: "reserve" | "remove", value: DirectExecutionIntent, assertCurrent?: () => void) => {
     const intent = { ...validateDirectExecutionIntent(value) };
-    assertCurrent?.();
-    if (!origin) await send({ action: "list" });
-    assertCurrent?.();
-    return send({ action, intent });
+    return client.request({ action, intent }, assertCurrent);
   };
-  return { list: () => send({ action: "list" }), reserve: value => mutate("reserve", value), remove: (value, assertCurrent) => mutate("remove", value, assertCurrent),
-    dispose() { disposed = true; host.removeEventListener("message", receive); for (const entry of pending.values()) { host.clearTimeout(entry.timer); entry.reject(new Error("direct:journal_unavailable")); } pending.clear(); } };
+  return { list: () => client.request({ action: "list" }), reserve: value => mutate("reserve", value),
+    remove: (value, assertCurrent) => mutate("remove", value, assertCurrent), dispose: client.dispose };
 }

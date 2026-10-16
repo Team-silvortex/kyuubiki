@@ -1,0 +1,108 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "October 16, 2026 source 3.6.0 evidence recalibration. Preserve separate Orchestra, standalone Agent, local Mesh and browser/native-journal achievements. Named installed, authenticated multi-host, host-power-loss and sustained-load obligations cannot be closed by unrelated historical operational claims. This is retained-evidence review, not new product execution or automatic recovery authorization.",
+  "cell_requirements": [
+    { "module_id": "orchestra-control-plane", "paradigm": "validation", "dimensions": ["recovery"] }
+  ],
+  "qualification_requirements": [
+    {
+      "id": "orchestra-retained-agent-control-rejoin",
+      "module_id": "runtime-agent-cli", "paradigm": "runtime_api", "dimension": "recovery",
+      "scope": "orchestrated/two-host/retained-control-link-rejoin", "target": "operational",
+      "claims": ["two-host-agent-control-link-operational"],
+      "basis": ["releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json"],
+      "acceptance": "Preserve the retained two-host Orchestra loss/re-registration journey with its original Agent process and version. It does not qualify decentralized discovery, current installed typed workflows or raw Agent ingress authentication."
+    },
+    {
+      "id": "standalone-agent-local-process-crash-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "solver_execution", "dimension": "recovery",
+      "scope": "macos/source-agent/durable-ledger/forced-process-exit", "target": "verified",
+      "claims": ["standalone-agent-durable-receipt-process-crash-recovery", "standalone-agent-async-durable-admission-lifecycle", "standalone-agent-durable-index-exact-owner-recovery-controls"],
+      "basis": ["reports/agent-durable-async-20261013.md", "reports/agent-durable-recovery-controls-20261013.md"],
+      "acceptance": "Retain actual local native Agent process-kill, ledger reopen, original-owner inspect/cancel, unknown-outcome no-replay and healthy next-task evidence. SIGKILL is not host power loss; a durable admission without a receipt is not a completed computation."
+    },
+    {
+      "id": "mesh-local-discovery-owner-isolation",
+      "module_id": "runtime-agent-cli", "paradigm": "runtime_api", "dimension": "recovery",
+      "scope": "macos/loopback-multiprocess/mesh-discovery-and-owner-fencing", "target": "verified",
+      "claims": ["rust-agent-lan-mesh-local-isolation"],
+      "basis": ["reports/agent-lan-mesh-recovery-20261013.md"],
+      "acceptance": "Retain native local peer discovery, peer loss/rejoin, same-endpoint ledger replacement and cancellation-reply-loss checks with no cross-peer replay. A cluster name or store ID is not authentication, consensus, durable distributed DAG ownership or task migration."
+    },
+    {
+      "id": "workbench-local-direct-caller-recovery",
+      "module_id": "workbench-shell", "paradigm": "persistence_provenance", "dimension": "recovery",
+      "scope": "local/browser-mock-gateway/native-journal-unit/direct-caller-identity", "target": "verified",
+      "claims": ["workbench-single-agent-durable-run-caller-journal"],
+      "basis": ["reports/workbench-durable-direct-run-20261013.md", "reports/agent-lan-mesh-recovery-20261013.md"],
+      "acceptance": "Preserve local caller identity, authority retirement, exact-owner recovery and conditional cleanup. Browser HTTP responses are mocked and native journal process tests are a separate layer, not one installed GUI-to-real-Agent journey."
+    },
+    {
+      "id": "workbench-local-checkpoint-reservation-boundaries",
+      "module_id": "workbench-shell", "paradigm": "persistence_provenance", "dimension": "recovery",
+      "scope": "local/browser-indexeddb/checkpoint-identity-and-authority", "target": "verified",
+      "claims": ["checkpoint-reservation-identity-contract", "workbench-checkpoint-caller-authority-boundaries"],
+      "basis": ["reports/agent-lan-mesh-recovery-20261013.md", "docs/data-lifecycle.html"],
+      "acceptance": "Retain source browser/PWDT reservation mismatch rejection before POST, immutable metadata, authority checks and abortable conditional cleanup with original-ID explicit retry. Mocked checkpoint responses do not qualify installed, cross-window atomicity or power-loss behavior."
+    },
+    {
+      "id": "desktop-local-journal-session-fencing",
+      "module_id": "workbench-shell", "paradigm": "product_surface", "dimension": "contract",
+      "scope": "local/chromium-cross-origin-iframe/v2-journal-session", "target": "verified",
+      "claims": ["desktop-journal-host-document-lifecycle"],
+      "basis": ["reports/agent-lan-mesh-recovery-20261013.md", "docs/protocols.md"],
+      "acceptance": "Retain real iframe navigation and bounded session/queue retirement with mocked native invocation. Delayed requests cannot cross document ownership, but native calls already dispatched may commit. This is not installed WebView or actual BFCache qualification."
+    },
+    {
+      "id": "orchestra-source-typed-postgres-continuation",
+      "module_id": "orchestra-control-plane", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos/source-orchestra-agent/remote-postgres/typed-continuation", "target": "verified",
+      "claims": ["workflow-typed-postgres-native-continuation"],
+      "basis": ["reports/workflow-typed-postgres-recovery-20261011.md"],
+      "acceptance": "Retain bounded real source Orchestra/Agent restart chains through isolated remote PostgreSQL JSONB, typed identity and unknown-receipt blocking. The test pool warm-up, macOS compute and seven small rounds do not qualify default-policy installed Linux execution, PWDT revision-two migration or arbitrary DAG depth."
+    },
+    {
+      "id": "native-agent-lan-ingress-authorization",
+      "module_id": "runtime-agent-cli", "paradigm": "security", "dimension": "security",
+      "scope": "native-agent/lan/peer-and-controller-authentication", "target": "qualified", "claims": [],
+      "basis": ["reports/agent-lan-mesh-recovery-20261013.md", "docs/book-ch04-runtime-modes.html"],
+      "acceptance": "Qualify authenticated peer/controller identity, admission and recovery authorization, revocation and replay rejection on the native Agent listener. Cover one-Orchestra binding and mutually exclusive offline Mesh authority. Trusted-network raw TCP, public cluster/store IDs, HTTP gateway auth and connection limits cannot substitute."
+    },
+    {
+      "id": "mesh-authenticated-multihost-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "runtime_api", "dimension": "recovery",
+      "scope": "decentralized/authenticated-multihost/partition-rejoin-owner-recovery", "target": "qualified", "claims": [],
+      "basis": ["reports/agent-lan-mesh-recovery-20261013.md"],
+      "acceptance": "Retain repeated real multi-host Mesh partition/rejoin, endpoint/ledger replacement and lost-reply recovery with authenticated peers, original-owner fencing and healthy distinct tasks. Unknown work must not migrate or replay. Loopback Agents and Orchestra re-registration are different scopes; this does not implicitly certify distributed DAG scheduling."
+    },
+    {
+      "id": "workbench-installed-direct-owner-recovery",
+      "module_id": "workbench-shell", "paradigm": "persistence_provenance", "dimension": "recovery",
+      "scope": "macos/installed-workbench/native-agent/direct-owner-recovery", "target": "qualified", "claims": [],
+      "basis": ["reports/workbench-durable-direct-run-20261013.md", "reports/agent-lan-mesh-recovery-20261013.md"],
+      "acceptance": "Exercise the matching installed shell/frontend/native journal against a real durable Agent. Include lost admission/cancel replies, App kill/reopen, two-window conditional cleanup, same-endpoint foreign ledger rejection and healthy follow-up without new identity or blind replay. Separate browser mocks and filesystem unit tests are not the complete journey."
+    },
+    {
+      "id": "agent-durable-ledger-host-power-loss",
+      "module_id": "runtime-agent-cli", "paradigm": "solver_execution", "dimension": "recovery",
+      "scope": "native-agent/durable-ledger/host-power-loss-commit-boundaries", "target": "qualified", "claims": [],
+      "basis": ["reports/agent-durable-async-20261013.md", "reports/agent-lan-mesh-recovery-20261013.md"],
+      "acceptance": "On disposable owned storage, retain non-graceful host or VM power-cut evidence around store identity, admission, result and directory-sync boundaries; committed receipts survive, incomplete outcomes stay unknown, corrupt records fail closed and a fresh task succeeds. Process kill, file-sync calls alone and another service's old host-reset evidence do not close this scope. No production data is a fault-test target."
+    },
+    {
+      "id": "orchestra-installed-typed-workflow-recovery",
+      "module_id": "orchestra-control-plane", "paradigm": "workflow_composition", "dimension": "recovery",
+      "scope": "current-installed/orchestra-remote-agent/postgres-typed-workflow-recovery", "target": "qualified", "claims": [],
+      "basis": ["reports/workflow-typed-postgres-recovery-20261011.md", "reports/workflow-native-dispatch-evidence-20261013.md"],
+      "acceptance": "Through Installer-managed matching runtime artifacts and default database policy, qualify typed solve/branch/join continuation with a remote native Agent, ownership takeover and final publication after faults. Completed work is not repeated; lost native evidence blocks rather than fabricating completion. Older operational takeover and source-only typed tests retain their scopes, not current installed acceptance."
+    },
+    {
+      "id": "mesh-sustained-ingress-and-recovery-budget",
+      "module_id": "runtime-agent-cli", "paradigm": "benchmark", "dimension": "benchmark",
+      "scope": "native-agent/multihost-mesh/sustained-ingress-and-recovery", "target": "qualified", "claims": [],
+      "basis": ["reports/agent-lan-mesh-recovery-20261013.md"],
+      "acceptance": "Measure repeated sustained connection/byte saturation, peer churn and recovery traffic on real multi-host Agents. Retain tail latency, throughput, memory/descriptor ceilings, recovery capacity and healthy next tasks. The 64-candidate cap, thousand-round state test and historical 1M solver-node runs are not this benchmark; do not increase limits to pass."
+    }
+  ]
+}

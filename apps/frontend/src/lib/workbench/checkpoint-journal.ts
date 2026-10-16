@@ -1,5 +1,5 @@
-import { createWorkbenchCheckpointClient, validateCheckpointIntent, type CheckpointIntent, type CheckpointJournal } from "../../../../desktop-shared/src/checkpoint-recovery-bridge.ts";
-export { validateCheckpointIntent, type CheckpointIntent, type CheckpointJournal };
+import { createWorkbenchCheckpointClient, validateCheckpointIntent, validateCheckpointReservation, type CheckpointIntent, type CheckpointJournal } from "../../../../desktop-shared/src/checkpoint-recovery-bridge.ts";
+export { validateCheckpointIntent, validateCheckpointReservation, type CheckpointIntent, type CheckpointJournal };
 
 export const CHECKPOINT_JOURNAL_DATABASE = "kyuubiki-checkpoint-recovery";
 const STORE = "pending";
@@ -18,7 +18,7 @@ export function createWorkbenchCheckpointJournal(): CheckpointJournal {
   return {
     list: () => backend().list(),
     async reserve(intent) { const value = await backend().reserve(intent); if (native) changed(); return value; },
-    async remove(key, requestId) { await backend().remove(key, requestId); if (native) changed(); },
+    async remove(key, requestId, assertCurrent) { await backend().remove(key, requestId, assertCurrent); if (native) changed(); },
   };
 }
 
@@ -50,7 +50,9 @@ export function createCheckpointJournal(factory: () => IDBFactory | undefined = 
     });
   }
 
-  async function access<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore, done: (value: T) => void, fail: (error: unknown) => void) => void): Promise<T> {
+  async function access<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore, done: (value: T) => void,
+    fail: (error: unknown) => void, checkpoint: () => boolean) => void, assertCurrent?: () => void): Promise<T> {
+    assertCurrent?.();
     const db = await open();
     return new Promise<T>((resolve, reject) => {
       let result: T;
@@ -58,6 +60,7 @@ export function createCheckpointJournal(factory: () => IDBFactory | undefined = 
       let tx: IDBTransaction;
       const finishError = () => { db.close(); reject(failure ?? new Error("checkpoint:journal_unavailable")); };
       try {
+        assertCurrent?.();
         tx = db.transaction(STORE, mode);
         tx.oncomplete = () => {
           db.close();
@@ -66,7 +69,12 @@ export function createCheckpointJournal(factory: () => IDBFactory | undefined = 
         };
         tx.onabort = finishError;
         tx.onerror = () => { failure ??= new Error("checkpoint:journal_unavailable", { cause: tx.error }); };
-        work(tx.objectStore(STORE), (value) => { result = value; }, (error) => { failure = error; tx.abort(); });
+        const fail = (error: unknown) => { failure = error; tx.abort(); };
+        const checkpoint = () => {
+          try { assertCurrent?.(); return true; }
+          catch (error) { fail(error); return false; }
+        };
+        work(tx.objectStore(STORE), (value) => { result = value; }, fail, checkpoint);
       } catch (error) { failure = error; finishError(); }
     });
   }
@@ -82,26 +90,30 @@ export function createCheckpointJournal(factory: () => IDBFactory | undefined = 
   }
 
   return {
-    reserve(intent) {
-      validateCheckpointIntent(intent);
+    reserve(value) {
+      const intent = { ...validateCheckpointIntent(value) };
       return access("readwrite", (store, done, fail) => readEntries(store, (entries) => {
         const existing = entries.find((entry) => entry.key === intent.key);
-        if (existing) { done({ intent: existing, isNew: false }); return; }
+        if (existing) { done(validateCheckpointReservation({ intent: existing, isNew: false }, intent)); return; }
         if (entries.length >= LIMIT) throw new Error("checkpoint:recovery_capacity_reached");
         store.add(intent);
         done({ intent, isNew: true });
       }, fail));
     },
     list: () => access("readonly", (store, done, fail) => readEntries(store, done, fail)),
-    remove: (key, requestId) => access("readwrite", (store, done, fail) => {
+    remove: (key, requestId, assertCurrent) => access("readwrite", (store, done, fail, checkpoint) => {
       const request = store.get(key);
       request.onsuccess = () => {
+        if (!checkpoint()) return;
         try {
-          if (request.result && validateCheckpointIntent(request.result).requestId === requestId) store.delete(key);
+          if (request.result && validateCheckpointIntent(request.result).requestId === requestId) {
+            // Delete success is still abortable before this transaction commits.
+            store.delete(key).onsuccess = checkpoint;
+          }
           done(undefined);
         } catch (error) { fail(error); }
       };
-    }),
+    }, assertCurrent),
   };
 }
 

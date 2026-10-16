@@ -739,6 +739,29 @@
           read-only <code>GET /api/v1/checkpoints/:operation/:parent_id/:request_id</code> with the
           existing read authorization and <code>Cache-Control: no-store</code>. Acknowledgement
           removes only an exact confirmed or deleted identity; unknown outcomes remain pending.</p>
+        <p>Reservation identity is checked consistently by the browser journal, desktop
+          bridge and checkpoint save service. A matching key must also match scope,
+          operation and parent ID. A new reservation must echo its request ID and creation
+          time exactly; an existing reservation keeps its original request ID and time.
+          Browser metadata is snapshotted before opening IndexedDB. Conflicts abort the
+          transaction and block the save before POST, without deleting or overwriting the
+          stored record. Invalid adapter replies cannot rebind the save to another identity.
+          These checks do not change the version-1 file format or add automatic repair.</p>
+        <p>Checkpoint saves, receipt checks, recovered-version opens and acknowledgements
+          retain their original API-authority guard across asynchronous work. Managed
+          connection/credential changes and pagehide invalidate that guard even if the
+          original settings or page are restored. A new explicit query can reconcile the
+          old identity, but an old response cannot clear it or authorize a new workspace
+          mutation. A late save response may represent a real server commit: retain its
+          original request ID rather than assuming the save failed or automatically
+          resending it. Concurrent identical saves still share one in-flight request.</p>
+        <p>Browser cleanup rechecks ownership before and after database open, after its
+          transaction read, and on delete-request success while the transaction can still
+          abort. The desktop bridge carries the same local callback through handshake,
+          dispatch and reply checks without serializing it. These guards cannot undo a
+          committed transaction or recall an already dispatched native command. An ordinary
+          storage-only cleanup failure still does not turn a valid save into a reported
+          failed commit; its pending identity stays available for reconciliation.</p>
         <p>Normal browser mode uses the bounded IndexedDB database
           <code>kyuubiki-checkpoint-recovery</code>; desktop host failure never falls back to it.
           Entries from a different backend/authentication scope remain isolated and still count
@@ -746,6 +769,13 @@
           the original authority first. Current native evidence verifies clean macOS process exit,
           not hard power loss, concurrent-window end-to-end reconciliation or all-platform storage.
           See the <a href="./tutorial-pwdt-automation.html#checkpoint-retries">PWDT recovery tutorial</a>.</p>
+        <p>Local Chromium tests cover retired saves, read-only receipt recovery, aborted
+          IndexedDB cleanup and same-key reservation conflicts that must send no POST,
+          using controlled fault injection and a mocked checkpoint service. Rust journal
+          tests separately verify conflict rejection without rewriting the stored file.
+          This is not actual BFCache, installed WebView, native disk power-loss or
+          multi-host recovery qualification. See the
+          <a href="../reports/agent-lan-mesh-recovery-20261013.md">scoped recovery report</a>.</p>
       </section>
 
       <section class="docs-card docs-section" id="direct-execution-caller-storage">

@@ -93,8 +93,9 @@ test("ordinary PWDT run uses durable single-Agent submission and applies a termi
 for (const [observation, modeChange] of [
   ["ordinary run", "switch"], ["manual recovery", "switch"],
   ["ordinary run", "roundtrip"], ["manual recovery", "roundtrip"],
+  ["ordinary run", "page lifecycle"], ["manual recovery", "page lifecycle"],
 ]) {
-  test(`a token-free mode ${modeChange} fences a late ${observation} receipt without losing its saved owner`, { timeout: 120_000 }, async () => {
+  test(`a token-free ${modeChange} fences a late ${observation} receipt without losing its saved owner`, { timeout: 120_000 }, async () => {
     await usingWorkbench(async page => {
       const { calls, state } = await setupRun(page, observation === "manual recovery");
       let original;
@@ -114,8 +115,16 @@ for (const [observation, modeChange] of [
         assert.equal(original.execution_id, state.id);
         const before = await page.evaluate(() => window.__kyuubikiPwdt.state());
         assert.equal(before.hasResult, false);
-        await invoke(page, "settings/patch", { frontendRuntimeMode: "orchestrated_gui" });
-        await page.waitForFunction(() => JSON.parse(localStorage.getItem("kyuubiki-workbench-settings")).frontendRuntimeMode === "orchestrated_gui");
+        if (modeChange === "page lifecycle") {
+          // Controlled event injection, not qualification of the browser's BFCache implementation.
+          await page.evaluate(() => {
+            window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true }));
+            window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+          });
+        } else {
+          await invoke(page, "settings/patch", { frontendRuntimeMode: "orchestrated_gui" });
+          await page.waitForFunction(() => JSON.parse(localStorage.getItem("kyuubiki-workbench-settings")).frontendRuntimeMode === "orchestrated_gui");
+        }
         if (modeChange === "roundtrip") {
           await invoke(page, "settings/patch", { frontendRuntimeMode: "direct_mesh_gui" });
           await page.waitForFunction(() => JSON.parse(localStorage.getItem("kyuubiki-workbench-settings")).frontendRuntimeMode === "direct_mesh_gui");

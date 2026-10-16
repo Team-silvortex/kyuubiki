@@ -7,6 +7,7 @@
   "evidence_includes": [
     "config/architecture/module-function-coverage-evidence/current-qualification-scopes.json",
     "config/architecture/module-function-coverage-evidence/current-solver-qualification-scopes.json",
+    "config/architecture/module-function-coverage-evidence/current-recovery-qualification-scopes.json",
     "config/architecture/module-function-coverage-evidence/core-contracts.json",
     "config/architecture/module-function-coverage-evidence/contracts-validation.json",
     "config/architecture/module-function-coverage-evidence/product-surface-contracts.json",
@@ -149,8 +150,8 @@
     "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
   },
   "release_profile": {
-    "id": "daji-3-4-hardening",
-    "current_checkpoint": "daji 3.4.5",
+    "id": "daji-3-6-hardening",
+    "current_checkpoint": "daji 3.6.0",
     "target_release": "daji 3.6.x",
     "gate_mode": "advisory",
     "enforce_from": "explicit gate-mode decision",

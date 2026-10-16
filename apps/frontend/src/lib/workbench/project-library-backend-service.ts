@@ -1,7 +1,7 @@
 "use client";
 
 import { defaultProjectApiClient } from "@/lib/api/project-client";
-import { buildWorkbenchApiAuthHeaders } from "@/lib/api/auth-context";
+import { buildWorkbenchApiAuthHeaders, captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
 import { resolveWorkbenchApiUrl } from "@/lib/api/backend-target";
 import { createWorkbenchCheckpointJournal } from "./checkpoint-journal";
 import { createCheckpointRecovery } from "./checkpoint-recovery";
@@ -21,8 +21,9 @@ export {
 
 const journal = createWorkbenchCheckpointJournal();
 const scope = () => JSON.stringify([resolveWorkbenchApiUrl("/api/v1/projects"), buildWorkbenchApiAuthHeaders("/api/v1/projects")]);
+const captureAuthority = () => captureWorkbenchApiAuthority("/api/v1/projects", "/api/v1/models", "/api/v1/model-versions", "/api/v1/checkpoints");
 
-export const workbenchCheckpointRecovery = createCheckpointRecovery({ journal, scope, lookup: defaultProjectApiClient.fetchCheckpoint });
+export const workbenchCheckpointRecovery = createCheckpointRecovery({ journal, scope, captureAuthority, lookup: defaultProjectApiClient.fetchCheckpoint });
 
 export const workbenchProjectLibraryBackendService = createProjectLibraryBackendService({
   createModel: defaultProjectApiClient.createModel,
@@ -41,5 +42,6 @@ export const workbenchProjectLibraryBackendService = createProjectLibraryBackend
 }, {
   // Only a digest is retained by the retry manager, never credentials or mesh payloads.
   scope,
+  captureAuthority,
   journal,
 });

@@ -22,7 +22,7 @@ function fixture(run: (f: {
   const location = { search: "" };
   globalThis.window = { localStorage: storage, sessionStorage, location,
     addEventListener: (type: string, listener: (event: StorageEvent) => void) => {
-      assert.equal(type, "storage"); events.add(listener);
+      if (type === "storage") events.add(listener);
     },
   } as unknown as Window & typeof globalThis;
   try {

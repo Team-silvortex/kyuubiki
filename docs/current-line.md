@@ -32,8 +32,13 @@ source runs at the report's recorded overlay, not new 3.6.0 installed, physical,
 remote or durable-recovery qualification. Earlier follow-ups below retain their
 original provenance and limitations.
 
-The tensor still records four maturity, 20 evidence-grade and 15 P0 gaps;
-release qualification remains blocked. Direct sweep-request, plan and expansion
+The [October 16 tensor recalibration](../reports/tensor-recalibration-20261016.md)
+records two maturity, 22 evidence-grade and 17 P0 gaps; 55/77 coordinates and
+17/46 named scenarios meet their targets. New recovery obligations expose
+unqualified native LAN authentication, installed direct/typed-workflow recovery,
+host-power-loss durability and sustained multi-host Mesh load. Local desktop
+tests now have correct verified mappings; no installed grade is promoted.
+Release qualification remains blocked. Direct sweep-request, plan and expansion
 quality-metadata admission now have scoped follow-ups below. Expansion counts and
 direct execution-batch quality evidence also have bounded checks. Batch structure,
 unique recovery identities and checkpoint input/policy admission now have a scoped
