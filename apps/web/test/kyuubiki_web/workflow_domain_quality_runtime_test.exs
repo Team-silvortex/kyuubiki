@@ -322,6 +322,39 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntimeTest do
     end
   end
 
+  test "transport stabilization terms are opt-in and retain native scoring defaults" do
+    fields =
+      ~w(transport_artificial_diffusivity_peak transport_stabilization_flux_peak_magnitude transport_numerical_flux_peak_magnitude)
+
+    payload = Map.new(fields, &{&1, 0.25})
+
+    assert {:ok, defaults} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.score_transport_quality",
+               payload,
+               %{}
+             )
+
+    assert defaults["transport_quality_term_count"] == 4
+    refute Enum.any?(defaults["transport_quality_terms"], &(&1["field"] in fields))
+
+    for field <- fields do
+      assert {:ok, quality} =
+               WorkflowOperatorRuntime.run_transform_operator(
+                 "transform.score_transport_quality",
+                 payload,
+                 %{"enabled_terms" => [field]}
+               )
+
+      assert quality["transport_quality_term_count"] == 1
+      assert quality["transport_quality_missing_metric_count"] == 0
+      assert_in_delta quality["transport_quality_score"], 0.25, 1.0e-12
+
+      assert [%{"field" => ^field, "target" => 1.0, "weight" => 1.0, "value" => 0.25}] =
+               quality["transport_quality_terms"]
+    end
+  end
+
   test "runs domain quality scores into a composite objective inside graph runner" do
     graph = %{
       "schema_version" => "kyuubiki.workflow-graph/v1",

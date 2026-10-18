@@ -1,9 +1,12 @@
+Code.require_file("workflow_diagnostic_agent.exs", __DIR__)
+
 defmodule KyuubikiWeb.TestSupport.WorkflowCatalogBenchmark do
   @moduledoc false
 
   alias KyuubikiWeb.TestSupport.WorkflowApi
   alias KyuubikiWeb.TestSupport.WorkflowApiFixtures
   alias KyuubikiWeb.TestSupport.WorkflowCatalogBenchmarkFixtures
+  alias KyuubikiWeb.TestSupport.WorkflowDiagnosticAgent
 
   @default_case_ids [
     "workflow.heat-thermo-quad-benchmark-json",
@@ -43,7 +46,13 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCatalogBenchmark do
   end
 
   defp run_case(router_opts, definition, run_index) do
-    {:ok, _pid} = WorkflowApi.start_fake_agent_sessions(definition.frame_sessions.())
+    agent =
+      if Map.has_key?(definition, :agent_sessions) do
+        WorkflowDiagnosticAgent.start!(definition.agent_sessions.())
+      else
+        {:ok, _pid} = WorkflowApi.start_fake_agent_sessions(definition.frame_sessions.())
+        nil
+      end
 
     port = WorkflowApi.await_fake_agent_port()
     WorkflowApi.configure_fake_agent_pool(port)
@@ -58,6 +67,7 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCatalogBenchmark do
       )
 
     elapsed_ms = System.monotonic_time(:millisecond) - started_at
+    if agent, do: WorkflowDiagnosticAgent.assert_complete(agent)
     result = result_payload["result"]
     performance = Map.get(result, "performance", %{})
     exported = get_in(result, ["artifacts", "json_output.json", "content"]) || "{}"
@@ -111,7 +121,22 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCatalogBenchmark do
     %{
       workflow_id: "workflow.heat-thermo-quad-benchmark-json",
       input_artifacts: &WorkflowApi.heat_to_thermo_quad_input_artifacts/0,
-      frame_sessions: &WorkflowCatalogBenchmarkFixtures.heat_thermo_benchmark_frames/0,
+      agent_sessions: fn ->
+        [heat, thermo] = WorkflowCatalogBenchmarkFixtures.heat_thermo_benchmark_frames()
+
+        [
+          WorkflowDiagnosticAgent.solver("solve_heat_plane_quad_2d", heat),
+          WorkflowDiagnosticAgent.diagnostic(
+            "extract_thermal_diagnostics",
+            "extract.thermal_result_diagnostics"
+          ),
+          WorkflowDiagnosticAgent.solver("solve_thermal_plane_quad_2d", thermo),
+          WorkflowDiagnosticAgent.diagnostic(
+            "extract_thermo_diagnostics",
+            "extract.thermo_result_diagnostics"
+          )
+        ]
+      end,
       summary_excerpt: fn summary ->
         %{
           "benchmark_winner" => summary["benchmark_winner"],
@@ -124,7 +149,7 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCatalogBenchmark do
         result = result_payload["result"]
 
         unless result_payload["job"]["status"] == "completed" do
-          raise "heat thermo benchmark job did not complete"
+          raise "heat thermo benchmark job did not complete: #{inspect(Map.take(result_payload["job"], ["status", "message"]))}"
         end
 
         unless length(result["completed_nodes"]) == 9 do

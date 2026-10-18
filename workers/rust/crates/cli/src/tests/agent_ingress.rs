@@ -50,6 +50,38 @@ fn ingress_configuration_is_bounded_and_never_silently_disabled() {
 }
 
 #[test]
+fn denied_network_peers_never_consume_general_or_recovery_capacity() {
+    let ingress = ingress(1000);
+    let local = crate::agent_network_access::NetworkAccess::default();
+    let allowed = crate::agent_network_access::NetworkAccess::parse(Some("192.0.2.1")).unwrap();
+    let peer = "192.0.2.1:50123".parse().unwrap();
+    for _ in 0..20 {
+        assert!(ingress.admit_peer_with_policy(Ok(peer), &local).is_none());
+    }
+    assert_eq!(ingress.snapshot()["active_connections"], 0);
+    assert_eq!(ingress.snapshot()["reserved_request_bytes"], 0);
+    let general = (0..2)
+        .map(|_| ingress.admit_peer_with_policy(Ok(peer), &allowed).unwrap())
+        .collect::<Vec<_>>();
+    assert!(general.iter().all(|permit| !permit.recovery_only));
+    assert!(ingress.admit_peer_with_policy(Ok(peer), &local).is_none());
+    assert!(
+        ingress
+            .admit_peer_with_policy(Err(io::ErrorKind::NotConnected.into()), &allowed)
+            .is_none()
+    );
+    assert_eq!(
+        ingress.snapshot()["recovery_reserve"]["active_connections"],
+        0
+    );
+    let reserve = ingress.admit_peer_with_policy(Ok(peer), &allowed).unwrap();
+    assert!(reserve.recovery_only);
+    assert!(ingress.admit_peer_with_policy(Ok(peer), &local).is_none());
+    drop((reserve, general));
+    assert_eq!(ingress.snapshot()["active_connections"], 0);
+}
+
+#[test]
 fn empty_or_oversized_headers_reject_before_payload_reservation() {
     let ingress = ingress(1000);
     for length in [0_u32, 33, u32::MAX] {

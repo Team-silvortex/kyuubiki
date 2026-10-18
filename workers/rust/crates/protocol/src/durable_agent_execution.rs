@@ -100,12 +100,16 @@ impl DurableAgentTask {
             validate_durable_execution_id(id)?;
         }
         validate_durable_execution_id(&self.execution_id)?;
-        let method = serde_json::to_value(&self.method).map_err(|error| error.to_string())?;
-        let solver = method
+        Self::validate_payload(&self.method, &self.params)
+    }
+
+    fn validate_payload(method: &RpcMethod, params: &Value) -> Result<(), String> {
+        let method_name = serde_json::to_value(method).map_err(|error| error.to_string())?;
+        let solver = method_name
             .as_str()
             .is_some_and(|value| value.starts_with("solve_"));
-        let task = self.method == RpcMethod::RunOperatorTaskIr && self.params["mode"] == "execute";
-        if !(solver || task) || !self.params.is_object() {
+        let task = *method == RpcMethod::RunOperatorTaskIr && params["mode"] == "execute";
+        if !(solver || task) || !params.is_object() {
             return Err(
                 "durable tasks require a solver RPC or execute-mode TaskIR with object params"
                     .into(),
@@ -116,8 +120,15 @@ impl DurableAgentTask {
 
     pub fn request_digest(&self) -> Result<String, String> {
         self.validate()?;
+        Self::payload_digest(&self.method, &self.params)
+    }
+
+    /// Hash a borrowed task payload without copying large simulation inputs.
+    /// Execution/store identities are separate fences, not part of this digest.
+    pub fn payload_digest(method: &RpcMethod, params: &Value) -> Result<String, String> {
+        Self::validate_payload(method, params)?;
         // Preserve binary64 distinctions; the legacy fixed-decimal digest is unsuitable here.
-        task_digest_v2::agent_execution_digest(&self.method, &self.params)
+        task_digest_v2::agent_execution_digest(method, params)
     }
 }
 
@@ -135,6 +146,10 @@ mod tests {
             params: json!({"tip_force": 1.0000000000000002}),
         };
         let digest = task.request_digest().unwrap();
+        assert_eq!(
+            digest,
+            DurableAgentTask::payload_digest(&task.method, &task.params).unwrap()
+        );
         task.execution_id = "b".repeat(32);
         assert_eq!(digest, task.request_digest().unwrap());
         task.expected_store_id = Some("c".repeat(32));
@@ -146,6 +161,8 @@ mod tests {
         assert_ne!(digest, task.request_digest().unwrap());
         task.method = RpcMethod::Ping;
         assert!(task.validate().is_err());
+        assert!(DurableAgentTask::payload_digest(&task.method, &task.params).is_err());
+        assert!(DurableAgentTask::payload_digest(&RpcMethod::SolveBar1d, &Value::Null).is_err());
         task.method = RpcMethod::RunDurableAgentTask;
         assert!(task.validate().is_err());
         task.method = RpcMethod::SubmitDurableAgentTask;

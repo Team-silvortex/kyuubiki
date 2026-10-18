@@ -113,6 +113,80 @@ fn only_same_cluster_offline_mesh_descriptors_are_compatible() {
     assert!(!compatible_peer(&unnamed, Some("research-mesh")));
 }
 
+#[test]
+fn mesh_discovery_requires_solver_role_and_exact_transport_contract() {
+    let descriptor = crate::agent_state::build_agent_descriptor(&config(&["127.0.0.1:5002"]));
+    let mut accepted = Vec::new();
+    for case in [
+        "role",
+        "protocol",
+        "version",
+        "kind",
+        "encoding",
+        "framing",
+        "missing_framing",
+        "methods",
+    ] {
+        let mut invalid = descriptor.clone();
+        match case {
+            "role" => invalid.role = "catalog_server".into(),
+            "protocol" => invalid.protocol.name = "foreign-rpc/v1".into(),
+            "version" => invalid.protocol.rpc_version = 0,
+            "kind" => invalid.protocol.transport.kind = "http".into(),
+            "encoding" => invalid.protocol.transport.encoding = "cbor".into(),
+            "framing" => invalid.protocol.transport.framing = Some("newline".into()),
+            "missing_framing" => invalid.protocol.transport.framing = None,
+            _ => invalid
+                .protocol
+                .methods
+                .retain(|method| *method != kyuubiki_protocol::RpcMethod::DescribeAgent),
+        }
+        if compatible_peer(&invalid, Some("research-mesh")) {
+            accepted.push(case);
+        }
+    }
+    assert!(
+        accepted.is_empty(),
+        "accepted incompatible peer descriptors: {accepted:?}"
+    );
+}
+
+#[test]
+fn discovery_compatibility_is_not_solver_readiness_or_engine_brand_identity() {
+    let policy = peer_mesh_policy();
+    assert_eq!(policy["discovery_is_execution_readiness"], false);
+    assert_eq!(
+        policy["descriptor_contract"],
+        serde_json::json!({
+            "role":"solver_agent", "protocol":kyuubiki_protocol::SOLVER_RPC_PROTOCOL,
+            "rpc_version":kyuubiki_protocol::RPC_VERSION, "transport":"tcp", "encoding":"json",
+            "framing":"length_prefixed_u32", "required_method":"describe_agent"
+        })
+    );
+    let mut descriptor = crate::agent_state::build_agent_descriptor(&config(&["127.0.0.1:5002"]));
+    descriptor.program = "another-conforming-agent".into();
+    descriptor.engine.engine_id = "another-compatible-engine".into();
+    descriptor.protocol.methods = vec![kyuubiki_protocol::RpcMethod::DescribeAgent];
+    descriptor.capabilities.clear();
+    for state in ["accepting", "draining", "quiescent"] {
+        let mut peer = descriptor.clone();
+        let lifecycle = &mut peer.lifecycle;
+        lifecycle.state = state.into();
+        lifecycle.active_execution_count = usize::from(state != "quiescent");
+        if state != "accepting" {
+            lifecycle.accepting_new_work = false;
+            lifecycle.quiescent = state == "quiescent";
+            lifecycle.safe_to_replace = state == "quiescent";
+            lifecycle.drain_generation = 1;
+            lifecycle.drain_owner_id = Some("controller".into());
+            lifecycle.drain_reason = Some("maintenance".into());
+            lifecycle.drain_started_unix_ms = Some(1);
+        }
+        kyuubiki_protocol::validate_agent_lifecycle_descriptor(lifecycle).unwrap();
+        assert!(compatible_peer(&peer, Some("research-mesh")), "{state}");
+    }
+}
+
 fn hint(address: &str) -> ClusterPeerDescriptor {
     ClusterPeerDescriptor {
         address: address.into(),

@@ -221,6 +221,8 @@ fn real_count_eviction_keeps_original_unknown_without_touching_peer_or_downstrea
     assert_eq!(policy["max_entries"], 64, "{state}");
     // Explicit fresh admissions exercise the actual cache cap, not a fake clock or policy override.
     for n in 1..=64 {
+        // The final response can arrive before the worker releases its capacity lease.
+        wait_for_lifecycle(&fixture.owner, "accepting", 0)?;
         let reply = fixture.owner.request(&format!("explicit-capacity-{n}"), "run_operator_task_ir",
             json!({"mode":"execute", "task_ir":fixture.task, "dispatch_attempt_id":format!("{n:032x}")}))?;
         assert_eq!(reply["ok"], true, "{reply}");

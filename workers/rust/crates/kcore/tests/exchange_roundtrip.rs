@@ -159,22 +159,21 @@ fn rewrite_archive(
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).expect("read source entry");
+        let name = entry.name().expect("entry name").into_owned();
         let mut bytes = Vec::new();
         entry.read_to_end(&mut bytes).expect("read entry bytes");
-        if remove_object && entry.name().starts_with("objects/") {
+        if remove_object && name.starts_with("objects/") {
             continue;
         }
-        if tamper_object && entry.name().starts_with("objects/") {
+        if tamper_object && name.starts_with("objects/") {
             bytes.push(b'!');
         }
-        let entry_options = if entry.name() == "mimetype" {
+        let entry_options = if name == "mimetype" {
             SimpleFileOptions::default().compression_method(CompressionMethod::Stored)
         } else {
             options
         };
-        writer
-            .start_file(entry.name(), entry_options)
-            .expect("start entry");
+        writer.start_file(name, entry_options).expect("start entry");
         writer.write_all(&bytes).expect("write entry");
     }
     if add_extra {

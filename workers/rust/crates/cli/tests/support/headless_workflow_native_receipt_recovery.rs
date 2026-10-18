@@ -209,6 +209,10 @@ fn run_round(
     assert_eq!(original["job"]["status"], "solving");
     assert_eq!(original["result"]["recovery"]["generation"], 1);
     assert_eq!(
+        original["result"]["recovery"]["native_result_checkpoint_count"], 1,
+        "the completed diagnosis is durable before the next admission"
+    );
+    assert_eq!(
         original["result"]["recovery"]["solve_checkpoint_count"],
         usize::from(solve)
     );
@@ -265,43 +269,15 @@ fn run_round(
     );
     let mut sdk = ServiceHeadlessExecutor::try_new(&format!("http://127.0.0.1:{}", restarted.port))
         .map_err(|error| error.message)?;
-    if lose_receipt {
-        assert_eq!(ended["job"]["status"], "failed", "{ended}");
-        assert_eq!(recovery["state"], "recovery_blocked");
-        assert_eq!(recovery["envelope_retained"], true);
-        assert_eq!(
-            recovery["history"].as_array().unwrap().last().unwrap()["next_action"],
-            "restore_original_native_receipt_or_explicit_resubmit"
-        );
-        assert!(
-            ended["job"]["message"]
-                .as_str()
-                .unwrap()
-                .contains("native_workflow_recovery_receipt_unavailable")
-        );
-        assert_eq!(records(&data.0, &job)?, retained);
-        assert_eq!(count(&owner)? + count(&peer)?, 0);
-        for node in ["diagnose", "quality", "objective", "decision"] {
-            assert!(
-                ended["result"]["artifacts"]
-                    .get(format!("{node}.summary"))
-                    .is_none()
-            );
-        }
-        assert!(
-            sdk.execute_step(
-                "job_wait",
-                1,
-                &json!({"job_id":job,"timeout_ms":1000,"interval_ms":10})
-            )
-            .is_err()
-        );
-    } else {
+    {
+        // Losing the Agent's volatile receipt is recoverable from the verified durable
+        // Orchestra checkpoint. Neither that receipt nor completed solves may be replayed.
         assert_eq!(ended["job"]["status"], "completed", "{ended}");
         assert_eq!(recovery["state"], "completed");
         assert_eq!(recovery["envelope_retained"], false);
         assert_eq!(recovery["solve_checkpoint_count"], 0);
         assert_eq!(recovery["branch_checkpoint_count"], 0);
+        assert_eq!(recovery["native_result_checkpoint_count"], 0);
         let full = http(&restarted, &format!("/api/v1/results/{job}"), None)?.1;
         let skipped: &[&str] = if branch.is_some() {
             &["unchosen", "unchosen-output"]
@@ -376,7 +352,13 @@ fn run_round(
         }
         assert_eq!(
             count(&owner)? + count(&peer)?,
-            if solve { 3 } else { 2 },
+            if lose_receipt {
+                1
+            } else if solve {
+                3
+            } else {
+                2
+            },
             "completed solve and diagnosis must not execute again"
         );
         let waited = sdk
@@ -405,7 +387,8 @@ fn real_native_workflow_restart_reuses_original_success_receipt_without_duplicat
 }
 
 #[test]
-fn real_native_workflow_restart_with_lost_agent_receipt_blocks_without_replay() -> Result<()> {
+fn real_native_workflow_restart_with_lost_agent_receipt_uses_checkpoint_without_replay()
+-> Result<()> {
     run_round(DOMAINS[0], true, false, None, false, None)
 }
 
@@ -436,7 +419,7 @@ fn real_typed_solved_branch_workflow_restart_preserves_numeric_identity_without_
 }
 
 #[test]
-fn real_typed_workflow_lost_agent_receipt_blocks_after_solve_and_branch_restore() -> Result<()> {
+fn real_typed_workflow_lost_agent_receipt_recovers_after_solve_and_branch_restore() -> Result<()> {
     run_round(DOMAINS[0], true, true, Some(true), true, None)
 }
 
@@ -458,7 +441,7 @@ fn real_typed_postgres_solved_branch_restart_preserves_identity_without_reexecut
 
 #[test]
 #[ignore = "requires an explicitly provisioned disposable PostgreSQL test database"]
-fn real_typed_postgres_lost_agent_receipt_blocks_after_checkpoint_restore() -> Result<()> {
+fn real_typed_postgres_lost_agent_receipt_recovers_after_checkpoint_restore() -> Result<()> {
     let url = std::env::var("KYUUBIKI_HEADLESS_LIVE_TEST_POSTGRES_URL")?;
     run_round(DOMAINS[0], true, true, Some(true), true, Some(&url))
 }

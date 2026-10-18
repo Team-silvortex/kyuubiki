@@ -177,7 +177,9 @@ for (const kind of ["job", "result"]) {
       }
       await page.locator('[data-workbench-data-action="refresh-record-source"]').click();
       await page.waitForFunction((kind) => document.querySelector(`[data-workbench-data-action="save-${kind}"]`)?.disabled === false, kind);
-      assert.equal(await field(page, kind).inputValue(), working(kind));
+      // An observed authority failure retires the old draft, even after settings are restored.
+      assert.equal(await field(page, kind).inputValue(), kind === "job" ? "backend A" : JSON.stringify({ metric: 1 }, null, 2));
+      await field(page, kind).fill(working(kind));
       await button(page, kind, "save").click();
       await waitForGuiTransition(page);
       await page.waitForLoadState("networkidle");

@@ -116,29 +116,23 @@ fn audit_all(root: &Path, contract: &AuditContract) -> Vec<AuditResult> {
 }
 
 fn audit_cargo_lanes(root: &Path, dirs: &[String]) -> Vec<AuditResult> {
-    let Some((first, rest)) = dirs.split_first() else {
-        return Vec::new();
-    };
-    let refreshed = run(root, "cargo", CARGO_ARGS, first);
-    let first_result = if is_cargo_fetch_failure(&refreshed) && cargo_cache_is_fresh(root) {
-        let mut cached = run(root, "cargo", CARGO_NO_FETCH_ARGS, first);
-        cached.summary = cargo_audit_summary(&cached, true);
-        cached
-    } else {
-        AuditResult {
-            summary: cargo_audit_summary(&refreshed, false),
-            ..refreshed
-        }
-    };
-    let mut results = vec![first_result];
-    results.extend(rest.iter().map(|cwd| {
-        let result = run(root, "cargo", CARGO_NO_FETCH_ARGS, cwd);
-        AuditResult {
-            summary: cargo_audit_summary(&result, true),
-            ..result
-        }
-    }));
-    results
+    dirs.iter()
+        .map(|cwd| {
+            // A shared advisory DB does not warm the registry entries of other lockfiles.
+            // Each lane must fetch its own index entries for the yanked-package check.
+            let refreshed = run(root, "cargo", CARGO_ARGS, cwd);
+            let (result, cached) =
+                if is_cargo_fetch_failure(&refreshed) && cargo_cache_is_fresh(root) {
+                    (run(root, "cargo", CARGO_NO_FETCH_ARGS, cwd), true)
+                } else {
+                    (refreshed, false)
+                };
+            AuditResult {
+                summary: cargo_audit_summary(&result, cached),
+                ..result
+            }
+        })
+        .collect()
 }
 
 fn cargo_audit_summary(result: &AuditResult, cached: bool) -> String {

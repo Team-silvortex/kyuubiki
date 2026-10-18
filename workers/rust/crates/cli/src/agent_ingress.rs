@@ -1,5 +1,5 @@
 use std::io::{self, Read};
-use std::net::TcpStream;
+use std::net::{SocketAddr, TcpStream};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
@@ -85,7 +85,22 @@ impl Ingress {
         }
     }
 
-    pub(crate) fn admit_connection(&self) -> Option<ConnectionPermit> {
+    pub(crate) fn admit_peer(&self, peer: io::Result<SocketAddr>) -> Option<ConnectionPermit> {
+        self.admit_peer_with_policy(peer, crate::agent_network_access::current())
+    }
+
+    fn admit_peer_with_policy(
+        &self,
+        peer: io::Result<SocketAddr>,
+        policy: &crate::agent_network_access::NetworkAccess,
+    ) -> Option<ConnectionPermit> {
+        if !policy.admit(peer) {
+            return None;
+        }
+        self.admit_connection()
+    }
+
+    fn admit_connection(&self) -> Option<ConnectionPermit> {
         if let Some(permit) = Permit::acquire(&self.connections, 1, self.limits.connections) {
             Some(ConnectionPermit {
                 _permit: permit,
@@ -203,6 +218,7 @@ impl Ingress {
             "overload_queue":false,
             "automatic_retry":false,
             "authenticated_transport":false,
+            "network_access":crate::agent_network_access::snapshot(),
             "whole_process_memory_limit":false
         })
     }

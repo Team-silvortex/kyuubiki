@@ -43,6 +43,8 @@ pub(crate) struct LiveAgent {
     durable_panic: Option<String>,
     mesh: Option<(String, Vec<String>, u64)>,
     ingress_limits: Option<[String; 4]>,
+    allowed_peer_ips: Option<String>,
+    wildcard_bind: bool,
 }
 
 impl LiveAgent {
@@ -150,6 +152,8 @@ impl LiveAgent {
             durable_panic: None,
             mesh: None,
             ingress_limits: None,
+            allowed_peer_ips: None,
+            wildcard_bind: false,
         };
         agent.start_process()?;
         Ok(agent)
@@ -170,6 +174,18 @@ impl LiveAgent {
         let binary = std::env::var_os("KYUUBIKI_TEST_AGENT_BINARY")
             .unwrap_or_else(|| env!("CARGO_BIN_EXE_kyuubiki-cli").into());
         let mut command = Command::new(binary);
+        let bind_host = if self.wildcard_bind {
+            "0.0.0.0"
+        } else {
+            "127.0.0.1"
+        };
+        command
+            .env("KYUUBIKI_AGENT_HOST", bind_host)
+            .env_remove("KYUUBIKI_AGENT_PORT");
+        command.env_remove("KYUUBIKI_AGENT_ALLOWED_PEER_IPS");
+        if let Some(peers) = &self.allowed_peer_ips {
+            command.env("KYUUBIKI_AGENT_ALLOWED_PEER_IPS", peers);
+        }
         for (index, name) in [
             "KYUUBIKI_AGENT_MAX_REQUEST_BYTES",
             "KYUUBIKI_AGENT_MAX_IN_FLIGHT_REQUEST_BYTES",
@@ -188,7 +204,7 @@ impl LiveAgent {
             .args([
                 "agent",
                 "--host",
-                "127.0.0.1",
+                bind_host,
                 "--port",
                 &self.port.to_string(),
                 "--agent-id",
@@ -316,6 +332,21 @@ impl LiveAgent {
             timeout_ms.to_string(),
             connections.to_string(),
         ]);
+        self.start_process()
+    }
+
+    pub(crate) fn restart_with_allowed_peer_ips(
+        &mut self,
+        peers: Option<&str>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.stop_process()?;
+        self.allowed_peer_ips = peers.map(str::to_owned);
+        self.start_process()
+    }
+
+    pub(crate) fn restart_with_wildcard_bind(&mut self) -> Result<(), Box<dyn Error>> {
+        self.stop_process()?;
+        self.wildcard_bind = true;
         self.start_process()
     }
 

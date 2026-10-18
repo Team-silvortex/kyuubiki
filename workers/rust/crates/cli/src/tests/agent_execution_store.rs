@@ -1,6 +1,12 @@
 use super::*;
+#[path = "agent_execution_store_binding.rs"]
+mod binding_tests;
 #[path = "agent_execution_store_identity.rs"]
 mod identity_tests;
+#[path = "agent_execution_store_missing.rs"]
+mod missing_tests;
+#[path = "agent_execution_store_publication.rs"]
+mod publication_tests;
 use kyuubiki_protocol::RpcMethod;
 use std::sync::atomic::{AtomicU64, Ordering};
 

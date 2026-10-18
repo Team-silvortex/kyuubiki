@@ -1,4 +1,5 @@
 mod agent_lifecycle;
+mod agent_network_access;
 mod agent_solver_qualification;
 mod analysis;
 mod artifact_transport;
@@ -39,6 +40,10 @@ mod types {
 }
 
 pub use agent_lifecycle::{AgentLifecycleValidationError, validate_agent_lifecycle_descriptor};
+pub use agent_network_access::{
+    AGENT_ALLOWED_PEER_IPS_ENV, AGENT_NETWORK_MAX_CONFIG_BYTES, AGENT_NETWORK_MAX_PEERS,
+    AgentNetworkAccessPolicy,
+};
 pub use agent_solver_qualification::{
     AGENT_SOLVER_QUALIFICATION_EXPECTED_TIP_DISPLACEMENT, AGENT_SOLVER_QUALIFICATION_OPERATOR_ID,
     AGENT_SOLVER_QUALIFICATION_SCHEMA, AgentSolverQualificationSummary,

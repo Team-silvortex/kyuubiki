@@ -16,6 +16,7 @@ use super::{
 pub(super) fn run_self_test() -> RunnerResult<()> {
     super::quality_domains::run_self_test()?;
     check_resolver_fields()?;
+    check_map_resolver_fields()?;
     check_quality_mirrors()?;
     check_quality_terms_and_signatures()?;
     check_quality_payload_keys()?;
@@ -61,6 +62,48 @@ defp domain_alias_value(payload, "velocity_magnitude"), do: payload
     expect_issue(
         compare_metric_fields(&rust_fields, &web_metric_fields(&extra_web_field)),
         "missing from Rust resolver: extra_metric",
+    )
+}
+
+fn check_map_resolver_fields() -> RunnerResult<()> {
+    let source = r#"
+@aliases %{
+  "max_stress" => ~w(peak_stress),
+  "max_velocity" =>
+    ~w(peak_velocity)
+}
+@frequency_aliases %{
+  "frequency_hz" => ~w(frequency)
+}
+@transient_fields %{
+  "max_velocity" => "vx"
+}
+@unrelated %{
+  "not_a_metric" => "ignore"
+}
+defp derived(payload, "frequency_span_hz" = field, path), do: payload
+"#;
+    let expected = [
+        "max_stress",
+        "max_velocity",
+        "frequency_hz",
+        "frequency_span_hz",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect();
+    let issues = compare_metric_fields(&expected, &web_metric_fields(source));
+    if !issues.is_empty() {
+        return Err(format!(
+            "self-test alias map extraction drifted: {issues:?}"
+        ));
+    }
+    expect_issue(
+        compare_metric_fields(
+            &expected,
+            &web_metric_fields(&source.replace("  \"max_stress\" => ~w(peak_stress),", "")),
+        ),
+        "missing from Web resolver: max_stress",
     )
 }
 

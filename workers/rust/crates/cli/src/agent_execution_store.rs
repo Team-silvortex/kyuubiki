@@ -83,8 +83,9 @@ impl From<&str> for AdmissionFailure {
 pub(crate) struct Store {
     root: PathBuf,
     store_id: String,
-    _lock: File,
+    lock: File,
     active: HashSet<String>,
+    known_admissions: HashSet<String>,
     bytes: u64,
     entries: usize,
     write_failed: bool,
@@ -105,8 +106,9 @@ impl Store {
         let mut store = Self {
             root: root.to_path_buf(),
             store_id,
-            _lock: lock,
+            lock,
             active: HashSet::new(),
+            known_admissions: HashSet::new(),
             bytes: 0,
             entries: 0,
             write_failed: false,
@@ -156,6 +158,7 @@ impl Store {
                 .ok_or("execution store size overflow")?;
             if suffix == "admission" {
                 self.entries += 1;
+                self.known_admissions.insert(id.to_string());
             }
         }
         if self.bytes > MAX_TOTAL_BYTES || self.entries > MAX_ENTRIES {
@@ -198,11 +201,6 @@ impl Store {
                 .lookup_record(&record)
                 .map(|report| (Admission::Existing(report), None))
                 .map_err(Into::into);
-        }
-        match fs::symlink_metadata(self.root.join(format!("{}.receipt", task.execution_id))) {
-            Ok(_) => return Err("orphan receipt blocks reuse of execution_id".into()),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => return Err(error.to_string().into()),
         }
         if self.write_failed {
             return Err("execution store admission blocked by a previous write failure".into());
@@ -267,6 +265,7 @@ impl Store {
     }
 
     fn persist_admission(&mut self, record: &Record) -> Result<(), String> {
+        self.check_owner(None)?;
         match io::write(
             &self.root,
             &format!("{}.admission", record.execution_id),
@@ -280,11 +279,13 @@ impl Store {
             }
         }
         self.entries += 1;
+        self.known_admissions.insert(record.execution_id.clone());
         self.active.insert(record.execution_id.clone());
         Ok(())
     }
 
     pub fn finish(&mut self, record: &Record, response: RpcResponse) -> Result<Value, String> {
+        self.check_owner(None)?;
         if !self.active.contains(&record.execution_id)
             || self.record(&record.execution_id)?.as_ref() != Some(record)
             || response.id != record.request_id
@@ -313,6 +314,7 @@ impl Store {
                     receipt.prepare().map_err(str::to_string)?
                 }
             };
+            self.check_owner(None)?;
             io::commit(
                 &self.root,
                 &format!("{}.receipt", record.execution_id),
@@ -337,6 +339,7 @@ impl Store {
 
     pub fn lookup(&self, id: &str) -> Result<Value, String> {
         validate_durable_execution_id(id)?;
+        self.check_owner(None)?;
         match self.record(id)? {
             Some(record) => self.lookup_record(&record),
             None => Ok(
@@ -352,7 +355,8 @@ impl Store {
     ) -> Result<Value, String> {
         query.validate()?;
         self.check_owner(query.expected_store_id.as_deref())?;
-        let mut ids = Vec::new();
+        let mut present = HashSet::new();
+        let mut receipts = HashSet::new();
         for (count, entry) in fs::read_dir(&self.root)
             .map_err(|e| e.to_string())?
             .enumerate()
@@ -365,11 +369,21 @@ impl Store {
             let name = name.to_str().ok_or("invalid execution store filename")?;
             if let Some(id) = name.strip_suffix(".admission") {
                 validate_durable_execution_id(id)?;
-                if query.after.as_deref().is_none_or(|after| id > after) {
-                    ids.push(id.to_string());
-                }
+                present.insert(id.to_string());
+            } else if let Some(id) = name.strip_suffix(".receipt") {
+                validate_durable_execution_id(id)?;
+                receipts.insert(id.to_string());
             }
         }
+        // Check before pagination: a missing admission must not vanish behind the cursor.
+        // Receipt names suffice; indexing never reads large result payloads.
+        if !self.known_admissions.is_subset(&present) || !receipts.is_subset(&present) {
+            return Err("execution recovery index is incomplete: admission missing; restore original records; no replay authorized".into());
+        }
+        let mut ids: Vec<_> = present
+            .into_iter()
+            .filter(|id| query.after.as_ref().is_none_or(|after| id > after))
+            .collect();
         ids.sort_unstable();
         let more = ids.len() > query.limit;
         ids.truncate(query.limit);
@@ -397,13 +411,27 @@ impl Store {
             {
                 return Err("execution admission identity or schema mismatch".into());
             }
+        } else {
+            if self.known_admissions.contains(id) {
+                return Err("known execution admission is missing; restore original records; no replay authorized".into());
+            }
+            match fs::symlink_metadata(self.root.join(format!("{id}.receipt"))) {
+                Ok(_) => {
+                    return Err(
+                        "orphan receipt has no admission; refusing absence or execution_id reuse"
+                            .into(),
+                    );
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.to_string()),
+            }
         }
         Ok(record)
     }
 
     fn lookup_record(&self, record: &Record) -> Result<Value, String> {
         if self.uncertain_receipts.contains(&record.execution_id) {
-            // A rename may have succeeded even when the directory sync failed.
+            // Publication may have succeeded even when cleanup or directory sync failed.
             // Do not turn that unacknowledged commit into a successful durable read.
             return Ok(self.report(record, None));
         }
@@ -439,6 +467,11 @@ impl Store {
 
     pub fn policy(&self) -> Value {
         let mut policy = policy(true);
+        let bound = self.check_owner(None).is_ok();
+        policy["available"] = json!(bound);
+        if !bound {
+            policy["unavailable_reason"] = json!("store_binding_unavailable");
+        }
         policy["store_id"] = json!(self.store_id);
         policy["directory"] = json!(self.root);
         policy["stored_entries"] = json!(self.entries);
@@ -449,6 +482,7 @@ impl Store {
     }
 
     pub fn check_owner(&self, expected: Option<&str>) -> Result<(), String> {
+        identity::check_binding(&self.lock, &self.root, &self.store_id)?;
         if let Some(expected) = expected {
             kyuubiki_protocol::validate_durable_execution_id(expected)?;
             if expected != self.store_id {
@@ -468,6 +502,22 @@ pub(crate) fn policy(enabled: bool) -> Value {
         "owner_fence":{"request_field":"expected_store_id", "response_field":"store_id",
             "identity_file":"owner.lock", "survives_restart":true, "is_authentication":false,
             "legacy_unfenced_requests":true, "mismatch_policy":"reject_before_operation"},
+        "live_store_binding":{"check":"before_store_operations_and_receipt_commit",
+            "owner_file_binding_checked":cfg!(unix),
+            "identity_read_max_bytes":if cfg!(unix) { 161 } else { 0 }, "identity_reinitialized":false,
+            "locked_file_identity":if cfg!(unix) { "device_and_inode" } else { "not_verified" },
+            "failure_policy":"unavailable_no_redirect_or_replay",
+            "concurrent_filesystem_mutation_safe":false},
+        "missing_admission":{"known_ids":"startup_scan_and_successful_live_admissions",
+            "max_known_ids":MAX_ENTRIES, "known_id_retention":"process_lifetime",
+            "known_missing_or_orphan_receipt":"unavailable_no_replay",
+            "index_membership_check":"before_pagination_without_reading_receipts",
+            "automatic_repair":false, "complete_evidence_deletion_detected_after_restart":false},
+        "record_publication":{"strategy":"same_filesystem_hard_link_then_unlink_pending",
+            "overwrites_existing_record":false, "unsafe_fallback":false,
+            "live_cleanup":"only_after_successful_exclusive_pending_create",
+            "restart_cleanup":"remove_pending_names_never_promote",
+            "hard_link_support_required":true},
         "directory_sync":cfg!(unix), "physical_power_loss_qualified":false,
         "response_rejection":{"code":"durable_response_unrecordable",
             "reasons":["byte_limit", "serialization", "restart_decode", "invalid_response"],

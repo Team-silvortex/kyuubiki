@@ -1,9 +1,47 @@
+use kyuubiki_protocol::{DurableAgentTask, RpcMethod, validate_durable_execution_id};
 use serde_json::Value;
 
 pub(crate) const REJECTION_SCHEMA: &str = "kyuubiki.agent-durable-admission-rejection/v1";
 
 pub(crate) fn is_rejection(report: &Value) -> bool {
     report["schema_version"] == REJECTION_SCHEMA || report["status"] == "not_admitted"
+}
+
+pub(crate) struct SubmissionIdentity<'a> {
+    execution_id: &'a str,
+    method: &'a str,
+    digest: String,
+}
+
+impl<'a> SubmissionIdentity<'a> {
+    pub(crate) fn from_params(params: &'a Value) -> Result<Self, String> {
+        let execution_id = params["execution_id"]
+            .as_str()
+            .ok_or("missing execution identity")?;
+        validate_durable_execution_id(execution_id)?;
+        let method = params["method"].as_str().ok_or("missing durable method")?;
+        let typed_method: RpcMethod = serde_json::from_value(params["method"].clone())
+            .map_err(|error| format!("invalid durable method: {error}"))?;
+        let digest = DurableAgentTask::payload_digest(&typed_method, &params["params"])?;
+        Ok(Self {
+            execution_id,
+            method,
+            digest,
+        })
+    }
+
+    pub(crate) fn validate(&self, report: &Value) -> Result<(), String> {
+        // Repeated submissions can return the original process/request IDs, but never
+        // a receipt for another payload or a lookup-only absence decision.
+        if report["execution_id"] != self.execution_id
+            || report["method"] != self.method
+            || report["request_digest"] != self.digest
+            || report["status"] == "not_found"
+        {
+            return Err("durable submission reply does not match the submitted task; inspect the original execution".into());
+        }
+        Ok(())
+    }
 }
 
 // A rejection is a decision for this live submit exchange, never a lookup result or replay ticket.

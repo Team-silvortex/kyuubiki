@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Explicit native workflow digest policy preserves typed Rust authoring and one lossless durable execution envelope. Seven source macOS HTTP/Agent/SQLite rounds restore solved artifacts, branch routes and native receipts with unchanged scoring identity and no repeated completed work; lost Agent receipts block without replay. A separate PostgreSQL follow-up verifies the same bounded source restart chains. Defaults and installed/remote-Agent/package-host qualification remain open.",
+  "summary": "Explicit native workflow digest policy preserves typed Rust authoring and one lossless durable execution envelope. Source macOS HTTP/Agent/SQLite rounds restore solved artifacts, branch routes and native receipts with unchanged scoring identity and no repeated completed work. The October 18 regression confirms that loss of the Agent receipt still permits recovery from a verified Orchestra native-result checkpoint; absence of both sources remains fail-closed. The PostgreSQL checkpoint-first continuation requires a fresh rerun. Defaults and installed/remote-Agent/package-host qualification remain open.",
   "evidence_claims": [
     {
       "id": "workflow-typed-execution-envelope-contract",
@@ -51,7 +51,7 @@
       "required_text": [
         "real_typed_solved_branch_workflow_restart_preserves_numeric_identity_without_reexecution",
         "real_typed_raw_workflow_restart_preserves_input_numeric_identity",
-        "real_typed_workflow_lost_agent_receipt_blocks_after_solve_and_branch_restore",
+        "real_typed_workflow_lost_agent_receipt_recovers_after_solve_and_branch_restore",
         "restart changed typed scoring identity",
         "This adds verified source macOS HTTP/Agent/SQLite contract and recovery evidence"
       ]

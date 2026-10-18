@@ -27,6 +27,13 @@ struct StartedProcess {
     port: u16,
 }
 
+struct PreparedStart {
+    env: HashMap<String, String>,
+    mode: String,
+    existing_mode: String,
+    options: RuntimeOptions,
+}
+
 pub(super) fn service_status() -> Result<String, String> {
     let paths = runtime_paths()?;
     let env = runtime_env(&paths.root);
@@ -64,6 +71,7 @@ pub(super) fn service_status() -> Result<String, String> {
         "agent-execution-store-root: {} (per-port; bounded; no automatic eviction)",
         crate::runtime_agent_storage::execution_store_root(&paths.state, &env)?.display()
     ));
+    lines.push(crate::runtime_agent_storage::network_config_line(&env));
     if paths.is_development() {
         for command in ["mix", "cargo"] {
             lines.push(match resolve_development_command(&paths.root, command) {
@@ -132,8 +140,14 @@ pub(super) fn service_start(mode: ServiceMode) -> Result<String, String> {
 pub(super) fn service_restart(mode: ServiceMode) -> Result<String, String> {
     let paths = runtime_paths()?;
     let _lock = RuntimeLifecycleLock::acquire(&paths.run)?;
-    let mut lines = vec![stop_services(&paths)?];
-    lines.push(start_services(&paths, service_mode_name(mode))?);
+    // Validate and retain one configuration snapshot before stopping owned services.
+    let prepared = prepare_start(&paths, service_mode_name(mode))?;
+    let mut lines = vec![stop_services_in(
+        &paths,
+        &prepared.env,
+        &prepared.existing_mode,
+    )?];
+    lines.push(start_prepared(&paths, prepared)?);
     lines.push("restart complete".to_string());
     Ok(lines.join("\n"))
 }
@@ -146,7 +160,16 @@ pub(super) fn service_stop() -> Result<String, String> {
 
 fn stop_services(paths: &RuntimePaths) -> Result<String, String> {
     let env = runtime_env(&paths.root);
-    let mut options = RuntimeOptions::from_env(&env)?;
+    let mode = read_runtime_mode(paths, &env, RuntimeOptions::from_env(&env)?);
+    stop_services_in(paths, &env, &mode)
+}
+
+fn stop_services_in(
+    paths: &RuntimePaths,
+    env: &HashMap<String, String>,
+    running_mode: &str,
+) -> Result<String, String> {
+    let mut options = RuntimeOptions::from_env(env)?;
     options.frontend_disabled |= paths.is_headless();
     let mut lines = Vec::new();
     let mut targets = Vec::new();
@@ -162,8 +185,8 @@ fn stop_services(paths: &RuntimePaths) -> Result<String, String> {
         "orchestrator".to_string(),
         options.orchestrator_port,
     ));
-    if !options.orchestrator_only && read_runtime_mode(paths, &env, options) != "distributed" {
-        for port in agent_ports(&paths.root, &env).into_iter().rev() {
+    if !options.orchestrator_only && running_mode != "distributed" {
+        for port in agent_ports(&paths.root, env).into_iter().rev() {
             targets.push((
                 paths.run.join(format!("agent-{port}.pid")),
                 format!("agent[{port}]"),
@@ -262,7 +285,10 @@ pub(super) fn hot_service_stop() -> Result<String, String> {
 }
 
 fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, String> {
-    ensure_runtime_dirs(paths)?;
+    start_prepared(paths, prepare_start(paths, requested_mode)?)
+}
+
+fn prepare_start(paths: &RuntimePaths, requested_mode: &str) -> Result<PreparedStart, String> {
     let mut env = runtime_env(&paths.root);
     paths.apply_writable_state_env(&mut env)?;
     let mode = resolve_mode(requested_mode, &env)?;
@@ -284,6 +310,9 @@ fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, 
     apply_mode_env(&mut env, &mode)?;
     let mut options = RuntimeOptions::from_env(&env)?;
     options.frontend_disabled |= paths.is_headless();
+    if mode != "distributed" && !options.orchestrator_only {
+        crate::runtime_agent_storage::network_policy(&env)?;
+    }
     env.entry("KYUUBIKI_ORCHESTRATOR_URL".to_string())
         .or_insert_with(|| options.orchestrator_url());
     let endpoints = agent_endpoints(&env);
@@ -291,6 +320,23 @@ fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, 
     env.entry("KYUUBIKI_AGENT_DISCOVERY".to_string())
         .or_insert_with(|| "static".to_string());
     augment_path(paths, &mut env);
+
+    Ok(PreparedStart {
+        env,
+        mode,
+        existing_mode,
+        options,
+    })
+}
+
+fn start_prepared(paths: &RuntimePaths, prepared: PreparedStart) -> Result<String, String> {
+    let PreparedStart {
+        env,
+        mode,
+        existing_mode,
+        options,
+    } = prepared;
+    ensure_runtime_dirs(paths)?;
 
     let mut reused = false;
     if mode != "distributed" && !options.orchestrator_only {
@@ -320,7 +366,7 @@ fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, 
         );
     }
 
-    let mut lines = Vec::new();
+    let mut lines = vec![crate::runtime_agent_storage::network_config_line(&env)];
     let mut started = Vec::new();
     if mode != "distributed" && !options.orchestrator_only {
         for port in agent_ports(&paths.root, &env) {

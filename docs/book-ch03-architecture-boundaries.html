@@ -44,6 +44,56 @@
         </p>
       </section>
 
+      <section class="docs-card docs-section" id="source-ownership">
+        <h2>One owner per responsibility</h2>
+        <p class="docs-copy">
+          The October 18, 2026 organization review separates three views:
+          13 logical topology modules, 15 Rust workspace crates, and independently
+          deployed processes. They are not the same count. Engine and Solver are
+          libraries used by the Agent; keeping their responsibilities separate
+          does not require another service. Hub, Workbench and Installer remain
+          independent Apps sharing native lifecycle and UI helper code.
+        </p>
+        <ul class="docs-list">
+          <li>GUI and Headless SDKs are clients. PWDT automates the fixed UI;
+            the Rust-only Worker / Operator SDK extends executable operators.</li>
+          <li>Orchestra owns coordination and persistence. Direct Agent and
+            explicit offline Mesh paths are separate supported architecture
+            paths, not requests to embed Orchestra in the GUI.</li>
+          <li>Agent owns process, ingress and receipt boundaries; Engine owns
+            execution dispatch; Solver owns numerical algorithms and acceptance.</li>
+          <li>TaskIR execute is implemented behind capability and package gates.
+            A successful preflight is not a completed solve, and source-IP
+            containment is not cryptographic peer authentication.</li>
+          <li>The current map owns navigation. Current-line notes and dated
+            reports own progress; the tensor owns scoped evidence requirements.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./current-architecture-map.md">Compact source map</a>
+          <a class="docs-link" href="./project-architecture-organization.md">Source and disk ownership</a>
+          <a class="docs-link" href="./runtime-doc-ownership.md">Documentation ownership</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section" id="development-storage">
+        <h2>Build output is not runtime state</h2>
+        <p class="docs-copy">
+          Preview rebuildable caches with <code>make disk-usage</code>; use
+          <code>make clean-dev-cache</code> explicitly while builds and tests are
+          idle. The native cleaner holds Cargo locks and preserves dependency
+          libraries, top-level tools, release packages and runtime data. Test
+          executables may need relinking afterwards; hard links mean the logical
+          preview is not an exact prediction of freed disk space.
+        </p>
+        <p class="docs-copy">
+          Do not delete <code>tmp/</code> wholesale: it mixes disposable reports
+          with databases, journals, execution receipts and process ownership
+          records. Git ignore status is not a retention policy. Installed Apps,
+          credentials and server storage belong to separate Installer-managed
+          lifecycles, not repository cache cleanup.
+        </p>
+      </section>
+
       <section class="docs-card docs-section" id="tensor-calibration">
         <h2>Coverage tensor: evidence without overclaiming</h2>
         <p class="docs-copy">

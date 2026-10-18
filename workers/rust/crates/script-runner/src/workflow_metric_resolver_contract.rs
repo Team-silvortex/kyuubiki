@@ -323,8 +323,27 @@ fn rust_metric_fields(source: &str) -> BTreeSet<String> {
 
 fn web_metric_fields(source: &str) -> BTreeSet<String> {
     let mut fields = BTreeSet::new();
+    let mut in_alias_map = false;
     for line in source.lines() {
         let trimmed = line.trim_start();
+        if [
+            "@aliases %{",
+            "@frequency_aliases %{",
+            "@transient_fields %{",
+        ]
+        .iter()
+        .any(|prefix| trimmed.starts_with(prefix))
+        {
+            in_alias_map = true;
+        } else if in_alias_map && trimmed.starts_with('}') {
+            in_alias_map = false;
+        } else if in_alias_map && trimmed.starts_with('"') {
+            if let Some((field, tail)) = first_quoted_string_with_tail(trimmed) {
+                if tail.trim_start().starts_with("=>") {
+                    fields.insert(field);
+                }
+            }
+        }
         if trimmed.starts_with("@dynamic_amplitude_fields") {
             fields.extend(tilde_word_list(trimmed));
         }
@@ -344,6 +363,7 @@ fn web_metric_function_head(line: &str) -> bool {
         "defp domain_alias_value(",
         "defp derived_dynamic_value(",
         "defp derived_domain_value(",
+        "defp derived(",
         "defp frequency_entry_number(",
         "defp transient_node_field(",
     ]

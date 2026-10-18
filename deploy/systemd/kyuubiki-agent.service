@@ -12,6 +12,9 @@ Environment=KYUUBIKI_AGENT_HOST=0.0.0.0
 Environment=KYUUBIKI_AGENT_PORT=5001
 Environment=KYUUBIKI_AGENT_ID=kyuubiki-lab-solver
 Environment=KYUUBIKI_AGENT_ADVERTISE_HOST=kyuubiki-lab.local
+# Remote callers are denied by default, even on this wildcard bind.
+# Set KYUUBIKI_AGENT_ALLOWED_PEER_IPS in the host-owned env file to exact controller/
+# Mesh peer IPs. This source-IP gate is not authentication; retain network isolation.
 EnvironmentFile=-{{KYUUBIKI_INSTALL_ROOT}}/deploy/kyuubiki-agent.env
 WorkingDirectory={{KYUUBIKI_INSTALL_ROOT}}
 ExecStart={{KYUUBIKI_INSTALL_ROOT}}/workers/rust/target/debug/kyuubiki-cli agent

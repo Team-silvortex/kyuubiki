@@ -487,8 +487,9 @@ Then branch by intent:
   planning, benchmark coverage, audit lanes, and self-host toolchains.
 - `deploy/README.md`
   Deployment descriptors, agent manifests, and workload-catalog examples.
-- `tmp/README.md`
-  Disposable local runtime state, working data, and dev-only paths.
+- `project-architecture-organization.md#generated-disk-use`
+  Source-controlled storage policy: rebuildable caches are separate from
+  runtime databases, journals, execution receipts and process ownership records.
 - `../tmp/nightly-overview.html`
   Human-readable local index for the latest retained nightly regression
   artifacts across direct-mesh, workflow-catalog, and standard benchmark lanes.

@@ -41,7 +41,6 @@ See also:
 
 - [project-architecture-organization.md](project-architecture-organization.md)
 - [scripts/README.md](../scripts/README.md)
-- [tmp/README.md](../tmp/README.md)
 - [releases/README.md](../releases/README.md)
 - [tests/integration/README.md](../tests/integration/README.md)
 
@@ -178,4 +177,9 @@ directories.
 - `dist/`
   Generated release layouts from the installer.
 
-These paths are generated output and should remain disposable.
+These paths are not source, but they are not equally disposable. Process
+ownership records, databases, journals and execution receipts can be required
+for recovery. Never remove `tmp/` wholesale because it is ignored by Git.
+Release scaffolds are regenerable only when their inputs and packaging path
+are available. Use the classification and native cleanup commands in
+[project-architecture-organization.md](project-architecture-organization.md#generated-disk-use).

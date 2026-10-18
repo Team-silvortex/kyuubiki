@@ -49,6 +49,73 @@ cross-process attempt ownership, authenticated provenance, standalone TaskIR bou
 readiness preservation through ranking.
 See `releases/snapshots/3.6.0.json` for the source checkpoint and scope.
 
+The [native network-access follow-up](../reports/agent-network-access-20261016.md)
+defaults every Agent control mode to loopback-only ingress. LAN deployments now
+require explicit peer IP configuration before upgrading; a wildcard bind does
+not opt in. This containment is not authentication and does not close the tensor's
+native authorization, authenticated multi-host or installed-recovery obligations.
+The same follow-up now covers deployment preflight: Agent, Installer environment
+validation and managed runtime share one policy parser. Invalid local Agent
+settings reject restart before stopping existing services; status and explicit
+stop remain available. Runtime summaries distinguish configured intent from
+observed running policy. Native lifecycle fixtures verify the control path, not
+an installed GUI, remote deployment or full transactional restart guarantee.
+
+The [Mesh submission identity follow-up](../reports/mesh-submission-identity-20261018.md)
+closes a native direct/Mesh gateway acceptance gap: durable submission receipts
+and explicit non-admission replies must match the requested method and exact
+typed input digest, not just the execution ID and field shapes. Lookup-only
+`not_found` cannot acknowledge a submission. Unknown replies retain the original
+recovery handle without retry or migration. Matching historical receipts and
+read-only inspection still work. Local TCP regressions and real Agent process
+recovery tests pass; authenticated multi-host, installed WebView and host-power-loss
+obligations remain open. Tensor grades are unchanged.
+
+The [Mesh discovery contract follow-up](../reports/mesh-discovery-contract-20261018.md)
+rejects incompatible roles, transport declarations and missing discovery methods
+before updating peer health or merging hints. A native Agent regression reproduces
+the old false-healthy/hint-acceptance behavior and verifies degradation, isolation
+across forced restart, rediscovery after protocol repair and retention of the exact
+committed execution receipt without replay. Busy/draining peers and differing
+solver inventories remain discoverable. This is local protocol compatibility,
+not authenticated membership, work admission or multi-host qualification.
+
+The [live store binding follow-up](../reports/mesh-live-store-binding-20261018.md)
+closes a second owner-fence gap: on Unix, the live Agent rechecks the current
+private owner file's device/inode and bounded checksummed identity before store
+operations and receipt commit. A moved directory, replacement lock file or corrupt
+identity cannot silently redirect the old process through its configured path.
+The descriptor reports the store unavailable; queries do not become `not_found`,
+new work is not admitted, and completion is not written into a replacement store.
+Local two-Agent tests retain completed receipts and recover interrupted work as
+`outcome_unknown` without replay after restoring the original store and restarting.
+This is operation-boundary checking, not protection against concurrent filesystem
+mutation; Windows handle identity, multi-host and physical-power-loss qualification
+remain open. Tensor grades are unchanged.
+
+The [missing admission follow-up](../reports/mesh-missing-admission-20261018.md)
+prevents an execution ID from being admitted again when its known admission file
+disappears during the Agent process lifetime. Fetch and cancellation fail rather
+than treating missing evidence as absence; orphan receipts remain inspect errors
+after restart. Recovery listing checks admission membership before pagination so
+missing records cannot silently disappear behind a cursor. This adds only a
+bounded ID set, not snapshots, input/result caching or automatic repair. Two real
+local Mesh regressions cover spare-capacity duplicate prevention, unaffected
+sibling/neighbor work, forced restarts and explicit restoration without replay.
+Deletion of all execution evidence followed by restart remains outside this guard;
+the retained ledger, not the in-memory set, supplies restart evidence.
+
+The [immutable publication follow-up](../reports/mesh-immutable-publication-20261018.md)
+prevents failed staging creation from deleting a preexisting `.next` file and
+replaces overwriting rename with atomic no-replace hard-link publication. The
+visible `record_publication` policy requires same-filesystem hard-link support;
+unsupported stores fail without a copy/rename fallback. Startup removes pending
+names before reading records, never promotes them, and retains existing final
+records. Native process tests cover staging collisions and constructed publication
+intermediate states through forced restarts without replay. The format and
+engine/operator contracts are unchanged. This does not qualify arbitrary external
+filesystem mutation, physical power loss or untested filesystems/platforms.
+
 ## Daji 3.5.0 Checkpoint
 
 October 7, 2026. Commit `0712b88d` starts this source checkpoint with the

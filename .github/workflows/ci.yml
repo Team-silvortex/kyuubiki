@@ -60,7 +60,8 @@ jobs:
             workers/rust
             sdks/rust
       - run: cargo fmt --check
-      - run: cargo test --locked --no-fail-fast
+      - name: Test workspace services and SDKs (solver has dedicated jobs)
+        run: cargo test --locked --workspace --exclude kyuubiki-solver --no-fail-fast
       - name: Test engine without workspace feature unification
         run: cargo test --locked -p kyuubiki-engine --lib
       - name: Audit Rust source line counts
@@ -107,6 +108,31 @@ jobs:
             tmp/ci-benchmark-current.json
             tmp/ci-benchmark-comparison.md
           if-no-files-found: ignore
+
+  solver:
+    name: rust-solver-${{ matrix.group }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Complementary filters keep every solver test; long material searches
+          # cannot consume the service/SDK job's deadline or hide its results.
+          - group: general
+            test_args: "-- --skip handoff_reassembly::material_anchor"
+          - group: material
+            test_args: "--lib handoff_reassembly::material_anchor"
+    defaults:
+      run:
+        working-directory: workers/rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
+      - run: cargo test --locked -p kyuubiki-solver --no-fail-fast ${{ matrix.test_args }}
 
   frontend:
     name: frontend-test
@@ -423,9 +449,18 @@ jobs:
           - suite: desktop
             target: test-integration-desktop-gui
             timeout: 20
-          - suite: workflow
+          - suite: workflow-1
             target: test-integration-ui-workflow
-            timeout: 40
+            shard: 1/3
+            timeout: 30
+          - suite: workflow-2
+            target: test-integration-ui-workflow
+            shard: 2/3
+            timeout: 30
+          - suite: workflow-3
+            target: test-integration-ui-workflow
+            shard: 3/3
+            timeout: 30
           - suite: mechanical
             target: test-integration-ui-mechanical
             timeout: 20
@@ -459,6 +494,7 @@ jobs:
       - name: Run the complete regression suite
         env:
           REGRESSION_TARGET: ${{ matrix.target }}
+          KYUUBIKI_UI_TEST_SHARD: ${{ matrix.shard }}
         run: make "$REGRESSION_TARGET"
       - name: Upload desktop GUI regression artifacts
         if: failure() || cancelled()

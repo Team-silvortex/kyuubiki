@@ -90,18 +90,21 @@ fn recovery_recalibration_keeps_each_control_mode_and_local_surface_scoped() {
             "desktop-local-journal-session-fencing",
             "verified",
         ),
-        (
-            "orchestra-control-plane",
-            "validation",
-            "orchestra-source-typed-postgres-continuation",
-            "verified",
-        ),
     ] {
         let scoped = qualifications::evaluate(&tensor, module, paradigm);
         let scope = scoped.iter().find(|scope| scope["id"] == id).unwrap();
         assert_eq!(scope["achieved_grade"], expected, "{id}");
         assert_eq!(scope["met"], true, "{id}");
     }
+
+    // The historical receipt-only run cannot qualify the newer checkpoint-first path.
+    let scoped = qualifications::evaluate(&tensor, "orchestra-control-plane", "validation");
+    let postgres = scoped
+        .iter()
+        .find(|scope| scope["id"] == "orchestra-source-typed-postgres-continuation")
+        .unwrap();
+    assert_eq!(postgres["achieved_grade"], "unassessed");
+    assert_eq!(postgres["met"], false);
 }
 
 #[test]

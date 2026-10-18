@@ -64,7 +64,10 @@ pub(super) fn validate_fixed_inputs(
         .payload
         .as_object()
         .ok_or_else(|| mismatch("candidate payload must be an object"))?;
-    for (key, value) in expected {
+    let mut keys = expected.keys().collect::<Vec<_>>();
+    keys.sort_unstable();
+    for key in keys {
+        let value = &expected[key];
         let path = child_path("", key);
         let changed = if key == "research" {
             research_difference(value, actual.get(key))

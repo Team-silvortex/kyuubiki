@@ -1,3 +1,4 @@
+mod agent_network_preflight;
 mod agent_update_payload;
 mod control_update;
 mod desktop_bundle_set;

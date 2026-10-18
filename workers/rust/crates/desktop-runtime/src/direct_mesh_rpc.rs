@@ -45,6 +45,9 @@ pub(crate) fn transport_policy() -> Value {
         "max_retained_progress_frames":MAX_PROGRESS_FRAMES, "max_retained_progress_bytes":MAX_PROGRESS_BYTES,
         "progress_retention":"most_recent_bounded_window", "control_progress_allowed":false,
         "automatic_retry":false,
+        "durable_submission":{"identity_binding":["execution_id", "method", "request_digest"],
+            "digest_encoding":kyuubiki_protocol::TASK_DIGEST_TYPED_V2,
+            "historical_receipt_identity_allowed":true, "lookup_absence_is_admission":false},
         "error_diagnostics":{"agent_code_field":"agent_error_code",
             "max_agent_code_bytes":MAX_AGENT_ERROR_CODE_BYTES,
             "agent_details_forwarded":false, "is_execution_or_owner_evidence":false}})
@@ -294,6 +297,11 @@ fn exchange_with_timeout(
     if payload.len() > MAX_FRAME_BYTES {
         return Err("direct mesh request exceeds 64 MiB".into());
     }
+    let submission = if method == "submit_durable_agent_task" {
+        Some(crate::direct_mesh_admission::SubmissionIdentity::from_params(&params)?)
+    } else {
+        None
+    };
     let mut stream = transport::connect(&parsed.endpoint, deadline)?;
     transport::write_before(&mut stream, &(payload.len() as u32).to_be_bytes(), deadline)
         .and_then(|_| transport::write_before(&mut stream, &payload, deadline))
@@ -346,6 +354,9 @@ fn exchange_with_timeout(
         validate_rpc_response_envelope(&response).map_err(|e| e.message)?;
         if response.ok {
             let result = response.result.ok_or("missing direct mesh result")?;
+            if let Some(submission) = &submission {
+                submission.validate(&result)?;
+            }
             if crate::direct_mesh_admission::is_rejection(&result) {
                 crate::direct_mesh_admission::validate_rejection(&result, method, &params, &id)?;
             }

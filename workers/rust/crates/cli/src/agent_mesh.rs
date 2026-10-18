@@ -4,7 +4,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use kyuubiki_protocol::{AgentDescriptor, ClusterPeerDescriptor};
+use kyuubiki_protocol::{
+    AgentDescriptor, ClusterPeerDescriptor, RPC_VERSION, RpcMethod, SOLVER_RPC_PROTOCOL,
+};
 #[cfg(test)]
 use kyuubiki_protocol::{RpcRequest, RpcResponse};
 
@@ -278,7 +280,19 @@ pub(crate) fn configured_peers(config: &AgentConfig) -> Vec<String> {
 }
 
 fn compatible_peer(descriptor: &AgentDescriptor, cluster_id: Option<&str>) -> bool {
-    descriptor.runtime.cluster_id.as_deref() == cluster_id
+    // Discovery compatibility is not work admission. Busy/draining peers can still
+    // serve recovery; engine branding and solver inventories need not be identical.
+    descriptor.role == "solver_agent"
+        && descriptor.protocol.name == SOLVER_RPC_PROTOCOL
+        && descriptor.protocol.rpc_version == RPC_VERSION
+        && descriptor.protocol.transport.kind == "tcp"
+        && descriptor.protocol.transport.encoding == "json"
+        && descriptor.protocol.transport.framing.as_deref() == Some("length_prefixed_u32")
+        && descriptor
+            .protocol
+            .methods
+            .contains(&RpcMethod::DescribeAgent)
+        && descriptor.runtime.cluster_id.as_deref() == cluster_id
         && descriptor.runtime.runtime_mode == "peer_mesh"
         && descriptor.authority.control_mode == "offline_mesh"
         && descriptor.authority.authority_mode == "offline_mesh"
@@ -308,6 +322,10 @@ pub(crate) fn peer_mesh_policy() -> serde_json::Value {
         "cooldown_clock":"process_monotonic",
         "request_timeout_ms":peer_rpc::REQUEST_TIMEOUT_MS, "max_frame_bytes":peer_rpc::MAX_FRAME_BYTES,
         "max_pending_dns_lookups":peer_rpc::MAX_RESOLVERS, "cluster_match":"exact_including_unset",
+        "descriptor_contract":{"role":"solver_agent", "protocol":SOLVER_RPC_PROTOCOL,
+            "rpc_version":RPC_VERSION, "transport":"tcp", "encoding":"json",
+            "framing":"length_prefixed_u32", "required_method":"describe_agent"},
+        "discovery_is_execution_readiness":false,
         "authority":"offline_mesh_only", "trusted_network_required":true,
         "cluster_id_is_authentication":false, "hint_is_execution_authorization":false,
         "task_replication":false, "automatic_cross_peer_replay":false,

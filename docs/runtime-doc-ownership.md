@@ -8,6 +8,20 @@ back to it instead of re-explaining the same boundary in full.
 
 ## Primary ownership map
 
+### Architecture navigation and evidence
+
+- `current-architecture-map.md` owns the compact current responsibility and
+  execution-path map, not a timeline of experiments.
+- `module-architecture.md` explains the machine-readable topology, matrix and
+  tensor contracts; it is not a Cargo dependency manifest.
+- `project-architecture-organization.md` owns source placement, file limits and
+  repository storage/cleanup rules.
+- `current-line.md` indexes active progress. Dated `reports/` and release
+  evidence keep their original results, versions and limitations.
+- `book-ch03-architecture-boundaries.html` is the book-facing entry to these
+  boundaries. Point to the primary owner rather than copying all historical
+  results into every map; do not delete retained evidence when trimming prose.
+
 ### Product-layer split
 
 - Primary:

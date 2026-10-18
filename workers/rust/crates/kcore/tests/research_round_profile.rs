@@ -467,7 +467,7 @@ fn reseal_with_changed_latest_score(source: &Path, output: &Path) {
     let mut writer = ZipWriter::new(File::create(output).expect("create resealed archive"));
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).expect("source entry");
-        let name = entry.name().to_string();
+        let name = entry.name().expect("entry name").into_owned();
         if name == "manifest.json" || name == old_path {
             continue;
         }

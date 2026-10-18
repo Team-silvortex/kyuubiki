@@ -537,7 +537,7 @@
         "missing selected receipt never falls back to another historical success",
         "on_error skip cannot turn an unavailable recovery receipt into a partial success",
         "real_native_workflow_restart_reuses_original_success_receipt_without_duplicate_execution",
-        "real_native_workflow_restart_with_lost_agent_receipt_blocks_without_replay",
+        "real_native_workflow_restart_with_lost_agent_receipt_uses_checkpoint_without_replay",
         "The five successful rounds",
         "require exactly ten Agent executions",
         "not a general durable node"

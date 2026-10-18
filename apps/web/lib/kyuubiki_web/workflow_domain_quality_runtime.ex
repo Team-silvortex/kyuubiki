@@ -236,6 +236,19 @@ defmodule KyuubikiWeb.WorkflowDomainQualityRuntime do
     do:
       {"magnetostatic_total_stored_energy", "Total magnetostatic stored energy", 10.0, 1.0, :min}
 
+  defp extra_quality_term("transport", "transport_artificial_diffusivity_peak"),
+    do: {"transport_artificial_diffusivity_peak", "Peak artificial diffusivity", 1.0, 1.0, :min}
+
+  defp extra_quality_term("transport", "transport_stabilization_flux_peak_magnitude"),
+    do:
+      {"transport_stabilization_flux_peak_magnitude", "Peak stabilization flux magnitude", 1.0,
+       1.0, :min}
+
+  defp extra_quality_term("transport", "transport_numerical_flux_peak_magnitude"),
+    do:
+      {"transport_numerical_flux_peak_magnitude", "Peak numerical transport flux magnitude", 1.0,
+       1.0, :min}
+
   defp extra_quality_term(_domain_id, _field), do: nil
 
   defp score_term(payload, config, {field, label, default_target, default_weight, goal}) do

@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed isolated PostgreSQL typed persistence, transaction rollback, selected-pool lease fencing and real source macOS HTTP/Agent restart continuation. Seven bounded rounds use remote PostgreSQL; lost receipts block without replay. Four read APIs contain storage loss without mutations. Installed/Linux-Agent/mesh/default-cold-start and revision-two PWDT lifecycle qualification remain open.",
+  "summary": "Historical PostgreSQL evidence covers typed persistence, transaction rollback, selected-pool lease fencing and real source macOS HTTP/Agent restart continuation. Checkpoint-first continuation now supersedes the old lost-receipt blocking expectation; its PostgreSQL rerun is pending, so this continuation claim is partial. Four read APIs contain storage loss without mutations. Installed/Linux-Agent/mesh/default-cold-start and revision-two PWDT lifecycle qualification remain open.",
   "evidence_claims": [
     {
       "id": "workflow-typed-postgres-checkpoint-contract",
@@ -29,8 +29,8 @@
     },
     {
       "id": "workflow-typed-postgres-native-continuation",
-      "status": "proven",
-      "grade": "verified",
+      "status": "partial",
+      "grade": "exercised",
       "modules": ["runtime-agent-cli", "orchestra-control-plane"],
       "paradigms": ["validation"],
       "dimensions": ["recovery"],
@@ -45,7 +45,7 @@
       "required_text": [
         "real_typed_postgres_solved_branch_restart_preserves_identity_without_reexecution",
         "real_typed_postgres_raw_restart_preserves_input_numeric_identity",
-        "real_typed_postgres_lost_agent_receipt_blocks_after_checkpoint_restore",
+        "real_typed_postgres_lost_agent_receipt_recovers_after_checkpoint_restore",
         "KYUUBIKI_HEADLESS_LIVE_TEST_POSTGRES_URL",
         "This adds verified source macOS / remote PostgreSQL contract and recovery"
       ]

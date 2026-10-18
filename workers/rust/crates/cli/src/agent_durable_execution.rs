@@ -69,11 +69,7 @@ pub(crate) fn configure() -> Result<(), String> {
 pub(crate) fn policy() -> Value {
     let mut policy = match STORE.get() {
         Some(store) => match store.try_lock() {
-            Ok(store) => {
-                let mut policy = store.policy();
-                policy["available"] = json!(true);
-                policy
-            }
+            Ok(store) => store.policy(),
             Err(error) => {
                 let mut policy = agent_execution_store::policy(true);
                 policy["available"] = json!(false);

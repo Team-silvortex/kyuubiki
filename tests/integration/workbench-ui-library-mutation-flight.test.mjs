@@ -173,14 +173,15 @@ test("Workbench same-ID B project editing is independent of an active A model wr
       }
       return route.fulfill({ status: 503, json: { error: "unrelated B operation" } });
     });
-    const held = await holdRequest(page, actions.save.path(library), "POST"), first = invoke(page, "model/save"); void first.catch(() => {});
+    const held = await holdRequest(page, actions.save.path(library), "POST");
+    const first = invoke(page, "model/save").catch(error => ({ error: error.message }));
     try {
       await held.received;
       await page.evaluate((base) => { const url = new URL(location.href); url.searchParams.set("kyuubikiApiBaseUrl", `${base}/flight-authority`); history.replaceState(null, "", url); }, runtime.backendUrl);
       await invoke(page, "runtime/refreshAll");
       assert.equal((await invoke(page, "project/updateSelected", { name: "B project" })).ok, true);
       assert.equal(bWrites.length, 1);
-      held.release(); assert.equal((await first).contextChanged, true);
+      held.release(); assert.match((await first).error ?? "", /checkpoint:context_changed/);
       await page.waitForLoadState("networkidle");
       assert.equal(projects[0].name, "B project"); assert.equal(library.writes.length, 2);
     } finally { held.release(); await first; }

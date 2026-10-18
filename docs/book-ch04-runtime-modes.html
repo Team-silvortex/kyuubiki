@@ -54,6 +54,17 @@
             match the exact cluster ID (including absent versus configured IDs), report
             <code>peer_mesh</code>/<code>offline_mesh</code>, and have no Orchestra
             binding or session. An incompatible seed cannot introduce further peers.</li>
+          <li>Before updating health or merging hints, discovery requires the
+            <code>solver_agent</code> role, the current
+            <code>kyuubiki.solver-rpc/v1</code> protocol/version, TCP/JSON with
+            <code>length_prefixed_u32</code> framing, and an advertised
+            <code>describe_agent</code> method. Missing framing or contradictory
+            transport metadata fails the probe even when a reply arrived over TCP.
+            The read-only <code>descriptor_contract</code> exposes these requirements.
+            A busy or draining Agent remains discoverable; matching engine brands,
+            identical solver inventories and new-work admission are not required.
+            <code>discovery_is_execution_readiness=false</code>: compatibility and
+            reachability do not authenticate a node or authorize execution.</li>
           <li>The read-only <code>describe_agent.peer_discovery</code> policy reports
             <code>kyuubiki.agent-peer-discovery/v1</code>. At most 64 candidates are
             retained; each round probes at most eight in rotation. Each query has a
@@ -172,6 +183,61 @@
 
       <section class="docs-card docs-section" id="native-agent-ingress">
         <h2>Native Agent request admission</h2>
+        <p class="docs-copy">
+          Native TCP connections now default to host loopback only, including when
+          the Agent binds to <code>0.0.0.0</code>. This applies equally to standalone,
+          Orchestra-bound and decentralized Mesh modes. Before upgrading a LAN
+          deployment, explicitly configure its permitted caller addresses; changing
+          the bind address, declaring a cluster, or supplying certificate metadata
+          does not grant remote access.
+        </p>
+        <ul class="docs-list">
+          <li><code>KYUUBIKI_AGENT_ALLOWED_PEER_IPS</code> adds up to 64 comma-separated
+            unicast IPv4/IPv6 literals to the always-permitted loopback addresses.
+            Unset means loopback only; an empty value, hostname, port, wildcard,
+            subnet, multicast or unspecified address rejects startup. The input
+            limit is 4096 bytes. IPv4-mapped IPv6 addresses are canonicalized.
+            There is no DNS expansion or automatic trust of discovered peers.</li>
+          <li>Configure this in the Agent service's host-owned environment, not in
+            a project bundle, task or source-controlled server configuration.
+            Permit the actual socket source of the controller/gateway and each
+            intended Mesh peer. The systemd template reads its existing
+            <code>deploy/kyuubiki-agent.env</code>; no actual host addresses are
+            embedded in the template. Every peer applies its own policy.</li>
+          <li>The kernel socket peer address is checked before connection permits,
+            handler threads, request frames or recovery-reserve admission. Unknown
+            peer addresses and unlisted non-loopback sources are closed without
+            reading or replying. Rejections increment a bounded counter instead
+            of producing one log line per connection.</li>
+          <li><code>describe_agent.request_ingress.network_access</code> and the
+            registration/heartbeat payload expose
+            <code>kyuubiki.agent-network-access/v1</code>, effective addresses,
+            rejection count and limitations. Changes, including removal of an
+            allowed address, take effect on process restart, not hot reload.
+            Drain/reconcile existing work before a planned restart; access-policy
+            changes do not authorize replay of uncertain executions.</li>
+          <li>Agent startup, Installer environment validation and managed-runtime
+            preflight use the same pure policy parser. Before a managed restart
+            stops existing services, it validates and captures the target startup
+            environment. An invalid local Agent policy is rejected without stopping
+            the existing services or replacing their execution records. Modes that
+            do not launch a local Agent do not require this policy to be valid.</li>
+          <li>Runtime status reports <code>agent-network-config</code> as configured
+            intent, with <code>running-policy=not-observed</code>, not proof that
+            an already-running Agent applied it. Inspect the Agent description for
+            its effective policy. An invalid network setting still permits status
+            inspection and explicit stop; fixing it does not silently restart work.
+            This preflight does not make arbitrary launch failures transactional.</li>
+        </ul>
+        <p class="docs-copy">
+          This is source-IP containment, not authentication, encryption, user
+          identity or single-Orchestra authorization. Local processes still share
+          loopback trust, and proxies/NAT are identified by their observed socket
+          address, not the original caller. Explicit permission does not grant
+          remote drain/resume authority. Keep an isolated trusted network boundary;
+          native identity verification, credential revocation and authenticated
+          multi-host Mesh recovery remain unqualified.
+        </p>
         <p class="docs-copy">
           Standalone, Orchestra-bound and Mesh Agents share the same native TCP
           ingress limits. Read <code>describe_agent.request_ingress</code> or the
@@ -401,6 +467,31 @@
             page exists. This is not a snapshot across pages; refresh from the first
             page to include newly admitted IDs that sort before the cursor.
             An index row is not evidence of successful or completed computation.</li>
+          <li>A known admission disappearing during the current Agent process is
+            an explicit recovery error, not <code>not_found</code> or permission to
+            reuse its execution ID. The bounded ID set is rebuilt at startup and
+            extended after successful admission; it retains no inputs or results.
+            An orphan receipt also rejects fetch and duplicate submission after
+            restart. Listing checks missing admissions and orphan receipt names
+            before pagination, without reading receipt payloads. Other intact
+            executions remain independently readable and runnable. Stop the Agent
+            before restoring original records, then inspect rather than replay.
+            This guard cannot detect complete deletion of all execution evidence
+            across restart; its visible <code>missing_admission</code> policy makes
+            that limit explicit. See the
+            <a href="../reports/mesh-missing-admission-20261018.md">missing admission report</a>.</li>
+          <li>Immutable records publish through same-filesystem hard links, then
+            remove the pending name and sync the directory where supported. Unlike
+            overwriting rename, publication fails if any destination entry exists.
+            The visible <code>record_publication</code> policy requires hard-link
+            support and forbids unsafe fallbacks. Failed exclusive staging creation
+            does not delete a preexisting <code>.next</code> entry. At startup, pending
+            names are removed before reading records; they are never promoted into
+            completed results. A published final record survives cleanup of its
+            pending alias, while an admission without a final receipt stays unknown.
+            No new format, backup or replay authority is introduced. This does not
+            protect arbitrary concurrent external mutation or certify power loss.
+            See the <a href="../reports/mesh-immutable-publication-20261018.md">immutable publication report</a>.</li>
           <li><code>cancel_durable_agent_execution</code> requires the inspected
             <code>execution_id</code>, <code>process_instance_id</code> and
             <code>request_digest</code>. It can mark only the original live async
@@ -433,11 +524,37 @@
             Unknown transport outcomes preserve this handle and never trigger
             cross-Agent failover. An HTTP 200 alone does not mean computation succeeded:
             inspect <code>execution.status</code> and the nested response.</li>
+          <li>Submission replies must match the exact <code>execution_id</code>, solver
+            method and locally computed typed binary64 input digest. This also applies
+            to <code>not_admitted</code>: a well-formed digest for another payload cannot
+            authorize cleanup. A <code>not_found</code> lookup is never a submission
+            acknowledgement. Mismatches return HTTP 502 with the original endpoint/ID
+            and no retry or replay permission. Repeated submissions may return the
+            original process and request IDs when the payload matches; inspection does
+            not compare the stored payload with an edited GUI form. These checks bind
+            reply content, not remote authentication. See the
+            <a href="../reports/mesh-submission-identity-20261018.md">submission identity report</a>.</li>
           <li>The native gateway also exposes <code>POST /api/direct-mesh/tasks/list</code>
             and <code>POST /api/direct-mesh/tasks/cancel</code>, carrying the corresponding
             RPC fields plus one allowlisted <code>endpoints</code> entry. Both enforce
             the same gateway token and return a validated <code>recovery</code> envelope.
             Neither route uses Orchestra history or the gateway result cache.</li>
+          <li>On Unix, live store operations also revalidate the private
+            <code>owner.lock</code> file against the held lock's device/inode and
+            checksummed store identity. Moving the directory, replacing the lock
+            (even with the same bytes), or corrupting its identity makes durable
+            storage unavailable rather than missing or silently redirected.
+            The descriptor exposes <code>available: false</code> and
+            <code>unavailable_reason: store_binding_unavailable</code>.
+            Recovery checks and new submissions fail without replay permission;
+            a finishing worker cannot publish a receipt to a detected replacement.
+            Stop the Agent before relocating or restoring storage, then inspect the
+            original execution after restart. A missing terminal receipt remains
+            <code>outcome_unknown</code>. The visible <code>live_store_binding</code>
+            policy distinguishes Unix owner-file validation from the unqualified
+            Windows handle boundary. These checks do not serialize arbitrary
+            concurrent filesystem mutations. See the
+            <a href="../reports/mesh-live-store-binding-20261018.md">live store binding report</a>.</li>
           <li>Native durable-route failures remain HTTP 502, with the diagnostic
             <code>agent_error_code</code> preserved only from a valid, request-bound
             RPC failure. Codes are limited to 1..128 ASCII letters, digits,

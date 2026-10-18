@@ -117,7 +117,10 @@ pub(crate) fn inventory(
         let mut entry = archive
             .by_index(index)
             .map_err(|error| format!("cannot read archive entry: {error}"))?;
-        let name = entry.name().to_string();
+        let name = entry
+            .name()
+            .map_err(|error| format!("invalid archive entry name: {error}"))?
+            .into_owned();
         if name == "project.json" && entry.size() > limits.max_manifest_bytes {
             return Err("project.json exceeds configured manifest byte limit".into());
         }

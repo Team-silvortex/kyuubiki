@@ -110,7 +110,7 @@ pub(crate) fn run_node_command(
             &paths.root,
             &["tests/integration/workbench-ui-thermal-smoke.test.mjs"],
         ),
-        "integration-ui-workflow-node-test" => run_node_test_serial(
+        "integration-ui-workflow-node-test" => run_node_workflow_test(
             &paths.root,
             &[
                 "tests/integration/workbench-ui-browser-launch.test.mjs",
@@ -196,6 +196,39 @@ fn run_node_test_serial(cwd: &Path, test_paths: &[&str]) -> RunnerResult<u8> {
         .into_iter()
         .chain(test_paths.iter().map(OsString::from)),
     )
+}
+
+fn run_node_workflow_test(cwd: &Path, test_paths: &[&str]) -> RunnerResult<u8> {
+    let shard = std::env::var("KYUUBIKI_UI_TEST_SHARD").unwrap_or_default();
+    let selected = workflow_test_shard(test_paths, &shard)?;
+    eprintln!(
+        "workflow tests: {} of {} files (shard {:?})",
+        selected.len(),
+        test_paths.len(),
+        shard
+    );
+    run_node_test_serial(cwd, &selected)
+}
+
+fn workflow_test_shard<'a>(test_paths: &[&'a str], shard: &str) -> RunnerResult<Vec<&'a str>> {
+    if shard.is_empty() {
+        return Ok(test_paths.to_vec());
+    }
+    let invalid = || {
+        "KYUUBIKI_UI_TEST_SHARD must be index/total with 1 <= index <= total <= file count"
+            .to_string()
+    };
+    let (index, total) = shard.split_once('/').ok_or_else(invalid)?;
+    let index = index.parse::<usize>().map_err(|_| invalid())?;
+    let total = total.parse::<usize>().map_err(|_| invalid())?;
+    if index == 0 || index > total || total > test_paths.len() {
+        return Err(invalid());
+    }
+    Ok(test_paths
+        .iter()
+        .enumerate()
+        .filter_map(|(i, &path)| (i % total == index - 1).then_some(path))
+        .collect())
 }
 
 pub(crate) fn run_hub_gui_compile(hub_gui: &Path) -> RunnerResult<u8> {
@@ -416,6 +449,25 @@ fn validate_coverage_out_dir(out_dir: &str) -> RunnerResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn workflow_shards_cover_every_file_exactly_once() {
+        let paths = ["a", "b", "c", "d", "e", "f", "g"];
+        assert_eq!(workflow_test_shard(&paths, "").unwrap(), paths);
+        for total in 1..=paths.len() {
+            let mut combined = Vec::new();
+            for index in 1..=total {
+                let shard = workflow_test_shard(&paths, &format!("{index}/{total}")).unwrap();
+                assert!(!shard.is_empty());
+                combined.extend(shard);
+            }
+            combined.sort_unstable();
+            assert_eq!(combined, paths);
+        }
+        for invalid in ["0/3", "1/0", "4/3", "1/8", "1", "one/3", "1/3/4", "-1/3"] {
+            assert!(workflow_test_shard(&paths, invalid).is_err(), "{invalid}");
+        }
+    }
 
     #[test]
     fn frontend_coverage_args_reject_unsafe_out_dir() {

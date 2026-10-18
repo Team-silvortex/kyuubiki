@@ -349,7 +349,7 @@ fn rewrite_archive(input: &Path, output: &Path, manifest: &Value) -> Result<(), 
                 .map_err(|error| format!("failed to read bundle entry: {error}"))?;
             let name = entry
                 .enclosed_name()
-                .ok_or_else(|| format!("unsafe bundle entry: {}", entry.name()))?
+                .ok_or_else(|| format!("unsafe bundle entry at index {index}"))?
                 .to_string_lossy()
                 .replace('\\', "/");
             if entry.is_dir() {
@@ -405,7 +405,7 @@ pub(crate) fn unpack_archive(input: &Path, output: &Path) -> Result<(), String> 
                 .map_err(|error| format!("failed to read bundle entry: {error}"))?;
             let relative = entry
                 .enclosed_name()
-                .ok_or_else(|| format!("unsafe bundle entry: {}", entry.name()))?;
+                .ok_or_else(|| format!("unsafe bundle entry at index {index}"))?;
             let destination = output.join(relative);
             if entry.is_dir() {
                 fs::create_dir_all(&destination).map_err(|error| {

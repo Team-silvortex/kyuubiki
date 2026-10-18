@@ -1,6 +1,8 @@
 use super::*;
 #[path = "direct_mesh_owner_tests.rs"]
 mod owner_tests;
+#[path = "direct_mesh_submission_tests.rs"]
+mod submission_tests;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::thread;
@@ -35,8 +37,20 @@ fn report() -> Value {
     json!({"schema_version":"kyuubiki.agent-durable-execution/v1",
         "execution_id":"a".repeat(32), "automatic_replay_authorized":false,
         "status":"outcome_unknown", "request_id":"original", "process_instance_id":"process",
-        "request_digest":"b".repeat(64), "method":"solve_bar_1d", "resumable":false,
+        "request_digest":task_digest("solve_bar_1d", input()["input"].clone()),
+        "method":"solve_bar_1d", "resumable":false,
         "response":null})
+}
+
+fn task_digest(method: &str, params: Value) -> String {
+    kyuubiki_protocol::DurableAgentTask {
+        expected_store_id: None,
+        execution_id: "a".repeat(32),
+        method: serde_json::from_value(json!(method)).unwrap(),
+        params,
+    }
+    .request_digest()
+    .unwrap()
 }
 
 #[test]
@@ -609,7 +623,8 @@ fn rejection_exchange(
         let mut response = json!({"rpc_version":1, "id":request["id"], "ok":true, "result":{
             "schema_version":"kyuubiki.agent-durable-admission-rejection/v1",
             "status":"not_admitted", "execution_id":"a".repeat(32), "method":"solve_bar_1d",
-            "request_id":request["id"], "process_instance_id":"producer", "request_digest":"b".repeat(64),
+            "request_id":request["id"], "process_instance_id":"producer",
+            "request_digest":task_digest("solve_bar_1d", input()["input"].clone()),
             "reason":"execution_unavailable", "message":"agent_at_capacity", "execution_started":false,
             "automatic_replay_authorized":false
         }});

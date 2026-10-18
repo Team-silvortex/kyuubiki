@@ -27,15 +27,20 @@ control-plane services, runtime engines, and shared contracts.
 - `Agent`
   is the Rust runtime/data-plane worker. It executes solver and operator tasks
   through protocol payloads, not UI knowledge.
-- `SDKs`
-  are headless protocol clients. They must be able to use core capabilities
-  without going through the frontend.
+- `Headless SDKs`
+  are Rust/Python/Elixir control clients. They must be able to use core
+  capabilities without going through the frontend.
+- `Worker / Operator SDK`
+  is the Rust-only executable operator extension surface, not a Headless client.
+  Frontend PWDT is a third, separate UI automation surface.
 - `Schemas`
   are the shared contract layer used by GUI, control plane, SDKs, installer,
   and agents.
 
 ## Current Source-Of-Truth Files
 
+- Compact current map, without experiment history:
+  `docs/current-architecture-map.md`
 - Runtime and product shell boundaries:
   `docs/app-runtime-boundaries.md`
 - System module architecture:
@@ -55,7 +60,7 @@ control-plane services, runtime engines, and shared contracts.
 - Documentation ownership:
   `docs/runtime-doc-ownership.md`
 
-## New Operator TaskIR Stack
+## Operator TaskIR Stack
 
 The current TaskIR path is:
 
@@ -74,12 +79,15 @@ The current TaskIR path is:
 10. Agent preflight returns an explicit execution plan with digest verification,
    execution-program summary, package fetch, integrity, dispatch, and result
    serialization stages.
-11. Agent RPC params now carry an optional `mode` field: `preflight` is the
-   default and `execute` is the reserved path for package dispatch.
+11. Agent RPC params carry an optional `mode` field: `preflight` is the
+   default; `execute` dispatches admitted native built-ins, supported Engine
+   solver requests, or eligible external operator packages.
 12. Agent preflight exposes an `operator_package_runtime` contract that points
    at `kyuubiki-engine.operator-sdk-host/v1` and its default trust boundary.
-13. Full agent-side execution still needs the operator package runtime to attach
-   package fetch, package integrity, dispatch, and result serialization.
+13. External package execution requires an attached runtime, package resolution,
+   integrity and ABI checks. A detached runtime or successful preflight cannot
+   be reported as completed execution. Native built-ins do not require an
+   external package attachment; solver TaskIR has its own capability allowlist.
 
 The implementation anchors are:
 
@@ -91,6 +99,8 @@ The implementation anchors are:
 - `workers/rust/crates/protocol/src/operator_task_ir.rs`
 - `workers/rust/crates/protocol/src/types/rpc.rs`
 - `workers/rust/crates/cli/src/operator_task_runtime.rs`
+- `workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs`
+- `workers/rust/crates/cli/src/operator_task_runtime/external_execution.rs`
 - `workers/rust/crates/cli/src/rpc.rs`
 - `workers/rust/crates/headless-sdk/src/operator_task.rs`
 - `schemas/operator-task-ir.schema.json`
@@ -123,6 +133,13 @@ The implementation anchors are:
   should hold agent process and command-line surfaces.
 - `workers/rust/crates/headless-sdk`
   should remain a Rust client SDK, not the engine implementation.
+- `workers/rust/crates/desktop-runtime`
+  should own shared native service lifecycle and process ownership, not the
+  Agent's solver or the desktop UI. Share this library across the independent
+  shells instead of growing three lifecycle implementations.
+- `workers/rust/crates/script-runner`
+  should own native repository maintenance and verification entrypoints, not
+  numerical policy or a second implementation of Installer deployment logic.
 - `schemas`
   should hold JSON contracts and examples, not app-specific implementation
   prose.
@@ -188,25 +205,45 @@ Allowed large-file categories:
 
 ## Generated Disk Use
 
-These paths are disposable local output and should not guide architecture
-decisions:
+Git ignore rules, runtime ownership and retention policy are separate concepts.
+An ignored directory is not automatically safe to delete. In particular,
+`tmp/data`, execution receipts, process records and credentials are not caches.
 
-- `workers/rust/target`
-- `sdks/rust/target`
-- `target/desktop-cache` (shared desktop builds)
-- `apps/*-gui/src-tauri/target` (ad-hoc desktop builds)
-- `apps/frontend/.next`
-- `apps/web/_build`
-- `apps/web/deps`
-- `tmp`
-- `dist` and `results`
+| Class | Paths | Default cleanup policy |
+| --- | --- | --- |
+| Rebuildable debug artifacts | `workers/rust/target`, `sdks/rust/target`, desktop debug targets | Native `dev-disk` removes incremental/object output and optionally hashed executables |
+| Reusable dependencies | Cargo libraries/build dependencies, `apps/web/deps`, `apps/web/_build`, UI `node_modules` | Keep during ordinary cleanup to avoid network downloads and full recompilation |
+| Shared packaging cache | `target/desktop-cache/<platform>/release` | Keep current reusable release cache; do not merge the three Apps |
+| Frontend output | `apps/frontend/.next` | Native cleanup targets `.next/cache`, not the exported/current UI payload |
+| Release products | `dist`, desktop bundles, runtime payloads | Separate review; do not delete the only usable package as cache |
+| Mixed local state | `tmp`, `results`, `.kyuubiki`, ignored environment files | Inspect by owner; preserve live state, credentials and non-reproducible inputs |
+| Retained evidence | `reports`, `evidence`, `releases` | Preserve test baselines, failure evidence and qualification references |
 
-They are already covered by `.gitignore`. Clean them when local disk pressure
-matters; do not move source boundaries just to reduce generated output.
-Prefer dropping old incremental/object output and duplicate desktop caches
-before removing reusable dependency libraries. Keep the current shared desktop
-cache when packaging speed matters. The first build after a cleanup may take
-longer. Never clean a target directory while its compiler or tests are running.
+Use the existing native maintenance path:
+
+```text
+make disk-usage
+make clean-dev-cache
+```
+
+The first command previews; the second explicitly opts into removal of hashed
+debug Cargo executables as well as incremental/object/frontend caches. Underlying
+`./scripts/kyuubiki dev-disk --apply` omits the executable cleanup for a smaller
+tradeoff. Cargo output locks block cleanup during builds; ensure tests and
+frontend build/dev servers are idle too. Tracked output and symlinked roots
+reject cleanup. Top-level tools, dependency libraries, release products and
+runtime data are retained. Subsequent tests may need to relink.
+
+Preview bytes are logical file sizes, not promised physical recovery: hard links,
+APFS accounting and unrelated activity can change the observed `du`/`df` delta.
+Never back up caches into the same repository before deleting them.
+
+Keep the existing build roots rather than inventing a target directory per test
+round: runtime work uses `workers/rust/target`, independent SDK examples use
+`sdks/rust/target`, and native packaging shares `target/desktop-cache/<platform>`.
+The runtime test profile already disables incremental output. For one-off dev
+build/check campaigns under disk pressure, opt in to `CARGO_INCREMENTAL=0` for
+that command; do not silently change the team's normal edit/build tradeoff.
 
 Temporary run reports are not regression-test source. Keep test fixtures,
 benchmark baselines, schemas, lockfiles, and release qualification evidence
@@ -221,6 +258,9 @@ Do not prune independent failure evidence or required qualification artifacts.
 Repository cleanup does not uninstall desktop apps or manage installed runtime
 data. Use Installer lifecycle/storage operations for those separate locations.
 Container build contexts exclude temporary research outputs and local env files.
+
+The [October 18 organization record](../reports/architecture-disk-organization-20261018.md)
+records measured cleanup and the source/evidence boundaries it preserved.
 
 ## Refactor Priority
 

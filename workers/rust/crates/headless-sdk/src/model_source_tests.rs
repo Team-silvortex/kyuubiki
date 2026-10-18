@@ -14,10 +14,12 @@ fn saved_source_streaming_hash_matches_the_versioned_lossless_projection() {
     let record = record();
     let source =
         headless_saved_model_source(&record, HeadlessModelSourceKind::ModelVersion).unwrap();
-    let projection = json!({"schema_version":HEADLESS_MODEL_SOURCE_SCHEMA_VERSION,
+    let mut projection = json!({"schema_version":HEADLESS_MODEL_SOURCE_SCHEMA_VERSION,
         "source_kind":"model_version", "project_id":"p", "model_id":"m",
         "model_version_id":"v", "kind":"axial_bar_1d", "payload":record["payload"],
         "material":record["material"], "model_schema_version":record["model_schema_version"]});
+    // The wire projection is key-sorted, including when workspace features enable preserve_order.
+    projection.sort_all_objects();
     let mut digest = Sha256::new();
     digest.update(HEADLESS_MODEL_SOURCE_SCHEMA_VERSION.as_bytes());
     digest.update([0]);

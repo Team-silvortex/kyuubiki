@@ -29,9 +29,21 @@ fn exchange_peer(
     respond: impl FnOnce(TcpStream, Value) + Send + 'static,
 ) -> Exchange {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
     let endpoint = listener.local_addr().unwrap().to_string();
     let peer = thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let mut stream = loop {
+            match listener.accept() {
+                Ok((stream, _)) => break stream,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    assert!(Instant::now() < deadline, "transport request never arrived");
+                    thread::sleep(Duration::from_millis(2));
+                }
+                Err(error) => panic!("transport accept: {error}"),
+            }
+        };
+        stream.set_nonblocking(false).unwrap();
         stream
             .set_read_timeout(Some(Duration::from_secs(2)))
             .unwrap();
@@ -42,7 +54,12 @@ fn exchange_peer(
         respond(stream, input);
     });
     let start = Instant::now();
-    let result = request_with_timeout(&endpoint, method, json!({}), timeout);
+    let params = if method == "submit_durable_agent_task" {
+        json!({"execution_id":"a".repeat(32), "method":"solve_bar_1d", "params":{"elements":2}})
+    } else {
+        json!({})
+    };
+    let result = request_with_timeout(&endpoint, method, params, timeout);
     let elapsed = start.elapsed();
     peer.join().unwrap();
     (result, elapsed)

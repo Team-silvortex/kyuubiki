@@ -54,6 +54,10 @@ pub(super) fn prepare_root(root: &Path) -> Result<(), String> {
             ));
         }
     }
+    validate_root(root)
+}
+
+pub(super) fn validate_root(root: &Path) -> Result<(), String> {
     let metadata = fs::symlink_metadata(root).map_err(|e| e.to_string())?;
     if !metadata.is_dir() || metadata.file_type().is_symlink() {
         return Err("execution store directory must not be a symlink".into());
@@ -163,14 +167,15 @@ pub(super) fn commit(root: &Path, name: &str, prepared: PreparedRecord) -> Resul
         return Err("refusing to overwrite an immutable execution record".into());
     }
     let pending = root.join(format!("{name}.next"));
+    // A failed create_new never transfers ownership of a preexisting staging file.
+    let mut file = open_private(&pending, true)?;
     let outcome = (|| {
-        let mut file = open_private(&pending, true)?;
         file.write_all(digest.as_bytes())
             .and_then(|_| file.write_all(&bytes))
             .and_then(|_| file.sync_all())
             .map_err(|e| e.to_string())?;
         drop(file);
-        fs::rename(&pending, &path).map_err(|e| e.to_string())?;
+        publish(&pending, &path)?;
         sync_directory(root)?;
         Ok((bytes.len() + digest.len()) as u64)
     })();
@@ -178,6 +183,15 @@ pub(super) fn commit(root: &Path, name: &str, prepared: PreparedRecord) -> Resul
         let _ = fs::remove_file(pending);
     }
     outcome
+}
+
+pub(super) fn publish(pending: &Path, path: &Path) -> Result<(), String> {
+    // Unlike rename, hard_link atomically rejects every existing destination.
+    // Startup removes a leftover .next alias before reading the single-link record.
+    fs::hard_link(pending, path).map_err(|error| {
+        format!("cannot publish immutable execution record without overwrite; same-filesystem hard links are required: {error}")
+    })?;
+    fs::remove_file(pending).map_err(|e| e.to_string())
 }
 
 #[cfg(unix)]

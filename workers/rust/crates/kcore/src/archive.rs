@@ -206,12 +206,16 @@ fn extract_verified(
         let mut entry = archive
             .by_index(index)
             .map_err(|error| format!("failed to read kcore entry {index}: {error}"))?;
+        let name = entry
+            .name()
+            .map_err(|error| format!("invalid kcore entry name: {error}"))?
+            .into_owned();
         let relative = entry
             .enclosed_name()
-            .ok_or_else(|| format!("unsafe kcore entry path: {}", entry.name()))?
+            .ok_or_else(|| format!("unsafe kcore entry path: {name}"))?
             .to_path_buf();
         if entry.is_dir() {
-            return Err(format!("unexpected directory entry: {}", entry.name()));
+            return Err(format!("unexpected directory entry: {name}"));
         }
         let destination = output.join(relative);
         if let Some(parent) = destination.parent() {
@@ -223,20 +227,17 @@ fn extract_verified(
             .create_new(true)
             .open(&destination)
             .map_err(|error| format!("failed to create {}: {error}", destination.display()))?;
-        if let Some((expected_length, expected_digest)) = expected.get(entry.name()) {
+        if let Some((expected_length, expected_digest)) = expected.get(&name) {
             let (length, digest) = copy_reader_and_hash(&mut entry, &mut target, *expected_length)?;
             if length != *expected_length || digest != *expected_digest {
-                return Err(format!(
-                    "kcore object changed while extracting: {}",
-                    entry.name()
-                ));
+                return Err(format!("kcore object changed while extracting: {name}"));
             }
             extracted_payload_bytes = extracted_payload_bytes
                 .checked_add(length)
                 .ok_or_else(|| "kcore extraction size overflow".to_string())?;
         } else {
             std::io::copy(&mut entry, &mut target)
-                .map_err(|error| format!("failed to extract {}: {error}", entry.name()))?;
+                .map_err(|error| format!("failed to extract {name}: {error}"))?;
         }
     }
     Ok(ExtractionReport {
@@ -284,29 +285,31 @@ fn validate_entry_table(
         let entry = archive
             .by_index(index)
             .map_err(|error| format!("failed to inspect kcore entry {index}: {error}"))?;
+        let name = entry
+            .name()
+            .map_err(|error| format!("invalid kcore entry name: {error}"))?
+            .into_owned();
         if entry.enclosed_name().is_none() || entry.is_dir() {
-            return Err(format!(
-                "unsafe or unsupported kcore entry: {}",
-                entry.name()
-            ));
+            return Err(format!("unsafe or unsupported kcore entry: {name}"));
         }
         if entry
             .unix_mode()
             .is_some_and(|mode| mode & 0o170000 == 0o120000)
         {
-            return Err(format!(
-                "symbolic links are forbidden in kcore: {}",
-                entry.name()
-            ));
+            return Err(format!("symbolic links are forbidden in kcore: {name}"));
         }
-        if !names.insert(entry.name().to_string()) {
-            return Err(format!("duplicate kcore entry: {}", entry.name()));
+        if !names.insert(name.clone()) {
+            return Err(format!("duplicate kcore entry: {name}"));
         }
     }
     let first = archive
         .by_index(0)
         .map_err(|error| format!("failed to inspect first kcore entry: {error}"))?;
-    if first.name() != MIMETYPE_ENTRY {
+    if first
+        .name()
+        .map_err(|error| format!("invalid kcore mimetype name: {error}"))?
+        != MIMETYPE_ENTRY
+    {
         return Err("mimetype must be the first kcore entry".to_string());
     }
     if first.compression() != CompressionMethod::Stored {

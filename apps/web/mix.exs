@@ -49,7 +49,7 @@ defmodule KyuubikiWeb.MixProject do
       {:ecto_sqlite3, "~> 0.17"},
       {:postgrex, "~> 0.20"},
       {:plug, "~> 1.19"},
-      {:bandit, "~> 1.12.5"}
+      {:bandit, "~> 1.13.0"}
     ]
   end
 end

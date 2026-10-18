@@ -33,11 +33,15 @@ async function routeFixture(context, spec) {
     return route.abort();
   });
 }
-const connectFrame = (frame, protocol) => frame.evaluate(protocol => new Promise(resolve => {
+const connectFrame = (frame, protocol) => frame.evaluate(protocol => new Promise((resolve, reject) => {
   const id = crypto.randomUUID();
+  const timer = setTimeout(() => {
+    removeEventListener("message", receive);
+    reject(new Error(`journal fixture handshake timed out: ${protocol} at ${location.href}`));
+  }, 5000);
   const receive = event => {
     if (event.source !== parent || event.origin !== "http://tauri.localhost" || event.data.id !== id) return;
-    removeEventListener("message", receive); window.session = event.data.session;
+    clearTimeout(timer); removeEventListener("message", receive); window.session = event.data.session;
     window.received = []; resolve();
   };
   addEventListener("message", receive);
@@ -119,6 +123,7 @@ for (const spec of variants) for (const firstAction of ["list", "reserve"]) for 
 for (const spec of variants) for (const delayedAction of ["connect", "list", "reserve", "remove"]) {
   test(`${spec.name} real navigation ${delayedAction === "connect" ? "isolates" : "rejects"} delayed old ${delayedAction} before native dispatch`, { timeout: 30_000 }, async () => {
     const context = await browser.newContext(), page = await context.newPage(), errors = [];
+    context.setDefaultTimeout(5000);
     page.on("pageerror", error => errors.push(error.message));
     try {
       await routeFixture(context, spec);
@@ -127,10 +132,18 @@ for (const spec of variants) for (const delayedAction of ["connect", "list", "re
         const module = await import("/bridge.js"), frame = document.querySelector("iframe");
         const h = window.harness = { calls: [], ledger: [spec.intent], firstProxy: frame.contentWindow, loads: 0, held: null };
         const wrappers = new Map();
-        // Hold a real browser MessageEvent before host receipt to model delayed task delivery.
+        // Capture the real message at delivery. Chromium can re-wrap event.source
+        // after the sending realm is destroyed; retaining the event itself would
+        // test a stale wrapper rejection instead of the stable-proxy session fence.
         const host = { crypto, addEventListener(type, fn) {
           const wrapped = type === "message" ? event => {
-            if (event.data?.id === "delayed-old") h.held = () => fn(event); else fn(event);
+            if (event.data?.id === "delayed-old") {
+              const message = { source: event.source, origin: event.origin, data: event.data };
+              h.held = () => {
+                if (message.source !== frame.contentWindow) throw new Error("delayed message lost its stable WindowProxy");
+                fn(message);
+              };
+            } else fn(event);
           } : fn;
           wrappers.set(fn, wrapped); addEventListener(type, wrapped);
         }, removeEventListener(type, fn) { removeEventListener(type, wrappers.get(fn)); wrappers.delete(fn); } };

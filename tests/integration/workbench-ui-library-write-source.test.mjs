@@ -141,7 +141,7 @@ for (const surface of ["GUI", "PWDT"]) for (const entry of cases) {
       const path = entry.path(library), held = await holdRequest(page, path, entry.method);
       let pending;
       try {
-        if (surface === "PWDT") { pending = invoke(page, entry.action, { name: "Old-source change" }); void pending.catch(() => {}); }
+        if (surface === "PWDT") pending = invoke(page, entry.action, { name: "Old-source change" }).catch(error => ({ error: error.message }));
         else await click(page, entry);
         await held.received;
         await changeBackend(page); await invoke(page, "runtime/refreshAll");
@@ -154,7 +154,12 @@ for (const surface of ["GUI", "PWDT"]) for (const entry of cases) {
         noLibraryRequests(b.requests);
         assert.deepEqual({ projects: b.projects, versions: b.versions }, originalB);
         assert.equal(library.writes.length + runtime.state.projectMutations.length, 2, "the original A write is retained exactly once in the fixture");
-        if (surface === "PWDT") { assert.equal(outcome.ok, true); assert.equal(outcome.contextChanged, true); }
+        if (surface === "PWDT") {
+          if (["model/save", "model/saveAs"].includes(entry.action)) {
+            assert.match(outcome.error ?? "", /checkpoint:context_changed/);
+            assert.equal(outcome.ok, undefined, "a retired checkpoint cannot claim a delivered save");
+          } else { assert.equal(outcome.ok, true); assert.equal(outcome.contextChanged, true); }
+        }
       } finally { held.release(); await pending; }
     });
   });

@@ -99,6 +99,7 @@ impl RuntimeFixture {
                 format!("127.0.0.1:{},127.0.0.1:{}", self.ports[2], self.ports[3]),
             )
             .env("KYUUBIKI_AGENT_DISCOVERY", "static")
+            .env_remove("KYUUBIKI_AGENT_ALLOWED_PEER_IPS")
             .env("KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY", "false")
             .env("KYUUBIKI_RUNTIME_FRONTEND_DISABLED", "false");
         command

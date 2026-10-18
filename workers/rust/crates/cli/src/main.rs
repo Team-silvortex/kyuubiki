@@ -20,6 +20,7 @@ mod agent_ingress;
 mod agent_lifecycle;
 mod agent_lifecycle_rpc;
 mod agent_mesh;
+mod agent_network_access;
 mod agent_reply_writer;
 mod agent_result_artifact;
 mod agent_shutdown;
@@ -89,6 +90,7 @@ fn main() {
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
     agent_mesh::validate_mesh_config(config)?;
+    agent_network_access::configure()?;
     agent_ingress::configure()?;
     agent_durable_execution::configure()?;
     agent_lifecycle::configure_execution_capacity()?;
@@ -143,8 +145,8 @@ fn accept_connections(listener: TcpListener, reply_timeout: Duration) -> Result<
             Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
             Err(error) => return Err(format!("failed to accept connection: {error}")),
         };
-        let Some(permit) = agent_ingress::current().admit_connection() else {
-            // Do not queue sockets or spawn threads when the ingress capacity is full.
+        let Some(permit) = agent_ingress::current().admit_peer(stream.peer_addr()) else {
+            // Reject before reading, reserving recovery capacity or spawning a handler.
             drop(stream);
             continue;
         };
@@ -174,7 +176,7 @@ fn handle_connection(
 ) -> Result<(), String> {
     let peer_is_loopback = stream
         .peer_addr()
-        .map(|address| address.ip().is_loopback())
+        .map(|address| address.ip().to_canonical().is_loopback())
         .unwrap_or(false);
     loop {
         let frame = match agent_ingress::current()
