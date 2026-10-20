@@ -22,6 +22,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryFailure
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryRunners, as: Runners
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryScan
 
   alias KyuubikiWeb.Orchestra.{
@@ -194,6 +195,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       jobs: %{},
       progress: %{},
       activity: %{},
+      completion_retries: %{},
+      registry_retry: nil,
       recovery_runs: 0,
       recovered_jobs: 0,
       blocked_jobs: 0
@@ -274,8 +277,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   def handle_call({:commit_result, job_id, claim, result}, _from, state) do
     if Ownership.owner?(state) do
       reply = WorkflowCompletionStore.commit(job_id, claim, result, state.lease)
-      next_state = state |> forget_progress(job_id) |> Ownership.after_write(reply)
-      {:reply, reply, next_state}
+      next_state = if reply == :ok, do: Runners.retire(state, job_id), else: state
+      {:reply, reply, Ownership.after_write(next_state, reply)}
     else
       {:reply, {:error, :orchestra_standby}, state}
     end
@@ -287,7 +290,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
         do: WorkflowCompletionStore.stage(job_id, claim, result, state.lease),
         else: {:error, :orchestra_standby}
 
-    {:reply, reply, Ownership.after_write(state, reply)}
+    next = if reply == :ok, do: Runners.staged(state, job_id), else: state
+    {:reply, reply, Ownership.after_write(next, reply)}
   end
 
   def handle_call({:checkpoint, checkpoint, job_id, claim, action}, _from, state)
@@ -308,8 +312,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   def handle_call({:fail, job_id, claim, message}, _from, state) do
     if Ownership.owner?(state) do
       reply = fail_if_owned(job_id, claim, message, state.lease)
-      next_state = state |> forget_progress(job_id) |> Ownership.after_write(reply)
-      {:reply, reply, next_state}
+      next_state = if reply == :ok, do: Runners.retire(state, job_id), else: state
+      {:reply, reply, Ownership.after_write(next_state, reply)}
     else
       {:reply, {:error, :orchestra_standby}, state}
     end
@@ -317,7 +321,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   def handle_call({:cancel, job_id}, _from, state) do
     reply = Ownership.guarded_write(state, fn -> cancel_recovery(job_id) end)
-    {:reply, reply, Ownership.after_write(state, reply)}
+    next = if reply == :ok, do: Runners.retire(state, job_id), else: state
+    {:reply, reply, Ownership.after_write(next, reply)}
   end
 
   def handle_call({:fail_observed, job, message}, _from, state),
@@ -339,7 +344,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       end
     end
 
-    next = if match?({:ok, _job}, reply), do: forget_progress(state, job_id), else: state
+    next = if match?({:ok, _job}, reply), do: Runners.retire(state, job_id), else: state
     {:reply, reply, Ownership.after_write(next, reply)}
   end
 
@@ -364,6 +369,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
        "max_attempts" => state.max_attempts,
        "lease" => Ownership.snapshot(state),
        "tracked_jobs" => state.jobs |> Map.keys() |> Enum.sort(),
+       "pending_completion_retries" => state.completion_retries |> Map.keys() |> Enum.sort(),
+       "runner_registry_retry_pending" => not is_nil(state.registry_retry),
        "recovery_runs" => state.recovery_runs,
        "recovered_jobs" => state.recovered_jobs,
        "blocked_jobs" => state.blocked_jobs
@@ -386,27 +393,15 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   def handle_info({:renew_lease, fencing_token, expires_at_ms}, state) do
-    case state.lease do
-      %{fencing_token: ^fencing_token, expires_at_ms: ^expires_at_ms} = lease ->
-        case LeaseStore.renew(lease, state.lease_ttl_ms) do
-          {:ok, renewed} ->
-            next_state = %{
-              state
-              | lease: renewed,
-                lease_status: :owner,
-                lease_holder: nil,
-                last_lease_error: nil
-            }
+    {:noreply, Ownership.renew(state, fencing_token, expires_at_ms)}
+  end
 
-            {:noreply, Ownership.schedule(next_state)}
+  def handle_info({:retry_runner_registry, token}, state) do
+    {:noreply, WorkflowRecoveryScan.retry_registry(state, token, &recover_active_jobs/1)}
+  end
 
-          {:error, reason} ->
-            {:noreply, Ownership.lose(state, reason)}
-        end
-
-      _ ->
-        {:noreply, state}
-    end
+  def handle_info({:retry_completion, job_id, token}, state) do
+    {:noreply, WorkflowRecoveryScan.retry_completion(state, job_id, token, &recover_job/3)}
   end
 
   def handle_info({:recover_job, job_id, reason}, state) do
@@ -419,25 +414,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
-    case Map.pop(state.refs, ref) do
-      {nil, _refs} ->
-        {:noreply, state}
-
-      {job_id, refs} ->
-        next_state = %{
-          state
-          | refs: refs,
-            jobs: Map.delete(state.jobs, job_id),
-            progress: Map.delete(state.progress, job_id),
-            activity: Map.delete(state.activity, job_id)
-        }
-
-        if Ownership.owner?(next_state) do
-          Process.send_after(self(), {:recover_job, job_id, :runner_loss}, 10)
-        end
-
-        {:noreply, next_state}
-    end
+    {:noreply, Runners.down(ref, state)}
   end
 
   @impl true
@@ -464,9 +441,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   defp do_recover_job(job_id, reason, state) do
-    case WorkflowJobRunner.running(job_id) do
+    case Runners.running(job_id, state) do
+      {:error, :workflow_runner_registry_unavailable} ->
+        {:skipped, WorkflowRecoveryScan.defer_registry(state, job_id, reason)}
+
       {:ok, pid} ->
-        {:skipped, track_runner(job_id, pid, state)}
+        {:skipped, Runners.track(job_id, pid, state)}
 
       :error ->
         case fetch_runtime(job_id) do
@@ -474,7 +454,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
           when terminal in ["completed", "failed", "cancelled", "recovery_blocked"] ->
             result =
               Ownership.guarded_write(state, fn ->
-                reconcile_terminal_job(job_id, terminal, recovery)
+                WorkflowRecoveryScan.reconcile_terminal(job_id, terminal, recovery)
               end)
 
             {:skipped, Ownership.after_write(state, result)}
@@ -525,9 +505,17 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   defp dispatch_available_job(job_id, reason, state) do
-    case WorkflowJobRunner.running(job_id) do
+    case Runners.running(job_id, state) do
+      {:error, :workflow_runner_registry_unavailable} = error ->
+        next =
+          if reason == :initial,
+            do: state,
+            else: WorkflowRecoveryScan.defer_registry(state, job_id, reason)
+
+        {error, next}
+
       {:ok, pid} ->
-        {{:ok, pid}, track_runner(job_id, pid, state)}
+        {{:ok, pid}, Runners.track(job_id, pid, state)}
 
       :error when reason == :initial ->
         do_dispatch_job(job_id, reason, state)
@@ -536,13 +524,18 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
         case WorkflowCompletionStore.pending(job_id, state.lease) do
           {:ok, claim, result} ->
             case WorkflowJobRunner.start_finalizing(job_id, claim, result) do
-              {:ok, pid} -> {{:ok, pid}, track_runner(job_id, pid, state)}
-              error -> {error, state}
+              {:ok, pid} ->
+                {{:ok, pid}, Runners.track(job_id, pid, state, :finalizing)}
+
+              {:error, :workflow_runner_supervisor_unavailable} = error ->
+                {error, WorkflowRecoveryScan.schedule_completion_retry(state, job_id)}
+
+              error ->
+                {error, state}
             end
 
-          {:error, :workflow_completion_checkpoint_invalid = error} ->
-            reply = block_recovery(job_id, error, state.lease)
-            {reply, Ownership.after_write(state, reply)}
+          {:error, :workflow_completion_checkpoint_invalid} ->
+            block_completion(job_id, state)
 
           :none ->
             do_dispatch_job(job_id, reason, state)
@@ -557,6 +550,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   defp do_dispatch_job(job_id, reason, state) do
+    # A finalizer retry never grants replay authority, including intervening manual scans.
+    if reason == :completion_retry or Map.has_key?(state.completion_retries, job_id) or
+         Runners.finalizing?(state, job_id),
+       do: block_completion(job_id, state),
+       else: claim_and_dispatch_job(job_id, reason, state)
+  end
+
+  defp block_completion(job_id, state) do
+    reply = block_recovery(job_id, :workflow_completion_checkpoint_invalid, state.lease)
+    {reply, WorkflowRecoveryScan.after_completion_block(state, job_id, reply)}
+  end
+
+  defp claim_and_dispatch_job(job_id, reason, state) do
     with {:ok, runtime, recovery} <- fetch_runtime(job_id),
          {:ok, claimed, claim} <-
            DispatchGuard.claim(job_id, recovery, state.session_id, reason, state.max_attempts),
@@ -564,7 +570,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
          :ok <- put_runtime_recovery(job_id, runtime, claimed, state.lease) do
       case WorkflowJobRunner.start_claimed(job_id, claim, envelope) do
         {:ok, pid} ->
-          {{:ok, pid}, track_runner(job_id, pid, state)}
+          {{:ok, pid}, Runners.track(job_id, pid, state, :executing)}
 
         {:error, reason} ->
           message = "workflow runner start failed: #{format_reason(reason)}"
@@ -717,57 +723,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end
   end
 
-  defp reconcile_terminal_job(job_id, "completed", _recovery) do
-    Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0}) |> progress_reply()
-  end
-
-  defp reconcile_terminal_job(job_id, "cancelled", _recovery) do
-    Store.apply_progress(%{job_id: job_id, stage: "cancelled", progress: 1.0}) |> progress_reply()
-  end
-
-  defp reconcile_terminal_job(job_id, terminal, recovery) do
-    message =
-      recovery
-      |> Map.get("history", [])
-      |> List.last()
-      |> case do
-        %{"message" => value} when is_binary(value) -> value
-        %{"reason" => value} when is_binary(value) -> "workflow recovery blocked: #{value}"
-        _ -> "workflow execution ended in #{terminal} state"
-      end
-
-    Store.apply_progress(%{job_id: job_id, stage: "failed", progress: 1.0, message: message})
-    |> progress_reply()
-  end
-
   defp mark_job_failed(job_id, _runtime, message) do
     Store.apply_progress(%{job_id: job_id, stage: "failed", progress: 1.0, message: message})
   end
-
-  defp track_runner(job_id, pid, state) when is_pid(pid) do
-    case Map.get(state.jobs, job_id) do
-      %{ref: ref} when is_reference(ref) ->
-        state
-
-      nil ->
-        ref = Process.monitor(pid)
-
-        runner = %{pid: pid, ref: ref}
-
-        %{
-          state
-          | refs: Map.put(state.refs, ref, job_id),
-            jobs: Map.put(state.jobs, job_id, runner)
-        }
-    end
-  end
-
-  defp forget_progress(state, job_id),
-    do: %{
-      state
-      | progress: Map.delete(state.progress, job_id),
-        activity: Map.delete(state.activity, job_id)
-    }
 
   defp normalize_block_reason({:workflow_replay_blocked, safety}),
     do: {:workflow_replay_blocked, safety}

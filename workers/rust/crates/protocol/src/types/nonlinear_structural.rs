@@ -17,7 +17,10 @@ pub struct NonlinearSpring1dElementInput {
     pub id: String,
     pub node_i: usize,
     pub node_j: usize,
+    /// Linear force coefficient (force / displacement), finite and positive.
     pub stiffness: f64,
+    /// Cubic force coefficient (force / displacement^3), finite.
+    /// A negative coefficient does not imply stability along the whole load path.
     pub cubic_stiffness: f64,
 }
 
@@ -29,6 +32,8 @@ pub struct SolveNonlinearSpring1dRequest {
     pub load_steps: Option<usize>,
     #[serde(default)]
     pub max_iterations: Option<usize>,
+    /// Absolute free-force residual tolerance, finite and positive; defaults to 1e-8.
+    /// Explicit values are not relaxed. Unattainable precision may yield nonconvergence.
     #[serde(default)]
     pub tolerance: Option<f64>,
 }
@@ -41,6 +46,7 @@ pub struct NonlinearSpring1dStepResult {
     pub iterations: usize,
     /// Residual of the last evaluated trial at this target load, including failed trials.
     pub residual_norm: f64,
+    /// Force equilibrium only; not a certificate of tangent or global stability.
     pub converged: bool,
 }
 
@@ -61,6 +67,7 @@ pub struct NonlinearSpring1dElementResult {
     pub length: f64,
     pub extension: f64,
     pub force: f64,
+    /// Element tangent; its sign alone does not certify constrained-system stability.
     pub tangent_stiffness: f64,
 }
 
@@ -70,6 +77,7 @@ pub struct SolveNonlinearSpring1dResult {
     pub nodes: Vec<NonlinearSpring1dNodeResult>,
     pub elements: Vec<NonlinearSpring1dElementResult>,
     pub steps: Vec<NonlinearSpring1dStepResult>,
+    /// Full-load force equilibrium only; not a certificate of stable equilibrium.
     pub converged: bool,
     /// Load factor of the returned committed state. None denotes an older result contract.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -670,6 +678,8 @@ pub struct SolveContactGap1dRequest {
     pub load_steps: Option<usize>,
     #[serde(default)]
     pub max_iterations: Option<usize>,
+    /// Absolute free-force residual tolerance, finite and positive; defaults to 1e-8.
+    /// Explicit values are not relaxed. Unattainable precision may yield nonconvergence.
     #[serde(default)]
     pub tolerance: Option<f64>,
 }
@@ -692,6 +702,7 @@ pub struct SolveContactGap1dResult {
     pub elements: Vec<NonlinearSpring1dElementResult>,
     pub contacts: Vec<ContactGap1dContactResult>,
     pub steps: Vec<NonlinearSpring1dStepResult>,
+    /// Full-load force equilibrium only; not a certificate of stable equilibrium.
     pub converged: bool,
     /// Load factor of the returned committed state. None denotes an older result contract.
     #[serde(default, skip_serializing_if = "Option::is_none")]

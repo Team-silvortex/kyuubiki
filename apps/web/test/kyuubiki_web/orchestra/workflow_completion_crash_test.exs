@@ -83,7 +83,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionCrashTest do
         "KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS" => "60000",
         "KYUUBIKI_WORKFLOW_TIMEOUT_MS" => "60000"
       }
-      |> Enum.map(fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
+      |> KyuubikiWeb.TestSupport.BeamChild.port_env()
 
     Port.open({:spawn_executable, System.find_executable("elixir")}, [
       :binary,

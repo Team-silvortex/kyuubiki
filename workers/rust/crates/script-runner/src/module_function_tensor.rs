@@ -753,7 +753,10 @@ fn read_json(root: &Path, relative_path: &str) -> RunnerResult<Value> {
 
 fn read_text(root: &Path, relative_path: &str) -> RunnerResult<String> {
     let path = repo_path(root, relative_path)?;
-    fs::read_to_string(&path).map_err(|error| format!("failed to read {}: {error}", path.display()))
+    fs::read_to_string(&path)
+        // Evidence anchors describe text, not a checkout's Git line-ending policy.
+        .map(|text| text.replace("\r\n", "\n"))
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))
 }
 
 #[derive(Debug)]

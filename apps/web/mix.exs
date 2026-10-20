@@ -47,6 +47,8 @@ defmodule KyuubikiWeb.MixProject do
       {:jason, "~> 1.4"},
       {:ecto_sql, "~> 3.13"},
       {:ecto_sqlite3, "~> 0.17"},
+      # Native statement cleanup must not block a scheduler behind a busy writer.
+      {:exqlite, "~> 0.42.0"},
       {:postgrex, "~> 0.20"},
       {:plug, "~> 1.19"},
       {:bandit, "~> 1.13.0"}

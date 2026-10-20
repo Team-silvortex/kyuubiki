@@ -36,11 +36,13 @@ fn step(action: &str, index: usize, payload: Value) -> HeadlessExecutionBatchSte
 pub(super) fn solve_batch(model: Value) -> HeadlessExecutionBatch {
     let mut batch = document("solve_bar_1d", json!({"model":model}));
     batch.steps.truncate(1);
+    // Multi-megabyte transport fixtures share the host with other live stacks.
+    // This is a bounded correctness wait, not a five-second performance gate.
     batch.steps.push(step(
         "job_wait",
         2,
         json!({
-            "job_id":"{{steps.1.result.job_id}}","timeout_ms":5000,"interval_ms":10
+            "job_id":"{{steps.1.result.job_id}}","timeout_ms":30000,"interval_ms":50
         }),
     ));
     batch.steps.push(step(

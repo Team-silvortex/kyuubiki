@@ -22,6 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
+        id: beam
         with:
           elixir-version: "1.19.5"
           otp-version: "28.0"
@@ -30,12 +31,43 @@ jobs:
           path: |
             apps/web/deps
             apps/web/_build
-          key: ${{ runner.os }}-beam-web-${{ hashFiles('apps/web/mix.lock') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-beam-web-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('apps/web/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-beam-web-
+            ${{ runner.os }}-${{ runner.arch }}-beam-web-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
       - run: mix deps.get
       - run: mix format --check-formatted
       - run: mix test
+      - name: Compile SQLite from source without reusing native build artifacts
+        env:
+          MIX_ENV: test
+          MIX_BUILD_PATH: _build-native
+        run: >-
+          elixir -e 'Application.put_env(:exqlite, :force_build, true);
+          Mix.CLI.main(["compile", "--warnings-as-errors"])'
+      - name: Repeat native contention and forced-process recovery regressions
+        env:
+          MIX_ENV: test
+          MIX_BUILD_PATH: _build-native
+        run: >-
+          mix test --no-compile
+          test/kyuubiki_web/beam_child_test.exs
+          test/kyuubiki_web/storage/sqlite_query_cache_test.exs
+          test/kyuubiki_web/storage/disposable_database_lifecycle_test.exs
+          test/kyuubiki_web/library/project_request_transaction_test.exs
+          test/kyuubiki_web/orchestra/workflow_completion_crash_test.exs
+          test/kyuubiki_web/orchestra/workflow_completion_supervisor_recovery_test.exs
+          test/kyuubiki_web/orchestra/workflow_registry_outage_test.exs
+          test/kyuubiki_web/orchestra/lease_store_test.exs
+          --repeat-until-failure 2
+      - name: Repeat file-backed workflow finalizer and registry recovery
+        env:
+          KYUUBIKI_STORAGE_BACKEND: memory
+          KYUUBIKI_DATA_DIR: ${{ runner.temp }}/kyuubiki-workflow-finalizer-tests
+        run: >-
+          mix test --no-compile
+          test/kyuubiki_web/orchestra/workflow_completion_supervisor_recovery_test.exs
+          test/kyuubiki_web/orchestra/workflow_registry_outage_test.exs
+          --repeat-until-failure 2
 
   rust:
     name: rust-test
@@ -282,6 +314,7 @@ jobs:
         with:
           python-version: "3.12"
       - uses: erlef/setup-beam@v1
+        id: beam
         with:
           elixir-version: "1.19.5"
           otp-version: "28.0"
@@ -290,9 +323,9 @@ jobs:
           path: |
             sdks/elixir/deps
             sdks/elixir/_build
-          key: ${{ runner.os }}-beam-sdk-${{ hashFiles('sdks/elixir/mix.lock') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-beam-sdk-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('sdks/elixir/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-beam-sdk-
+            ${{ runner.os }}-${{ runner.arch }}-beam-sdk-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
       - name: Install Elixir SDK dependencies
         working-directory: sdks/elixir
         run: mix deps.get
@@ -320,6 +353,7 @@ jobs:
           cache: "npm"
           cache-dependency-path: apps/frontend/package-lock.json
       - uses: erlef/setup-beam@v1
+        id: beam
         with:
           elixir-version: "1.19.5"
           otp-version: "28.0"
@@ -328,9 +362,9 @@ jobs:
           path: |
             apps/web/deps
             apps/web/_build
-          key: ${{ runner.os }}-beam-web-${{ hashFiles('apps/web/mix.lock') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-beam-web-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('apps/web/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-beam-web-
+            ${{ runner.os }}-${{ runner.arch }}-beam-web-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
       - name: Install live-service dependencies
         working-directory: apps/web
         run: mix deps.get

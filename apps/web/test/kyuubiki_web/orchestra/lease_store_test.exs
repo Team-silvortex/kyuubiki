@@ -159,6 +159,8 @@ defmodule KyuubikiWeb.Orchestra.LeaseStoreTest do
 
     takeover_task =
       Task.async(fn ->
+        # Exercise fencing, not global's randomly doubling lock-retry sleeps.
+        :rand.seed(:exsplus, {17, 18, 19})
         LeaseMemoryBackend.acquire(lease_name, "memory-b", 1_000)
       end)
 

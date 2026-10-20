@@ -12,12 +12,14 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationDelivery do
   def kick([]), do: :ok
 
   def kick(job_ids) do
-    Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
-      case Registry.register(@registry, {__MODULE__, :sweep}, nil) do
-        {:ok, _} -> sweep(job_ids)
-        {:error, _} -> :ok
-      end
-    end)
+    with :ok <- KyuubikiWeb.Orchestra.WorkflowJobRunner.registry_status() do
+      Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
+        case Registry.register(@registry, {__MODULE__, :sweep}, nil) do
+          {:ok, _} -> sweep(job_ids)
+          {:error, _} -> :ok
+        end
+      end)
+    end
   catch
     :exit, _ -> {:error, :cancellation_worker_unavailable}
   end

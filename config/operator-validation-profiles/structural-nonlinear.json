@@ -12,6 +12,8 @@
       "validation_methods": [
         "final_permitted_correction_equilibrium_check",
         "failed_step_rollback_and_nonzero_committed_residual",
+        "bounded_residual_backtracking_and_independent_bisection",
+        "explicit_absolute_tolerance_and_small_load_closed_form",
         "cancellation_and_clean_in_process_replay",
         "headless_workflow_and_legacy_result_contract",
         "benchmark_nonconvergence_negative_controls"
@@ -20,25 +22,31 @@
         "tested_returned_physical_state_belongs_to_achieved_load_factor",
         "failed_trial_residual_is_evaluated_after_the_last_allowed_correction",
         "finite_nonconvergence_does_not_commit_trial_displacement_or_contact_activation",
+        "exhausted_line_search_retains_the_committed_state_and_evaluated_failure_diagnostics",
+        "explicit_finite_positive_tolerance_is_not_silently_relaxed",
         "legacy_missing_achieved_load_is_unknown_not_assumed_complete",
         "nonconverged_spring_benchmarks_cannot_report_success"
       ],
       "evidence_paths": [
         "workers/rust/crates/solver/src/nonlinear_spring_1d.rs",
         "workers/rust/crates/solver/tests/nonlinear_spring_recovery.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_globalization.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_tolerance.rs",
         "workers/rust/crates/protocol/src/types/nonlinear_structural.rs",
         "workers/rust/crates/protocol/tests/nonlinear_spring_result_contract.rs",
         "workers/rust/crates/cli/tests/nonlinear_spring_range_operator.rs",
         "workers/rust/crates/engine/tests/nonlinear_spring_recovery_workflow.rs",
         "workers/rust/crates/benchmark/src/runner_structural.rs",
         "workers/rust/crates/benchmark/src/tests/spring_recovery.rs",
-        "reports/nonlinear-spring-recovery-20260924.md"
+        "reports/nonlinear-spring-recovery-20260924.md",
+        "reports/nonlinear-spring-globalization-20261020.md",
+        "reports/nonlinear-spring-tolerance-20261020.md"
       ],
       "commands": [
         {
           "id": "spring-committed-recovery-public",
           "kind": "boundary_regression",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_recovery --test nonlinear_spring_range_reliability --test nonlinear_spring_reliability --test contact_gap_reliability --test nonlinear_spring_1d_review --test nonlinear_spring_1d_closed_form --test contact_gap_1d_review --test contact_gap_1d_closed_form --test contact_gap_1d_refinement --test mechanical_convergence -- --nocapture"
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_tolerance --test nonlinear_spring_globalization --test nonlinear_spring_recovery --test nonlinear_spring_range_reliability --test nonlinear_spring_reliability --test contact_gap_reliability --test nonlinear_spring_1d_review --test nonlinear_spring_1d_closed_form --test contact_gap_1d_review --test contact_gap_1d_closed_form --test contact_gap_1d_refinement --test mechanical_convergence -- --nocapture"
         },
         {
           "id": "spring-committed-recovery-protocol",
@@ -70,32 +78,56 @@
       "operators": ["solve.nonlinear_spring_1d", "solve.contact_gap_1d"],
       "validation_methods": [
         "finite_linear_limit_and_weighted_cubic_closed_form",
+        "force_length_unit_covariance_and_stable_softening_cross_checks",
+        "softening_cancellation_and_contact_stabilized_extreme_range_cross_checks",
         "zero_residual_assembly_overflow_negative_controls",
         "final_trial_and_contact_penalty_output_validation",
         "constrained_load_isolation",
+        "exhaustive_four_node_restraint_topology_cross_check",
+        "inactive_contact_nullspace_negative_controls",
         "cooperative_cancellation_and_clean_in_process_replay",
         "rust_headless_plan_bridge_and_real_operator_execution"
       ],
       "formal_invariants": [
         "tested_representable_cubic_response_does_not_require_unweighted_displacement_powers",
+        "tested_finite_softening_response_survives_overflow_in_separate_polynomial_terms",
+        "equivalent_finite_unit_transformations_do_not_change_tested_equilibria",
+        "positive_initial_stiffness_and_representable_nonzero_lengths_have_no_absolute_floor",
         "nonfinite_assembled_state_cannot_claim_zero_residual_convergence",
         "nonfinite_final_trial_or_contact_output_fails_before_serialization",
         "support_loads_do_not_enter_the_free_equilibrium_residual",
+        "zero_or_small_residual_cannot_certify_an_initially_unrestrained_component",
+        "independently_supported_components_preserve_their_analytical_equilibria",
         "tested_assembly_and_result_cancellation_cannot_publish_partial_success"
       ],
       "evidence_paths": [
         "workers/rust/crates/solver/src/nonlinear_spring_1d.rs",
         "workers/rust/crates/solver/tests/nonlinear_spring_range_reliability.rs",
+        "workers/rust/crates/solver/src/nonlinear_spring_1d_validation.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_topology.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_scaling.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_softening_arithmetic.rs",
         "workers/rust/crates/cli/tests/nonlinear_spring_range_operator.rs",
+        "workers/rust/crates/engine/tests/nonlinear_spring_topology_workflow.rs",
+        "workers/rust/crates/engine/tests/nonlinear_spring_recovery_workflow.rs",
         "workers/rust/crates/engine/tests/nonlinear_spring_workflow.rs",
         "workers/rust/crates/engine/tests/contact_gap_workflow.rs",
-        "reports/nonlinear-spring-range-reliability-20260924.md"
+        "workers/rust/crates/benchmark/src/tests/spring_recovery.rs",
+        "reports/nonlinear-spring-range-reliability-20260924.md",
+        "reports/nonlinear-spring-topology-reliability-20261020.md",
+        "reports/nonlinear-spring-unit-scaling-20261020.md",
+        "reports/nonlinear-spring-softening-arithmetic-20261020.md"
       ],
       "commands": [
         {
           "id": "nonlinear-spring-range-public-paths",
           "kind": "boundary_regression",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_range_reliability --test nonlinear_spring_reliability --test contact_gap_reliability --test nonlinear_spring_1d_review --test nonlinear_spring_1d_closed_form --test contact_gap_1d_review --test contact_gap_1d_closed_form --test contact_gap_1d_refinement --test mechanical_convergence -- --nocapture"
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_softening_arithmetic --test nonlinear_spring_scaling --test nonlinear_spring_topology --test nonlinear_spring_range_reliability --test nonlinear_spring_reliability --test contact_gap_reliability --test nonlinear_spring_1d_review --test nonlinear_spring_1d_closed_form --test contact_gap_1d_review --test contact_gap_1d_closed_form --test contact_gap_1d_refinement --test mechanical_convergence -- --nocapture"
+        },
+        {
+          "id": "nonlinear-spring-softening-arithmetic",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib nonlinear_spring_1d::response_tests -- --nocapture"
         },
         {
           "id": "nonlinear-spring-range-headless",
@@ -105,7 +137,12 @@
         {
           "id": "nonlinear-spring-range-workflows",
           "kind": "contract",
-          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test nonlinear_spring_workflow --test contact_gap_workflow -- --nocapture"
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test nonlinear_spring_recovery_workflow --test nonlinear_spring_topology_workflow --test nonlinear_spring_workflow --test contact_gap_workflow -- --nocapture"
+        },
+        {
+          "id": "nonlinear-spring-range-benchmark",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-benchmark spring_recovery -- --nocapture"
         }
       ]
     },

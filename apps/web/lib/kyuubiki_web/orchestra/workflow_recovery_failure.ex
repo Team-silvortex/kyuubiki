@@ -8,6 +8,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
   alias KyuubikiWeb.Orchestra.WorkflowBranchCheckpoint
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard, as: DispatchGuard
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryRunners, as: Runners
   alias KyuubikiWeb.Orchestra.{WorkflowJobRunner, WorkflowRecoveryCoordinator}
   alias KyuubikiWeb.Orchestra.{WorkflowCancellationDelivery, WorkflowCancellationIntent}
   alias KyuubikiWeb.Playground.AgentExecutionGate
@@ -33,11 +34,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
       if reply == :ok do
         WorkflowCancellationDelivery.kick([job_id])
 
-        %{
-          state
-          | progress: Map.delete(state.progress, job_id),
-            activity: Map.delete(state.activity, job_id)
-        }
+        Runners.retire(state, job_id)
       else
         state
       end
@@ -69,11 +66,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
         WorkflowJobRunner.stop_failed(job.job_id, not durable?)
         if durable?, do: WorkflowCancellationDelivery.kick([job.job_id])
 
-        %{
-          state
-          | progress: Map.delete(state.progress, job.job_id),
-            activity: Map.delete(state.activity, job.job_id)
-        }
+        Runners.retire(state, job.job_id)
       else
         state
       end

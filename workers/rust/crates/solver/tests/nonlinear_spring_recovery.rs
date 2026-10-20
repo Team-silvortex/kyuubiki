@@ -90,12 +90,12 @@ fn final_allowed_correction_is_checked_before_declaring_budget_exhaustion() {
 
 #[test]
 fn failed_first_step_retains_zero_state_and_reports_the_evaluated_trial_residual() {
-    for load in [-2.0, 2.0] {
+    for load in [-3.0, 3.0] {
         let input = spring(1.0, load, 1, 1);
         let result = solve_nonlinear_spring_1d(&input).unwrap();
         assert!(!result.converged);
         assert_eq!(result.achieved_load_factor, Some(0.0));
-        close(result.steps[0].residual_norm, 8.0);
+        close(result.steps[0].residual_norm, 1.875);
         close(result.nodes[1].ux, 0.0);
         close(result.elements[0].force, 0.0);
         close(result.max_displacement, 0.0);
@@ -104,7 +104,7 @@ fn failed_first_step_retains_zero_state_and_reports_the_evaluated_trial_residual
         let result = solve_contact_gap_1d(&contact(input, 3.0)).unwrap();
         assert!(!result.converged);
         assert_eq!(result.achieved_load_factor, Some(0.0));
-        close(result.steps[0].residual_norm, 8.0);
+        close(result.steps[0].residual_norm, 1.875);
         close(result.nodes[1].ux, 0.0);
         close(result.residual_norm, 0.0);
         assert!(!result.contacts[0].active);
@@ -121,7 +121,7 @@ fn failed_contact_activation_restores_the_last_equilibrated_load_step() {
     assert!(result.steps[..2].iter().all(|step| step.converged));
     assert!(!result.steps[2].converged);
     close(result.steps[2].load_factor, 0.75);
-    close(result.steps[2].residual_norm, 5.0);
+    close(result.steps[2].residual_norm, 0.1875);
     let baseline = solve_contact_gap_1d(&contact(spring(0.0, 1.0, 2, 1), 1.0)).unwrap();
     assert!(baseline.converged);
     assert_eq!(result.nodes, baseline.nodes);
@@ -146,7 +146,7 @@ fn last_allowed_contact_correction_can_commit_the_full_load() {
 
 #[test]
 fn rollback_preserves_a_nonzero_committed_residual_instead_of_the_failed_trial_norm() {
-    let mut input = contact(spring(1.0, 1.0, 2, 1), 0.6);
+    let mut input = contact(spring(1.0, 1.0, 2, 1), 0.55);
     input.tolerance = Some(0.13);
     let result = solve_contact_gap_1d_owned(input).unwrap();
     assert!(!result.converged);
@@ -154,8 +154,8 @@ fn rollback_preserves_a_nonzero_committed_residual_instead_of_the_failed_trial_n
     close(result.nodes[1].ux, 0.5);
     close(result.elements[0].force, 0.625);
     close(result.residual_norm, 0.125);
-    let last_trial = 5.0_f64 / 7.0;
-    let trial_residual = (last_trial + last_trial.powi(3) + 10.0 * (last_trial - 0.6) - 1.0).abs();
+    let last_trial = 31.0_f64 / 56.0;
+    let trial_residual = (last_trial + last_trial.powi(3) + 10.0 * (last_trial - 0.55) - 1.0).abs();
     close(result.steps[1].residual_norm, trial_residual);
     assert!(result.steps[1].residual_norm > 0.13);
     assert!(!result.contacts[0].active);

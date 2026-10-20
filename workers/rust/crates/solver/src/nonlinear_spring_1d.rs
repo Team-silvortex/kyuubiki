@@ -137,6 +137,73 @@ struct SpringLoadPath {
     residual_norm: f64,
 }
 
+struct SpringEquilibrium {
+    tangent: SparseMatrix,
+    residual: Vec<f64>,
+    norm: f64,
+}
+
+struct SpringStep<'a> {
+    nodes: &'a [kyuubiki_protocol::NonlinearSpring1dNodeInput],
+    elements: &'a [NonlinearSpring1dElementInput],
+    contacts: &'a [ContactGap1dContactInput],
+    load_factor: f64,
+    tolerance: f64,
+}
+
+enum SpringCorrection {
+    Accepted(SpringEquilibrium),
+    Exhausted(f64),
+}
+
+const MAX_BACKTRACKS: usize = 32;
+const SUFFICIENT_DECREASE: f64 = 1e-4;
+
+impl SpringStep<'_> {
+    fn evaluate(&self, displacement: &[f64]) -> Result<SpringEquilibrium, String> {
+        let (tangent, internal) = assemble_tangent_and_internal(
+            self.nodes.len(),
+            self.elements,
+            self.contacts,
+            displacement,
+        )?;
+        let residual = checked_residual(self.nodes, &internal, self.load_factor)?;
+        let norm = checked_max_abs(residual.iter().copied(), SolverStage::ResidualValidate)?;
+        Ok(SpringEquilibrium {
+            tangent,
+            residual,
+            norm,
+        })
+    }
+
+    fn correct(
+        &self,
+        base: &[f64],
+        candidate: &mut [f64],
+        free: &[usize],
+        delta: &[f64],
+        initial_norm: f64,
+    ) -> Result<SpringCorrection, String> {
+        copy_displacement(base, candidate)?;
+        let mut scale = 1.0;
+        let mut last_norm = initial_norm;
+        // Bound all merit evaluations, including the full Newton step. Errors and
+        // cancellation propagate; a rejected trial never replaces the base state.
+        for _ in 0..=MAX_BACKTRACKS {
+            update_displacement(base, candidate, free, delta, scale)?;
+            let state = self.evaluate(candidate)?;
+            last_norm = state.norm;
+            if state.norm <= self.tolerance
+                || state.norm <= (1.0 - SUFFICIENT_DECREASE * scale) * initial_norm
+            {
+                return Ok(SpringCorrection::Accepted(state));
+            }
+            scale *= 0.5;
+        }
+        Ok(SpringCorrection::Exhausted(last_norm))
+    }
+}
+
 fn solve_load_path(
     nodes: &[kyuubiki_protocol::NonlinearSpring1dNodeInput],
     elements: &[NonlinearSpring1dElementInput],
@@ -147,7 +214,9 @@ fn solve_load_path(
 ) -> Result<SpringLoadPath, String> {
     let load_steps = load_steps.unwrap_or(8).clamp(1, 256);
     let max_iterations = max_iterations.unwrap_or(32).clamp(1, 256);
-    let tolerance = tolerance.unwrap_or(1.0e-8).max(1.0e-14);
+    // Validation accepts any finite positive absolute force tolerance. Do not
+    // silently relax explicit small-scale requests into zero-displacement success.
+    let tolerance = tolerance.unwrap_or(1.0e-8);
     let constrained = nodes
         .iter()
         .enumerate()
@@ -160,30 +229,42 @@ fn solve_load_path(
         residual_norm: 0.0,
     };
     let mut trial = vec![0.0; nodes.len()];
+    let mut candidate = vec![0.0; nodes.len()];
 
     for step in 1..=load_steps {
         checkpoint(SolverStage::StabilityStep, step)?;
-        // Reuse two buffers; do not retain a full displacement snapshot per load step.
-        for (index, (&committed, value)) in path.displacement.iter().zip(&mut trial).enumerate() {
-            *value = committed;
-            checkpoint_chunk(SolverStage::StabilityRecovery, index + 1, nodes.len())?;
-        }
+        // Reuse three buffers, regardless of load-step and backtracking counts.
+        copy_displacement(&path.displacement, &mut trial)?;
         let load_factor = step as f64 / load_steps as f64;
+        let problem = SpringStep {
+            nodes,
+            elements,
+            contacts,
+            load_factor,
+            tolerance,
+        };
+        let mut state = problem.evaluate(&trial)?;
         let mut iterations = 0;
         let (residual_norm, converged) = loop {
-            let (tangent, internal) =
-                assemble_tangent_and_internal(nodes.len(), elements, contacts, &trial)?;
-            let residual = checked_residual(nodes, &internal, load_factor)?;
             // Constrained entries are zero; inspect the free norm before allocating a reduction.
-            let norm = checked_max_abs(residual.iter().copied(), SolverStage::ResidualValidate)?;
-            if norm <= tolerance || iterations == max_iterations {
-                break (norm, norm <= tolerance);
+            if state.norm <= tolerance || iterations == max_iterations {
+                break (state.norm, state.norm <= tolerance);
             }
             let (reduced_tangent, reduced_residual, free) =
-                reduce_sparse_system(&tangent, &residual, &constrained)?;
+                reduce_sparse_system(&state.tangent, &state.residual, &constrained)?;
             let delta = solve_chain_tangent(&reduced_tangent, &reduced_residual)?;
-            update_displacement(&mut trial, &free, &delta)?;
+            drop(reduced_tangent);
+            drop(reduced_residual);
             iterations += 1;
+            let norm = state.norm;
+            drop(state);
+            match problem.correct(&trial, &mut candidate, &free, &delta, norm)? {
+                SpringCorrection::Accepted(accepted) => {
+                    std::mem::swap(&mut trial, &mut candidate);
+                    state = accepted;
+                }
+                SpringCorrection::Exhausted(last_norm) => break (last_norm, false),
+            }
         };
         path.steps.push(NonlinearSpring1dStepResult {
             step,
@@ -286,10 +367,12 @@ fn spring_response(
     element: &NonlinearSpring1dElementInput,
     extension: f64,
 ) -> Result<(f64, f64), String> {
-    // Weight each power before multiplying again: x^3 or 3*c may overflow on their own.
-    let cubic_secant = (element.cubic_stiffness * extension) * extension;
-    let force = element.stiffness * extension + cubic_secant * extension;
-    let tangent = element.stiffness + 3.0 * cubic_secant;
+    // Horner form cancels softening terms before the final multiplication;
+    // fused sums avoid intermediate overflow and rounding away the small force.
+    let weighted_cubic = element.cubic_stiffness * extension;
+    let force = weighted_cubic.mul_add(extension, element.stiffness) * extension;
+    let cubic_secant = weighted_cubic * extension;
+    let tangent = cubic_secant.mul_add(3.0, element.stiffness);
     if !(extension.is_finite() && force.is_finite() && tangent.is_finite()) {
         return Err(format!(
             "nonlinear spring element {index} ({}) has non-finite extension, force or tangent",
@@ -367,13 +450,15 @@ fn checked_max_abs(
 }
 
 fn update_displacement(
+    base: &[f64],
     displacement: &mut [f64],
     free: &[usize],
     delta: &[f64],
+    scale: f64,
 ) -> Result<(), String> {
     checkpoint(SolverStage::PcgVectorUpdate, 0)?;
     for (index, &dof) in free.iter().enumerate() {
-        let value = displacement[dof] + delta[index];
+        let value = base[dof] + scale * delta[index];
         if !value.is_finite() {
             return Err(format!(
                 "nonlinear spring displacement at node {dof} is non-finite"
@@ -381,6 +466,14 @@ fn update_displacement(
         }
         displacement[dof] = value;
         checkpoint_chunk(SolverStage::PcgVectorUpdate, index + 1, free.len())?;
+    }
+    Ok(())
+}
+
+fn copy_displacement(base: &[f64], target: &mut [f64]) -> Result<(), String> {
+    for (index, (&value, output)) in base.iter().zip(target).enumerate() {
+        *output = value;
+        checkpoint_chunk(SolverStage::StabilityRecovery, index + 1, base.len())?;
     }
     Ok(())
 }
@@ -461,4 +554,75 @@ fn contact_results(
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod response_tests {
+    use super::*;
+
+    fn response(k: f64, c: f64, u: f64) -> Result<(f64, f64), String> {
+        spring_response(
+            0,
+            &NonlinearSpring1dElementInput {
+                id: "softening".into(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: k,
+                cubic_stiffness: c,
+            },
+            u,
+        )
+    }
+
+    #[test]
+    fn finite_tangent_survives_overflow_in_the_separate_cubic_term() {
+        let unit = 2.0_f64.powi(1022);
+        for sign in [-1.0, 1.0] {
+            let (force, tangent) = response(3.0 * unit, -1.5 * unit, sign).unwrap();
+            assert_eq!(force, sign * 1.5 * unit);
+            assert_eq!(tangent, -1.5 * unit);
+        }
+    }
+
+    #[test]
+    fn finite_force_survives_overflow_in_the_separate_linear_term() {
+        let unit = 2.0_f64.powi(1022);
+        for sign in [-1.0, 1.0] {
+            let (force, tangent) = response(2.5 * unit, -0.25 * unit, sign * 2.0).unwrap();
+            assert_eq!(force, sign * 3.0 * unit);
+            assert_eq!(tangent, -0.5 * unit);
+        }
+    }
+
+    #[test]
+    fn softening_force_near_cancellation_matches_a_factored_reference() {
+        // With c = -k and u = 1 + d, f/k = -d * (2 + 3*d + d*d).
+        for exponent in [-26, -27, -30, -40, -50] {
+            let delta = 2.0_f64.powi(exponent);
+            for unit in [2.0_f64.powi(-500), 1.0, 2.0_f64.powi(500)] {
+                for sign in [-1.0, 1.0] {
+                    let expected = -sign * delta * (2.0 + 3.0 * delta + delta * delta);
+                    let (force, _) = response(unit, -unit, sign * (1.0 + delta)).unwrap();
+                    assert!(
+                        ((force / unit) / expected - 1.0).abs() <= 4.0 * f64::EPSILON,
+                        "exponent={exponent}, unit={unit}, sign={sign}, force={force}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn genuinely_nonfinite_constitutive_values_still_fail() {
+        let unit = 2.0_f64.powi(1022);
+        for (k, c, u) in [
+            (unit, unit, 1.0),
+            (unit, 0.0, 4.0),
+            (unit, -unit, 2.0),
+            (1.0, 0.0, f64::INFINITY),
+        ] {
+            let error = response(k, c, u).unwrap_err();
+            assert!(error.contains("softening") && error.contains("non-finite"));
+        }
+    }
 }

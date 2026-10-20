@@ -159,7 +159,7 @@ fn headless_last_correction_can_finish_without_an_extra_iteration_budget() {
 #[test]
 fn headless_failed_trial_does_not_replace_the_committed_physical_state() {
     for contact in [false, true] {
-        let mut input = model(contact, 1.0, 1.0, -2.0);
+        let mut input = model(contact, 1.0, 1.0, -3.0);
         input["max_iterations"] = json!(1);
         let result = planned_solve(contact, input).unwrap();
         assert_eq!(result["converged"], false);
@@ -168,7 +168,7 @@ fn headless_failed_trial_does_not_replace_the_committed_physical_state() {
         assert_eq!(result["elements"][0]["force"], 0.0);
         assert_eq!(result["max_displacement"], 0.0);
         assert_eq!(result["residual_norm"], 0.0);
-        close(&result["steps"][0]["residual_norm"], 8.0);
+        close(&result["steps"][0]["residual_norm"], 1.875);
     }
 }
 
@@ -187,11 +187,165 @@ fn headless_partial_contact_load_is_explicit_and_replay_can_reach_the_target() {
     assert_eq!(result["contacts"][0]["active"], false);
     assert_eq!(result["active_contact_count"], 0);
     assert_eq!(result["steps"].as_array().unwrap().len(), 3);
-    close(&result["steps"][2]["residual_norm"], 5.0);
+    close(&result["steps"][2]["residual_norm"], 0.1875);
     input["max_iterations"] = json!(2);
     let replay = planned_solve(true, input.clone()).unwrap();
     assert_eq!(replay["converged"], true);
     assert_eq!(replay["achieved_load_factor"], 1.0);
     close(&replay["nodes"][1]["ux"], 12.0 / 11.0);
     assert_eq!(replay, planned_solve(true, input).unwrap());
+}
+
+#[test]
+fn headless_rejects_unrestrained_components_before_publishing_convergence() {
+    for contact in [false, true] {
+        let mut input = model(contact, 1.0, 0.0, 0.0);
+        input["nodes"].as_array_mut().unwrap().push(json!({
+            "id":"floating", "x":2.0, "fix_x":false, "load_x":0.0
+        }));
+        let error = planned_solve(contact, input.clone()).unwrap_err();
+        assert!(error.contains("unrestrained"), "{error}");
+        assert!(error.contains("floating"), "{error}");
+        input["nodes"][2]["fix_x"] = json!(true);
+        input["nodes"][1]["load_x"] = json!(2.0);
+        let result = planned_solve(contact, input).unwrap();
+        assert_eq!(result["converged"], true);
+        assert_eq!(result["achieved_load_factor"], 1.0);
+        close(&result["nodes"][1]["ux"], if contact { 1.0 } else { 2.0 });
+        assert_eq!(result["nodes"][2]["ux"], 0.0);
+    }
+}
+
+#[test]
+fn headless_strong_hardening_reaches_the_requested_equilibrium_with_bounded_newton_steps() {
+    for contact in [false, true] {
+        let mut input = model(
+            contact,
+            1.0,
+            1e18,
+            if contact { 1.500001 } else { 1.000001 },
+        );
+        input["max_iterations"] = json!(12);
+        input["tolerance"] = json!(1e-12);
+        if contact {
+            input["contacts"][0]["gap"] = json!(0.5e-6);
+            input["contacts"][0]["normal_stiffness"] = json!(1e6);
+        }
+        let result = planned_solve(contact, input).unwrap();
+        assert_eq!(result["converged"], true);
+        assert_eq!(result["achieved_load_factor"], 1.0);
+        close(&result["nodes"][1]["ux"], 1e-6);
+        assert!(result["steps"][0]["iterations"].as_u64().unwrap() <= 12);
+        assert!(result["residual_norm"].as_f64().unwrap() <= 1e-12);
+        if contact {
+            assert_eq!(result["contacts"][0]["active"], true);
+            close(&result["contacts"][0]["force"], 0.5);
+        }
+    }
+}
+
+#[test]
+fn headless_explicit_tolerance_survives_small_scale_contact_and_failure_routing() {
+    let unit = 2.0_f64.powi(-50);
+    let tolerance = unit * 1e-12;
+    for contact in [false, true] {
+        let mut input = model(contact, 1.0, 0.0, 8.0 * unit);
+        input["tolerance"] = json!(tolerance);
+        input["load_steps"] = json!(8);
+        if contact {
+            input["contacts"][0]["gap"] = json!(2.0 * unit);
+            input["contacts"][0]["normal_stiffness"] = json!(3.0);
+        }
+        let result = planned_solve(contact, input.clone()).unwrap();
+        assert_eq!(result["converged"], true);
+        assert_eq!(result["input"]["tolerance"], tolerance);
+        close(
+            &result["nodes"][1]["ux"],
+            if contact { 3.5 } else { 8.0 } * unit,
+        );
+        assert!(result["residual_norm"].as_f64().unwrap() <= tolerance);
+        for step in result["steps"].as_array().unwrap() {
+            assert!(step["residual_norm"].as_f64().unwrap() <= tolerance);
+        }
+
+        input["elements"][0]["cubic_stiffness"] = json!(1.0 / (unit * unit));
+        input["nodes"][1]["load_x"] = json!(-3.0 * unit);
+        input["load_steps"] = json!(1);
+        input["max_iterations"] = json!(1);
+        let failed = planned_solve(contact, input).unwrap();
+        assert_eq!(failed["converged"], false);
+        assert_eq!(failed["achieved_load_factor"], 0.0);
+        assert_eq!(failed["nodes"][1]["ux"], 0.0);
+        assert_eq!(failed["residual_norm"], 0.0);
+        close(&failed["steps"][0]["residual_norm"], 1.875 * unit);
+    }
+}
+
+#[test]
+fn headless_equivalent_units_preserve_hardening_and_stable_softening_results() {
+    for contact in [false, true] {
+        for cubic in [8.0, -16.0] {
+            for (force, length) in [(1.0, 1.0), (1e-100, 1.0), (1.0, 1e-30)] {
+                let expected = 0.125_f64;
+                let contact_force = if contact { expected / 2.0 } else { 0.0 };
+                let load = (4.0 * expected + cubic * expected.powi(3) + contact_force) * force;
+                let mut input = model(
+                    contact,
+                    4.0 * force / length,
+                    cubic * (force / length) / (length * length),
+                    load,
+                );
+                input["nodes"][1]["x"] = json!(length);
+                input["load_steps"] = json!(4);
+                input["tolerance"] = json!(1e-12 * force);
+                if contact {
+                    input["contacts"][0]["gap"] = json!(expected * length / 2.0);
+                    input["contacts"][0]["normal_stiffness"] = json!(force / length);
+                }
+                let result = planned_solve(contact, input).unwrap();
+                assert_eq!(result["converged"], true);
+                assert_eq!(result["achieved_load_factor"], 1.0);
+                close(&result["nodes"][1]["ux"], expected * length);
+                assert!(result["residual_norm"].as_f64().unwrap() <= 1e-12 * force);
+                assert!(result["elements"][0]["tangent_stiffness"].as_f64().unwrap() > 0.0);
+                if contact {
+                    close(&result["contacts"][0]["force"], contact_force * force);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn headless_softening_contact_cancellation_survives_json_round_trip() {
+    let unit = 2.0_f64.powi(1022);
+    for (k, c, load, gap, penalty, expected) in [
+        (3.0, -1.5, 2.5, 0.5, 2.0, 1.0),
+        (2.5, -0.25, 3.5, 1.5, 1.0, 2.0),
+    ] {
+        let mut input = model(true, k * unit, c * unit, load * unit);
+        input["contacts"][0]["gap"] = json!(gap);
+        input["contacts"][0]["normal_stiffness"] = json!(penalty * unit);
+        input["tolerance"] = json!(2.0_f64.powi(-40) * unit);
+        let encoded = serde_json::to_string(&input).unwrap();
+        let result = planned_solve(true, serde_json::from_str(&encoded).unwrap()).unwrap();
+        let encoded = serde_json::to_string(&result).unwrap();
+        let decoded: Value = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded["converged"], true);
+        assert_eq!(decoded["achieved_load_factor"], 1.0);
+        close(&decoded["nodes"][1]["ux"], expected);
+        close(
+            &decoded["elements"][0]["force"],
+            (k + c * expected * expected) * expected * unit,
+        );
+        close(
+            &decoded["contacts"][0]["force"],
+            penalty * (expected - gap) * unit,
+        );
+        close(
+            &decoded["elements"][0]["tangent_stiffness"],
+            (k + 3.0 * c * expected * expected) * unit,
+        );
+        assert!(decoded["residual_norm"].as_f64().unwrap() <= 2.0_f64.powi(-40) * unit);
+    }
 }

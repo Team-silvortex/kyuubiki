@@ -80,7 +80,45 @@ defmodule KyuubikiWeb.Library.ProjectRequestTransactionTest do
     end)
   end
 
-  defp with_repo(path, callback) do
+  @tag :capture_log
+  test "a busy writer leaves no partial project or receipt, and explicit retry commits once" do
+    path = Path.join(Fixture.directory(), "busy-writer.sqlite3")
+
+    with_repo(path, [pool_size: 1, busy_timeout: 0], fn ->
+      DatabaseMigrations.boot!(Repo, :sqlite)
+      repo = Repo.get_dynamic_repo()
+      {:sqlite, lock} = connection = Fixture.open!(path)
+
+      try do
+        :ok = Exqlite.Sqlite3.execute(lock, "BEGIN IMMEDIATE")
+
+        try do
+          assert_raise Exqlite.Error, ~r/(locked|busy)/i, fn ->
+            Library.create_project(input())
+          end
+
+          assert {:ok, []} = Library.list_projects()
+
+          assert SQL.query!(repo, "SELECT count(*) FROM kyuubiki_project_requests", []).rows == [
+                   [0]
+                 ]
+        after
+          :ok = Exqlite.Sqlite3.execute(lock, "ROLLBACK")
+        end
+      after
+        Fixture.close!(connection)
+      end
+
+      assert {:ok, created} = Library.create_project(input())
+      assert Library.create_project(input()) == {:ok, created}
+      assert {:ok, [listed]} = Library.list_projects()
+      assert Map.delete(listed, "models") == created
+      assert listed["models"] == []
+      assert SQL.query!(repo, "SELECT count(*) FROM kyuubiki_project_requests", []).rows == [[1]]
+    end)
+  end
+
+  defp with_repo(path, options \\ [], callback) do
     # Exercise concurrent runtime connections in WAL mode, not the offline copy-upgrade mode.
     # Set the persistent journal mode before competing pool connections configure the new file.
     {:ok, db} = Exqlite.Sqlite3.open(path)
@@ -93,11 +131,16 @@ defmodule KyuubikiWeb.Library.ProjectRequestTransactionTest do
 
     {:ok, pid} =
       Repo.start_link(
-        name: nil,
-        database: path,
-        pool_size: 2,
-        journal_mode: :wal,
-        busy_timeout: 5_000
+        Keyword.merge(
+          [
+            name: nil,
+            database: path,
+            pool_size: 2,
+            journal_mode: :wal,
+            busy_timeout: 5_000
+          ],
+          options
+        )
       )
 
     previous = Repo.put_dynamic_repo(pid)

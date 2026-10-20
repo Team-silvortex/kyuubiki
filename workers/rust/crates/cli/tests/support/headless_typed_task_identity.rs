@@ -1,4 +1,4 @@
-use super::agent_support::LiveAgent;
+use super::agent_support::{LiveAgent, wait_for_lifecycle};
 use super::diagnostic_domains::DOMAINS;
 use super::orchestra_completion::http_json;
 use super::{Scratch, repo_root, start_live_server_with_agent};
@@ -86,6 +86,7 @@ fn real_rust_and_elixir_typed_tasks_are_verified_independently_by_agent_and_http
             assert_eq!(status, 200, "{prepared}");
             assert_eq!(prepared["task_digest"], task["integrity"]["task_digest"]);
 
+            wait_for_lifecycle(&agent, "accepting", 0)?;
             let response = agent.request(
                 "typed-execute",
                 "run_operator_task_ir",
@@ -112,6 +113,9 @@ fn real_rust_and_elixir_typed_tasks_are_verified_independently_by_agent_and_http
             let mut unknown = task.clone();
             unknown["integrity"]["task_digest_encoding"] = json!("future");
             for bad in [changed, removed, unknown] {
+                // A terminal reply can precede release of the reply writer's lease.
+                // Exercise digest rejection, not the independent capacity gate.
+                wait_for_lifecycle(&agent, "accepting", 0)?;
                 let response = agent.request(
                     "typed-reject",
                     "run_operator_task_ir",
@@ -136,6 +140,7 @@ fn real_rust_and_elixir_typed_tasks_are_verified_independently_by_agent_and_http
                 )?;
                 assert_eq!(status, 422, "{rejected}");
             }
+            wait_for_lifecycle(&agent, "accepting", 0)?;
             let healthy = agent.request(
                 "typed-healthy",
                 "run_operator_task_ir",

@@ -436,22 +436,40 @@ fn thermal_contact_rejects_overlapping_bodies_internal_edges_and_blank_ids() {
     for index in [5, 6] {
         overlap["nodes"][index]["x"] = json!(0.0);
     }
-    cases.push(overlap);
+    cases.push((overlap, "opposite sides of the interface"));
     let mut internal = model();
-    let element = internal["elements"][0].clone();
+    let mut element = internal["elements"][0].clone();
+    // Reach contact topology validation instead of the earlier duplicate-ID guard.
+    element["id"] = json!("nonmanifold-copy");
     internal["elements"].as_array_mut().unwrap().push(element);
-    cases.push(internal);
+    cases.push((internal, "interior or nonmanifold edge"));
     let mut blank = model();
     blank["contact_interfaces"][0]["id"] = json!("  ");
-    cases.push(blank);
+    cases.push((blank, "IDs must be nonblank and unique"));
     for triangle in [false, true] {
-        for input in &cases {
-            assert!(
-                solve(input.clone(), triangle, false)
-                    .unwrap_err()
-                    .contains("thermal contact")
-            );
+        for owned in [false, true] {
+            for (input, expected) in &cases {
+                let error = solve(input.clone(), triangle, owned).unwrap_err();
+                assert!(error.contains("thermal contact"), "{error}");
+                assert!(error.contains(expected), "{error}");
+            }
         }
+    }
+}
+
+#[test]
+fn duplicate_bulk_ids_are_rejected_before_thermal_contact_topology_checks() {
+    let mut input = model();
+    let duplicate = input["elements"][0].clone();
+    input["elements"].as_array_mut().unwrap().push(duplicate);
+    let quad = serde_json::from_value::<SolveHeatPlaneQuad2dRequest>(input.clone()).unwrap_err();
+    let triangle =
+        serde_json::from_value::<SolveHeatPlaneTriangle2dRequest>(triangles(input)).unwrap_err();
+    for error in [quad, triangle] {
+        assert!(
+            error.to_string().contains("duplicate elements id"),
+            "{error}"
+        );
     }
 }
 

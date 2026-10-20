@@ -55,6 +55,28 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
     %{state | lease_timer_ref: Process.send_after(self(), message, delay)}
   end
 
+  def renew(state, fencing_token, expires_at_ms) do
+    case state.lease do
+      %{fencing_token: ^fencing_token, expires_at_ms: ^expires_at_ms} = lease ->
+        case LeaseStore.renew(lease, state.lease_ttl_ms) do
+          {:ok, renewed} ->
+            schedule(%{
+              state
+              | lease: renewed,
+                lease_status: :owner,
+                lease_holder: nil,
+                last_lease_error: nil
+            })
+
+          {:error, reason} ->
+            lose(state, reason)
+        end
+
+      _ ->
+        state
+    end
+  end
+
   def guarded_write(state, callback) do
     if owner?(state),
       do: LeaseStore.with_lease(state.lease, callback),
@@ -78,6 +100,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
     end)
 
     state
+    |> KyuubikiWeb.Orchestra.WorkflowRecoveryScan.clear_completion_retries()
+    |> KyuubikiWeb.Orchestra.WorkflowRecoveryScan.clear_registry_retry()
     |> Map.merge(%{
       lease: nil,
       lease_status: :standby,

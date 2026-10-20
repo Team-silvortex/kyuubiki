@@ -547,12 +547,15 @@
         "apps/web/config/runtime.exs",
         "apps/web/test/support/disposable_database.exs",
         "apps/web/test/kyuubiki_web/storage/test_runtime_isolation_test.exs",
+        "apps/web/test/kyuubiki_web/storage/disposable_database_lifecycle_test.exs",
         "apps/web/README.md",
         "reports/orchestra-task-completion-20261005.md"
       ],
       "required_text": [
         "test_database_root",
-        "ExUnit.after_suite",
+        "System.at_exit",
+        "repeated suites retain the database until the process exits",
+        "caller-owned SQLite files survive cleanup of the disposable journal",
         "explicit SQLite paths remain caller-owned in every environment",
         "independent test starts never reuse an owned database path",
         "cleanup refuses caller-owned directories and never recursively removes unexpected files",

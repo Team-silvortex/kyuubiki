@@ -56,15 +56,49 @@ fn assert_cancelled_runtime(stored: &Value) {
     }
 }
 
+fn observation_records(root: &Path) -> Result<Option<Vec<Value>>> {
+    let paths = fs::read_dir(root.join("operator-task-dispatches"))?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<std::io::Result<Vec<_>>>()?;
+    // This live writer uses exclusive .json.next + rename. Do not decode a
+    // partial stage or certify the previous published observation while pending.
+    if paths
+        .iter()
+        .any(|path| path.to_string_lossy().ends_with(".json.next"))
+    {
+        return Ok(None);
+    }
+    let records = paths
+        .into_iter()
+        .map(|path| -> Result<Value> {
+            if path.extension().is_none_or(|ext| ext != "json") {
+                return Err(
+                    format!("unexpected dispatch observation file: {}", path.display()).into(),
+                );
+            }
+            let envelope: Value = serde_json::from_slice(&fs::read(&path)?).map_err(|error| {
+                format!("published dispatch observation {}: {error}", path.display())
+            })?;
+            let payload = envelope
+                .get("payload")
+                .filter(|payload| payload.is_object())
+                .ok_or_else(|| {
+                    format!(
+                        "published dispatch observation has no payload: {}",
+                        path.display()
+                    )
+                })?;
+            Ok(payload.clone())
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(Some(records))
+}
+
 fn await_observation(root: &Path, job: &str) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
-        let records = fs::read_dir(root.join("operator-task-dispatches"))?
-            .map(|entry| -> Result<Value> {
-                let record: Value = serde_json::from_slice(&fs::read(entry?.path())?)?;
-                Ok(record["payload"].clone())
-            })
-            .collect::<Result<Vec<_>>>()?;
+        let snapshot = observation_records(root)?;
+        let records = snapshot.as_deref().unwrap_or_default();
         let records = records
             .iter()
             .filter(|record| {
@@ -73,7 +107,7 @@ fn await_observation(root: &Path, job: &str) -> Result<()> {
                     .is_some_and(|id| id.starts_with(&format!("{job}:")))
             })
             .collect::<Vec<_>>();
-        if cancelled_observation_ready(&records)? {
+        if snapshot.is_some() && cancelled_observation_ready(&records)? {
             return Ok(());
         }
         if Instant::now() >= deadline {
@@ -81,6 +115,29 @@ fn await_observation(root: &Path, job: &str) -> Result<()> {
         }
         thread::sleep(Duration::from_millis(10));
     }
+}
+
+#[test]
+fn cancellation_observation_never_decodes_or_certifies_an_unpublished_stage() -> Result<()> {
+    let data = Scratch::new()?;
+    let root = data.0.join("operator-task-dispatches");
+    fs::create_dir(&root)?;
+    let published = root.join(format!("{}.json", "a".repeat(32)));
+    let stage = root.join(format!("{}.json.next", "a".repeat(32)));
+    let record = json!({"task_id":"job:diagnose", "state":"observed_failed"});
+    fs::write(&published, serde_json::to_vec(&json!({"payload":record}))?)?;
+    for partial in ["", "{", "{\"payload\":"] {
+        fs::write(&stage, partial)?;
+        assert!(observation_records(&data.0)?.is_none());
+    }
+    fs::remove_file(stage)?;
+    assert_eq!(observation_records(&data.0)?, Some(vec![record]));
+    for malformed in ["", "{", "{}", "{\"payload\":null}"] {
+        fs::write(&published, malformed)?;
+        let error = observation_records(&data.0).unwrap_err().to_string();
+        assert!(error.contains("published dispatch observation"), "{error}");
+    }
+    Ok(())
 }
 
 fn cancelled_observation_ready(records: &[&Value]) -> Result<bool> {

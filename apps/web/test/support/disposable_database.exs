@@ -63,7 +63,7 @@ defmodule KyuubikiWeb.TestSupport.DisposableDatabase do
 end
 
 if root = Application.get_env(:kyuubiki_web, :operator_dispatch_journal_test_root) do
-  ExUnit.after_suite(fn _result ->
+  System.at_exit(fn _status ->
     # Close SQLite/WAL writers before removing only this run's owned files.
     case Application.stop(:kyuubiki_web) do
       result when result in [:ok, {:error, {:not_started, :kyuubiki_web}}] ->

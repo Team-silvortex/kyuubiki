@@ -62,6 +62,7 @@
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
     "config/architecture/module-function-coverage-evidence/agent-execution-cancellation-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-postprocess.json",
+    "config/architecture/module-function-coverage-evidence/runtime-spring.json",
     "config/architecture/module-function-coverage-evidence/runtime-thermal-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-transport-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-transport-upwind.json",

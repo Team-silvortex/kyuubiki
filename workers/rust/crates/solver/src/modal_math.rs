@@ -5,6 +5,10 @@ const MAX_DENSE_MODAL_DOFS: usize = 4_096;
 const JACOBI_RELATIVE_TOLERANCE: f64 = 1.0e-12;
 const MAX_JACOBI_SWEEPS: usize = 40;
 
+#[path = "modal_norm.rs"]
+mod norm;
+use norm::hypot;
+
 pub(crate) fn ensure_dense_modal_size(dof_count: usize, label: &str) -> Result<(), String> {
     if dof_count > MAX_DENSE_MODAL_DOFS {
         return Err(format!(
@@ -105,7 +109,7 @@ pub(crate) fn checked_shape_norm(shape: &[f64]) -> Result<f64, String> {
     checkpoint(SolverStage::ResultNodeSummary, 0)?;
     let mut norm = 0.0_f64;
     for (index, chunk) in shape.chunks(64).enumerate() {
-        norm = norm.hypot(stable_l2_norm(chunk.iter().copied()));
+        norm = hypot(norm, stable_l2_norm(chunk.iter().copied()));
         checkpoint(
             SolverStage::ResultNodeSummary,
             ((index + 1) * 64).min(shape.len()),
@@ -242,7 +246,7 @@ fn jacobi_connected_eigenpairs(
                     continue;
                 }
                 let half_difference = (matrix[q][q] - matrix[p][p]) * 0.5;
-                let radius = half_difference.hypot(coupling);
+                let radius = hypot(half_difference, coupling);
                 let t = coupling / (half_difference + radius.copysign(half_difference));
                 let c = 1.0 / (1.0 + t * t).sqrt();
                 rotate(&mut matrix, &mut vectors, p, q, c, t * c);

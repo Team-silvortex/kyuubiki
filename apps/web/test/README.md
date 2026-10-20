@@ -164,6 +164,58 @@ refusal. `sqlite_lifecycle_test.exs` retains independent revision-1 and revision
 snapshot verification. No active installed database is migrated by these tests.
 See the [results and remaining gaps](../../../reports/project-create-receipts-20261012.md).
 
+## Workflow Finalizer Availability
+
+`kyuubiki_web/orchestra/workflow_completion_supervisor_recovery_test.exs` stops the
+real TaskSupervisor after staging a completion checkpoint. It verifies automatic
+publication when supervision returns, coordinator restart, per-job timer
+deduplication, stale timer rejection, cancellation/deletion, changed checkpoint
+evidence, lease takeover and storage outage. Rejected terminal writes must not
+cancel another valid recovery attempt. Successful publication preserves the
+execution claim and consumes the staged result without replaying the graph.
+
+The publication-only cases also remove a staged checkpoint before a timer or
+manual recovery scan. A remembered finalizer must not fall back to claiming a
+new execution, even for an idempotent graph. Missing or damaged evidence is
+blocked; transient failure to persist that decision keeps a fenced retry alive.
+Another healthy staged job must still publish during the same recovery scan.
+
+Run on the default disposable SQLite store, or set
+`KYUUBIKI_STORAGE_BACKEND=memory` and `KYUUBIKI_DATA_DIR` to a fresh disposable
+directory for the JSON snapshot backend. The latter must never point at installed
+runtime data. CI repeats both variants; the focused suite can also use
+`--repeat-until-failure N` for N additional rounds. These are process/service
+outages, not physical power-loss tests. See the
+[finalizer recovery report](../../../reports/workflow-completion-supervisor-recovery-20261018.md).
+
+## Workflow Registry Availability
+
+`kyuubiki_web/orchestra/workflow_registry_outage_test.exs` terminates the real
+runner Registry, including during a controlled solver request. An unavailable
+registry must not be mistaken for an absent runner: admission must not consume a
+claim, recovery must defer, and the coordinator and its supervisors must survive.
+A single fenced retry resumes recovery after the registry returns. Idempotent
+work may be replayed; checkpoint-required work without sufficient evidence is
+blocked. Staged completions publish without a new execution claim.
+
+The suite also covers coordinator restart, timer deduplication, stale timers,
+lease takeover, cancellation/deletion, watchdog failure and combined registry
+and TaskSupervisor outages. Losing a registry must not erase a pending
+publication-only retry and accidentally authorize replay of its graph.
+Run alongside `workflow_completion_supervisor_recovery_test.exs`; CI repeats
+both on SQLite and the isolated JSON snapshot backend described above. Solver
+requests are controlled fixtures, not numerical benchmarks or physical
+power-loss tests. See the
+[registry outage report](../../../reports/workflow-registry-outage-recovery-20261020.md).
+
+Startup-race cases suspend TaskSupervisor after the registry lookup, remove the
+registry, and then release startup. They cover valid and missing staged evidence
+under both replay policies. Controlled tracked-process cases cover the
+pre-registration window, monitor replacement and late DOWN messages, accepted
+versus rejected staging, and terminal retirement. A successful task spawn is not
+proof of registration, and losing a publisher must not grant graph replay.
+See the [runner lifecycle follow-up](../../../reports/workflow-runner-lifecycle-recovery-20261020.md).
+
 ## PostgreSQL Recovery Tests
 
 Use a disposable database, never an installed runtime's active store. Set

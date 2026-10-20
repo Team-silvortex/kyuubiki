@@ -87,12 +87,30 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
     :exit, _ -> {:error, :workflow_runner_supervisor_unavailable}
   end
 
-  @spec running(String.t()) :: {:ok, pid()} | :error
+  @doc false
+  def registry_status do
+    case lookup({__MODULE__, :availability}) do
+      {:error, _} = error -> error
+      _entries -> :ok
+    end
+  end
+
+  @spec running(String.t()) ::
+          {:ok, pid()} | :error | {:error, :workflow_runner_registry_unavailable}
   def running(job_id) when is_binary(job_id) do
-    case Registry.lookup(@registry, job_id) do
+    case lookup(job_id) do
       [{pid, _claim}] when is_pid(pid) -> {:ok, pid}
+      {:error, _} = error -> error
       _ -> :error
     end
+  end
+
+  defp lookup(key) do
+    Registry.lookup(@registry, key)
+  rescue
+    # Registry is fixed and keys are unrestricted; its missing ETS tables are unavailable,
+    # not evidence that a runner has stopped. Keep this boundary around lookup only.
+    _ in ArgumentError -> {:error, :workflow_runner_registry_unavailable}
   end
 
   @doc false
@@ -102,6 +120,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
     case running(job_id) do
       {:ok, pid} -> Process.exit(pid, :shutdown)
       :error -> :ok
+      {:error, :workflow_runner_registry_unavailable} -> :ok
     end
 
     if request_cancel? and match?({:ok, _}, targets),

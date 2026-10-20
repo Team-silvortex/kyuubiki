@@ -208,7 +208,65 @@ pub(super) fn fixture_tensor() -> Value {
 #[cfg(test)]
 mod tests {
     use super::super::{contract_evidence_for, derive_evidence_aware_gap, derive_gap};
+    use super::*;
     use serde_json::json;
+
+    #[test]
+    fn evidence_contracts_and_maturity_claims_accept_checkout_line_endings_only() {
+        let root = temp_root("kyuubiki_tensor_line_endings").unwrap();
+        let result = (|| -> RunnerResult<()> {
+            let entry = json!({
+                "id": "line-ending-evidence", "modules": ["engine"],
+                "paradigms": ["solver_execution"], "status": "proven", "grade": "verified",
+                "dimensions": ["contract"], "files": ["evidence.txt"],
+                "required_text": ["adds\nbackend tests, not new backend production behavior"]
+            });
+            for contract in [true, false] {
+                let mut tensor = fixture_tensor();
+                if contract {
+                    tensor["paradigm_contract_evidence"] =
+                        json!({"solver_execution": [entry.clone()]});
+                } else {
+                    tensor["evidence_claims"] = json!([entry.clone()]);
+                }
+                // JSON also follows the checkout policy; escaped anchor newlines do not.
+                fs::write(
+                    root.join("tensor.json"),
+                    serde_json::to_string_pretty(&tensor)
+                        .unwrap()
+                        .replace('\n', "\r\n"),
+                )
+                .unwrap();
+                let tensor = super::super::read_json(&root, "tensor.json")?;
+                for text in [
+                    "header\nadds\nbackend tests, not new backend production behavior\n",
+                    "header\r\nadds\r\nbackend tests, not new backend production behavior\r\n",
+                    "header\nadds\r\nbackend tests, not new backend production behavior\n",
+                ] {
+                    fs::write(root.join("evidence.txt"), text).unwrap();
+                    validate_tensor_config(&root, &tensor, &fixture_topology(), &fixture_matrix())?;
+                }
+                for text in [
+                    "adds backend tests, not new backend production behavior",
+                    "adds\r\nbackend tests, new backend production behavior",
+                    "adds\rbackend tests, not new backend production behavior",
+                ] {
+                    fs::write(root.join("evidence.txt"), text).unwrap();
+                    let error = validate_tensor_config(
+                        &root,
+                        &tensor,
+                        &fixture_topology(),
+                        &fixture_matrix(),
+                    )
+                    .expect_err("line-ending normalization must not weaken evidence checks");
+                    assert!(error.contains("evidence bundle missing"), "{error}");
+                }
+            }
+            Ok(())
+        })();
+        fs::remove_dir_all(root).unwrap();
+        result.unwrap();
+    }
 
     #[test]
     fn derives_required_and_optional_gaps() {

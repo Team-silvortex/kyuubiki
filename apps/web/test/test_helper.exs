@@ -1,3 +1,6 @@
+# Exit hooks run in reverse registration order. Keep the database alive through
+# standalone ExUnit autorun as well as every round of Mix's repeated runner.
+Code.require_file("support/disposable_database.exs", __DIR__)
 ExUnit.start()
 
 Path.wildcard(Path.join(__DIR__, "support/**/*.exs"))
