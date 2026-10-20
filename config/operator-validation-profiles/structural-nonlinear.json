@@ -80,6 +80,8 @@
         "finite_linear_limit_and_weighted_cubic_closed_form",
         "force_length_unit_covariance_and_stable_softening_cross_checks",
         "softening_cancellation_and_contact_stabilized_extreme_range_cross_checks",
+        "adjacent_tangent_pivoting_and_range_safe_backward_error",
+        "loss_checked_binary_row_equilibration",
         "zero_residual_assembly_overflow_negative_controls",
         "final_trial_and_contact_penalty_output_validation",
         "constrained_load_isolation",
@@ -91,6 +93,10 @@
       "formal_invariants": [
         "tested_representable_cubic_response_does_not_require_unweighted_displacement_powers",
         "tested_finite_softening_response_survives_overflow_in_separate_polynomial_terms",
+        "tested_invertible_zero_tangent_pivots_are_independent_of_node_order",
+        "overflowing_error_scale_cannot_hide_a_tested_equation_residual",
+        "tested_finite_equilibria_survive_intermediate_elimination_overflow",
+        "equation_scaling_cannot_silently_discard_nonzero_coefficients_or_loads",
         "equivalent_finite_unit_transformations_do_not_change_tested_equilibria",
         "positive_initial_stiffness_and_representable_nonzero_lengths_have_no_absolute_floor",
         "nonfinite_assembled_state_cannot_claim_zero_residual_convergence",
@@ -107,6 +113,14 @@
         "workers/rust/crates/solver/tests/nonlinear_spring_topology.rs",
         "workers/rust/crates/solver/tests/nonlinear_spring_scaling.rs",
         "workers/rust/crates/solver/tests/nonlinear_spring_softening_arithmetic.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_tangent_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_residual.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot_tests.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_equilibration.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_scaling_tests.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_equation_scaling.rs",
         "workers/rust/crates/cli/tests/nonlinear_spring_range_operator.rs",
         "workers/rust/crates/engine/tests/nonlinear_spring_topology_workflow.rs",
         "workers/rust/crates/engine/tests/nonlinear_spring_recovery_workflow.rs",
@@ -116,13 +130,20 @@
         "reports/nonlinear-spring-range-reliability-20260924.md",
         "reports/nonlinear-spring-topology-reliability-20261020.md",
         "reports/nonlinear-spring-unit-scaling-20261020.md",
-        "reports/nonlinear-spring-softening-arithmetic-20261020.md"
+        "reports/nonlinear-spring-softening-arithmetic-20261020.md",
+        "reports/nonlinear-spring-tangent-pivot-20261020.md",
+        "reports/nonlinear-spring-equation-scaling-20261020.md"
       ],
       "commands": [
         {
           "id": "nonlinear-spring-range-public-paths",
           "kind": "boundary_regression",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_softening_arithmetic --test nonlinear_spring_scaling --test nonlinear_spring_topology --test nonlinear_spring_range_reliability --test nonlinear_spring_reliability --test contact_gap_reliability --test nonlinear_spring_1d_review --test nonlinear_spring_1d_closed_form --test contact_gap_1d_review --test contact_gap_1d_closed_form --test contact_gap_1d_refinement --test mechanical_convergence -- --nocapture"
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_equation_scaling --test nonlinear_spring_tangent_pivot --test nonlinear_spring_softening_arithmetic --test nonlinear_spring_scaling --test nonlinear_spring_topology --test nonlinear_spring_range_reliability --test nonlinear_spring_reliability --test contact_gap_reliability --test nonlinear_spring_1d_review --test nonlinear_spring_1d_closed_form --test contact_gap_1d_review --test contact_gap_1d_closed_form --test contact_gap_1d_refinement --test mechanical_convergence -- --nocapture"
+        },
+        {
+          "id": "nonlinear-spring-tangent-pivot",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib tridiagonal -- --nocapture"
         },
         {
           "id": "nonlinear-spring-softening-arithmetic",

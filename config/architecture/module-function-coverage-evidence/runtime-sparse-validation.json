@@ -1,0 +1,193 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded local sparse residual validation: overflow and underflow controls, complete admission, mixed-scale row equilibrium, and cooperative replay. PCG global norms and erased products cannot hide tested wrong responses; subnormal displacement tails use a row-local representation bound while retaining representable raw residuals. No general conditioning, physical qualification or durable restart claim.",
+  "evidence_claims": [
+    {
+      "id": "sparse-residual-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range_tests.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/sparse-residual-range-reliability-20261020.md"
+      ],
+      "required_text": [
+        "finite_wrong_solution_cannot_pass_with_an_overflowing_error_denominator",
+        "overflowing_large_equation_does_not_hide_a_wrong_small_equation",
+        "cancelling_overflowing_products_preserve_finite_residuals",
+        "overflow_cancellation_retains_the_product_rounding_tail",
+        "sparse_validation_does_not_silently_zip_away_missing_equations",
+        "overflow_fallback_restores_signed_finite_residuals_not_only_relative_errors",
+        "nonfinite_solution_cannot_hide_in_an_empty_equation",
+        "complete_solution_scan_can_be_cancelled_before_residual_work",
+        "genuinely_unrepresentable_or_lossy_residuals_are_not_published_as_zero",
+        "scaled_sparse_rows_match_manufactured_integer_equations_across_units",
+        "wide_overflow_fallback_cancels_in_its_second_pass_and_replays",
+        "This is bounded local sparse residual validation, not arbitrary-precision solving, general physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "sparse-row-equilibrium-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_spd.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium_tests.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/solver/tests/transient_spring_reliability.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/sparse-row-equilibrium-reliability-20261020.md"
+      ],
+      "required_text": [
+        "finite_global_scale_cannot_mask_a_wrong_weak_equation",
+        "iterative_solution_resolves_weak_equations_before_returning",
+        "extreme_mixed_scale_pcg_resolves_weak_equations_without_underflowing_inner_products",
+        "genuinely_unrepresentable_mixed_scale_displacements_fail_and_replay_cleanly",
+        "equilibrium_candidate_cancellation_cannot_trigger_regularized_fallback",
+        "compressed_equilibrium_gate_checks_wide_rows_and_replays_after_cancellation",
+        "subnormal_solution_quantization_is_local_and_cannot_hide_resolvable_loads",
+        "range_fallback_keeps_the_same_subnormal_tail_rule_and_raw_residual",
+        "branched_spring_operator_preserves_weak_equilibrium_beside_strong_loads",
+        "mixed_scale_spring_numbering_and_element_orientation_preserve_local_balance",
+        "transient_spring_1d_handles_a_large_sparse_chain",
+        "workflow_weak_equilibrium_survives_json_dispatch_and_failed_range_replay",
+        "This is bounded mixed-scale equilibrium validation, not general conditioning, industrial physics qualification or durable restart."
+      ]
+    },
+    {
+      "id": "sparse-product-underflow-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_underflow_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/solver/tests/transient_spring_reliability.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/sparse-product-underflow-reliability-20261020.md"
+      ],
+      "required_text": [
+        "underflowed_products_cannot_certify_a_nonzero_response_to_zero_load",
+        "partially_rounded_subnormal_products_cannot_erase_equilibrium_error",
+        "compressed_candidate_checks_product_underflow_before_acceptance",
+        "exact_subnormal_equations_still_pass_with_signed_loads",
+        "exact_cancellation_of_unrepresentable_products_does_not_fail",
+        "individually_erased_products_recover_a_representable_signed_residual",
+        "underflow_range_passes_are_cancellable_and_replay_cleanly",
+        "exactly_representable_subnormal_spring_forces_remain_usable",
+        "transient_spring_1d_handles_a_large_sparse_chain",
+        "This is bounded product-underflow validation, not arbitrary-precision solving, general physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "pcg-inner-product-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_spd.rs",
+        "workers/rust/crates/solver/src/linear_spd_inner_product.rs",
+        "workers/rust/crates/solver/src/linear_spd_inner_product_tests.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/pcg-inner-product-range-reliability-20261020.md"
+      ],
+      "required_text": [
+        "ratios_survive_inner_product_underflow_and_overflow",
+        "fallback_retains_product_tails_through_cancellation",
+        "ordinary_ratios_preserve_the_direct_division_bits",
+        "genuinely_unrepresentable_ratios_remain_explicit_iteration_limits",
+        "each_fallback_pass_can_be_cancelled_and_replayed",
+        "extreme_mixed_scale_pcg_resolves_weak_equations_without_underflowing_inner_products",
+        "genuinely_unrepresentable_mixed_scale_displacements_fail_and_replay_cleanly",
+        "extreme_mixed_scale_spring_operator_preserves_local_force_balance",
+        "workflow_weak_equilibrium_survives_json_dispatch_and_failed_range_replay",
+        "This is bounded PCG inner-product range validation, not general conditioning, arbitrary-precision solving or durable restart."
+      ]
+    },
+    {
+      "id": "pcg-vector-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_spd.rs",
+        "workers/rust/crates/solver/src/linear_spd_vectors.rs",
+        "workers/rust/crates/solver/src/linear_spd_vector_tests.rs",
+        "workers/rust/crates/solver/src/linear_spd_vector_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_spd_control_tests.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/pcg-vector-range-reliability-20261020.md"
+      ],
+      "required_text": [
+        "vector_admission_does_not_ignore_nonfinite_components",
+        "normalization_rejects_invalid_scales_and_erased_nonzero_loads",
+        "solution_rescaling_rejects_nonfinite_outputs_but_preserves_finite_quantization",
+        "invalid_rhs_cannot_take_the_zero_load_shortcut_and_replay_stays_clean",
+        "pcg_reports_small_fresh_residuals_instead_of_squared_underflow_zero",
+        "residual_norm_recovers_squared_underflow_subnormal_rounding_and_overflow",
+        "stable_norm_fallback_is_cancellable_and_the_normal_path_needs_no_second_scan",
+        "fresh_residual_uses_the_same_range_safe_norm_as_the_recursive_path",
+        "vector_passes_retain_original_order_for_finite_values",
+        "cancelled_pcg_does_not_fallback_or_poison_any_preconditioner",
+        "This is bounded PCG vector-range validation, not general conditioning, arbitrary-precision solving or durable restart."
+      ]
+    },
+    {
+      "id": "sparse-scaling-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_binary_scale.rs",
+        "workers/rust/crates/solver/src/linear_algebra_scaling.rs",
+        "workers/rust/crates/solver/src/linear_sparse_compression.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_scaling_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_scaling_control_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/sparse-scaling-range-reliability-20261020.md"
+      ],
+      "required_text": [
+        "symmetric_scaling_preserves_couplings_across_intermediate_range_loss",
+        "representable_star_solution_survives_asymmetric_intermediate_underflow",
+        "unresolved_candidate_is_rejected_without_weakening_final_validation",
+        "matrix_scaling_rejects_invalid_factors_and_genuinely_unrepresentable_coefficients",
+        "exactly_representable_subnormal_scaled_couplings_are_retained",
+        "wide_range_scaling_remains_cancellable_and_replays_without_partial_output",
+        "scaling_preserves_original_arithmetic_sparse_entries_and_profile_metadata",
+        "weak_spring_couplings_survive_scaled_products_and_candidate_range_rejection",
+        "This is bounded sparse-scaling range validation, not general conditioning, physical material qualification or durable restart."
+      ]
+    }
+  ]
+}

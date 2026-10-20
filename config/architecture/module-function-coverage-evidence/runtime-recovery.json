@@ -193,7 +193,7 @@
         "cancelled_pcg_does_not_fallback_or_poison_any_preconditioner",
         "prepared_solver_propagates_vector_cancellation_without_regularized_retry",
         "all_vector_passes_poll_entry_interior_and_short_final_blocks",
-        "vector_passes_retain_original_order_and_nonfinite_behavior",
+        "vector_passes_retain_original_order_for_finite_values",
         "cancel_pcg_solution_scale_then_reuse_the_job",
         "disconnected_pcg_update_releases_capacity_without_releasing_the_hold",
         "disconnected_pcg_solution_scale_does_not_commit_a_partial_success",

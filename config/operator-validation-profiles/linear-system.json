@@ -1,0 +1,393 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "daji 3.0.x",
+  "domain": "shared-linear-system",
+  "profiles": [
+    {
+      "profile_id": "sparse-residual-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "sparse-residual-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.spring_1d", "solve.transient_spring_1d"],
+      "validation_methods": [
+        "manufactured_equation_and_wrong_solution_negative_controls",
+        "overflowing_product_cancellation_and_prepared_solver_replay",
+        "binary_unit_covariance_of_signed_and_relative_residuals",
+        "complete_dimension_and_finite_solution_admission",
+        "cooperative_cancellation_during_wide_row_fallback"
+      ],
+      "formal_invariants": [
+        "overflowing_error_denominators_cannot_certify_tested_wrong_solutions",
+        "a_large_equation_cannot_mask_a_bad_small_equation_in_range_fallback",
+        "tested_representable_residuals_survive_intermediate_product_overflow",
+        "missing_equations_and_nonfinite_unused_solution_components_are_rejected",
+        "normalization_range_loss_is_an_error_not_a_zero_residual",
+        "cancellation_cannot_publish_a_partial_validation_result"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_spd_prepared.rs",
+        "workers/rust/crates/solver/tests/spring_1d_closed_form.rs",
+        "workers/rust/crates/solver/tests/transient_spring_reliability.rs",
+        "reports/sparse-residual-range-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "sparse-residual-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_algebra::residual::range_tests -- --nocapture"
+        },
+        {
+          "id": "sparse-residual-spring-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_1d_closed_form --test spring_1d_refinement --test dynamic_spring_closed_form --test transient_spring_reliability --test harmonic_spring_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "sparse-row-equilibrium-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "sparse-row-equilibrium-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.spring_1d"],
+      "validation_methods": [
+        "mixed_scale_star_network_closed_form_and_local_force_balance",
+        "dense_iterative_threshold_and_three_preconditioner_cross_checks",
+        "load_sign_common_units_node_numbering_and_element_orientation",
+        "local_subnormal_displacement_quantization_negative_controls",
+        "candidate_gate_cancellation_and_prepared_factor_replay",
+        "real_workflow_json_dispatch_and_failed_range_replay"
+      ],
+      "formal_invariants": [
+        "a_large_finite_equation_cannot_mask_an_incorrect_weak_equation",
+        "global_pcg_norm_is_not_a_complete_equilibrium_certificate",
+        "tested_iterative_candidates_continue_until_local_equilibrium_is_met",
+        "subnormal_solution_allowance_uses_only_this_rows_coefficients_and_representation_spacing",
+        "raw_physical_residuals_are_retained_instead_of_rewritten_to_zero",
+        "unresolvable_range_and_cancellation_cannot_publish_partial_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_spd.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/solver/tests/transient_spring_reliability.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "reports/sparse-row-equilibrium-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "sparse-row-equilibrium-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_algebra::equilibrium_tests -- --nocapture"
+        },
+        {
+          "id": "mixed-scale-spring-public",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_mixed_scale_equilibrium --test transient_spring_reliability -- --nocapture"
+        },
+        {
+          "id": "mixed-scale-spring-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test spring_mixed_scale_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "sparse-product-underflow-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "sparse-product-underflow-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.spring_1d", "solve.transient_spring_1d"],
+      "validation_methods": [
+        "erased_and_partially_rounded_product_negative_controls",
+        "binary_exact_cancellation_and_signed_accumulation_references",
+        "shared_sparse_and_compressed_candidate_range_validation",
+        "wide_row_second_pass_cancellation_and_clean_replay",
+        "public_operator_exact_subnormal_force_and_transient_tail_controls"
+      ],
+      "formal_invariants": [
+        "tested_underflowed_products_cannot_certify_wrong_displacements",
+        "representable_signed_residuals_are_recovered_from_individually_erased_products",
+        "unrepresentable_nonzero_residuals_return_errors_instead_of_zero",
+        "exact_product_cancellation_and_representable_subnormal_equations_remain_accepted",
+        "range_validation_reuses_csr_storage_without_materializing_a_row_copy",
+        "cancellation_cannot_publish_a_partial_range_validation"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_underflow_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/solver/tests/transient_spring_reliability.rs",
+        "reports/sparse-product-underflow-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "sparse-product-underflow-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_algebra::residual::underflow_tests -- --nocapture"
+        },
+        {
+          "id": "sparse-product-underflow-public-controls",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_mixed_scale_equilibrium --test transient_spring_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "pcg-inner-product-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "pcg-inner-product-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.spring_1d"],
+      "validation_methods": [
+        "exponent_preserving_inner_product_ratio_binary_references",
+        "fused_product_tail_and_compensated_cancellation_controls",
+        "three_preconditioner_extreme_scale_force_balance",
+        "reversed_load_prepared_factor_reuse_and_failed_displacement_replay",
+        "borrowed_owned_operator_and_json_workflow_cross_checks"
+      ],
+      "formal_invariants": [
+        "tested_nonzero_inner_products_do_not_fail_only_because_their_raw_product_underflows",
+        "tested_representable_alpha_beta_ratios_survive_inner_product_overflow",
+        "ordinary_positive_inner_products_keep_the_original_single_vector_pass",
+        "local_equilibrium_and_original_equation_validation_remain_mandatory",
+        "unrepresentable_responses_and_interrupted_work_cannot_publish_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_spd.rs",
+        "workers/rust/crates/solver/src/linear_spd_inner_product.rs",
+        "workers/rust/crates/solver/src/linear_spd_inner_product_tests.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "reports/pcg-inner-product-range-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "pcg-inner-product-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_spd::inner_product -- --nocapture"
+        },
+        {
+          "id": "pcg-extreme-scale-solve",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib mixed_scale -- --nocapture"
+        },
+        {
+          "id": "pcg-extreme-scale-dispatch",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test spring_mixed_scale_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "pcg-vector-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "pcg-vector-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.spring_1d", "solve.transient_spring_1d"],
+      "validation_methods": [
+        "nonfinite_rhs_admission_and_zero_load_shortcut_negative_controls",
+        "normalization_range_loss_and_solution_rescaling_controls",
+        "binary_scaled_norm_references_and_fresh_residual_cross_checks",
+        "small_nonzero_pcg_profile_residual_regression",
+        "fallback_cancellation_replay_and_normal_path_no_second_scan"
+      ],
+      "formal_invariants": [
+        "nonfinite_rhs_components_cannot_be_hidden_by_maximum_reduction",
+        "tested_nonzero_loads_cannot_be_silently_erased_by_rhs_normalization",
+        "squared_underflow_does_not_publish_a_tested_nonzero_residual_as_zero",
+        "squared_overflow_alone_does_not_invalidate_a_representable_vector_norm",
+        "nonfinite_norms_and_exported_solution_components_are_rejected",
+        "normal_positive_squared_sums_retain_the_existing_fast_path",
+        "local_equilibrium_and_original_equation_validation_remain_mandatory"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_spd.rs",
+        "workers/rust/crates/solver/src/linear_spd_vectors.rs",
+        "workers/rust/crates/solver/src/linear_spd_vector_tests.rs",
+        "workers/rust/crates/solver/src/linear_spd_vector_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_spd_control_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "reports/pcg-vector-range-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "pcg-vector-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_spd::vectors -- --nocapture"
+        },
+        {
+          "id": "pcg-vector-recovery-controls",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_spd::control_tests -- --nocapture"
+        },
+        {
+          "id": "pcg-vector-operator-workflow-consumers",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test transient_spring_reliability --test spring_mixed_scale_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "sparse-scaling-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "sparse-scaling-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.spring_1d", "solve.transient_spring_1d"],
+      "validation_methods": [
+        "binary_exact_symmetric_scaling_and_intermediate_range_controls",
+        "manufactured_star_system_three_preconditioner_and_numbering_cross_checks",
+        "prepared_factor_reuse_and_reversed_load_references",
+        "candidate_rejection_versus_final_validation_negative_controls",
+        "wide_row_cancellation_and_clean_matrix_scaling_replay",
+        "borrowed_owned_operator_force_balance_and_energy_cross_checks"
+      ],
+      "formal_invariants": [
+        "tested_representable_couplings_survive_intermediate_underflow_and_overflow",
+        "normal_sparse_scaling_retains_original_arithmetic_order",
+        "compressed_setup_and_retry_matrix_use_the_same_coefficient_scaling",
+        "genuinely_unrepresentable_nonzero_coefficients_are_not_silently_removed",
+        "unresolved_candidates_are_rejected_not_published_or_automatically_treated_as_unsolvable",
+        "nonfinite_input_cancellation_and_final_range_validation_still_propagate_errors"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_binary_scale.rs",
+        "workers/rust/crates/solver/src/linear_algebra_scaling.rs",
+        "workers/rust/crates/solver/src/linear_sparse_compression.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_scaling_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_scaling_control_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "reports/sparse-scaling-range-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "sparse-scaling-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_algebra::scaling_range_tests -- --nocapture"
+        },
+        {
+          "id": "sparse-scaling-recovery-controls",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_algebra::scaling_tests -- --nocapture"
+        },
+        {
+          "id": "sparse-scaling-operator-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test transient_spring_reliability --test spring_mixed_scale_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "dense-equation-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "dense-equation-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.spring_1d", "solve.transient_spring_1d"],
+      "validation_methods": [
+        "binary_exact_overflow_and_subnormal_dense_equation_references",
+        "mixed_row_units_and_six_equation_permutations",
+        "direct_and_prepared_spd_original_equation_cross_checks",
+        "lossy_coefficient_and_rhs_admission_negative_controls",
+        "cooperative_scaling_cancellation_and_immutable_factor_replay"
+      ],
+      "formal_invariants": [
+        "tested_representable_solutions_survive_unscaled_substitution_range_failure",
+        "binary_row_scaling_must_round_trip_coefficients_and_loads_exactly",
+        "pivoted_rhs_scaling_uses_original_equation_row_identity",
+        "ordinary_row_scales_retain_the_existing_unscaled_factorization_path",
+        "failed_or_interrupted_solves_cannot_mutate_prepared_factors",
+        "original_sparse_equation_validation_remains_mandatory"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_dense.rs",
+        "workers/rust/crates/solver/src/linear_dense_equilibration.rs",
+        "workers/rust/crates/solver/src/linear_dense_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_binary_scale.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_kernels_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "reports/dense-equation-range-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "dense-equation-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_dense::range_tests -- --nocapture"
+        },
+        {
+          "id": "dense-equation-recovery-controls",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib solver_control -- --nocapture"
+        },
+        {
+          "id": "dense-equation-operator-consumers",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_mixed_scale_equilibrium --test transient_spring_reliability --test truss_2d_review --test heat_plane_quad_2d_review -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "dense-substitution-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "dense-substitution-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.spring_1d", "solve.transient_spring_1d"],
+      "validation_methods": [
+        "ordinary_matrix_large_rhs_closed_form_controls",
+        "forward_backward_overflow_cancellation_and_fused_product_tails",
+        "erased_and_rounded_subnormal_product_references",
+        "direct_prepared_spd_original_equation_cross_checks",
+        "invalid_operand_range_loss_and_cancelled_factor_replay",
+        "ordinary_row_bitwise_arithmetic_and_no_range_pass_controls"
+      ],
+      "formal_invariants": [
+        "tested_finite_solutions_do_not_fail_only_because_the_unscaled_numerator_overflows",
+        "tested_cancelling_products_retain_their_fused_rounding_tails",
+        "nonzero_substitution_terms_cannot_be_silently_erased_in_the_tested_cases",
+        "normalization_range_loss_and_unrepresentable_nonzero_solutions_remain_errors",
+        "ordinary_rows_keep_the_existing_accumulation_and_division_order",
+        "original_equation_validation_remains_mandatory_after_range_recovery",
+        "cancelled_or_failed_substitution_does_not_mutate_prepared_factors"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_dense.rs",
+        "workers/rust/crates/solver/src/linear_dense_substitution.rs",
+        "workers/rust/crates/solver/src/linear_dense_substitution_tests.rs",
+        "workers/rust/crates/solver/src/linear_binary_scale.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_kernels_tests.rs",
+        "reports/dense-substitution-range-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "dense-substitution-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_dense::substitution_tests -- --nocapture"
+        },
+        {
+          "id": "dense-substitution-recovery-controls",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib solver_control -- --nocapture"
+        },
+        {
+          "id": "dense-substitution-operator-consumers",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test spring_mixed_scale_equilibrium --test transient_spring_reliability --test truss_2d_review --test heat_plane_quad_2d_review -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,20 @@
 use crate::solver_control::{SolverStage, checkpoint};
 
+#[path = "linear_dense_equilibration.rs"]
+mod equilibration;
+use equilibration::RowEquilibration;
+
+#[path = "linear_dense_substitution.rs"]
+mod substitution;
+
+#[cfg(test)]
+#[path = "linear_dense_range_tests.rs"]
+mod range_tests;
+
+#[cfg(test)]
+#[path = "linear_dense_substitution_tests.rs"]
+mod substitution_tests;
+
 pub(crate) fn solve_linear_system(
     matrix: Vec<Vec<f64>>,
     vector: Vec<f64>,
@@ -15,6 +30,7 @@ pub(crate) fn solve_linear_system(
 pub(crate) struct DenseLu {
     factors: Vec<Vec<f64>>,
     permutation: Vec<usize>,
+    equilibration: Option<RowEquilibration>,
 }
 
 impl DenseLu {
@@ -35,6 +51,7 @@ impl DenseLu {
         if row_scales.contains(&0.0) {
             return Err("system is singular".to_string());
         }
+        let equilibration = RowEquilibration::prepare(&mut matrix, &mut row_scales)?;
         let relative_pivot_floor = 32.0 * f64::EPSILON * size.max(1) as f64;
         let mut permutation = (0..size).collect::<Vec<_>>();
 
@@ -78,6 +95,7 @@ impl DenseLu {
         Ok(Self {
             factors: matrix,
             permutation,
+            equilibration,
         })
     }
 
@@ -91,34 +109,31 @@ impl DenseLu {
             return Err("linear system vector contains non-finite value".to_string());
         }
 
-        let mut solution = self
-            .permutation
-            .iter()
-            .map(|index| vector[*index])
-            .collect::<Vec<_>>();
-        for row in 0..size {
-            let correction = self.factors[row][..row]
+        let mut solution = match &self.equilibration {
+            Some(equilibration) => equilibration.permute_rhs(vector, &self.permutation)?,
+            None => self
+                .permutation
                 .iter()
-                .zip(&solution[..row])
-                .map(|(coefficient, value)| coefficient * value)
-                .sum::<f64>();
-            solution[row] -= correction;
-            if !solution[row].is_finite() {
-                return Err("linear system forward substitution diverged".to_string());
-            }
+                .map(|index| vector[*index])
+                .collect(),
+        };
+        for row in 0..size {
+            solution[row] = substitution::solve_row(
+                solution[row],
+                &self.factors[row][..row],
+                &solution[..row],
+                1.0,
+            )?;
             checkpoint(SolverStage::DenseSubstitution, row + 1)?;
         }
 
         for row in (0..size).rev() {
-            let accumulated = self.factors[row][row + 1..]
-                .iter()
-                .zip(&solution[row + 1..])
-                .map(|(coefficient, value)| coefficient * value)
-                .sum::<f64>();
-            solution[row] = (solution[row] - accumulated) / self.factors[row][row];
-            if !solution[row].is_finite() {
-                return Err("linear system back substitution diverged".to_string());
-            }
+            solution[row] = substitution::solve_row(
+                solution[row],
+                &self.factors[row][row + 1..],
+                &solution[row + 1..],
+                self.factors[row][row],
+            )?;
             checkpoint(SolverStage::DenseSubstitution, size + (size - row))?;
         }
 

@@ -76,6 +76,7 @@ mod heat_plane_contact;
 mod heat_plane_results;
 mod linear_algebra;
 mod linear_banded;
+mod linear_binary_scale;
 mod linear_dense;
 mod linear_solver_profile;
 mod linear_spd;

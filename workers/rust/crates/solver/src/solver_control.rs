@@ -86,6 +86,9 @@ pub enum SolverStage {
     ModalRoundoffSearch,
     ModalRoundoffValidate,
     ResultDiagnostics,
+    DenseRowScale,
+    DenseRhsScale,
+    DenseSubstitutionRange,
 }
 
 impl SolverStage {
@@ -169,6 +172,9 @@ impl SolverStage {
             Self::ModalRoundoffSearch => "modal_roundoff_search",
             Self::ModalRoundoffValidate => "modal_roundoff_validate",
             Self::ResultDiagnostics => "result_diagnostics",
+            Self::DenseRowScale => "dense_row_scale",
+            Self::DenseRhsScale => "dense_rhs_scale",
+            Self::DenseSubstitutionRange => "dense_substitution_range",
         }
     }
 
@@ -252,6 +258,9 @@ impl SolverStage {
             Self::ModalRoundoffSearch,
             Self::ModalRoundoffValidate,
             Self::ResultDiagnostics,
+            Self::DenseRowScale,
+            Self::DenseRhsScale,
+            Self::DenseSubstitutionRange,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)

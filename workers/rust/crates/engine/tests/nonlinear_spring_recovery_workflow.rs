@@ -213,3 +213,59 @@ fn workflow_softening_contact_keeps_finite_cancelling_constitutive_terms() {
         }
     }
 }
+
+#[test]
+fn workflow_contact_switch_survives_an_invertible_zero_tangent_pivot() {
+    let mut input = model(true, 32);
+    input["nodes"].as_array_mut().unwrap().push(json!({
+        "id":"tail", "x":2.0, "fix_x":false, "load_x":0.0
+    }));
+    input["elements"][0]["stiffness"] = json!(2.0);
+    input["elements"][0]["cubic_stiffness"] = json!(-1.0);
+    input["elements"].as_array_mut().unwrap().push(json!({
+        "id":"tail", "node_i":1, "node_j":2, "stiffness":1.0, "cubic_stiffness":0.0
+    }));
+    input["contacts"][0]["normal_stiffness"] = json!(5.8125);
+    input["load_steps"] = json!(1);
+    let result = run(true, input.clone());
+    assert_eq!(
+        result,
+        run_solve_operator("solve.contact_gap_1d", input).unwrap()
+    );
+    assert_eq!(result["converged"], true);
+    assert_eq!(result["achieved_load_factor"], 1.0);
+    assert_eq!(result["contacts"][0]["active"], true);
+    for index in [1, 2] {
+        assert!((result["nodes"][index]["ux"].as_f64().unwrap() - 1.25).abs() < 1e-10);
+    }
+    assert!(result["residual_norm"].as_f64().unwrap() <= 1e-12);
+}
+
+#[test]
+fn workflow_large_force_chain_uses_range_safe_equations_without_engine_changes() {
+    let unit = 2.0_f64.powi(1023);
+    let input = json!({
+        "nodes": [
+            {"id":"left", "x":0.0, "fix_x":true, "load_x":0.0},
+            {"id":"first", "x":1.0, "fix_x":false, "load_x":1.5 * unit},
+            {"id":"second", "x":2.0, "fix_x":false, "load_x":1.5 * unit},
+            {"id":"right", "x":3.0, "fix_x":true, "load_x":0.0}
+        ],
+        "elements": (0..3).map(|i| json!({
+            "id":format!("e{i}"), "node_i":i, "node_j":i+1,
+            "stiffness":0.5 * unit, "cubic_stiffness":0.0
+        })).collect::<Vec<_>>(),
+        "load_steps":1, "max_iterations":4, "tolerance":unit * 1e-12
+    });
+    let result = run(false, input.clone());
+    assert_eq!(
+        result,
+        run_solve_operator("solve.nonlinear_spring_1d", input).unwrap()
+    );
+    assert_eq!(result["converged"], true);
+    assert_eq!(result["achieved_load_factor"], 1.0);
+    for i in [1, 2] {
+        assert!((result["nodes"][i]["ux"].as_f64().unwrap() - 3.0).abs() < 1e-12);
+    }
+    assert!((result["max_force"].as_f64().unwrap() / unit - 1.5).abs() < 1e-12);
+}

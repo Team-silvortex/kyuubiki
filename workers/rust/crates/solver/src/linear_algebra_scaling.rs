@@ -1,3 +1,4 @@
+use crate::linear_binary_scale::{restore, split_finite};
 use crate::linear_solver_profile::SpdSolveProfile;
 use crate::solver_control::{SolverStage, checkpoint};
 
@@ -41,7 +42,7 @@ pub(super) fn scale_sparse_matrix(
     matrix: &SparseMatrix,
     scaling: &[f64],
 ) -> Result<SparseMatrix, String> {
-    debug_assert_eq!(matrix.size(), scaling.len());
+    validate_matrix_scaling(matrix.size(), scaling, SolverStage::SparseMatrixScale)?;
     let capacity = row_capacity_hint(matrix)?;
     let mut scaled = SparseMatrix {
         rows: Vec::with_capacity(matrix.size()),
@@ -49,11 +50,22 @@ pub(super) fn scale_sparse_matrix(
     for_rows(matrix, SolverStage::SparseMatrixScale, |row_index, row| {
         scaled.rows.push(Vec::with_capacity(capacity));
         let row_scale = scaling[row_index];
+        let mut error = None;
         visit_row_chunks(row, SolverStage::SparseMatrixScaleRow, |_, chunk| {
-            for &(column, value) in chunk {
-                scaled.push_sorted_entry(row_index, column, value * row_scale * scaling[column]);
+            if error.is_some() {
+                return;
             }
-        })
+            for &(column, value) in chunk {
+                match scale_matrix_entry(value, row_scale, scaling[column]) {
+                    Ok(value) => scaled.push_sorted_entry(row_index, column, value),
+                    Err(reason) => {
+                        error = Some(reason);
+                        break;
+                    }
+                }
+            }
+        })?;
+        error.map_or(Ok(()), Err)
     })?;
     Ok(scaled)
 }
@@ -83,15 +95,70 @@ pub(super) fn average_scaled_diagonal_magnitude(
     matrix: &SparseMatrix,
     scaling: &[f64],
 ) -> Result<f64, String> {
-    debug_assert_eq!(matrix.size(), scaling.len());
+    validate_matrix_scaling(matrix.size(), scaling, SolverStage::SparseDiagonalMagnitude)?;
     let size = matrix.size().max(1);
     // Match Iterator::sum's identity and retain its sequential addition order.
     let mut diagonal_sum = -0.0;
     for_rows(matrix, SolverStage::SparseDiagonalMagnitude, |index, _| {
-        diagonal_sum += matrix.diagonal_value(index).abs() * scaling[index] * scaling[index];
+        diagonal_sum += scale_matrix_entry(
+            matrix.diagonal_value(index).abs(),
+            scaling[index],
+            scaling[index],
+        )?;
         Ok(())
     })?;
     Ok(diagonal_sum / size as f64)
+}
+
+pub(super) fn validate_matrix_scaling(
+    size: usize,
+    scaling: &[f64],
+    stage: SolverStage,
+) -> Result<(), String> {
+    checkpoint(stage, 0)?;
+    if size != scaling.len() {
+        return Err("sparse matrix scaling dimensions must match".into());
+    }
+    for (block, values) in scaling.chunks(VECTOR_CHUNK).enumerate() {
+        if values
+            .iter()
+            .any(|value| !value.is_finite() || *value <= 0.0)
+        {
+            return Err("sparse matrix scaling factors must be finite and positive".into());
+        }
+        checkpoint(stage, block * VECTOR_CHUNK + values.len())?;
+    }
+    Ok(())
+}
+
+// Factors are admitted once per matrix, not once per nonzero coefficient.
+#[inline]
+pub(super) fn scale_matrix_entry(
+    value: f64,
+    row_scale: f64,
+    column_scale: f64,
+) -> Result<f64, String> {
+    let intermediate = value * row_scale;
+    let scaled = intermediate * column_scale;
+    if value == 0.0 || (intermediate.is_normal() && scaled.is_normal()) {
+        return Ok(scaled);
+    }
+    recover_scaled_entry(value, row_scale, column_scale)
+}
+
+#[cold]
+fn recover_scaled_entry(value: f64, row_scale: f64, column_scale: f64) -> Result<f64, String> {
+    if !value.is_finite() {
+        return Err("sparse matrix scaling contains a non-finite coefficient".into());
+    }
+    let (coefficient, ce) = split_finite(value);
+    let (row, re) = split_finite(row_scale);
+    let (column, ke) = split_finite(column_scale);
+    let scaled = restore(coefficient * (row * column), ce + re + ke);
+    if !scaled.is_finite() || scaled == 0.0 {
+        return Err("sparse matrix scaling coefficient is outside the representable range".into());
+    }
+    Ok(scaled)
 }
 
 pub(super) fn regularize_sparse_diagonal(

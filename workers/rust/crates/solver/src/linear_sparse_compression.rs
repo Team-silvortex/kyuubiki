@@ -1,4 +1,4 @@
-use super::{CompressedSparseMatrix, IncompleteCholesky, SparseMatrix, safe_diagonal};
+use super::{CompressedSparseMatrix, IncompleteCholesky, SparseMatrix, safe_diagonal, scaling};
 use crate::linear_solver_profile::SpdPreconditioner;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
@@ -56,7 +56,7 @@ impl SparseMatrix {
     ) -> Result<CompressedSparseMatrix, String> {
         checkpoint(SolverStage::SparseCompress, 0)?;
         let size = self.size();
-        debug_assert_eq!(scaling.len(), size);
+        scaling::validate_matrix_scaling(size, scaling, SolverStage::SparseCompress)?;
         let mut row_offsets = Vec::with_capacity(size + 1);
         let mut lower_end_offsets = Vec::with_capacity(size);
         let mut upper_start_offsets = Vec::with_capacity(size);
@@ -76,7 +76,7 @@ impl SparseMatrix {
                 .push(row_start + row.partition_point(|(column, _)| *column <= row_index));
             let row_scale = scaling[row_index];
             for &(column, value) in row {
-                let scaled_value = value * row_scale * scaling[column];
+                let scaled_value = scaling::scale_matrix_entry(value, row_scale, scaling[column])?;
                 if column == row_index {
                     diagonal[row_index] = scaled_value;
                 }

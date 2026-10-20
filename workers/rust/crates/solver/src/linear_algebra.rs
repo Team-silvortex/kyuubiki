@@ -6,7 +6,7 @@ use crate::solver_control::{SolverStage, check_cancellation, checkpoint, checkpo
 use std::time::Instant;
 
 const DENSE_REFINEMENT_TARGET: f64 = 1.0e-12;
-const SPARSE_RESIDUAL_TOLERANCE: f64 = 1.0e-8;
+pub(crate) const SPARSE_RESIDUAL_TOLERANCE: f64 = 1.0e-8;
 
 #[cfg(test)]
 #[path = "linear_sparse_product_tests.rs"]
@@ -15,6 +15,17 @@ mod product_tests;
 #[cfg(test)]
 #[path = "linear_scaling_control_tests.rs"]
 mod scaling_tests;
+
+#[cfg(test)]
+#[path = "linear_scaling_range_tests.rs"]
+mod scaling_range_tests;
+
+#[cfg(test)]
+#[path = "linear_sparse_equilibrium_tests.rs"]
+mod equilibrium_tests;
+
+#[path = "linear_sparse_equilibrium.rs"]
+mod equilibrium;
 
 #[path = "linear_sparse_compression.rs"]
 mod compression;
@@ -389,6 +400,19 @@ fn validate_spd_solution(
     rhs: &[f64],
     mut profile: SpdSolveProfile,
 ) -> Result<SpdSolveProfile, String> {
+    checkpoint(SolverStage::ResidualValidate, 0)?;
+    for (index, value) in profile.solution.iter().enumerate() {
+        if !value.is_finite() {
+            return Err(format!(
+                "linear system solution contains a non-finite value at index {index}"
+            ));
+        }
+        checkpoint_chunk(
+            SolverStage::ResidualValidate,
+            index + 1,
+            profile.solution.len(),
+        )?;
+    }
     profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution)?;
     let validation =
         sparse_relative_residual(matrix, rhs, &profile.solution, SPARSE_RESIDUAL_TOLERANCE)?;

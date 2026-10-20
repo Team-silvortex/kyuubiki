@@ -22,20 +22,35 @@ fn visit_blocks(
 
 pub(super) fn rhs_scale(rhs: &[f64]) -> Result<f64, String> {
     let mut scale: f64 = 0.0;
+    let mut invalid = false;
     visit_blocks(rhs.len(), SolverStage::PcgRhsScale, |block| {
-        scale = rhs[block]
-            .iter()
-            .map(|value| value.abs())
-            .fold(scale, f64::max);
+        for value in &rhs[block] {
+            invalid |= !value.is_finite();
+            scale = scale.max(value.abs());
+        }
     })?;
+    if invalid {
+        return Err("PCG right-hand side must contain only finite values".into());
+    }
     Ok(scale)
 }
 
 pub(super) fn normalize_rhs(rhs: &[f64], scale: f64) -> Result<Vec<f64>, String> {
+    if !scale.is_finite() || scale <= 0.0 {
+        return Err("PCG RHS scale must be finite and positive".into());
+    }
     let mut normalized = Vec::with_capacity(rhs.len());
+    let mut invalid = false;
     visit_blocks(rhs.len(), SolverStage::PcgRhsNormalize, |block| {
-        normalized.extend(rhs[block].iter().map(|value| value / scale));
+        normalized.extend(rhs[block].iter().map(|value| {
+            let scaled = value / scale;
+            invalid |= !scaled.is_finite() || (*value != 0.0 && scaled == 0.0);
+            scaled
+        }));
     })?;
+    if invalid {
+        return Err("PCG RHS normalization produced a non-finite or erased nonzero load".into());
+    }
     Ok(normalized)
 }
 
@@ -60,25 +75,39 @@ pub(super) fn dot(lhs: &[f64], rhs: &[f64]) -> Result<f64, String> {
 pub(super) fn l2_norm(values: &[f64]) -> Result<f64, String> {
     let mut scale = 0.0;
     let mut sum_squares = 1.0;
+    let mut invalid = false;
     visit_blocks(values.len(), SolverStage::PcgNorm, |block| {
-        for value in values[block]
-            .iter()
-            .map(|value| value.abs())
-            .filter(|value| *value > 0.0)
-        {
-            if scale < value {
-                sum_squares = 1.0 + sum_squares * (scale / value).powi(2);
-                scale = value;
-            } else {
-                sum_squares += (value / scale).powi(2);
+        for value in values[block].iter().map(|value| value.abs()) {
+            if !value.is_finite() {
+                invalid = true;
+            } else if value != 0.0 {
+                if scale < value {
+                    sum_squares = 1.0 + sum_squares * (scale / value).powi(2);
+                    scale = value;
+                } else {
+                    sum_squares += (value / scale).powi(2);
+                }
             }
         }
     })?;
-    Ok(if scale == 0.0 {
+    let norm = if scale == 0.0 {
         0.0
     } else {
         scale * sum_squares.sqrt()
-    })
+    };
+    if invalid || !norm.is_finite() {
+        return Err("PCG vector norm is non-finite".into());
+    }
+    Ok(norm)
+}
+
+pub(super) fn norm_from_squared_sum(squared: f64, values: &[f64]) -> Result<f64, String> {
+    if squared.is_normal() && squared > 0.0 {
+        Ok(squared.sqrt())
+    } else {
+        // A zero or overflowing squared sum does not determine the vector's norm.
+        l2_norm(values)
+    }
 }
 
 pub(super) fn update_solution_residual(
@@ -130,14 +159,26 @@ pub(super) fn update_direction(direction: &mut [f64], z: &[f64], beta: f64) -> R
 }
 
 pub(super) fn rescale_solution(mut solution: Vec<f64>, scale: f64) -> Result<Vec<f64>, String> {
+    if !scale.is_finite() || scale <= 0.0 {
+        return Err("PCG solution scale must be finite and positive".into());
+    }
+    let mut invalid = false;
     visit_blocks(solution.len(), SolverStage::PcgSolutionScale, |block| {
         for value in &mut solution[block] {
             *value *= scale;
+            invalid |= !value.is_finite();
         }
     })?;
+    if invalid {
+        return Err("PCG solution rescaling produced a non-finite value".into());
+    }
     Ok(solution)
 }
 
 #[cfg(test)]
 #[path = "linear_spd_vector_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "linear_spd_vector_range_tests.rs"]
+mod range_tests;

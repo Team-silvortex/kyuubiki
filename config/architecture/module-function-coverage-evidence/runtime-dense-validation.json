@@ -1,0 +1,63 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded dense linear-system range validation: exact binary row equilibration, original-row RHS identity through pivots, exponent-preserving substitution with product tails, explicit range-loss rejection, and cancellable immutable factor replay. This is not general conditioning, physical qualification or durable restart evidence.",
+  "evidence_claims": [
+    {
+      "id": "dense-equation-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_dense.rs",
+        "workers/rust/crates/solver/src/linear_dense_equilibration.rs",
+        "workers/rust/crates/solver/src/linear_dense_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_binary_scale.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/dense-equation-range-reliability-20261020.md"
+      ],
+      "required_text": [
+        "finite_dense_solution_survives_overflowing_unscaled_back_substitution",
+        "subnormal_dense_equations_do_not_round_away_substitution_terms",
+        "row_scaling_follows_original_rows_through_pivoting_and_repeated_solves",
+        "direct_and_prepared_dense_spd_paths_validate_original_extreme_equations",
+        "dense_equilibration_rejects_information_loss_without_poisoning_factors",
+        "ordinary_dense_equations_keep_the_unscaled_path",
+        "dense_equilibration_cancels_and_replays_without_partial_state",
+        "This is bounded dense-equation range validation, not general conditioning, arbitrary-precision solving, physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "dense-substitution-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_dense.rs",
+        "workers/rust/crates/solver/src/linear_dense_substitution.rs",
+        "workers/rust/crates/solver/src/linear_dense_substitution_tests.rs",
+        "workers/rust/crates/solver/src/linear_binary_scale.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/dense-substitution-range-reliability-20261020.md"
+      ],
+      "required_text": [
+        "ordinary_matrix_with_large_rhs_does_not_overflow_before_pivot_division",
+        "back_substitution_recovers_cancelling_overflowed_products",
+        "forward_substitution_recovers_cancelling_overflowed_products",
+        "substitution_preserves_fused_product_tails_after_overflow_cancellation",
+        "substitution_recovers_erased_and_rounded_subnormal_products_before_division",
+        "direct_and_prepared_spd_recover_large_rhs_without_relaxing_original_balance",
+        "substitution_rejects_unresolved_range_and_invalid_operands_before_replay",
+        "ordinary_substitution_keeps_original_bits_and_avoids_range_passes",
+        "substitution_range_passes_cancel_and_prepared_factors_replay_cleanly",
+        "This is bounded dense-substitution range validation, not general conditioning, arbitrary-precision solving, physical qualification or durable restart."
+      ]
+    }
+  ]
+}

@@ -349,3 +349,64 @@ fn headless_softening_contact_cancellation_survives_json_round_trip() {
         assert!(decoded["residual_norm"].as_f64().unwrap() <= 2.0_f64.powi(-40) * unit);
     }
 }
+
+#[test]
+fn headless_contact_switch_pivot_failure_budget_and_replay_share_the_real_solver() {
+    let mut input = model(true, 2.0, -1.0, 2.0);
+    input["nodes"].as_array_mut().unwrap().push(json!({
+        "id":"tail", "x":2.0, "fix_x":false, "load_x":0.0
+    }));
+    input["elements"].as_array_mut().unwrap().push(json!({
+        "id":"tail", "node_i":1, "node_j":2, "stiffness":1.0, "cubic_stiffness":0.0
+    }));
+    input["contacts"][0]["gap"] = json!(1.0);
+    input["contacts"][0]["normal_stiffness"] = json!(5.8125);
+    input["max_iterations"] = json!(2);
+    let failed = planned_solve(true, input.clone()).unwrap();
+    assert_eq!(failed["converged"], false);
+    assert_eq!(failed["achieved_load_factor"], 0.0);
+    assert_eq!(failed["nodes"][1]["ux"], 0.0);
+    assert_eq!(failed["nodes"][2]["ux"], 0.0);
+    assert_eq!(failed["contacts"][0]["active"], false);
+    assert!(
+        failed["steps"][0]["residual_norm"]
+            .as_f64()
+            .unwrap()
+            .is_finite()
+    );
+    input["max_iterations"] = json!(32);
+    let replay = planned_solve(true, input).unwrap();
+    assert_eq!(replay["converged"], true);
+    assert_eq!(replay["achieved_load_factor"], 1.0);
+    close(&replay["nodes"][1]["ux"], 1.25);
+    close(&replay["nodes"][2]["ux"], 1.25);
+    close(&replay["contacts"][0]["force"], 1.453125);
+    close(&replay["elements"][0]["force"], 0.546875);
+}
+
+#[test]
+fn headless_equation_scaling_preserves_finite_large_and_tiny_chain_results() {
+    for unit in [2.0_f64.powi(1023), 2.0_f64.powi(-1000)] {
+        let input = json!({
+            "nodes": (0..4).map(|i| json!({
+                "id":format!("n{i}"), "x":i, "fix_x":i == 0 || i == 3,
+                "load_x":if i == 1 || i == 2 { 1.5 * unit } else { 0.0 }
+            })).collect::<Vec<_>>(),
+            "elements": (0..3).map(|i| json!({
+                "id":format!("e{i}"), "node_i":i, "node_j":i+1,
+                "stiffness":0.5 * unit, "cubic_stiffness":0.0
+            })).collect::<Vec<_>>(),
+            "load_steps":1, "max_iterations":4, "tolerance":unit * 1e-12
+        });
+        let result = planned_solve(false, input).unwrap();
+        let decoded: Value =
+            serde_json::from_str(&serde_json::to_string(&result).unwrap()).unwrap();
+        assert_eq!(decoded["converged"], true);
+        assert_eq!(decoded["achieved_load_factor"], 1.0);
+        close(&decoded["nodes"][1]["ux"], 3.0);
+        close(&decoded["nodes"][2]["ux"], 3.0);
+        close(&decoded["elements"][0]["force"], 1.5 * unit);
+        close(&decoded["elements"][2]["force"], -1.5 * unit);
+        assert!(decoded["residual_norm"].as_f64().unwrap() <= unit * 1e-12);
+    }
+}
