@@ -400,19 +400,7 @@ fn validate_spd_solution(
     rhs: &[f64],
     mut profile: SpdSolveProfile,
 ) -> Result<SpdSolveProfile, String> {
-    checkpoint(SolverStage::ResidualValidate, 0)?;
-    for (index, value) in profile.solution.iter().enumerate() {
-        if !value.is_finite() {
-            return Err(format!(
-                "linear system solution contains a non-finite value at index {index}"
-            ));
-        }
-        checkpoint_chunk(
-            SolverStage::ResidualValidate,
-            index + 1,
-            profile.solution.len(),
-        )?;
-    }
+    validate_finite_solution(&profile.solution)?;
     profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution)?;
     let validation =
         sparse_relative_residual(matrix, rhs, &profile.solution, SPARSE_RESIDUAL_TOLERANCE)?;
@@ -426,6 +414,35 @@ fn validate_spd_solution(
         ));
     }
     Ok(profile)
+}
+
+/// Componentwise validation shared by SPD and indefinite tangent consumers.
+/// This evaluates the original equations, not the factorization's scaled rows.
+pub(crate) fn sparse_solution_backward_error(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+    solution: &[f64],
+    tolerance: f64,
+) -> Result<f64, String> {
+    validate_finite_solution(solution)?;
+    let validation = sparse_relative_residual(matrix, rhs, solution, tolerance)?;
+    if !validation.relative.is_finite() {
+        return Err("linear system solution produced a non-finite backward error".into());
+    }
+    Ok(validation.relative)
+}
+
+fn validate_finite_solution(solution: &[f64]) -> Result<(), String> {
+    checkpoint(SolverStage::ResidualValidate, 0)?;
+    for (index, value) in solution.iter().enumerate() {
+        if !value.is_finite() {
+            return Err(format!(
+                "linear system solution contains a non-finite value at index {index}"
+            ));
+        }
+        checkpoint_chunk(SolverStage::ResidualValidate, index + 1, solution.len())?;
+    }
+    Ok(())
 }
 
 pub(crate) fn safe_diagonal(value: f64) -> f64 {

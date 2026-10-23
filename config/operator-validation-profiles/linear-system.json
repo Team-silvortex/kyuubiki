@@ -4,6 +4,118 @@
   "domain": "shared-linear-system",
   "profiles": [
     {
+      "profile_id": "banded-substitution-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "banded-substitution-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.frame_2d_p_delta", "solve.frame_2d_material_p_delta",
+        "solve.cohesive_interface_mesh_2d", "solve.cohesive_interface_mesh_3d",
+        "solve.buckling_beam_1d", "solve.buckling_frame_2d"
+      ],
+      "validation_methods": [
+        "signed_large_rhs_and_subnormal_product_closed_form_controls",
+        "narrow_513_dof_chain_with_dense_fallback_disabled",
+        "prepared_factor_forward_cancellation_and_transposed_fused_product_tails",
+        "ordinary_arithmetic_bitwise_parity_and_no_range_pass_controls",
+        "wide_row_two_pass_cancellation_and_failed_rhs_clean_replay",
+        "frame_cohesive_buckling_workflow_and_cli_regression"
+      ],
+      "formal_invariants": [
+        "tested_finite_large_responses_remain_on_the_banded_solver_path",
+        "tested_underflowed_products_are_accumulated_before_final_division",
+        "unrepresentable_nonzero_responses_are_errors_instead_of_silent_zero",
+        "dense_and_banded_substitution_share_one_range_recovery_implementation",
+        "range_recovery_traverses_banded_storage_without_materializing_a_dense_row",
+        "ordinary_rows_preserve_the_existing_accumulation_order",
+        "cancellation_and_range_failures_do_not_mutate_prepared_factors"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_banded.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/src/linear_dense_substitution.rs",
+        "workers/rust/crates/solver/src/linear_banded_substitution_tests.rs",
+        "workers/rust/crates/solver/src/linear_dense_substitution_tests.rs",
+        "workers/rust/crates/solver/src/linear_symmetric_tangent_validation_tests.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "reports/banded-substitution-range-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "banded-substitution-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_banded::substitution_tests -- --nocapture"
+        },
+        {
+          "id": "shared-substitution-consistency",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_ -- --nocapture"
+        },
+        {
+          "id": "banded-substitution-physical-consumers",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test buckling_beam_1d_closed_form --test buckling_frame_2d_clustered_modes --test frame_2d_branch_continuation --test cohesive_interface_mesh_2d_sparse --test cohesive_interface_mesh_3d_sparse --test buckling_frame_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "symmetric-tangent-validation-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "symmetric-tangent-validation-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.frame_2d_p_delta",
+        "solve.frame_2d_material_p_delta",
+        "solve.cohesive_interface_mesh_2d",
+        "solve.cohesive_interface_mesh_3d"
+      ],
+      "validation_methods": [
+        "overflow_underflow_and_weak_equation_negative_controls",
+        "original_equation_componentwise_validation_for_both_tangent_backends",
+        "bounded_factor_reuse_refinement_and_dense_fallback",
+        "malformed_sparse_column_rejection_before_factorization",
+        "validation_and_correction_cancellation_with_clean_replay",
+        "frame_continuation_and_cohesive_operator_workflow_cli_regression"
+      ],
+      "formal_invariants": [
+        "nan_and_infinite_scales_cannot_certify_tested_wrong_tangent_solutions",
+        "weak_equations_use_their_own_products_not_connected_maximum_displacement",
+        "both_backends_validate_original_equations_after_at_most_four_corrections",
+        "failed_sparse_validation_cannot_bypass_dense_size_limits",
+        "cancelled_validation_cannot_fall_through_to_another_solver",
+        "accepted_tangents_do_not_materialize_a_correction_residual_vector",
+        "tested_invalid_column_indices_return_errors_instead_of_panicking"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_symmetric_tangent.rs",
+        "workers/rust/crates/solver/src/linear_symmetric_tangent_validation_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_branch_continuation.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_sparse.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_sparse.rs",
+        "workers/rust/crates/engine/tests/cohesive_interface_mesh_2d_workflow.rs",
+        "workers/rust/crates/engine/tests/frame_2d_branch_workflow.rs",
+        "reports/symmetric-tangent-validation-reliability-20261020.md"
+      ],
+      "commands": [
+        {
+          "id": "symmetric-tangent-validation-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_symmetric_tangent -- --nocapture"
+        },
+        {
+          "id": "symmetric-tangent-physical-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_branch_continuation --test cohesive_interface_mesh_2d_sparse --test cohesive_interface_mesh_3d_sparse -- --nocapture"
+        },
+        {
+          "id": "symmetric-tangent-workflow-dispatch",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_branch_workflow --test cohesive_interface_mesh_2d_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "sparse-residual-range-local-reliability",
       "profile_role": "component_profile",
       "qualification_candidate_id": "sparse-residual-range-local-reliability",
@@ -365,6 +477,7 @@
       "evidence_paths": [
         "workers/rust/crates/solver/src/linear_dense.rs",
         "workers/rust/crates/solver/src/linear_dense_substitution.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
         "workers/rust/crates/solver/src/linear_dense_substitution_tests.rs",
         "workers/rust/crates/solver/src/linear_binary_scale.rs",
         "workers/rust/crates/solver/src/solver_control.rs",

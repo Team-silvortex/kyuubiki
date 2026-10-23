@@ -12,13 +12,17 @@ fn cancellation_is_not_exported_as_a_nonconverged_cohesive_result() {
     use kyuubiki_solver::solver_control::{SolverControl, SolverStage, with_solver_observer};
     let request = block_request(80);
     let baseline = solve_cohesive_interface_mesh_3d(&request).unwrap();
-    for stage in [SolverStage::ConstraintReduce, SolverStage::BandedFactor] {
+    for (stage, step) in [
+        (SolverStage::ConstraintReduce, 64),
+        (SolverStage::BandedFactor, 64),
+        (SolverStage::ResidualValidate, 0),
+    ] {
         let control = SolverControl::default();
         let cancel = control.clone();
         let result = with_solver_observer(
             &control,
             move |point| {
-                if point.stage == stage && point.completed_steps == 64 {
+                if point.stage == stage && point.completed_steps == step {
                     cancel.request_cancel();
                 }
             },
@@ -34,7 +38,7 @@ fn cancellation_is_not_exported_as_a_nonconverged_cohesive_result() {
         assert!(result.is_err());
         assert!(control.was_interrupted());
         assert_eq!(control.last_checkpoint().unwrap().stage, stage);
-        assert_eq!(control.last_checkpoint().unwrap().completed_steps, 64);
+        assert_eq!(control.last_checkpoint().unwrap().completed_steps, step);
         let next = solve_cohesive_interface_mesh_3d(&request).unwrap();
         assert!(next.converged);
         assert_eq!(

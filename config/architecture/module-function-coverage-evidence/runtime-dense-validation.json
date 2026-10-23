@@ -40,6 +40,7 @@
       "files": [
         "workers/rust/crates/solver/src/linear_dense.rs",
         "workers/rust/crates/solver/src/linear_dense_substitution.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
         "workers/rust/crates/solver/src/linear_dense_substitution_tests.rs",
         "workers/rust/crates/solver/src/linear_binary_scale.rs",
         "workers/rust/crates/solver/src/solver_control.rs",

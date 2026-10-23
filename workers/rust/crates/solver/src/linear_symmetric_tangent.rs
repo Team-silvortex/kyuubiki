@@ -1,7 +1,13 @@
-use crate::linear_algebra::{SparseMatrix, sparse_to_dense};
+use crate::linear_algebra::{
+    SparseMatrix, sparse_residual_vector, sparse_solution_backward_error, sparse_to_dense,
+};
 use crate::linear_banded::SymmetricBandCholesky;
-use crate::linear_dense::solve_linear_system;
+use crate::linear_dense::DenseLu;
 use crate::solver_control::check_cancellation;
+
+#[cfg(test)]
+#[path = "linear_symmetric_tangent_validation_tests.rs"]
+mod validation_tests;
 
 const MAX_BAND_FACTOR_ENTRIES: usize = 8_000_000;
 const MIN_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-9;
@@ -34,28 +40,32 @@ pub(crate) fn solve_symmetric_tangent(
         matrix
             .row_entries(row)
             .iter()
-            .any(|(_, value)| !value.is_finite())
+            .any(|(column, value)| *column >= matrix.size() || !value.is_finite())
     }) {
-        return Err(format!("{context} tangent matrix must be finite"));
+        return Err(format!(
+            "{context} tangent matrix must have finite values and valid column indices"
+        ));
     }
 
     let sparse_failure = match SymmetricBandCholesky::try_factor(matrix, MAX_BAND_FACTOR_ENTRIES) {
-        Ok(Some(factor)) => {
-            let solution = solve_refined(matrix, rhs, &factor, context)?;
-            return Ok(SymmetricTangentSolution {
-                solution,
-                method: SYMMETRIC_BAND_CHOLESKY,
-            });
-        }
+        Ok(Some(factor)) => match solve_refined(matrix, rhs, |rhs| factor.solve(rhs), context) {
+            Ok(solution) => {
+                return Ok(SymmetricTangentSolution {
+                    solution,
+                    method: SYMMETRIC_BAND_CHOLESKY,
+                });
+            }
+            Err(error) => error,
+        },
         Ok(None) => "symmetric band exceeds the factor memory budget".to_string(),
         Err(error) => error,
     };
 
     check_cancellation()?;
     if rhs.len() <= dense_fallback_limit {
-        let solution = solve_linear_system(sparse_to_dense(matrix), rhs.to_vec())
+        let factor = DenseLu::factor(sparse_to_dense(matrix))
             .map_err(|error| format!("{context} tangent solve failed: {error}"))?;
-        validate_solution(matrix, rhs, &solution, context)?;
+        let solution = solve_refined(matrix, rhs, |rhs| factor.solve(rhs), context)?;
         return Ok(SymmetricTangentSolution {
             solution,
             method: DENSE_PIVOTED_FALLBACK,
@@ -63,48 +73,38 @@ pub(crate) fn solve_symmetric_tangent(
     }
 
     Err(format!(
-        "{context} tangent requires an indefinite or wide sparse solve beyond the {dense_fallback_limit}-dof dense fallback: {sparse_failure}"
+        "{context} tangent could not produce a validated sparse solution and exceeds the {dense_fallback_limit}-dof dense fallback: {sparse_failure}"
     ))
 }
 
 fn solve_refined(
     matrix: &SparseMatrix,
     rhs: &[f64],
-    factor: &SymmetricBandCholesky,
+    solve: impl Fn(&[f64]) -> Result<Vec<f64>, String>,
     context: &str,
 ) -> Result<Vec<f64>, String> {
-    let mut solution = factor.solve(rhs)?;
+    let mut solution = solve(rhs)?;
     let tolerance = backward_error_tolerance(rhs.len());
-    for refinement in 0..=4 {
-        let residual = linear_residual(matrix, rhs, &solution);
-        let backward_error = maximum_backward_error(matrix, rhs, &solution, &residual);
-        if backward_error.is_finite() && backward_error <= tolerance {
+    for _ in 0..4 {
+        let backward_error = sparse_solution_backward_error(matrix, rhs, &solution, tolerance)
+            .map_err(|error| format!("{context} tangent validation failed: {error}"))?;
+        if backward_error <= tolerance {
             return Ok(solution);
         }
-        if refinement == 4 {
-            return Err(format!(
-                "{context} tangent solution failed backward-error validation ({backward_error:.6e})"
-            ));
-        }
-        let correction = factor.solve(&residual)?;
+        let residual = sparse_residual_vector(matrix, rhs, &solution)?;
+        let correction = solve(&residual)?;
         for (value, correction) in solution.iter_mut().zip(correction) {
             *value += correction;
+            if !value.is_finite() {
+                return Err(format!(
+                    "{context} tangent refinement produced a non-finite value"
+                ));
+            }
         }
+        check_cancellation()?;
     }
-    unreachable!("refinement loop always returns")
-}
-
-fn linear_residual(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> Vec<f64> {
-    (0..matrix.size())
-        .map(|row| {
-            rhs[row]
-                - matrix
-                    .row_entries(row)
-                    .iter()
-                    .map(|&(column, value)| value * solution[column])
-                    .sum::<f64>()
-        })
-        .collect()
+    validate_solution(matrix, rhs, &solution, context)?;
+    Ok(solution)
 }
 
 fn validate_solution(
@@ -113,46 +113,15 @@ fn validate_solution(
     solution: &[f64],
     context: &str,
 ) -> Result<(), String> {
-    let residual = linear_residual(matrix, rhs, solution);
-    let backward_error = maximum_backward_error(matrix, rhs, solution, &residual);
-    if !backward_error.is_finite() || backward_error > backward_error_tolerance(rhs.len()) {
+    let tolerance = backward_error_tolerance(rhs.len());
+    let backward_error = sparse_solution_backward_error(matrix, rhs, solution, tolerance)
+        .map_err(|error| format!("{context} tangent validation failed: {error}"))?;
+    if backward_error > tolerance {
         return Err(format!(
             "{context} tangent solution failed backward-error validation ({backward_error:.6e})"
         ));
     }
     Ok(())
-}
-
-fn maximum_backward_error(
-    matrix: &SparseMatrix,
-    rhs: &[f64],
-    solution: &[f64],
-    residual: &[f64],
-) -> f64 {
-    let mut maximum = 0.0_f64;
-    for row in 0..matrix.size() {
-        let row_entries = matrix.row_entries(row);
-        let row_norm = row_entries
-            .iter()
-            .map(|(_, value)| value.abs())
-            .sum::<f64>();
-        let connected_solution_scale = row_entries
-            .iter()
-            .map(|(column, _)| solution[*column].abs())
-            .fold(0.0, f64::max);
-        let equation_scale = rhs[row].abs() + row_norm * connected_solution_scale;
-        let relative = if equation_scale == 0.0 {
-            if residual[row] == 0.0 {
-                0.0
-            } else {
-                f64::INFINITY
-            }
-        } else {
-            residual[row].abs() / equation_scale
-        };
-        maximum = maximum.max(relative);
-    }
-    maximum
 }
 
 fn backward_error_tolerance(size: usize) -> f64 {

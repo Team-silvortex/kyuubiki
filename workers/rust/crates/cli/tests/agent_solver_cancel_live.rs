@@ -412,7 +412,13 @@ fn cancel_heat_element_assembly_then_reuse_the_job() -> Result<(), Box<dyn Error
 
 #[test]
 fn cancel_heat_sparse_compression_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
-    cancel_preparation("sparse_compress", HEAT, heat_grid("compression-held", 40))
+    // Scaling validation polls a 1024-value block before 64-row compression begins.
+    cancel_pass(
+        "sparse_compress",
+        HEAT,
+        heat_grid("compression-held", 40),
+        1024,
+    )
 }
 
 #[test]

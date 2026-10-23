@@ -16,9 +16,10 @@ fn request(
     let model_type = format!("study_model/{family}");
     let result_type = format!("result/{family}");
     let summary_type = "artifact/result_summary";
+    // Keep the rejection fixture off the exact one-correction root at load 2.
     let mut model = json!({
         "nodes":[{"id":"base","x":0.0,"fix_x":true,"load_x":0.0},
-                 {"id":"tip","x":1.0,"fix_x":false,"load_x":2.0}],
+                 {"id":"tip","x":1.0,"fix_x":false,"load_x":if contact { 2.0 } else { 3.0 }}],
         "elements":[{"id":"spring","node_i":0,"node_j":1,"stiffness":1.0,
                      "cubic_stiffness":if contact { 0.0 } else { 1.0 }}],
         "load_steps":if contact { 4 } else { 1 },"max_iterations":iterations,"tolerance":1e-12
@@ -124,6 +125,9 @@ fn explicit_recovery_keeps_diagnostics_and_independent_work_without_a_false_qual
             assert_eq!(raw["converged"], false);
             assert_eq!(raw["achieved_load_factor"], if contact { 0.5 } else { 0.0 });
             assert_eq!(raw["residual_norm"], 0.0);
+            let failed_step = raw["steps"].as_array().unwrap().last().unwrap();
+            assert_eq!(failed_step["converged"], false);
+            assert!(failed_step["residual_norm"].as_f64().unwrap() > 1e-12);
             let trace = run
                 .node_runs
                 .iter()
@@ -161,5 +165,27 @@ fn full_load_replay_after_failure_completes_direct_and_summary_quality_chains() 
                 json!({"value":7})
             );
         }
+    }
+}
+
+#[test]
+fn exact_one_correction_solution_is_admitted_without_a_spurious_iteration_failure() {
+    for extract_first in [false, true] {
+        let mut request = request(false, 1, false, extract_first);
+        request.input_artifacts.get_mut("input").unwrap()["nodes"][1]["load_x"] = json!(2.0);
+        let run = run_workflow_graph(request).unwrap();
+        assert!(run.failed_nodes.is_empty());
+        assert!(run.skipped_nodes.is_empty());
+        let result = &run.artifacts["raw.result"];
+        assert_eq!(result["converged"], true);
+        assert_eq!(result["achieved_load_factor"], 1.0);
+        assert_eq!(result["nodes"][1]["ux"], 1.0);
+        assert_eq!(result["elements"][0]["force"], 2.0);
+        assert_eq!(result["residual_norm"], 0.0);
+        assert_eq!(result["steps"][0]["iterations"], 1);
+        assert_eq!(
+            run.artifacts["decision.summary"]["structural_quality_ready"],
+            true
+        );
     }
 }

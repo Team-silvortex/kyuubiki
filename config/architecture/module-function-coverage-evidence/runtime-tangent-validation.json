@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded symmetric tangent validation for corotational frames and cohesive interfaces: original-equation componentwise checks, range-aware correction residuals, reusable band/dense factors, size-limited fallback, invalid-column rejection and cancellation replay. This is not a general nonlinear or conditioning qualification.",
+  "evidence_claims": [
+    {
+      "id": "symmetric-tangent-validation-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_symmetric_tangent.rs",
+        "workers/rust/crates/solver/src/linear_symmetric_tangent_validation_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_branch_continuation.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_sparse.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_sparse.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/symmetric-tangent-validation-reliability-20261020.md"
+      ],
+      "required_text": [
+        "overflowing_tangent_residual_cannot_be_hidden_by_nan_maximum",
+        "finite_wrong_tangent_response_cannot_pass_with_an_overflowing_scale",
+        "underflowed_tangent_products_cannot_certify_a_wrong_nonzero_response",
+        "large_connected_displacement_cannot_mask_a_wrong_weak_equation",
+        "both_tangent_backends_validate_original_equations_at_extreme_scale",
+        "finite_tangent_solution_recovers_after_banded_substitution_overflow",
+        "malformed_tangent_columns_fail_before_either_factorization_path",
+        "tangent_validation_cancels_during_complete_scan_and_wide_range_recovery",
+        "dense_tangent_refinement_reuses_factor_and_preserves_cancellation",
+        "tangent_refinement_failure_cannot_bypass_iteration_or_dense_size_limits",
+        "accepted_tangent_needs_no_correction_vector_and_cancelled_validation_cannot_fallback",
+        "branched_arch_continuation_is_objective_and_contains_local_seed_failures",
+        "cancellation_is_not_exported_as_a_nonconverged_cohesive_result",
+        "This is bounded tangent-equation validation, not general nonlinear convergence, conditioning, physical qualification or durable restart."
+      ]
+    }
+  ]
+}

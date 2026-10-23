@@ -16,9 +16,10 @@ const DOMAINS: &[&str] = &[
 ];
 
 fn partial_result(contact: bool) -> Value {
+    // Backtracking solves u + u^3 = 2 exactly in one correction; load 3 does not.
     let mut model = json!({
         "nodes": [{"id":"base","x":0.0,"fix_x":true,"load_x":0.0},
-                  {"id":"tip","x":1.0,"fix_x":false,"load_x":2.0}],
+                  {"id":"tip","x":1.0,"fix_x":false,"load_x":if contact { 2.0 } else { 3.0 }}],
         "elements": [{"id":"spring","node_i":0,"node_j":1,"stiffness":1.0,
                       "cubic_stiffness":if contact { 0.0 } else { 1.0 }}],
         "load_steps":if contact { 4 } else { 1 }, "max_iterations":1, "tolerance":1e-12
@@ -34,6 +35,9 @@ fn partial_result(contact: bool) -> Value {
     let result = run_solve_operator(&format!("solve.{family}"), model).unwrap();
     assert_eq!(result["converged"], false);
     assert_eq!(result["residual_norm"], 0.0);
+    let failed_step = result["steps"].as_array().unwrap().last().unwrap();
+    assert_eq!(failed_step["converged"], false);
+    assert!(failed_step["residual_norm"].as_f64().unwrap() > 1e-12);
     result
 }
 

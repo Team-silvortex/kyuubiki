@@ -1,6 +1,10 @@
 use crate::linear_algebra::SparseMatrix;
 use crate::solver_control::{SolverStage, checkpoint};
 
+#[cfg(test)]
+#[path = "linear_banded_substitution_tests.rs"]
+mod substitution_tests;
+
 /// Reusable Cholesky factor for symmetric positive-definite matrices with a narrow band.
 pub(crate) struct SymmetricBandCholesky {
     size: usize,
@@ -81,20 +85,24 @@ impl SymmetricBandCholesky {
         let mut forward = vec![0.0; self.size];
         for row in 0..self.size {
             let start = row.saturating_sub(self.width);
-            let correction = (start..row)
-                .map(|column| self.get(row, column) * forward[column])
-                .sum::<f64>();
-            forward[row] = (rhs[row] - correction) / self.get(row, row);
+            forward[row] = crate::linear_substitution::solve_row(
+                rhs[row],
+                (start..row).map(|column| (self.get(row, column), forward[column])),
+                self.get(row, row),
+                SolverStage::BandedSubstitutionRange,
+            )?;
             checkpoint(SolverStage::BandedSubstitution, row + 1)?;
         }
 
         let mut solution = vec![0.0; self.size];
         for row in (0..self.size).rev() {
             let end = (row + self.width + 1).min(self.size);
-            let correction = ((row + 1)..end)
-                .map(|other| self.get(other, row) * solution[other])
-                .sum::<f64>();
-            solution[row] = (forward[row] - correction) / self.get(row, row);
+            solution[row] = crate::linear_substitution::solve_row(
+                forward[row],
+                ((row + 1)..end).map(|other| (self.get(other, row), solution[other])),
+                self.get(row, row),
+                SolverStage::BandedSubstitutionRange,
+            )?;
             checkpoint(
                 SolverStage::BandedSubstitution,
                 self.size + (self.size - row),

@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded banded-substitution range recovery shared with dense triangular solves: finite large responses without dense fallback, subnormal product accumulation, preserved ordinary arithmetic, and cancellable immutable-factor replay. This does not qualify all factorization ranges or general conditioning.",
+  "evidence_claims": [
+    {
+      "id": "banded-substitution-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_banded.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/src/linear_dense_substitution.rs",
+        "workers/rust/crates/solver/src/linear_banded_substitution_tests.rs",
+        "workers/rust/crates/solver/src/linear_dense_substitution_tests.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/banded-substitution-range-reliability-20261023.md"
+      ],
+      "required_text": [
+        "banded_substitution_keeps_finite_large_responses_on_the_sparse_path",
+        "banded_substitution_recovers_erased_products_before_division",
+        "banded_substitution_rejects_nonzero_response_range_loss_then_replays",
+        "banded_large_rhs_chain_stays_sparse_with_dense_fallback_disabled",
+        "banded_transposed_substitution_retains_fused_product_tails",
+        "banded_range_passes_cancel_without_poisoning_the_prepared_factor",
+        "ordinary_banded_substitution_preserves_bits_and_skips_range_passes",
+        "banded_invalid_rhs_and_true_overflow_fail_before_clean_replay",
+        "This is bounded banded-substitution validation, not general factorization range, conditioning, physical qualification or durable restart."
+      ]
+    }
+  ]
+}

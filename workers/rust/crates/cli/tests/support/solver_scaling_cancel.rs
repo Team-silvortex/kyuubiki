@@ -37,11 +37,12 @@ fn cancel_sparse_rhs_scaling_then_reuse_the_job() -> Result<(), Box<dyn Error>> 
 
 #[test]
 fn cancel_sparse_diagonal_magnitude_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    // Scaling validation is the first nonzero checkpoint, before the row reduction.
     cancel_pass(
         "sparse_diagonal_magnitude",
         HEAT,
         heat_grid("diagonal-magnitude", 40),
-        64,
+        1024,
     )
 }
 

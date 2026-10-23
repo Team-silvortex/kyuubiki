@@ -80,6 +80,7 @@ mod linear_binary_scale;
 mod linear_dense;
 mod linear_solver_profile;
 mod linear_spd;
+mod linear_substitution;
 mod linear_symmetric_tangent;
 mod magnetostatic_bar_1d;
 mod magnetostatic_bar_1d_validation;
