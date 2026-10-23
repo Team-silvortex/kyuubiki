@@ -1,0 +1,56 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "daji 3.0.x",
+  "domain": "shared-linear-admission",
+  "profiles": [
+    {
+      "profile_id": "sparse-erased-load-admission-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "sparse-erased-load-admission-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.spring_1d", "solve.nonlinear_spring_1d", "solve.contact_gap_1d",
+        "solve.transient_spring_1d", "solve.heat_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "plain_scaled_and_compressed_erased_load_negative_controls",
+        "unrelated_strong_equation_and_whole_matrix_range_fallback_controls",
+        "valid_zero_load_quantized_response_and_cancelling_term_controls",
+        "candidate_rhs_scale_and_normalization_error_controls",
+        "wide_plain_and_range_cancellation_with_clean_admission_replay",
+        "three_preconditioners_and_prepared_solver_failure_then_clean_replay",
+        "branched_spring_borrowed_owned_orientation_json_dispatch_and_workflow"
+      ],
+      "formal_invariants": [
+        "nonzero_load_without_any_row_response_receives_no_unknown_rounding_allowance",
+        "plain_range_and_iterative_candidate_admission_share_the_same_policy",
+        "response_presence_is_row_local_not_inferred_from_other_unknowns",
+        "nonzero_cancelling_terms_are_distinct_from_absent_response",
+        "raw_residuals_and_existing_non_erased_quantization_policy_remain_available",
+        "failed_or_cancelled_admission_cannot_publish_workflow_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium.rs",
+        "workers/rust/crates/solver/src/linear_sparse_erased_load_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "reports/sparse-erased-load-admission-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "sparse-erased-load-admission-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_algebra::residual::erased_load_tests -- --nocapture"
+        },
+        {
+          "id": "sparse-erased-load-admission-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test spring_mixed_scale_workflow --test transient_spring_reliability --test nonlinear_spring_recovery -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

@@ -2,6 +2,52 @@ use super::*;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 #[test]
+fn constraint_row_stage_appends_without_renumbering_existing_stages() {
+    assert_eq!(SolverStage::ConstraintReduce as u8, 17);
+    assert_eq!(SolverStage::TridiagonalForwardRange as u8, 84);
+    assert_eq!(SolverStage::ConstraintReduceRow as u8, 85);
+    assert_eq!(
+        SolverStage::decode(85),
+        Some(SolverStage::ConstraintReduceRow)
+    );
+    assert_eq!(
+        SolverStage::ConstraintReduceRow.as_str(),
+        "constraint_reduce_row"
+    );
+}
+
+#[test]
+fn tridiagonal_range_stage_appends_without_renumbering_existing_stages() {
+    assert_eq!(SolverStage::TridiagonalSubstitution as u8, 8);
+    assert_eq!(SolverStage::BandedSubstitutionRange as u8, 82);
+    assert_eq!(SolverStage::TridiagonalSubstitutionRange as u8, 83);
+    assert_eq!(
+        SolverStage::decode(83),
+        Some(SolverStage::TridiagonalSubstitutionRange)
+    );
+    assert_eq!(SolverStage::decode(0), None);
+    assert_eq!(SolverStage::decode(u8::MAX), None);
+    assert_eq!(
+        SolverStage::TridiagonalSubstitutionRange.as_str(),
+        "tridiagonal_substitution_range"
+    );
+}
+
+#[test]
+fn tridiagonal_forward_stage_appends_after_back_substitution_range() {
+    assert_eq!(SolverStage::TridiagonalSubstitutionRange as u8, 83);
+    assert_eq!(SolverStage::TridiagonalForwardRange as u8, 84);
+    assert_eq!(
+        SolverStage::decode(84),
+        Some(SolverStage::TridiagonalForwardRange)
+    );
+    assert_eq!(
+        SolverStage::TridiagonalForwardRange.as_str(),
+        "tridiagonal_forward_range"
+    );
+}
+
+#[test]
 fn pre_cancelled_control_never_evaluates_the_operation() {
     let control = SolverControl::default();
     control.request_cancel();

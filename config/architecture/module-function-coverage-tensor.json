@@ -67,6 +67,8 @@
     "config/architecture/module-function-coverage-evidence/runtime-dense-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-tangent-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-banded-validation.json",
+    "config/architecture/module-function-coverage-evidence/runtime-chain-validation.json",
+    "config/architecture/module-function-coverage-evidence/runtime-constraint-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-thermal-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-transport-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-transport-upwind.json",

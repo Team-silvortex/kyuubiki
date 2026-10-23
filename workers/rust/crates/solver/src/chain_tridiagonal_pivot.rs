@@ -1,4 +1,4 @@
-use super::{ensure_usable_pivot, row_scales};
+use super::{ensure_usable_pivot, finish_back_substitution, row_scales};
 use crate::solver_control::{SolverStage, checkpoint};
 
 /// Adjacent-row pivoted LU: U gains only one additional superdiagonal.
@@ -67,28 +67,43 @@ impl PivotedTridiagonal {
         for row in 0..size.saturating_sub(1) {
             let next = row + 1;
             if self.swapped[row] {
-                let previous = result[row];
-                result[row] = result[next];
-                result[next] = (-self.factors[row]).mul_add(result[row], previous);
-            } else {
-                result[next] = (-self.factors[row]).mul_add(result[row], result[next]);
+                result.swap(row, next);
             }
-            if !result[next].is_finite() {
-                return Err("tridiagonal elimination diverged".into());
+            let original = result[next];
+            result[next] = (-self.factors[row]).mul_add(result[row], original);
+            if super::range_value::update_needs_range(
+                original,
+                self.factors[row],
+                result[row],
+                result[next],
+            )? {
+                drop(result);
+                return super::forward_range::solve(
+                    &self.diagonal,
+                    &self.upper,
+                    &self.second_upper,
+                    &self.factors,
+                    &self.swapped,
+                    rhs,
+                );
             }
             if next % 256 == 0 {
                 checkpoint(SolverStage::TridiagonalSubstitution, next)?;
             }
         }
         for row in (0..size).rev() {
-            let mut value = result[row];
-            if row + 1 < size {
-                value = (-self.upper[row]).mul_add(result[row + 1], value);
-            }
-            if row + 2 < size {
-                value = (-self.second_upper[row]).mul_add(result[row + 2], value);
-            }
-            result[row] = value / self.diagonal[row];
+            result[row] = finish_back_substitution(
+                result[row],
+                self.diagonal[row],
+                (row + 1..(row + 3).min(size)).map(|column| {
+                    let coefficient = if column == row + 1 {
+                        self.upper[row]
+                    } else {
+                        self.second_upper[row]
+                    };
+                    (coefficient, result[column])
+                }),
+            )?;
             if row % 256 == 0 {
                 checkpoint(SolverStage::TridiagonalSubstitution, size + size - row)?;
             }

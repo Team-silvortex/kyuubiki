@@ -90,6 +90,9 @@ pub enum SolverStage {
     DenseRhsScale,
     DenseSubstitutionRange,
     BandedSubstitutionRange,
+    TridiagonalSubstitutionRange,
+    TridiagonalForwardRange,
+    ConstraintReduceRow,
 }
 
 impl SolverStage {
@@ -177,6 +180,9 @@ impl SolverStage {
             Self::DenseRhsScale => "dense_rhs_scale",
             Self::DenseSubstitutionRange => "dense_substitution_range",
             Self::BandedSubstitutionRange => "banded_substitution_range",
+            Self::TridiagonalSubstitutionRange => "tridiagonal_substitution_range",
+            Self::TridiagonalForwardRange => "tridiagonal_forward_range",
+            Self::ConstraintReduceRow => "constraint_reduce_row",
         }
     }
 
@@ -264,6 +270,9 @@ impl SolverStage {
             Self::DenseRhsScale,
             Self::DenseSubstitutionRange,
             Self::BandedSubstitutionRange,
+            Self::TridiagonalSubstitutionRange,
+            Self::TridiagonalForwardRange,
+            Self::ConstraintReduceRow,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)

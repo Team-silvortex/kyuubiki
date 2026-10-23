@@ -90,10 +90,12 @@ pub(in crate::linear_algebra) fn scaled_entries(
     let (rhs, rhs_exponent) = split(expected)?;
     let mut exponent = if rhs == 0.0 { i32::MIN } else { rhs_exponent };
     let mut solution_roundoff = 0.0;
+    let mut has_response = false;
     checkpoint(stage, 0)?;
     for (index, (column, coefficient)) in entries.clone().enumerate() {
         let component = component(solution, column)?;
         let (high, _, power) = product(coefficient, component)?;
+        has_response |= high != 0.0;
         solution_roundoff += super::subnormal_solution_roundoff(coefficient, component);
         if high != 0.0 {
             exponent = exponent.max(power);
@@ -141,7 +143,7 @@ pub(in crate::linear_algebra) fn scaled_entries(
             residual.abs() / scale
         },
         equation_scale: restore(scale, exponent),
-        solution_roundoff,
+        solution_roundoff: super::row_solution_roundoff(expected, has_response, solution_roundoff),
     })
 }
 

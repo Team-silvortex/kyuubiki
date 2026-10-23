@@ -4,7 +4,7 @@ use super::{
     residual::{
         product_needs_range_check,
         range::{RangeError, scaled_entries},
-        subnormal_solution_roundoff,
+        row_solution_roundoff, subnormal_solution_roundoff,
     },
 };
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
@@ -40,6 +40,7 @@ impl CompressedSparseMatrix {
             let mut actual = 0.0;
             let mut scale = expected.abs();
             let mut solution_roundoff = 0.0;
+            let mut has_response = false;
             let mut needs_range_check = false;
             visit_row_chunks(
                 columns,
@@ -47,6 +48,7 @@ impl CompressedSparseMatrix {
                 |offset, columns| {
                     for (&column, &coefficient) in columns.iter().zip(&values[offset..]) {
                         let term = coefficient * solution[column];
+                        has_response |= term != 0.0;
                         needs_range_check |=
                             product_needs_range_check(coefficient, solution[column], term);
                         actual += term;
@@ -73,7 +75,9 @@ impl CompressedSparseMatrix {
             } else if scale == 0.0 {
                 0.0
             } else {
-                (residual - solution_roundoff).max(0.0) / scale
+                (residual - row_solution_roundoff(expected, has_response, solution_roundoff))
+                    .max(0.0)
+                    / scale
             };
             accepted &= relative <= SPARSE_RESIDUAL_TOLERANCE;
             checkpoint_chunk(SolverStage::ResidualValidate, row + 1, self.size())?;

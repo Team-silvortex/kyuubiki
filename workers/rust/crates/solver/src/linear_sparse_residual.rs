@@ -13,6 +13,10 @@ mod range_tests;
 #[path = "linear_sparse_residual_underflow_tests.rs"]
 mod underflow_tests;
 
+#[cfg(test)]
+#[path = "linear_sparse_erased_load_tests.rs"]
+mod erased_load_tests;
+
 // A subnormal displacement has a fixed representational spacing. Bound its
 // half-ulp contribution locally; never borrow another equation's force or units.
 pub(super) fn subnormal_solution_roundoff(coefficient: f64, value: f64) -> f64 {
@@ -20,6 +24,15 @@ pub(super) fn subnormal_solution_roundoff(coefficient: f64, value: f64) -> f64 {
         (coefficient.abs() * f64::from_bits(1)) * 0.5
     } else {
         0.0
+    }
+}
+
+pub(super) fn row_solution_roundoff(expected: f64, has_response: bool, roundoff: f64) -> f64 {
+    // A zero response cannot spend its representation budget to erase a nonzero load.
+    if expected != 0.0 && !has_response {
+        0.0
+    } else {
+        roundoff
     }
 }
 
@@ -175,11 +188,13 @@ pub(super) fn sparse_relative_residual(
         let mut actual = 0.0;
         let mut equation_scale = expected.abs();
         let mut solution_roundoff = 0.0;
+        let mut has_response = false;
         let mut needs_range_check = false;
         visit_row_chunks(row, SolverStage::ResidualValidateRow, |_, entries| {
             for &(column, value) in entries {
                 let component = solution.get(column).copied().unwrap_or(f64::NAN);
                 let term = value * component;
+                has_response |= term != 0.0;
                 needs_range_check |= product_needs_range_check(value, component, term);
                 actual += term;
                 equation_scale += term.abs();
@@ -191,7 +206,11 @@ pub(super) fn sparse_relative_residual(
             drop(rows);
             return range::relative_residual(matrix, rhs, solution);
         }
-        rows.push((residual, equation_scale, solution_roundoff));
+        rows.push((
+            residual,
+            equation_scale,
+            row_solution_roundoff(*expected, has_response, solution_roundoff),
+        ));
         checkpoint_chunk(SolverStage::ResidualValidate, index + 1, size)?;
     }
 

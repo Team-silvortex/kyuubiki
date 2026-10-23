@@ -1,0 +1,95 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded chain/sparse prescribed-value consistency, sparse reduction contracts, representable boundary-load recovery and cancellable scans. Scope excludes general original-equation or physical qualification.",
+  "evidence_claims": [
+    {
+      "id": "prescribed-zero-cancellation-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed.rs",
+        "workers/rust/crates/solver/src/linear_sparse_reduction.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed_cancellation_tests.rs",
+        "workers/rust/crates/solver/src/linear_prescribed_cancellation_tests.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_prescribed_range.rs",
+        "workers/rust/crates/engine/tests/magnetostatic_prescribed_workflow.rs",
+        "config/operator-validation-profiles/linear-constraints.json",
+        "reports/prescribed-zero-cancellation-reliability-20261023.md"
+      ],
+      "required_text": [
+        "prescribed_cancellation_sparse_recovers_normal_product_tail_before_solving",
+        "prescribed_cancellation_chain_recovers_normal_product_tail_on_either_boundary",
+        "prescribed_cancellation_sparse_replays_the_full_row_after_addition_loss",
+        "prescribed_cancellation_chain_replays_both_boundaries_after_addition_loss",
+        "prescribed_cancellation_sparse_recovers_an_intermediate_zero_before_a_later_term",
+        "prescribed_cancellation_chain_recovers_an_intermediate_zero_before_a_later_boundary",
+        "prescribed_cancellation_sparse_cancels_each_wide_replay_phase_then_reuses_inputs",
+        "prescribed_cancellation_chain_cancels_recovery_and_publication_then_replays",
+        "magnetic_prescribed_cancellation_retains_small_response_on_paths_and_junctions",
+        "magnetic_prescribed_cancellation_survives_serialized_dispatch_and_workflow",
+        "This is bounded prescribed-zero cancellation recovery, not complete original constrained-system admission, arbitrary precision, physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "prescribed-value-consistency-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed.rs",
+        "workers/rust/crates/solver/src/linear_sparse_reduction.rs",
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_constraint_consistency_tests.rs",
+        "config/operator-validation-profiles/linear-constraints.json",
+        "reports/prescribed-value-consistency-reliability-20261023.md"
+      ],
+      "required_text": [
+        "prescribed_consistency_rejects_distinct_duplicate_values_at_every_scale_and_order",
+        "prescribed_consistency_keeps_equal_repeats_and_signed_zeros_idempotent",
+        "prescribed_consistency_keeps_distinct_values_on_different_dofs_independent",
+        "prescribed_consistency_rejects_invalid_values_even_in_repeated_assignments",
+        "prescribed_consistency_cancellation_keeps_long_equal_repeats_reusable",
+        "Distinct finite assignments to the same DOF are conflicts; signed zeros compare numerically equal."
+      ]
+    },
+    {
+      "id": "sparse-prescribed-reduction-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_sparse_reduction.rs",
+        "workers/rust/crates/solver/src/linear_sparse_reduction_tests.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_prescribed_range.rs",
+        "workers/rust/crates/engine/tests/magnetostatic_prescribed_workflow.rs",
+        "config/operator-validation-profiles/linear-constraints.json",
+        "reports/sparse-prescribed-reduction-reliability-20261023.md"
+      ],
+      "required_text": [
+        "sparse_prescribed_range_combines_four_quarter_quantum_contributions",
+        "sparse_prescribed_range_rejects_erased_and_rounded_reduced_loads",
+        "sparse_prescribed_range_recovers_overflow_cancellation_without_erasing_the_load",
+        "sparse_reduction_rejects_dimension_mismatch_instead_of_panicking_or_ignoring_rows",
+        "sparse_reduction_rejects_invalid_or_conflicting_prescribed_data",
+        "sparse_reduction_validates_values_even_when_their_rows_are_constrained",
+        "sparse_prescribed_range_preserves_normal_rhs_bits_and_symmetric_coefficients",
+        "sparse_prescribed_range_cancels_wide_row_and_recovery_phases_then_replays",
+        "constraint_row_stage_appends_without_renumbering_existing_stages",
+        "magnetic_sparse_boundary_preserves_constant_subnormal_potential_on_a_four_arm_junction",
+        "magnetic_sparse_boundary_recovers_junction_load_through_json_and_workflow",
+        "This is bounded sparse constraint-reduction evidence, not general original-equation admission, arbitrary precision, physical qualification or durable restart."
+      ]
+    }
+  ]
+}

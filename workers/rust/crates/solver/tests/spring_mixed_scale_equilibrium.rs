@@ -3,6 +3,152 @@ use kyuubiki_protocol::{
 };
 use kyuubiki_solver::{solve_spring_1d, solve_spring_1d_owned};
 
+#[test]
+fn branched_erased_load_is_rejected_before_result_publication_and_clean_replay() {
+    for sign in [-1.0, 1.0] {
+        for reverse in [false, true] {
+            let mut input = model(1025, 4.0, 4.0);
+            for node in &mut input.nodes {
+                node.load_x *= sign;
+            }
+            input.nodes[1025].load_x = sign * f64::from_bits(1);
+            if reverse {
+                input.nodes.reverse();
+                for element in &mut input.elements {
+                    (element.node_i, element.node_j) =
+                        (1025 - element.node_j, 1025 - element.node_i);
+                }
+            }
+            for result in [
+                solve_spring_1d(&input),
+                solve_spring_1d_owned(input.clone()),
+            ] {
+                assert!(
+                    result.is_err(),
+                    "branched spring accepted an erased independent load"
+                );
+                assert!(result.unwrap_err().contains("residual validation"));
+            }
+            input
+                .nodes
+                .iter_mut()
+                .find(|node| node.id == "n1025")
+                .unwrap()
+                .load_x = sign * 4.0;
+            for result in [
+                solve_spring_1d(&input).unwrap(),
+                solve_spring_1d_owned(input.clone()).unwrap(),
+            ] {
+                let weak = result.nodes.iter().find(|node| node.id == "n1025").unwrap();
+                assert!((weak.ux - sign).abs() < 1e-8);
+                let force = result
+                    .elements
+                    .iter()
+                    .find(|element| element.id == "anchor1025")
+                    .unwrap()
+                    .force;
+                assert!((force.abs() - 4.0).abs() < 1e-8);
+            }
+        }
+    }
+}
+
+#[test]
+fn unequal_spring_chain_preserves_subnormal_back_substitution_and_forces() {
+    for bits in [1, 3, 7] {
+        for sign in [-1.0, 1.0] {
+            for reverse in [false, true] {
+                let load = sign * f64::from_bits(bits);
+                let mut input = SolveSpring1dRequest {
+                    nodes: (0..3)
+                        .map(|index| Spring1dNodeInput {
+                            id: format!("n{index}"),
+                            x: index as f64,
+                            fix_x: index == 0,
+                            load_x: if index == 2 { load } else { 0.0 },
+                        })
+                        .collect(),
+                    elements: (0..2)
+                        .map(|index| Spring1dElementInput {
+                            id: format!("spring{index}"),
+                            node_i: index,
+                            node_j: index + 1,
+                            stiffness: if index == 0 { 0.5 } else { 0.25 },
+                        })
+                        .collect(),
+                };
+                if reverse {
+                    input.nodes.reverse();
+                    for element in &mut input.elements {
+                        (element.node_i, element.node_j) = (2 - element.node_j, 2 - element.node_i);
+                    }
+                }
+                for result in [
+                    solve_spring_1d(&input).unwrap(),
+                    solve_spring_1d_owned(input.clone()).unwrap(),
+                ] {
+                    for node in &result.nodes {
+                        let multiplier = match node.id.as_str() {
+                            "n0" => 0.0,
+                            "n1" => 2.0,
+                            _ => 6.0,
+                        };
+                        assert_eq!(node.ux, multiplier * load);
+                    }
+                    for element in &result.elements {
+                        assert_eq!(element.force.abs(), load.abs());
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn chain_spring_preserves_subnormal_forward_work_through_operator_results() {
+    for bits in [1, 3, 7] {
+        for sign in [-1.0, 1.0] {
+            for reverse in [false, true] {
+                let load = sign * f64::from_bits(bits);
+                let mut input = SolveSpring1dRequest {
+                    nodes: (0..3)
+                        .map(|index| Spring1dNodeInput {
+                            id: format!("n{index}"),
+                            x: index as f64,
+                            fix_x: index == 0,
+                            load_x: if index == 1 { load } else { 0.0 },
+                        })
+                        .collect(),
+                    elements: (0..2)
+                        .map(|index| Spring1dElementInput {
+                            id: format!("spring{index}"),
+                            node_i: index,
+                            node_j: index + 1,
+                            stiffness: 0.5,
+                        })
+                        .collect(),
+                };
+                if reverse {
+                    input.nodes.reverse();
+                    for element in &mut input.elements {
+                        (element.node_i, element.node_j) = (2 - element.node_j, 2 - element.node_i);
+                    }
+                }
+                for result in [
+                    solve_spring_1d(&input).unwrap(),
+                    solve_spring_1d_owned(input.clone()).unwrap(),
+                ] {
+                    for node in &result.nodes {
+                        assert_eq!(node.ux, if node.id == "n0" { 0.0 } else { 2.0 * load });
+                    }
+                    assert_eq!(result.elements[0].force.abs(), load.abs());
+                    assert_eq!(result.elements[1].force, 0.0);
+                }
+            }
+        }
+    }
+}
+
 fn model(free: usize, strong: f64, weak: f64) -> SolveSpring1dRequest {
     let nodes = (0..=free)
         .map(|index| Spring1dNodeInput {
@@ -138,6 +284,64 @@ fn exactly_representable_subnormal_spring_forces_remain_usable() {
             for result in [borrowed, owned] {
                 assert_eq!(result.nodes[1].ux, displacement);
                 assert_eq!(result.elements[0].force, load);
+            }
+        }
+    }
+}
+
+#[test]
+fn chain_spring_rejects_erased_weak_load_then_replays_representable_response() {
+    let quantum = f64::from_bits(1);
+    for sign in [-1.0, 1.0] {
+        for reverse in [false, true] {
+            let mut input = SolveSpring1dRequest {
+                nodes: (0..3)
+                    .map(|index| Spring1dNodeInput {
+                        id: format!("n{index}"),
+                        x: index as f64,
+                        fix_x: index == 0,
+                        load_x: sign * [0.0, 1.0, quantum][index],
+                    })
+                    .collect(),
+                elements: (1..3)
+                    .map(|index| Spring1dElementInput {
+                        id: format!("spring{index}"),
+                        node_i: 0,
+                        node_j: index,
+                        stiffness: if index == 1 { 1.0 } else { 4.0 },
+                    })
+                    .collect(),
+            };
+            if reverse {
+                input.nodes.reverse();
+                for element in &mut input.elements {
+                    (element.node_i, element.node_j) = (2 - element.node_j, 2 - element.node_i);
+                }
+            }
+            for result in [
+                solve_spring_1d(&input),
+                solve_spring_1d_owned(input.clone()),
+            ] {
+                assert!(result.unwrap_err().contains("backward-error"));
+            }
+            input
+                .nodes
+                .iter_mut()
+                .find(|node| node.id == "n2")
+                .unwrap()
+                .load_x = sign * 4.0 * quantum;
+            for result in [
+                solve_spring_1d(&input).unwrap(),
+                solve_spring_1d_owned(input.clone()).unwrap(),
+            ] {
+                assert_eq!(
+                    result.nodes.iter().find(|node| node.id == "n2").unwrap().ux,
+                    sign * quantum
+                );
+                assert_eq!(
+                    result.nodes.iter().find(|node| node.id == "n1").unwrap().ux,
+                    sign
+                );
             }
         }
     }

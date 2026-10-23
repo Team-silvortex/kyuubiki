@@ -7,6 +7,8 @@
     "config/operator-validation-profiles/cfd.json",
     "config/operator-validation-profiles/electromagnetic.json",
     "config/operator-validation-profiles/line-field.json",
+    "config/operator-validation-profiles/linear-admission.json",
+    "config/operator-validation-profiles/linear-constraints.json",
     "config/operator-validation-profiles/linear-system.json",
     "config/operator-validation-profiles/modal.json",
     "config/operator-validation-profiles/structural.json",

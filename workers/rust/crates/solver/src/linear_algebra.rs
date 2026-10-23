@@ -24,6 +24,14 @@ mod scaling_range_tests;
 #[path = "linear_sparse_equilibrium_tests.rs"]
 mod equilibrium_tests;
 
+#[cfg(test)]
+#[path = "linear_constraint_consistency_tests.rs"]
+mod constraint_consistency_tests;
+
+#[cfg(test)]
+#[path = "linear_prescribed_cancellation_tests.rs"]
+mod prescribed_cancellation_tests;
+
 #[path = "linear_sparse_equilibrium.rs"]
 mod equilibrium;
 

@@ -4,6 +4,37 @@
   "summary": "Bounded local sparse residual validation: overflow and underflow controls, complete admission, mixed-scale row equilibrium, and cooperative replay. PCG global norms and erased products cannot hide tested wrong responses; subnormal displacement tails use a row-local representation bound while retaining representable raw residuals. No general conditioning, physical qualification or durable restart claim.",
   "evidence_claims": [
     {
+      "id": "sparse-erased-load-admission-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/linear_sparse_equilibrium.rs",
+        "workers/rust/crates/solver/src/linear_sparse_erased_load_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "config/operator-validation-profiles/linear-admission.json",
+        "reports/sparse-erased-load-admission-reliability-20261023.md"
+      ],
+      "required_text": [
+        "erased_load_plain_validation_cannot_spend_zero_response_roundoff",
+        "erased_load_scaled_validation_cannot_spend_zero_response_roundoff",
+        "erased_load_compressed_candidate_cannot_accept_a_zero_response",
+        "erased_load_iterative_and_prepared_solves_reject_missing_response_then_replay",
+        "erased_load_admission_is_row_local_in_plain_and_whole_matrix_range_paths",
+        "erased_load_guard_keeps_zero_loads_and_valid_quantized_responses",
+        "erased_load_guard_distinguishes_cancelling_terms_from_absent_response",
+        "erased_load_validation_cancels_wide_plain_and_range_passes_then_replays",
+        "branched_erased_load_is_rejected_before_result_publication_and_clean_replay",
+        "workflow_branched_erased_load_fails_admission_and_replays_with_a_resolved_load",
+        "This is bounded erased-load admission evidence, not general original-equation constraint validation, arbitrary precision, physical qualification or durable restart."
+      ]
+    },
+    {
       "id": "sparse-residual-range-local-reliability",
       "status": "proven",
       "grade": "verified",

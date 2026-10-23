@@ -1,0 +1,204 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "daji 3.0.x",
+  "domain": "shared-linear-constraints",
+  "profiles": [
+    {
+      "profile_id": "prescribed-zero-cancellation-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "prescribed-zero-cancellation-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.heat_bar_1d", "solve.electrostatic_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d",
+        "solve.heat_plane_triangle_2d", "solve.heat_plane_quad_2d",
+        "solve.electrostatic_plane_triangle_2d", "solve.electrostatic_plane_quad_2d",
+        "solve.magnetostatic_plane_triangle_2d", "solve.magnetostatic_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "signed_power_of_two_scaled_normal_product_tail_closed_forms",
+        "complete_and_intermediate_zero_after_product_or_addition_loss",
+        "exact_zero_and_independent_quantum_load_controls",
+        "sparse_exact_load_restoration_and_chain_scaled_quotient_controls",
+        "irreversible_alignment_rejection_and_clean_replay",
+        "wide_row_collection_arithmetic_and_publication_cancellation",
+        "magnetic_path_junction_borrowed_owned_json_dispatch_and_workflow"
+      ],
+      "formal_invariants": [
+        "nonzero_boundary_product_reducing_rhs_to_zero_triggers_original_row_replay",
+        "intermediate_zero_replay_includes_all_boundary_products_not_only_the_last_update",
+        "free_matrix_coefficients_and_sparse_symmetry_remain_unchanged",
+        "ordinary_nonexceptional_rows_keep_their_previous_arithmetic",
+        "true_zero_loads_remain_admissible_without_erasing_independent_equations",
+        "failure_or_cancellation_does_not_publish_a_partial_result"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed.rs",
+        "workers/rust/crates/solver/src/linear_sparse_reduction.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed_cancellation_tests.rs",
+        "workers/rust/crates/solver/src/linear_prescribed_cancellation_tests.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_prescribed_range.rs",
+        "workers/rust/crates/engine/tests/magnetostatic_prescribed_workflow.rs",
+        "reports/prescribed-zero-cancellation-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "prescribed-zero-cancellation-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib prescribed_cancellation -- --nocapture"
+        },
+        {
+          "id": "prescribed-zero-cancellation-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test magnetostatic_prescribed_range --test magnetostatic_prescribed_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "prescribed-value-consistency-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "prescribed-value-consistency-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.heat_bar_1d", "solve.electrostatic_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "cross_backend_duplicate_conflict_controls_at_small_normal_and_large_scales",
+        "identical_repeat_signed_zero_and_separate_dof_controls",
+        "nonfinite_and_out_of_range_duplicate_controls",
+        "long_repeat_indexing_cancellation_and_clean_replay"
+      ],
+      "formal_invariants": [
+        "distinct_finite_assignments_to_the_same_dof_are_conflicts",
+        "duplicate_input_identity_is_independent_of_solver_tolerances",
+        "signed_zeros_remain_numerically_equal",
+        "distinct_dofs_do_not_share_an_identity_comparison",
+        "cancelled_duplicate_indexing_returns_no_partial_solution"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed.rs",
+        "workers/rust/crates/solver/src/linear_sparse_reduction.rs",
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_constraint_consistency_tests.rs",
+        "reports/prescribed-value-consistency-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "prescribed-value-consistency-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib prescribed_consistency -- --nocapture"
+        },
+        {
+          "id": "prescribed-value-consistency-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test magnetostatic_prescribed_range --test magnetostatic_prescribed_workflow --test heat_bar_closed_form --test electrostatic_bar_closed_form --test acoustic_bar_closed_form --test advection_diffusion_bar_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "sparse-prescribed-reduction-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "sparse-prescribed-reduction-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.heat_plane_triangle_2d", "solve.heat_plane_quad_2d",
+        "solve.electrostatic_plane_triangle_2d", "solve.electrostatic_plane_quad_2d",
+        "solve.magnetostatic_plane_triangle_2d", "solve.magnetostatic_plane_quad_2d",
+        "solve.electric_conduction_plane_quad_2d", "solve.magnetostatic_bar_1d"
+      ],
+      "validation_methods": [
+        "signed_quarter_quantum_boundary_aggregation_and_overflow_cancellation",
+        "exact_range_restoration_and_rejected_erased_or_rounded_loads",
+        "dimension_column_order_finiteness_and_duplicate_constraint_controls",
+        "normal_rhs_bit_and_unchanged_symmetric_matrix_controls",
+        "wide_row_validation_reduction_recovery_and_publication_cancellation",
+        "four_arm_magnetic_junction_borrowed_owned_json_dispatch_and_workflow"
+      ],
+      "formal_invariants": [
+        "both_sparse_reducers_validate_the_entire_input_before_reduction",
+        "out_of_range_or_conflicting_constraints_are_not_silently_ignored",
+        "identical_duplicate_constraints_remain_idempotent",
+        "nonexceptional_rhs_subtractions_keep_existing_order_and_bits",
+        "exceptional_boundary_aggregation_preserves_the_free_matrix",
+        "range_recovery_rejects_complete_and_partial_subnormal_restoration_loss",
+        "wide_row_work_is_cooperatively_cancellable",
+        "failed_or_cancelled_reduction_returns_no_partial_tuple"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_sparse_reduction.rs",
+        "workers/rust/crates/solver/src/linear_sparse_reduction_tests.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_prescribed_range.rs",
+        "workers/rust/crates/engine/tests/magnetostatic_prescribed_workflow.rs",
+        "reports/sparse-prescribed-reduction-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "sparse-prescribed-reduction-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib linear_algebra::reduction::tests -- --nocapture"
+        },
+        {
+          "id": "sparse-prescribed-reduction-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test magnetostatic_prescribed_range --test magnetostatic_prescribed_workflow --test heat_plane_contact_reliability --test electric_conduction_reference_invariance --test electrostatic_plane_mesh_refinement --test magnetostatic_plane_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "tridiagonal-prescribed-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "tridiagonal-prescribed-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.heat_bar_1d", "solve.electrostatic_bar_1d", "solve.thermal_bar_1d",
+        "solve.acoustic_bar_1d", "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "signed_half_quantum_and_two_boundary_closed_forms",
+        "overflowing_boundary_product_and_cancellation_controls",
+        "coefficient_scale_orientation_and_ordinary_arithmetic_bit_controls",
+        "pivoted_free_segments_and_independent_quantum_load_controls",
+        "fixed_input_rounding_exclusion_and_original_equation_admission",
+        "true_overflow_irreversible_scaling_and_clean_subsequent_solve_controls",
+        "constraint_scan_reduction_validation_and_publication_cancellation",
+        "magnetic_constant_potential_zero_field_borrowed_owned_and_workflow_controls"
+      ],
+      "formal_invariants": [
+        "boundary_range_repair_is_shared_by_path_consumers",
+        "ordinary_boundary_subtractions_keep_their_previous_order",
+        "exceptional_free_row_coefficients_must_scale_reversibly",
+        "independent_equations_are_not_scaled_by_a_boundary_load",
+        "original_boundary_equations_are_checked_before_segment_publication",
+        "prescribed_values_receive_no_unknown_rounding_allowance",
+        "fixed_reaction_equations_are_not_required_to_have_zero_residual",
+        "failure_or_cancellation_publishes_no_partial_solution"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_residual.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_prescribed_range.rs",
+        "workers/rust/crates/engine/tests/magnetostatic_prescribed_workflow.rs",
+        "reports/tridiagonal-prescribed-range-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "tridiagonal-prescribed-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib prescribed_range -- --nocapture"
+        },
+        {
+          "id": "tridiagonal-prescribed-range-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test magnetostatic_prescribed_range --test magnetostatic_prescribed_workflow --test heat_bar_closed_form --test electrostatic_bar_closed_form --test acoustic_bar_closed_form --test advection_diffusion_bar_closed_form -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

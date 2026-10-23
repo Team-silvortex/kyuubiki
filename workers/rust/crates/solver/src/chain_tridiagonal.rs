@@ -5,9 +5,17 @@ mod pivot;
 use pivot::PivotedTridiagonal;
 #[path = "chain_tridiagonal_equilibration.rs"]
 mod equilibration;
+#[path = "chain_tridiagonal_forward_range.rs"]
+mod forward_range;
+#[path = "chain_tridiagonal_prescribed.rs"]
+mod prescribed;
+#[path = "chain_tridiagonal_range_value.rs"]
+mod range_value;
 #[path = "chain_tridiagonal_residual.rs"]
 mod residual;
 use equilibration::RowEquilibration;
+use prescribed::solve_with_prescribed;
+use residual::maximum_backward_error;
 
 #[cfg(test)]
 #[path = "chain_tridiagonal_pivot_tests.rs"]
@@ -16,6 +24,34 @@ mod pivot_tests;
 #[cfg(test)]
 #[path = "chain_tridiagonal_scaling_tests.rs"]
 mod scaling_tests;
+
+#[cfg(test)]
+#[path = "chain_tridiagonal_validation_tests.rs"]
+mod validation_tests;
+
+#[cfg(test)]
+#[path = "chain_tridiagonal_substitution_tests.rs"]
+mod substitution_tests;
+
+#[cfg(test)]
+#[path = "chain_tridiagonal_forward_range_tests.rs"]
+mod forward_range_tests;
+
+#[cfg(test)]
+#[path = "chain_tridiagonal_forward_underflow_tests.rs"]
+mod forward_underflow_tests;
+
+#[cfg(test)]
+#[path = "chain_tridiagonal_back_underflow_tests.rs"]
+mod back_underflow_tests;
+
+#[cfg(test)]
+#[path = "chain_tridiagonal_prescribed_range_tests.rs"]
+mod prescribed_range_tests;
+
+#[cfg(test)]
+#[path = "chain_tridiagonal_prescribed_cancellation_tests.rs"]
+mod prescribed_cancellation_tests;
 
 struct TridiagonalSystem<'a> {
     diagonal: &'a [f64],
@@ -146,24 +182,14 @@ impl PreparedTridiagonal {
             return Err("tridiagonal back substitution diverged".to_string());
         }
         let tolerance = backward_error_tolerance(rhs.len());
-        let backward_error = if self.equilibration.is_some() {
-            residual::scaled_backward_error(
-                &self.diagonal,
-                &self.lower,
-                &self.upper,
-                rhs,
-                &solution,
-            )?
-        } else {
-            maximum_backward_error(
-                &self.diagonal,
-                &self.lower,
-                &self.upper,
-                rhs,
-                &solution,
-                tolerance,
-            )?
-        };
+        let backward_error = maximum_backward_error(
+            &self.diagonal,
+            &self.lower,
+            &self.upper,
+            rhs,
+            &solution,
+            tolerance,
+        )?;
         if !backward_error.is_finite() || backward_error > tolerance {
             return Err(format!(
                 "tridiagonal solution failed backward-error validation ({backward_error:.6e})"
@@ -174,12 +200,26 @@ impl PreparedTridiagonal {
 
     fn solve_without_pivoting(&self, rhs: &[f64]) -> Result<Vec<f64>, String> {
         let size = rhs.len();
+        let upper = self
+            .equilibration
+            .as_ref()
+            .map_or(self.upper.as_slice(), |scaling| scaling.upper.as_slice());
         let mut rhs_work = rhs.to_vec();
         for row in 1..size {
-            rhs_work[row] =
-                (-self.elimination_factors[row - 1]).mul_add(rhs_work[row - 1], rhs_work[row]);
-            if !rhs_work[row].is_finite() {
-                return Err("tridiagonal elimination diverged".to_string());
+            let original = rhs_work[row];
+            let previous = rhs_work[row - 1];
+            let coefficient = self.elimination_factors[row - 1];
+            rhs_work[row] = (-coefficient).mul_add(previous, original);
+            if range_value::update_needs_range(original, coefficient, previous, rhs_work[row])? {
+                drop(rhs_work);
+                return forward_range::solve(
+                    &self.factored_diagonal,
+                    upper,
+                    &[],
+                    &self.elimination_factors,
+                    &[],
+                    rhs,
+                );
             }
             if row % 256 == 0 {
                 checkpoint(SolverStage::TridiagonalSubstitution, row)?;
@@ -187,14 +227,17 @@ impl PreparedTridiagonal {
         }
 
         let mut solution = vec![0.0; size];
-        let upper = self
-            .equilibration
-            .as_ref()
-            .map_or(self.upper.as_slice(), |scaling| scaling.upper.as_slice());
-        solution[size - 1] = rhs_work[size - 1] / self.factored_diagonal[size - 1];
+        solution[size - 1] = finish_back_substitution(
+            rhs_work[size - 1],
+            self.factored_diagonal[size - 1],
+            std::iter::empty(),
+        )?;
         for row in (0..size - 1).rev() {
-            solution[row] = (-upper[row]).mul_add(solution[row + 1], rhs_work[row])
-                / self.factored_diagonal[row];
+            solution[row] = finish_back_substitution(
+                rhs_work[row],
+                self.factored_diagonal[row],
+                std::iter::once((upper[row], solution[row + 1])),
+            )?;
             if row % 256 == 0 {
                 checkpoint(SolverStage::TridiagonalSubstitution, size + (size - row))?;
             }
@@ -202,6 +245,41 @@ impl PreparedTridiagonal {
         checkpoint(SolverStage::TridiagonalSubstitution, size.saturating_mul(2))?;
         Ok(solution)
     }
+}
+
+fn finish_back_substitution<I>(rhs: f64, pivot: f64, operands: I) -> Result<f64, String>
+where
+    I: ExactSizeIterator<Item = (f64, f64)> + Clone,
+{
+    let mut numerator = rhs;
+    let mut needs_range = false;
+    for (coefficient, solved) in operands.clone() {
+        let updated = (-coefficient).mul_add(solved, numerator);
+        if !needs_range {
+            needs_range = range_value::update_needs_range(numerator, coefficient, solved, updated)?;
+        }
+        numerator = updated;
+    }
+    let result = numerator / pivot;
+    if result.is_finite() {
+        if needs_range {
+            return crate::linear_substitution::solve_scaled_rhs_row_with_policy(
+                crate::linear_binary_scale::split_finite(rhs),
+                operands,
+                pivot,
+                SolverStage::TridiagonalSubstitutionRange,
+                crate::linear_substitution::SubnormalResult::ValidateOriginalEquations,
+            );
+        }
+        // Retain ordered FMA bits and final quantized tails unless an update lost range.
+        return Ok(result);
+    }
+    crate::linear_substitution::solve_row(
+        rhs,
+        operands,
+        pivot,
+        SolverStage::TridiagonalSubstitutionRange,
+    )
 }
 
 pub(crate) fn solve_tridiagonal(
@@ -386,92 +464,6 @@ fn solve_ordered_path<Element>(
     Ok(values)
 }
 
-pub(crate) fn solve_with_prescribed(
-    diagonal: &[f64],
-    lower: &[f64],
-    upper: &[f64],
-    rhs: &[f64],
-    prescribed: &[(usize, f64)],
-) -> Result<Vec<f64>, String> {
-    validate_dimensions(diagonal, lower, upper, rhs)
-        .map_err(|error| format!("1d chain solver failed: {error}"))?;
-    validate_finite(diagonal, lower, upper, rhs)
-        .map_err(|error| format!("1d chain solver failed: {error}"))?;
-    let node_count = diagonal.len();
-    if node_count == 0 {
-        return Err("1d chain solver received inconsistent tridiagonal dimensions".to_string());
-    }
-
-    let mut values = vec![0.0; node_count];
-    let mut fixed = vec![false; node_count];
-    for &(index, value) in prescribed {
-        if index >= node_count {
-            return Err("1d chain solver received an out-of-range prescribed value".to_string());
-        }
-        if !value.is_finite() {
-            return Err("1d chain solver received a non-finite prescribed value".to_string());
-        }
-        if fixed[index] && (values[index] - value).abs() > 1.0e-12 {
-            return Err("1d chain solver received conflicting prescribed values".to_string());
-        }
-        fixed[index] = true;
-        values[index] = value;
-    }
-
-    let mut cursor = 0;
-    while cursor < node_count {
-        if fixed[cursor] {
-            cursor += 1;
-            continue;
-        }
-        let start = cursor;
-        while cursor < node_count && !fixed[cursor] {
-            cursor += 1;
-        }
-        solve_free_segment(
-            start..cursor,
-            &TridiagonalSystem {
-                diagonal,
-                lower,
-                upper,
-                rhs,
-            },
-            &mut values,
-            &fixed,
-        )?;
-    }
-    Ok(values)
-}
-
-fn solve_free_segment(
-    range: std::ops::Range<usize>,
-    system: &TridiagonalSystem<'_>,
-    values: &mut [f64],
-    fixed: &[bool],
-) -> Result<(), String> {
-    let start = range.start;
-    let end = range.end;
-    let count = end - start;
-    let mut rhs_work = system.rhs[start..end].to_vec();
-
-    if start > 0 && fixed[start - 1] {
-        rhs_work[0] -= system.lower[start - 1] * values[start - 1];
-    }
-    if end < values.len() && fixed[end] {
-        rhs_work[count - 1] -= system.upper[end - 1] * values[end];
-    }
-
-    let solved = solve_tridiagonal(
-        &system.diagonal[start..end],
-        &system.lower[start..end - 1],
-        &system.upper[start..end - 1],
-        &rhs_work,
-    )
-    .map_err(|error| format!("1d chain solver failed: {error}"))?;
-    values[start..end].copy_from_slice(&solved);
-    Ok(())
-}
-
 fn validate_dimensions(
     diagonal: &[f64],
     lower: &[f64],
@@ -540,66 +532,6 @@ fn ensure_usable_pivot(pivot: f64, row_scale: f64, size: usize) -> Result<(), St
 fn usable_pivot(pivot: f64, row_scale: f64, size: usize) -> bool {
     let relative_floor = (64.0 * f64::EPSILON * size.max(1) as f64).min(1.0e-8);
     pivot.is_finite() && row_scale > 0.0 && pivot.abs() / row_scale > relative_floor
-}
-
-fn maximum_backward_error(
-    diagonal: &[f64],
-    lower: &[f64],
-    upper: &[f64],
-    rhs: &[f64],
-    solution: &[f64],
-    tolerance: f64,
-) -> Result<f64, String> {
-    checkpoint(SolverStage::SparseResidual, 0)?;
-    let mut rows = Vec::with_capacity(diagonal.len());
-    let mut global_scale = 0.0_f64;
-    for row in 0..diagonal.len() {
-        let diagonal_term = diagonal[row] * solution[row];
-        let mut actual = diagonal_term;
-        let mut scale = rhs[row].abs() + diagonal_term.abs();
-        if row > 0 {
-            let lower_term = lower[row - 1] * solution[row - 1];
-            actual += lower_term;
-            scale += lower_term.abs();
-        }
-        if row + 1 < diagonal.len() {
-            let upper_term = upper[row] * solution[row + 1];
-            actual += upper_term;
-            scale += upper_term.abs();
-        }
-        let residual = (rhs[row] - actual).abs();
-        if !residual.is_finite() || !scale.is_finite() {
-            // Never let infinity in the denominator or NaN in f64::max
-            // turn an unchecked equation into a zero relative error.
-            drop(rows);
-            return residual::scaled_backward_error(diagonal, lower, upper, rhs, solution);
-        }
-        global_scale = global_scale.max(scale);
-        rows.push((residual, scale));
-        if (row + 1) % 256 == 0 {
-            checkpoint(SolverStage::SparseResidual, row + 1)?;
-        }
-    }
-
-    let roundoff_floor = global_scale * f64::EPSILON / tolerance;
-    let mut maximum = 0.0_f64;
-    for (row, (residual, scale)) in rows.into_iter().enumerate() {
-        let effective_scale = scale.max(roundoff_floor);
-        let relative = if effective_scale == 0.0 {
-            if residual == 0.0 { 0.0 } else { f64::INFINITY }
-        } else {
-            residual / effective_scale
-        };
-        maximum = maximum.max(relative);
-        if (row + 1) % 256 == 0 {
-            checkpoint(SolverStage::SparseResidual, diagonal.len() + row + 1)?;
-        }
-    }
-    checkpoint(
-        SolverStage::SparseResidual,
-        diagonal.len().saturating_mul(2),
-    )?;
-    Ok(maximum)
 }
 
 fn backward_error_tolerance(size: usize) -> f64 {

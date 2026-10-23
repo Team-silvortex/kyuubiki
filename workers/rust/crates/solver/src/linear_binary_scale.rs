@@ -21,7 +21,7 @@ pub(crate) fn restore(value: f64, exponent: i32) -> f64 {
         return value;
     }
     let (mantissa, power) = split_finite(value);
-    let exponent = exponent + power;
+    let exponent = exponent.saturating_add(power);
     if exponent > 1023 {
         f64::INFINITY.copysign(value)
     } else if exponent >= -1022 {

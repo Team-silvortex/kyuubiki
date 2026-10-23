@@ -4,6 +4,260 @@
   "domain": "shared-linear-system",
   "profiles": [
     {
+      "profile_id": "tridiagonal-back-underflow-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "tridiagonal-back-underflow-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.spring_1d", "solve.nonlinear_spring_1d", "solve.contact_gap_1d",
+        "solve.transient_spring_1d", "solve.heat_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "signed_erased_rounded_and_minimum_normal_back_numerator_controls",
+        "pivoted_second_superdiagonal_and_early_loss_before_normal_final_update",
+        "fused_tail_equilibration_and_forward_replay_cross_checks",
+        "normal_load_and_dense_reference_cross_checks",
+        "exact_fma_bits_quantized_tails_and_rejected_load_controls",
+        "row_phase_and_late_block_cancellation_with_immutable_factor_replay",
+        "unequal_spring_operator_workflow_and_json_force_balance_controls"
+      ],
+      "formal_invariants": [
+        "each_ordered_back_update_is_checked_not_only_the_final_numerator",
+        "verified_tiny_intermediate_loss_uses_shared_row_range_arithmetic",
+        "ordinary_representable_updates_keep_their_fma_order_and_signed_zero_bits",
+        "back_recovery_adds_no_full_matrix_or_factorization_replay",
+        "original_equation_admission_and_dense_banded_strict_policy_remain_unchanged",
+        "true_overflow_and_irreversible_recovery_alignment_remain_errors",
+        "cancelled_or_failed_back_recovery_cannot_mutate_prepared_factors"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_range_value.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_range.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_back_underflow_tests.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "reports/tridiagonal-back-underflow-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "tridiagonal-back-underflow-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib chain_tridiagonal -- --nocapture"
+        },
+        {
+          "id": "tridiagonal-back-underflow-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test spring_mixed_scale_workflow --test transient_spring_reliability --test nonlinear_spring_recovery --test heat_bar_closed_form --test acoustic_bar_closed_form --test magnetostatic_bar_closed_form --test advection_diffusion_bar_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "tridiagonal-forward-underflow-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "tridiagonal-forward-underflow-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.spring_1d", "solve.nonlinear_spring_1d", "solve.contact_gap_1d",
+        "solve.transient_spring_1d", "solve.heat_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "signed_erased_and_rounded_work_entries_with_and_without_row_swaps",
+        "fused_cancellation_and_minimum_normal_rounding_boundary",
+        "normal_load_metamorphic_and_dense_reference_cross_checks",
+        "mixed_overflow_underflow_and_equilibrated_original_equation_controls",
+        "exact_zero_no_replay_and_2048_row_quantized_tail_controls",
+        "spring_operator_and_workflow_json_roundtrip_controls",
+        "conversion_forward_backward_cancellation_and_factor_replay"
+      ],
+      "formal_invariants": [
+        "tested_tiny_forward_work_is_not_rounded_before_later_division",
+        "exactly_represented_tiny_work_and_exact_cancellation_do_not_allocate_replay",
+        "finite_probes_without_reversible_alignment_keep_original_equation_admission",
+        "actual_extended_replay_still_rejects_irreversible_alignment",
+        "chain_final_rounding_requires_original_equation_validation",
+        "dense_and_banded_substitution_keep_strict_erased_result_rejection",
+        "cancellation_and_failures_leave_prepared_factors_reusable"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_range.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_underflow_tests.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_range_value.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "reports/tridiagonal-forward-underflow-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "tridiagonal-forward-underflow-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib chain_tridiagonal -- --nocapture"
+        },
+        {
+          "id": "tridiagonal-forward-underflow-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test spring_mixed_scale_workflow --test transient_spring_reliability --test nonlinear_spring_recovery --test heat_bar_closed_form --test acoustic_bar_closed_form --test magnetostatic_bar_closed_form --test advection_diffusion_bar_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "tridiagonal-forward-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "tridiagonal-forward-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.spring_1d", "solve.nonlinear_spring_1d", "solve.contact_gap_1d",
+        "solve.transient_spring_1d", "solve.heat_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "signed_unpivoted_and_swapped_forward_overflow_closed_form_controls",
+        "extended_intermediate_propagation_and_cancellation",
+        "independent_minimum_load_and_equilibrated_original_equation_controls",
+        "dense_reference_and_normal_load_metamorphic_cross_checks",
+        "conversion_forward_backward_cancellation_and_factor_replay",
+        "alignment_loss_true_overflow_and_integer_exponent_negative_controls"
+      ],
+      "formal_invariants": [
+        "nonfinite_or_verified_lost_tiny_forward_work_entries_trigger_exceptional_replay",
+        "independent_work_entries_keep_independent_binary_exponents",
+        "the_ordinary_workspace_is_dropped_before_range_replay_allocation",
+        "recovery_uses_existing_factors_without_dense_fallback_or_refactorization",
+        "irreversible_alignment_is_rejected_instead_of_silently_erasing_a_term",
+        "finite_results_still_require_original_equation_admission",
+        "cancellation_and_range_failures_leave_factors_reusable"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_range.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_range_tests.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_range_value.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/src/linear_binary_scale.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "reports/tridiagonal-forward-range-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "tridiagonal-forward-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib chain_tridiagonal -- --nocapture"
+        },
+        {
+          "id": "tridiagonal-forward-range-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test spring_mixed_scale_workflow --test transient_spring_reliability --test nonlinear_spring_recovery --test heat_bar_closed_form --test acoustic_bar_closed_form --test magnetostatic_bar_closed_form --test advection_diffusion_bar_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "tridiagonal-back-substitution-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "tridiagonal-back-substitution-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.spring_1d", "solve.nonlinear_spring_1d", "solve.contact_gap_1d",
+        "solve.transient_spring_1d", "solve.heat_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "signed_finite_response_after_back_substitution_overflow",
+        "adjacent_pivot_second_superdiagonal_and_fused_product_tail_controls",
+        "ordinary_fma_bitwise_parity_including_signed_zero",
+        "range_entry_pass_completion_and_late_block_cancellation_replay",
+        "original_equation_negative_control_and_true_overflow_rejection",
+        "solver_workflow_cli_and_live_agent_consumer_regression"
+      ],
+      "formal_invariants": [
+        "nonfinite_results_or_verified_tiny_back_update_loss_enter_the_recovery_adapter",
+        "finite_rows_without_verified_update_range_loss_preserve_ordered_fma_bits",
+        "chain_range_recovery_reuses_the_dense_banded_row_algorithm_without_dense_fallback",
+        "recovered_candidates_still_require_original_equation_admission",
+        "range_cancellation_and_rejected_rhs_leave_prepared_factors_reusable",
+        "the_new_observation_stage_does_not_renumber_existing_stages"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_substitution_tests.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_range_value.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "reports/tridiagonal-back-substitution-range-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "tridiagonal-back-substitution-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib chain_tridiagonal -- --nocapture"
+        },
+        {
+          "id": "tridiagonal-back-substitution-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test spring_mixed_scale_workflow --test transient_spring_reliability --test nonlinear_spring_recovery --test heat_bar_closed_form --test acoustic_bar_closed_form --test magnetostatic_bar_closed_form --test advection_diffusion_bar_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "tridiagonal-row-validation-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "tridiagonal-row-validation-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.spring_1d", "solve.nonlinear_spring_1d", "solve.contact_gap_1d",
+        "solve.transient_spring_1d", "solve.heat_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d"
+      ],
+      "validation_methods": [
+        "finite_strong_row_and_weak_equation_negative_controls",
+        "subnormal_products_and_erased_load_rejection",
+        "row_local_half_quantum_roundoff_with_multi_quantum_negative_controls",
+        "long_chain_closed_form_near_field_and_quantized_tail",
+        "pivoted_equilibrated_and_ordinary_factor_replay",
+        "solver_workflow_and_agent_consumer_regression"
+      ],
+      "formal_invariants": [
+        "ordinary_and_equilibrated_factors_validate_the_original_equations_with_one_gate",
+        "a_strong_equation_cannot_relax_another_rows_error_scale",
+        "tested_underflowed_products_are_not_treated_as_exact_zero",
+        "half_quantum_roundoff_is_local_to_subnormal_unknowns_not_global_loads",
+        "a_nonzero_load_with_all_row_products_erased_cannot_be_certified",
+        "validation_uses_fixed_row_storage_without_a_node_count_sized_buffer",
+        "cancellation_and_rejected_responses_leave_prepared_factors_reusable"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_residual.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_validation_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/solver/tests/transient_spring_reliability.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "reports/tridiagonal-row-validation-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "tridiagonal-row-validation-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib chain_tridiagonal -- --nocapture"
+        },
+        {
+          "id": "tridiagonal-row-validation-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test spring_mixed_scale_equilibrium --test spring_mixed_scale_workflow --test transient_spring_reliability --test nonlinear_spring_recovery --test heat_bar_closed_form --test acoustic_bar_closed_form --test magnetostatic_bar_closed_form --test advection_diffusion_bar_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "banded-substitution-range-local-reliability",
       "profile_role": "component_profile",
       "qualification_candidate_id": "banded-substitution-range-local-reliability",

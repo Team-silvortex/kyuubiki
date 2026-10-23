@@ -1,0 +1,195 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded tridiagonal original-equation admission and forward/back overflow-underflow recovery: shared update probes, per-entry exponents, local rounding bounds, shared row arithmetic and immutable-factor reuse. Not general physical or conditioning qualification.",
+  "evidence_claims": [
+    {
+      "id": "tridiagonal-prescribed-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_residual.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_prescribed_range_tests.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/tests/magnetostatic_prescribed_range.rs",
+        "workers/rust/crates/engine/tests/magnetostatic_prescribed_workflow.rs",
+        "config/operator-validation-profiles/linear-constraints.json",
+        "reports/tridiagonal-prescribed-range-reliability-20261023.md"
+      ],
+      "required_text": [
+        "prescribed_range_retains_a_half_quantum_boundary_load_before_division",
+        "prescribed_range_combines_two_half_quantum_boundary_contributions",
+        "prescribed_range_recovers_finite_response_from_overflowing_boundary_product",
+        "prescribed_range_cancels_overflowing_boundaries_without_erasing_the_load",
+        "prescribed_range_does_not_rescale_away_an_independent_quantum_load",
+        "prescribed_range_keeps_ordinary_subtraction_order_and_bits",
+        "prescribed_range_does_not_give_fixed_inputs_a_solution_rounding_allowance",
+        "prescribed_range_cancellation_keeps_inputs_reusable_and_never_publishes_a_partial_result",
+        "magnetic_boundary_range_keeps_constant_subnormal_potential_and_zero_field",
+        "magnetic_prescribed_range_survives_workflow_dispatch_and_json_roundtrip",
+        "This is bounded prescribed-boundary range recovery, not general constraint elimination, arbitrary precision, physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "tridiagonal-back-underflow-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_range_value.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_range.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_back_underflow_tests.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/tridiagonal-back-underflow-reliability-20261023.md"
+      ],
+      "required_text": [
+        "back_underflow_recovers_erased_and_rounded_numerators",
+        "back_underflow_recovers_both_pivoted_superdiagonal_products",
+        "back_underflow_keeps_early_loss_when_the_last_update_is_normal",
+        "back_underflow_preserves_exact_fma_bits_without_range_entry",
+        "back_underflow_keeps_final_quantized_tails_and_rejects_erased_loads",
+        "back_underflow_is_checked_inside_forward_overflow_replay",
+        "back_underflow_cancels_row_recovery_before_publication_then_replays",
+        "back_underflow_matches_normal_load_and_dense_reference",
+        "unequal_spring_chain_preserves_subnormal_back_substitution_and_forces",
+        "workflow_preserves_subnormal_back_substitution_and_force_balance",
+        "This is bounded back-update underflow recovery, not arbitrary precision, general factorization range, physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "tridiagonal-forward-underflow-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_range.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_underflow_tests.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_range_value.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/tridiagonal-forward-underflow-reliability-20261023.md"
+      ],
+      "required_text": [
+        "forward_underflow_recovers_erased_and_rounded_work_entries",
+        "forward_underflow_recovers_after_adjacent_swap",
+        "forward_underflow_keeps_fused_cancellation_with_nonzero_rhs",
+        "forward_underflow_checks_values_rounded_up_to_minimum_normal",
+        "forward_underflow_probe_keeps_exact_zeros_and_representable_subnormals",
+        "forward_underflow_keeps_final_quantized_tail_without_erasing_independent_load",
+        "forward_underflow_cancels_each_recovery_phase_and_reuses_factors",
+        "forward_underflow_matches_normal_load_and_dense_references",
+        "chain_spring_preserves_subnormal_forward_work_through_operator_results",
+        "workflow_preserves_subnormal_forward_work_through_json_and_dispatch",
+        "This is bounded forward-underflow recovery, not arbitrary precision, general factorization range, physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "tridiagonal-forward-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_range.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_forward_range_tests.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_range_value.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/src/linear_binary_scale.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/tridiagonal-forward-range-reliability-20261023.md"
+      ],
+      "required_text": [
+        "forward_range_recovers_finite_solution_from_overflowing_work_vector",
+        "forward_range_recovers_swapped_rhs_without_dense_fallback",
+        "forward_range_does_not_rescale_away_an_independent_minimum_load",
+        "forward_range_uses_equilibrated_factors_but_validates_original_equations",
+        "forward_range_matches_dense_reference_and_normal_load_scaling",
+        "forward_range_cancels_conversion_forward_and_backward_then_replays",
+        "forward_range_rejects_alignment_loss_and_erased_load_before_clean_replay",
+        "extended_rhs_checks_exponents_and_operands_without_integer_overflow",
+        "This is bounded forward-work range recovery, not arbitrary precision, general factorization range, physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "tridiagonal-back-substitution-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_pivot.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_substitution_tests.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_range_value.rs",
+        "workers/rust/crates/solver/src/linear_substitution.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/tridiagonal-back-substitution-range-reliability-20261023.md"
+      ],
+      "required_text": [
+        "chain_back_substitution_recovers_finite_response_after_numerator_overflow",
+        "pivoted_chain_recovers_two_superdiagonal_overflow_before_division",
+        "pivoted_chain_overflow_cancellation_retains_fused_product_tail",
+        "chain_range_recovery_cancels_before_publication_and_reuses_factors",
+        "ordinary_chain_substitution_preserves_fma_bits_and_skips_range_passes",
+        "chain_range_recovery_does_not_bypass_original_equations_or_true_overflow",
+        "large_block_chain_range_recovery_stays_sparse_and_cancellable",
+        "tridiagonal_range_stage_appends_without_renumbering_existing_stages",
+        "This is bounded back-substitution recovery, not general factorization or forward-substitution range, conditioning, physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "tridiagonal-row-validation-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/chain_tridiagonal.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_residual.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_validation_tests.rs",
+        "workers/rust/crates/solver/tests/spring_mixed_scale_equilibrium.rs",
+        "workers/rust/crates/solver/tests/transient_spring_reliability.rs",
+        "workers/rust/crates/engine/tests/spring_mixed_scale_workflow.rs",
+        "config/operator-validation-profiles/linear-system.json",
+        "reports/tridiagonal-row-validation-reliability-20261023.md"
+      ],
+      "required_text": [
+        "finite_large_row_cannot_hide_a_wrong_weak_equation",
+        "underflowed_equation_products_are_not_zero_error",
+        "two_half_quantum_products_are_checked_before_rounding",
+        "unrepresentable_weak_response_is_rejected_before_clean_factor_replay",
+        "subnormal_roundoff_is_local_and_cannot_cover_a_multi_quantum_error",
+        "long_chain_preserves_quantized_tail_and_closed_form_near_field",
+        "chain_weak_response_range_failure_cannot_publish_workflow_success",
+        "This is bounded tridiagonal admission evidence, not general conditioning, physical qualification or durable restart."
+      ]
+    }
+  ]
+}
