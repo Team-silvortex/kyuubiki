@@ -93,6 +93,8 @@ pub enum SolverStage {
     TridiagonalSubstitutionRange,
     TridiagonalForwardRange,
     ConstraintReduceRow,
+    ConstraintValidate,
+    ConstraintValidateRow,
 }
 
 impl SolverStage {
@@ -183,6 +185,8 @@ impl SolverStage {
             Self::TridiagonalSubstitutionRange => "tridiagonal_substitution_range",
             Self::TridiagonalForwardRange => "tridiagonal_forward_range",
             Self::ConstraintReduceRow => "constraint_reduce_row",
+            Self::ConstraintValidate => "constraint_validate",
+            Self::ConstraintValidateRow => "constraint_validate_row",
         }
     }
 
@@ -273,6 +277,8 @@ impl SolverStage {
             Self::TridiagonalSubstitutionRange,
             Self::TridiagonalForwardRange,
             Self::ConstraintReduceRow,
+            Self::ConstraintValidate,
+            Self::ConstraintValidateRow,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)

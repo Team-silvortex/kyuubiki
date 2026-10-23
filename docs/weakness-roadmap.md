@@ -30,9 +30,13 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The current review is October 16, 2026 for the `daji-3-6-hardening` profile.
-Source metadata is still `daji 3.6.0`; commit `301ba02c` is titled 3.6.4.
-This is a retained-evidence review, not a version bump or installed qualification.
+The current source checkpoint is `daji 3.7.0`, with profile
+`daji-3-7-hardening`; version alignment does not promote evidence grades.
+The last retained recalibration below is October 16, 2026 for the earlier
+`daji-3-6-hardening` profile. At that review source metadata was `daji 3.6.0`
+and commit `301ba02c` was titled 3.6.4. Later scoped evidence is tracked by the
+live tensor; the table below is a dated comparison, not a current test total.
+This is retained evidence, not new installed qualification.
 The [calibration record](../reports/tensor-recalibration-20261016.md) preserves
 that provenance and the [current-line entry](current-line.md) separates source
 progress from the last installed baseline.

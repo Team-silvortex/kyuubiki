@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system,
+    solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
@@ -143,6 +144,8 @@ fn solve_thermal_truss_2d_internal(
             .solution;
 
     let displacements = restore_solution(dof_count, &[], &free, &reduced_displacements)?;
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&force_vector, &displacements)?;
 
     let nodes = try_collect_results(
         SolverStage::ResultNodes,
@@ -399,6 +402,8 @@ fn solve_thermal_truss_3d_internal(
             .solution;
 
     let displacements = restore_solution(dof_count, &[], &free, &reduced_displacements)?;
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&force_vector, &displacements)?;
 
     let nodes = try_collect_results(
         SolverStage::ResultNodes,

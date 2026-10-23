@@ -2,7 +2,7 @@
   "version": "3.6.0",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-10-12",
   "git_commit": "a1740601c14cf8797ea9b078db3ceb2306bb38cc",
   "summary": "Daji 3.6.0 source checkpoint: bounded workflow recovery and cross-runtime quality-evidence admission. Source metadata, language-pack targets and documentation aligned; no desktop rebuild, installation or publication.",

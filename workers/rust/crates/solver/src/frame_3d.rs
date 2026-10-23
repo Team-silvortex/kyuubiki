@@ -3,7 +3,8 @@ use std::borrow::Cow;
 use crate::frame_3d_element::{FrameElement, finite_fields, norm3, total_energy, validate_matrix};
 use crate::frame_3d_math::frame3d_rotation_with_local_y;
 use crate::linear_algebra::{
-    SparseMatrix, reduce_sparse_system, solve_spd_system_profile_with_options,
+    PrescribedSystemValidator, SparseMatrix, reduce_sparse_system,
+    solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
@@ -61,6 +62,8 @@ fn solve_frame_3d_internal(
     let (reduced, force, free) = reduce_sparse_system(&stiffness, &forces, &constrained)?;
     let solution = solve_spd_system_profile_with_options(&reduced, &force, options)?.solution;
     let displacements = restore_solution(dof_count, &[], &free, &solution)?;
+    PrescribedSystemValidator::new_homogeneous(&stiffness, &constrained)?
+        .validate(&forces, &displacements)?;
 
     let nodes = try_collect_results(
         SolverStage::ResultNodes,

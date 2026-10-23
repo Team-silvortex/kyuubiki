@@ -1,7 +1,8 @@
 use crate::acoustic_bar_1d_validation::validate_request;
 use crate::chain_tridiagonal::solve_path_with_prescribed;
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    solve_spd_system,
 };
 use kyuubiki_protocol::{
     AcousticBar1dElementInput, AcousticBar1dElementResult, AcousticBar1dNodeResult,
@@ -129,6 +130,7 @@ fn solve_pressures(request: &SolveAcousticBar1dRequest, omega: f64) -> Result<Ve
     for (index, &dof) in free.iter().enumerate() {
         pressures[dof] = solved[index];
     }
+    PrescribedSystemValidator::new(&system, &prescribed)?.validate(&rhs, &pressures)?;
     Ok(pressures)
 }
 

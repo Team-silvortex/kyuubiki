@@ -1,4 +1,5 @@
 use crate::chain_tridiagonal::solve_path_with_prescribed;
+use crate::linear_algebra::{PrescribedSystemValidator, SparseMatrix, add_at};
 use crate::linear_dense::{solve_linear_system, zero_matrix};
 use crate::solver_control::SolverStage;
 use crate::solver_postprocess::{collect_results, max_results, try_collect_results};
@@ -189,7 +190,8 @@ fn solve_concentrations(request: &SolveAdvectionDiffusionBar1dRequest) -> Result
     }
 
     let mut matrix = zero_matrix(size);
-    let mut adjusted_rhs = rhs;
+    let mut original = SparseMatrix::new(size);
+    let mut adjusted_rhs = rhs.clone();
     for element in &request.elements {
         let local = local_matrix(request, element)?;
         let map = [element.node_i, element.node_j];
@@ -197,11 +199,14 @@ fn solve_concentrations(request: &SolveAdvectionDiffusionBar1dRequest) -> Result
             for column in 0..2 {
                 let entry = &mut matrix[map[row]][map[column]];
                 *entry = checked(&element.id, "assembled matrix", *entry + local[row][column])?;
+                add_at(&mut original, map[row], map[column], local[row][column]);
             }
         }
     }
     apply_prescribed_concentrations(request, &mut matrix, &mut adjusted_rhs)?;
-    solve_linear_system(matrix, adjusted_rhs)
+    let solution = solve_linear_system(matrix, adjusted_rhs)?;
+    PrescribedSystemValidator::new(&original, &prescribed)?.validate(&rhs, &solution)?;
+    Ok(solution)
 }
 
 fn apply_prescribed_concentrations(

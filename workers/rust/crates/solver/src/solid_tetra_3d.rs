@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 
-use crate::linear_algebra::{SparseMatrix, reduce_sparse_system, solve_spd_system};
+use crate::linear_algebra::{
+    PrescribedSystemValidator, SparseMatrix, reduce_sparse_system, solve_spd_system,
+};
 use crate::solid_tetra_3d_element::{SolidTetra3dElementKernel, element_dof_map};
 use crate::solid_tetra_3d_validation::{mesh_component_count, validate_request};
 use crate::solver_control::{SolverStage, checkpoint};
@@ -66,6 +68,8 @@ fn solve_solid_tetra_3d_internal(
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
     }
+    PrescribedSystemValidator::new_homogeneous(&stiffness, &constrained)?
+        .validate(&force, &displacements)?;
     let (reactions, equilibrium) = recover_equilibrium(
         request.as_ref(),
         &stiffness,

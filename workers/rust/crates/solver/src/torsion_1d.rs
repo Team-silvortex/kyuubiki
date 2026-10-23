@@ -1,5 +1,6 @@
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system, solve_tridiagonal_system,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system, solve_spd_system,
+    solve_tridiagonal_system,
 };
 use crate::torsion_1d_validation::validate_request;
 use kyuubiki_protocol::{
@@ -65,6 +66,8 @@ fn solve_validated_torsion_1d(
     for (index, &dof) in free.iter().enumerate() {
         rotations[dof] = reduced_rotations[index];
     }
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&torque_vector, &rotations)?;
 
     let nodes = request
         .nodes

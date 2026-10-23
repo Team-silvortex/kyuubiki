@@ -1,11 +1,64 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.6.0`.
-Source package metadata targets `3.6.0`; the last locally built and installed
+The current development point in this line is `daji 3.7.0`.
+Source package metadata targets `3.7.0`; the last locally built and installed
 desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
+
+## Daji 3.7.0 Checkpoint
+
+October 23, 2026. Source packages, SDK metadata, language-pack targets,
+installation/update contracts and current documentation advance to 3.7.0.
+The release snapshot records base commit `0a65f2e8` plus this source overlay;
+it is not a clean-commit desktop binary or an installed qualification run.
+
+- Selected scalar and mechanical solves now validate the complete original
+  assembled system before constraint elimination. Dimensions, finite values,
+  exact fixed values and free-equation equilibrium are checked together.
+  Nonzero support reactions remain legitimate and are checked separately.
+- Projected thermal-frame constraints preserve their physical support basis.
+  Newmark steps and Newton increments check the original equations before
+  history publication or line-search acceptance; these are not new constitutive
+  models or blanket qualification of every solver family.
+- Harmonic solves validate the complete complex state and constraint mapping.
+  Binary-scaled frequency products, checked complex elimination and complete-row
+  back substitution recover finite results from exceptional intermediates.
+  True overflow or erasure fails instead of producing a plausible zero.
+- Displacement, element extension and element-force ranges are independently
+  checked before publication. Bounded cancellation and explicit same-input replay
+  regressions do not imply durable process recovery or automatic retry.
+- Numerical algorithms remain in Solver; Engine/Agent retain execution and
+  publication ownership. Repository cleanup removes only disposable build
+  outputs, not regression source, credentials or current installed components.
+
+Read the retained reports in order: [original prescribed equations](../reports/original-prescribed-equation-admission-20261023.md),
+[mechanical zero constraints](../reports/homogeneous-mechanical-equation-admission-20261023.md),
+[projected thermal frames](../reports/projected-thermal-frame-equation-admission-20261023.md),
+[Newmark](../reports/newmark-original-equation-admission-20261023.md),
+[Newton](../reports/newton-original-equation-admission-20261023.md),
+[harmonic admission](../reports/harmonic-original-equation-admission-20261023.md),
+[frequency products](../reports/harmonic-frequency-product-range-20261023.md) and
+[complex arithmetic/force recovery](../reports/harmonic-complex-arithmetic-range-20261023.md).
+Their recorded 3.6.x working-tree provenance and exclusions remain unchanged.
+The final complex-arithmetic report retains 1,540 passing checks on each of
+macOS AArch64 and Linux x86_64, with ten ignored and 292 modal cases excluded
+per platform. These overlapping suites must not be summed across reports or
+promoted into full physical, Windows, installed or scale qualification.
+
+After version alignment, the macOS source overlay passes 1,598 Rust checks:
+786 Solver library, 711 Engine library, 48 Solver integration and 53 Engine
+integration tests. Ten tests are ignored and 292 modal cases remain excluded.
+The frontend product-identity check also passes. This release rerun is not a
+fresh Linux or installed-platform run; the snapshot lists its exact targets.
+
+The active tensor profile becomes `daji-3-7-hardening`, without promoting
+evidence grades or changing thresholds. Release qualification remains blocked;
+the last recorded review has two maturity, 23 evidence-grade and 18 P0 gaps.
+See [the source snapshot](../releases/snapshots/3.7.0.json) for the checks rerun
+after version alignment. No desktop/runtime rebuild, installation, registry
+publication or public distribution is part of this source release.
 
 ## Daji 3.6.0 Checkpoint
 
@@ -1309,12 +1362,10 @@ independent. This protects report assumptions, not material truth or numerical
 qualification. The artifact test service also waits for bounded complete request
 headers instead of racing delayed clients.
 
-See `releases/snapshots/3.6.0.json`. Package, update, language-pack and book
-targets are aligned, without changing protocol/schema versions, translation
-content or historical grades. The installed baseline remains 3.4.0. The tensor
-continues to have four maturity gaps, 20 evidence-grade gaps and 15 P0 gaps;
-release qualification remains blocked. The 3.6.x mainline continues reliable
-research execution and recovery under the existing Engine/Solver split.
+See `releases/snapshots/3.6.0.json` for that earlier source checkpoint. Its package
+alignment and four maturity, 20 evidence-grade and 15 P0 gaps are historical,
+not the current tensor result. The 3.7.0 checkpoint above records the current
+source target and retained qualification limits under the same Engine/Solver split.
 
 ## Daji 3.4.7 Checkpoint
 

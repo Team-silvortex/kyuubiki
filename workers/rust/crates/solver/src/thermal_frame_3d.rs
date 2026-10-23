@@ -101,6 +101,7 @@ fn solve_thermal_frame_3d_internal(
         solve_spd_system_profile_with_options(&reduced, &force, options)?.solution
     };
     let displacements = constraints.restore(&solution)?;
+    constraints.validate_original(&stiffness, &forces, &displacements)?;
 
     let nodes = try_collect_results(
         SolverStage::ResultNodes,

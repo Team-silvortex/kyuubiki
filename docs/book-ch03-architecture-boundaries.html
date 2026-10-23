@@ -47,7 +47,7 @@
       <section class="docs-card docs-section" id="source-ownership">
         <h2>One owner per responsibility</h2>
         <p class="docs-copy">
-          The October 18, 2026 organization review separates three views:
+          The October 23, 2026 organization review separates three views:
           13 logical topology modules, 15 Rust workspace crates, and independently
           deployed processes. They are not the same count. Engine and Solver are
           libraries used by the Agent; keeping their responsibilities separate
@@ -75,6 +75,40 @@
         </div>
       </section>
 
+      <section class="docs-card docs-section" id="numerical-admission">
+        <h2>Numerical acceptance has one runtime owner</h2>
+        <p class="docs-copy">
+          Solver owns numerical admission; Engine owns dispatch and workflows;
+          Agent owns execution identity and transport. A GUI or Headless client
+          must not implement a second residual policy or silently relax a failed
+          kernel gate. TaskIR capability admission remains a separate boundary.
+        </p>
+        <ul class="docs-list">
+          <li>Coordinate and prescribed constraints use shared complete-system
+            checks after restoration; support reactions need not vanish.</li>
+          <li>Directional thermal-frame supports keep their projected identities,
+            admissible-direction equilibrium and physical reaction recovery.</li>
+          <li>Newmark checks the full velocity increment against the original
+            effective system before state/history updates.</li>
+          <li>Newton checks the full unscaled correction against the current
+            tangent and residual before line search. Complete nonlinear states
+            also check dimensions, finite values and fixed support identity.</li>
+          <li>Harmonic spring checks the complete complex state and original
+            element/mass/load equations at every frequency. Binary product
+            scaling must not erase finite forces or change fixed supports.
+            Frequency products must also retain finite inertia and acceleration
+            even when the intermediate angular-frequency square is out of range.
+            Complex substitution replays complete exceptional rows before pivot
+            division; element-force products combine terms before restoration.</li>
+          <li>These are named consumer scopes, not all-operator qualification.
+            Cooperative cancellation/replay is not durable restart evidence.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./current-architecture-map.md#numerical-admission-ownership">Kernel ownership and source anchors</a>
+          <a class="docs-link" href="./project-architecture-organization.md#numerical-source-and-test-placement">Adding a constrained solve path</a>
+        </div>
+      </section>
+
       <section class="docs-card docs-section" id="development-storage">
         <h2>Build output is not runtime state</h2>
         <p class="docs-copy">
@@ -97,14 +131,15 @@
       <section class="docs-card docs-section" id="tensor-calibration">
         <h2>Coverage tensor: evidence without overclaiming</h2>
         <p class="docs-copy">
-          Current calibration reviews the daji 3.6.x source overlay on October 16,
-          2026. Source packages still identify as 3.6.0; the latest commit subject
-          says 3.6.4. This review records the distinction without changing versions
-          or qualifying a new installed release.
+          The retained baseline below was recorded on October 16, 2026. Its
+          source metadata was 3.6.0 and commit subject 3.6.4; neither is a live
+          release label. Run <code>make check-module-function-coverage-tensor</code>
+          for the current working-tree result instead of treating historical
+          counts as the current queue or installed qualification.
         </p>
         <p class="docs-copy">
-          Tensor v5 now uses the daji-3-6-hardening profile and source checkpoint
-          daji 3.6.0. The three axes remain module,
+          Tensor v5 now uses the daji-3-7-hardening profile and source checkpoint
+          daji 3.7.0, without promoting retained evidence grades. The three axes remain module,
           function paradigm, and scoped evidence depth: 13 modules, 11
           paradigms, and 77 required coordinates. Recalculation reviews retained
           claims; it does not rerun the product tests those claims describe.
@@ -116,6 +151,8 @@
           <li>Target attainment requires covered capability, sufficient dimension grades, and all configured scenario obligations. A zero grade-step gap alone is not success.</li>
           <li>Structural success, evidence maturity, and release permission are separate. Release thresholds use exact counts rather than rounded display percentages.</li>
         </ul>
+        <details>
+        <summary>Historical October 16 calibration snapshot</summary>
         <h3>The recalibrated snapshot</h3>
         <p class="docs-copy">
           The same-tree target result changes from 57/77 to 55/77 (71.4%), with
@@ -141,7 +178,7 @@
           dimensions, files and anchors; reviewers must still establish proof
           meaning and freshness. Existing historical claims are preserved.
         </p>
-        <h3>What needs attention next</h3>
+        <h3>Priorities recorded in that calibration</h3>
         <ol class="docs-list">
           <li>The unchanged release-weighted queue now starts with sdk-headless/sdk_headless, runtime-protocol/sdk_operator, workbench-shell/validation and runtime-engine-solver/validation. Installed language journeys, protocol security and exact recovery/numerical scopes remain incomplete.</li>
           <li>For the recovery mainline, establish native Agent LAN authentication and authorization before claiming authenticated Mesh. Public cluster/store identifiers and HTTP gateway authentication are not raw native ingress protection.</li>
@@ -159,6 +196,9 @@
           calibration record</a> for exact changes and test scope. The follow-ups
           below retain their historical dates and counts, not the current snapshot.
         </p>
+        </details>
+        <details>
+        <summary>Retained modal research follow-ups and their original limits</summary>
         <h3 id="modal-request-reassembly-follow-up">Bounded modal request-reassembly follow-up</h3>
         <p class="docs-copy">
           A subsequent production correction makes the sampled horizontal
@@ -341,6 +381,9 @@
           actual final receipts and recovery replay stay test-only Solver
           evidence, not production or Engine/Agent qualification.
         </p>
+        </details>
+        <details>
+        <summary>Retained product-recovery follow-ups and platform limits</summary>
         <h3 id="product-recovery-follow-up">First product-recovery follow-up</h3>
         <p class="docs-copy">
           The <a href="./acceptance-immersive-modeling.html#macos-checkpoint-reopen">native App-exit
@@ -399,6 +442,7 @@
           The usability gate now follows the current minor line rather than
           targeting 3.0.0; release_claim_allowed remains false.
         </p>
+        </details>
         <div class="docs-links">
           <a class="docs-link" href="./weakness-roadmap.md">Current hardening backlog</a>
           <a class="docs-link" href="./module-architecture.md">Scoring contract</a>

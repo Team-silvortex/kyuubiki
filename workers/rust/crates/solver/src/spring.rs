@@ -1,5 +1,6 @@
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system, solve_tridiagonal_system,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system, solve_spd_system,
+    solve_tridiagonal_system,
 };
 use crate::spring_validation::{
     validate_spring_1d_request, validate_spring_2d_request, validate_spring_3d_request,
@@ -64,6 +65,8 @@ fn solve_validated_spring_1d(request: SolveSpring1dRequest) -> Result<SolveSprin
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
     }
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&force_vector, &displacements)?;
 
     let nodes = request
         .nodes
@@ -202,6 +205,8 @@ fn solve_validated_spring_2d(request: SolveSpring2dRequest) -> Result<SolveSprin
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
     }
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&force_vector, &displacements)?;
 
     let nodes = request
         .nodes
@@ -362,6 +367,8 @@ fn solve_validated_spring_3d(request: SolveSpring3dRequest) -> Result<SolveSprin
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
     }
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&force_vector, &displacements)?;
 
     let nodes = request
         .nodes

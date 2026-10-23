@@ -2,9 +2,56 @@ use kyuubiki_protocol::{
     AdvectionDiffusionBar1dElementInput, AdvectionDiffusionBar1dNodeInput,
     SolveAdvectionDiffusionBar1dRequest,
 };
-use kyuubiki_solver::solve_advection_diffusion_bar_1d;
+use kyuubiki_solver::solver_control::{SolverControl, SolverStage, with_solver_observer};
+use kyuubiki_solver::{solve_advection_diffusion_bar_1d, solve_advection_diffusion_bar_1d_owned};
 
 const TOL: f64 = 1.0e-10;
+
+#[test]
+fn transport_original_constraints_cover_non_path_dense_fallback_and_clean_replay() {
+    let request = SolveAdvectionDiffusionBar1dRequest {
+        scheme: Default::default(),
+        nodes: (0..=4)
+            .map(|index| AdvectionDiffusionBar1dNodeInput {
+                id: format!("n{index}"),
+                x: index as f64,
+                fix_concentration: index != 0,
+                concentration: 2.0,
+                source: if index == 0 { 1.0 } else { 0.0 },
+            })
+            .collect(),
+        elements: (1..=4)
+            .map(|index| AdvectionDiffusionBar1dElementInput {
+                id: format!("e{index}"),
+                node_i: 0,
+                node_j: index,
+                area: 1.0,
+                diffusivity: index as f64,
+                velocity: 0.0,
+            })
+            .collect(),
+    };
+    let control = SolverControl::default();
+    let cancel = control.clone();
+    let result = with_solver_observer(
+        &control,
+        move |point| {
+            if point.stage == SolverStage::ConstraintValidate && point.completed_steps == 0 {
+                cancel.request_cancel();
+            }
+        },
+        || solve_advection_diffusion_bar_1d(&request),
+    );
+    assert!(result.unwrap_err().contains("constraint_validate"));
+    assert!(control.was_interrupted());
+    let solved = solve_advection_diffusion_bar_1d(&request).unwrap();
+    assert_close(solved.nodes[0].concentration, 2.25);
+    let owned = solve_advection_diffusion_bar_1d_owned(request).unwrap();
+    assert_eq!(
+        serde_json::to_value(solved).unwrap(),
+        serde_json::to_value(owned).unwrap()
+    );
+}
 
 #[test]
 fn advection_diffusion_bar_1d_matches_single_element_flux_baseline() {

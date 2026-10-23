@@ -3,7 +3,8 @@ use std::time::Instant;
 use kyuubiki_protocol::{PlaneNodeInput, SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult};
 
 use crate::linear_algebra::{
-    SparseMatrix, reduce_sparse_system, solve_spd_system_profile_with_options,
+    PrescribedSystemValidator, SparseMatrix, reduce_sparse_system,
+    solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
 
@@ -97,6 +98,10 @@ pub(crate) fn profile_plane_displacements_with_options(
         displacements[dof] = solve_profile.solution[index];
     }
     push_stage(&mut stages, "scatter_solution", started);
+    let started = Instant::now();
+    PrescribedSystemValidator::new_homogeneous(global_stiffness, &constrained)?
+        .validate(force_vector, &displacements)?;
+    push_stage(&mut stages, "validate_original_constraints", started);
 
     Ok(PlaneDisplacementProfile {
         displacements,

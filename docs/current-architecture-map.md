@@ -1,9 +1,10 @@
 # Current Architecture Map
 
 This is the compact navigation map for the current `daji 3.x` line, reviewed
-on October 18, 2026 against the source tree. It describes ownership and call
-paths, not installed qualification. Package metadata remains 3.6.0; the base
-commit subject is `daji 3.6.5`. This organization pass changes neither version.
+on October 23, 2026 against the source tree and current constraint-admission
+work. It describes ownership and call paths, not installed qualification.
+Version declarations belong to the manifests and [current line](current-line.md),
+not a second release timeline in this navigation map.
 
 Kyuubiki is a contract-first FEM system, not one monolithic application.
 Keep product shells, control clients, runtime services, execution and numerical
@@ -123,6 +124,40 @@ completed solve or production qualification. Source anchors:
 - [TaskIR dispatch](../workers/rust/crates/cli/src/operator_task_runtime.rs)
 - [Engine solver adapter](../workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs)
 - [Runtime and recovery book](book-ch04-runtime-modes.html)
+
+## Numerical Admission Ownership
+
+Numerical acceptance belongs in Solver, after reconstruction and before
+successful result publication. Engine dispatch/workflows and Agent/SDK clients
+must not grow their own residual policy, relaxed tolerance or hidden retry.
+Transport admission, TaskIR capability and numerical acceptance are different
+contracts; implementing a kernel gate does not widen the TaskIR allowlist.
+
+| Equation family | Solver owner | Admission boundary |
+| --- | --- | --- |
+| Coordinate zero/prescribed constraints | [Shared sparse validator](../workers/rust/crates/solver/src/linear_constraint_validation.rs) and [chain validator](../workers/rust/crates/solver/src/chain_tridiagonal_constraint_validation.rs) | Complete unknowns against pre-elimination equations; fixed values are exact data and support reactions may be nonzero |
+| Directional thermal-frame supports | [Projected constraint validator](../workers/rust/crates/solver/src/thermal_frame_3d_constraint_validation.rs) | Support identities and free-direction equilibrium in restored physical coordinates |
+| Transient spring Newmark steps | [Transient operator](../workers/rust/crates/solver/src/transient_spring_1d.rs) using the shared sparse validator | Full velocity increment against the original effective system before physical state/history updates |
+| Nonlinear spring/contact Newton steps | [Shared nonlinear path](../workers/rust/crates/solver/src/nonlinear_spring_1d.rs) using the shared sparse validator | Full unscaled correction against the current tangent/residual before line search; every evaluated state also checks complete dimensions and fixed identity |
+| Harmonic spring complex equations | [Complex original-equation validator](../workers/rust/crates/solver/src/harmonic_spring_constraint_validation.rs) and [frequency-product range helpers](../workers/rust/crates/solver/src/harmonic_spring_frequency_range.rs) | Each frequency checks complete complex state, exact support identities, the reduction map and original element/mass/load terms; dynamic coefficients and response products defer exponent restoration until all factors are combined |
+
+These are explicitly wired consumer scopes, not automatic coverage of all
+operators. A nonlinear state is not a static tangent solution; a dynamic
+increment is not a static physical displacement. Family-specific reaction and
+postprocessing checks remain separate from the shared equation gate.
+
+Harmonic [complex arithmetic](../workers/rust/crates/solver/src/harmonic_spring_complex_range.rs)
+also owns exceptional elimination updates, complete-row substitution replay and
+element-force product restoration. A wide temporary numerator may be divided
+before restoration; an unrepresentable final coefficient, force or extension
+must still fail instead of becoming a successful zero-valued result.
+
+Solver unit tests own mathematical and range counterexamples. Engine integration
+tests own serialized dispatch/workflow equality, gate reachability and failure
+propagation. [Validation profiles](../config/operator-validation-profiles/linear-constraints.json)
+register commands; [tensor evidence](../config/architecture/module-function-coverage-evidence/runtime-constraint-validation.json)
+binds their bounded claims. Cooperative cancellation and same-input replay are
+not durable process-restart or host-power-loss evidence.
 
 ## SDK And Extension Surfaces
 

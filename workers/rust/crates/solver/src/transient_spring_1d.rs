@@ -1,5 +1,7 @@
 use crate::dynamic_spring_1d_validation::validate_transient_request;
-use crate::linear_algebra::{PreparedSpdSolver, SparseMatrix, add_at, reduce_sparse_system};
+use crate::linear_algebra::{
+    PreparedSpdSolver, PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system,
+};
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use crate::solver_postprocess::{collect_results, max_results, try_collect_results};
 use crate::transient_history::TransientHistoryPlan;
@@ -8,6 +10,10 @@ use kyuubiki_protocol::{
     TransientSpring1dElementResult, TransientSpring1dNodeResult, TransientSpring1dStepResult,
 };
 use std::borrow::Cow;
+
+#[cfg(test)]
+#[path = "transient_spring_1d_constraint_tests.rs"]
+mod constraint_tests;
 
 const BETA: f64 = 0.25;
 const GAMMA: f64 = 0.5;
@@ -27,6 +33,7 @@ struct NewmarkSystem<'a> {
     elements: &'a [TransientSpring1dElementInput],
     free: &'a [usize],
     solver: &'a PreparedSpdSolver,
+    validator: PrescribedSystemValidator<'a>,
     request: &'a SolveTransientSpring1dRequest,
 }
 
@@ -112,6 +119,7 @@ fn solve_transient_spring_1d_internal(
         elements: &request.elements,
         free: &free,
         solver: &solver,
+        validator: PrescribedSystemValidator::new_homogeneous(&effective, &constrained)?,
         request: request.as_ref(),
     };
 
@@ -254,8 +262,14 @@ fn newmark_step(
     let mut next_u = vec![0.0; count];
     let mut next_v = vec![0.0; count];
     for (index, &dof) in system.free.iter().enumerate() {
+        next_v[dof] = reduced_dv[index];
+        checkpoint_chunk(SolverStage::ResultFreeDofs, index + 1, system.free.len())?;
+    }
+    // Reuse next_v for the complete increment before committing the next state.
+    system.validator.validate(&rhs, &next_v)?;
+    for (index, &dof) in system.free.iter().enumerate() {
         checkpoint_chunk(SolverStage::TransientState, index, system.free.len())?;
-        let dv = reduced_dv[index];
+        let dv = next_v[dof];
         next_v[dof] = state.velocity[dof] + dv;
         next_u[dof] = system
             .time_step

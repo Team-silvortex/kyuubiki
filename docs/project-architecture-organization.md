@@ -150,6 +150,36 @@ The implementation anchors are:
   should hold source-of-truth architecture documents. Hub docs may mirror them
   for operator reading, but should not silently become the deeper source.
 
+## Numerical Source And Test Placement
+
+Keep one shared coordinate-constraint arithmetic policy under
+`workers/rust/crates/solver/src/linear_algebra.rs` and its private modules.
+Directional projection, physical reaction recovery and increment-versus-state
+semantics remain with their operator family. Do not move numerical admission
+into Engine, Agent, GUI or SDK wrappers just to reach another control mode.
+The [compact map](current-architecture-map.md#numerical-admission-ownership)
+lists the currently connected equation families without duplicating their dated
+test results here.
+
+For a new constrained operator or a new solve path:
+
+1. Identify the original equation, support identities, unknown representation
+   and publication boundary. Do not substitute a reduced residual for the
+   restored system, or a Newton/Newmark increment for the physical state.
+2. Reuse the shared numerical policy where applicable; keep a genuinely different
+   projected, complex or eigen contract explicit. Registering an operator does
+   not automatically install a numerical gate or prove its physics.
+3. Put local wrong-map, hidden-value, range and cancellation controls beside the
+   kernel. Include all-fixed and zero-correction early exits, not only the main
+   linear solve. Keep family fixture files focused rather than adding a global
+   fixture registry or a wrapper module per helper.
+4. Put serialized dispatch, workflow, failure propagation and replay checks under
+   `workers/rust/crates/engine/tests`. Preserve the distinction between
+   cooperative cancellation and durable recovery.
+5. Extend the existing validation-profile and tensor-evidence shard for that
+   responsibility. Dated reports retain measured scope, exclusions and costs;
+   the overview stays a navigation map, not an accumulating experiment log.
+
 ## Line-Count Rule
 
 Source files should stay below 800 lines and documentation files should stay
@@ -259,8 +289,10 @@ Repository cleanup does not uninstall desktop apps or manage installed runtime
 data. Use Installer lifecycle/storage operations for those separate locations.
 Container build contexts exclude temporary research outputs and local env files.
 
-The [October 18 organization record](../reports/architecture-disk-organization-20261018.md)
-records measured cleanup and the source/evidence boundaries it preserved.
+The [October 23 organization record](../reports/architecture-disk-organization-20261023.md)
+records this pass's measured cleanup and preserved work. The
+[October 18 record](../reports/architecture-disk-organization-20261018.md)
+remains historical evidence, not the current disk inventory.
 
 ## Refactor Priority
 

@@ -32,6 +32,10 @@ mod constraint_consistency_tests;
 #[path = "linear_prescribed_cancellation_tests.rs"]
 mod prescribed_cancellation_tests;
 
+#[path = "linear_constraint_validation.rs"]
+mod constraint_validation;
+pub(crate) use constraint_validation::{PrescribedSystemValidator, prescribed_row_backward_error};
+
 #[path = "linear_sparse_equilibrium.rs"]
 mod equilibrium;
 
@@ -56,7 +60,8 @@ pub(crate) use prepared::PreparedSpdSolver;
 pub(crate) use reduction::{reduce_sparse_system, reduce_sparse_system_with_prescribed};
 use residual::sparse_relative_residual;
 pub(crate) use residual::{
-    cancellable_l2_norm, sparse_residual_norm, sparse_residual_vector, stable_l2_norm,
+    cancellable_l2_norm, sparse_residual_norm, sparse_residual_vector,
+    sparse_scaled_residual_vector, stable_l2_norm,
 };
 pub(crate) use sparse_path::solve_tridiagonal_system;
 

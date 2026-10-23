@@ -2,20 +2,30 @@ use crate::{
     chain_tridiagonal::path_forest_order,
     dynamic_spring_1d_validation::validate_harmonic_request,
     harmonic_spring_linear::{
-        Complex, ComplexTridiagonalSystem, solve_complex_system, solve_complex_tridiagonal,
+        Complex, ComplexTridiagonalSystem, arithmetic, solve_complex_system,
+        solve_complex_tridiagonal,
     },
     solver_control::{SolverStage, checkpoint, checkpoint_chunk},
     solver_postprocess::{fold_results, max_results, try_collect_results},
 };
 use kyuubiki_protocol::{
     HarmonicSpring1dElementResponse, HarmonicSpring1dFrequencyResult, HarmonicSpring1dNodeResponse,
-    SolveHarmonicSpring1dRequest, SolveHarmonicSpring1dResult,
+    SolveHarmonicSpring1dRequest, SolveHarmonicSpring1dResult, TransientSpring1dElementInput,
 };
 use std::{borrow::Cow, collections::BTreeSet, f64::consts::PI};
 
 const MAX_DENSE_HARMONIC_DOFS: usize = 512;
-const MIN_COMPLEX_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-12;
-const MAX_COMPLEX_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-8;
+
+#[path = "harmonic_spring_constraint_validation.rs"]
+mod constraint_validation;
+use constraint_validation::validate_harmonic_equilibrium;
+
+#[path = "harmonic_spring_frequency_range.rs"]
+mod frequency_range;
+
+#[cfg(test)]
+#[path = "harmonic_spring_constraint_tests.rs"]
+mod constraint_tests;
 
 struct ReducedLayout {
     free: Vec<usize>,
@@ -151,13 +161,11 @@ fn solve_frequency(
     layout: &ReducedLayout,
 ) -> Result<HarmonicSpring1dFrequencyResult, String> {
     let omega = 2.0 * PI * frequency_hz;
-    let omega_squared = omega * omega;
-    if !(omega.is_finite() && omega_squared.is_finite()) {
+    if !omega.is_finite() {
         return Err("harmonic spring 1d angular frequency exceeds the numeric range".to_string());
     }
     let solved = if let Some(path_position) = &layout.path_position {
-        let system =
-            assemble_path_dynamic_stiffness(request, omega, omega_squared, layout, path_position)?;
+        let system = assemble_path_dynamic_stiffness(request, omega, layout, path_position)?;
         let ordered = solve_complex_tridiagonal(system)?;
         let mut reduced = vec![Complex::default(); ordered.len()];
         for (reduced_index, &path_index) in path_position.iter().enumerate() {
@@ -173,7 +181,6 @@ fn solve_frequency(
         let (matrix, rhs) = assemble_reduced_dynamic_stiffness(
             request,
             omega,
-            omega_squared,
             &layout.free,
             &layout.reduced_index,
         )?;
@@ -184,31 +191,21 @@ fn solve_frequency(
         displacement[dof] = solved[index];
         checkpoint_chunk(SolverStage::ResultFreeDofs, index + 1, layout.free.len())?;
     }
-    validate_harmonic_equilibrium(
-        request,
-        omega,
-        omega_squared,
-        &displacement,
-        &layout.reduced_index,
-    )?;
+    validate_harmonic_equilibrium(request, omega, &displacement, &layout.reduced_index)?;
 
     let nodes = try_collect_results(
         SolverStage::ResultNodes,
         request.nodes.iter().enumerate().map(|(index, node)| {
             let amplitude = displacement[index].amplitude();
-            let velocity = omega * amplitude;
-            let acceleration = omega_squared * amplitude;
-            for (field, value) in [
-                ("displacement", amplitude),
-                ("velocity", velocity),
-                ("acceleration", acceleration),
-            ] {
-                if !value.is_finite() {
-                    return Err(format!(
-                        "node {index} {field} amplitude exceeds the finite numeric range"
-                    ));
-                }
+            if !amplitude.is_finite() {
+                return Err(format!(
+                    "node {index} displacement amplitude exceeds the finite numeric range"
+                ));
             }
+            let velocity = frequency_range::product(omega, amplitude)
+                .map_err(|error| format!("node {index} velocity amplitude {error}"))?;
+            let acceleration = frequency_range::square_product(omega, amplitude)
+                .map_err(|error| format!("node {index} acceleration amplitude {error}"))?;
             Ok(HarmonicSpring1dNodeResponse {
                 index,
                 id: node.id.clone(),
@@ -250,16 +247,22 @@ fn harmonic_elements(
         SolverStage::ResultElements,
         request.elements.iter().enumerate().map(|(index, element)| {
             let extension = displacement[element.node_j] - displacement[element.node_i];
-            let force = extension
-                * Complex {
-                    re: element.stiffness,
-                    im: omega * element.damping,
-                };
             let extension_amplitude = extension.amplitude();
-            let force_amplitude = force.amplitude();
-            if !(extension_amplitude.is_finite() && force_amplitude.is_finite()) {
+            if !extension_amplitude.is_finite() {
                 return Err(format!(
-                    "element {index} extension or force amplitude exceeds the finite numeric range"
+                    "element {index} extension amplitude exceeds the finite numeric range"
+                ));
+            }
+            let force = arithmetic::product(
+                extension,
+                element_coefficient(element, omega, index)?,
+                SolverStage::ResultElements,
+            )
+            .map_err(|error| format!("element {index} force: {error}"))?;
+            let force_amplitude = force.amplitude();
+            if !force_amplitude.is_finite() {
+                return Err(format!(
+                    "element {index} force amplitude exceeds the finite numeric range"
                 ));
             }
             Ok(HarmonicSpring1dElementResponse {
@@ -277,7 +280,6 @@ fn harmonic_elements(
 fn assemble_reduced_dynamic_stiffness(
     request: &SolveHarmonicSpring1dRequest,
     omega: f64,
-    omega_squared: f64,
     free: &[usize],
     reduced_index: &[Option<usize>],
 ) -> Result<(Vec<Vec<Complex>>, Vec<Complex>), String> {
@@ -285,15 +287,12 @@ fn assemble_reduced_dynamic_stiffness(
     let mut matrix = vec![vec![Complex::default(); free.len()]; free.len()];
     let mut rhs = vec![Complex::default(); free.len()];
     for (row, &node) in free.iter().enumerate() {
-        matrix[row][row].re = -omega_squared * request.nodes[node].mass;
+        matrix[row][row].re = -inertia_coefficient(omega, request.nodes[node].mass, node)?;
         rhs[row] = Complex::real(request.nodes[node].load_x);
         checkpoint_chunk(SolverStage::ConstraintReduce, row + 1, free.len())?;
     }
     for (index, element) in request.elements.iter().enumerate() {
-        let coefficient = Complex {
-            re: element.stiffness,
-            im: omega * element.damping,
-        };
+        let coefficient = element_coefficient(element, omega, index)?;
         let first = reduced_index[element.node_i];
         let second = reduced_index[element.node_j];
         if let Some(first) = first {
@@ -318,7 +317,6 @@ fn assemble_reduced_dynamic_stiffness(
 fn assemble_path_dynamic_stiffness(
     request: &SolveHarmonicSpring1dRequest,
     omega: f64,
-    omega_squared: f64,
     layout: &ReducedLayout,
     path_position: &[usize],
 ) -> Result<ComplexTridiagonalSystem, String> {
@@ -330,15 +328,12 @@ fn assemble_path_dynamic_stiffness(
     let mut rhs = vec![Complex::default(); size];
     for (reduced, &node) in layout.free.iter().enumerate() {
         let row = path_position[reduced];
-        diagonal[row].re = -omega_squared * request.nodes[node].mass;
+        diagonal[row].re = -inertia_coefficient(omega, request.nodes[node].mass, node)?;
         rhs[row] = Complex::real(request.nodes[node].load_x);
         checkpoint_chunk(SolverStage::ConstraintReduce, reduced + 1, size)?;
     }
     for (index, element) in request.elements.iter().enumerate() {
-        let coefficient = Complex {
-            re: element.stiffness,
-            im: omega * element.damping,
-        };
+        let coefficient = element_coefficient(element, omega, index)?;
         let first = layout.reduced_index[element.node_i];
         let second = layout.reduced_index[element.node_j];
         if let Some(first) = first {
@@ -373,140 +368,21 @@ fn assemble_path_dynamic_stiffness(
     })
 }
 
-fn validate_harmonic_equilibrium(
-    request: &SolveHarmonicSpring1dRequest,
-    omega: f64,
-    omega_squared: f64,
-    displacement: &[Complex],
-    reduced_index: &[Option<usize>],
-) -> Result<(), String> {
-    checkpoint(SolverStage::HarmonicResidual, 0)?;
-    let free_count = reduced_index.iter().flatten().count();
-    let mut coefficient_scales = vec![0.0_f64; free_count];
-    let mut displacement_scales = vec![0.0_f64; free_count];
-    for (index, node) in request.nodes.iter().enumerate() {
-        if let Some(row) = reduced_index[index] {
-            coefficient_scales[row] = omega_squared * node.mass;
-            displacement_scales[row] = displacement[index].component_scale();
-        }
-        checkpoint_chunk(
-            SolverStage::HarmonicResidual,
-            index + 1,
-            request.nodes.len(),
-        )?;
-    }
-    for (index, element) in request.elements.iter().enumerate() {
-        let coefficient = Complex {
-            re: element.stiffness,
-            im: omega * element.damping,
-        };
-        let local_displacement = displacement[element.node_i]
-            .component_scale()
-            .max(displacement[element.node_j].component_scale());
-        for row in [reduced_index[element.node_i], reduced_index[element.node_j]]
-            .into_iter()
-            .flatten()
-        {
-            coefficient_scales[row] = coefficient_scales[row].max(coefficient.component_scale());
-            displacement_scales[row] = displacement_scales[row].max(local_displacement);
-        }
-        checkpoint_chunk(
-            SolverStage::HarmonicResidual,
-            index + 1,
-            request.elements.len(),
-        )?;
-    }
-
-    // Normalize each equation and its incident displacements, not the whole model.
-    // This avoids overflowing the error denominator or erasing an independent soft row.
-    let mut residuals = vec![Complex::default(); free_count];
-    let mut equation_scales = vec![0.0_f64; free_count];
-    for (index, node) in request.nodes.iter().enumerate() {
-        if let Some(row) = reduced_index[index] {
-            let coefficient_scale = coefficient_scales[row];
-            if !(coefficient_scale.is_finite() && coefficient_scale > 0.0) {
-                return Err(format!("node {index} dynamic stiffness has invalid scale"));
-            }
-            if displacement_scales[row] == 0.0 {
-                displacement_scales[row] = 1.0;
-            }
-            let displacement_scale = displacement_scales[row];
-            let rhs = normalized_load(node.load_x, coefficient_scale, displacement_scale)?;
-            let inertia = Complex::real(omega_squared * node.mass / coefficient_scale)
-                * displacement[index].scaled(displacement_scale);
-            residuals[row] = Complex::real(rhs) + inertia;
-            equation_scales[row] = rhs.abs() + inertia.amplitude();
-        }
-        checkpoint_chunk(
-            SolverStage::HarmonicResidual,
-            index + 1,
-            request.nodes.len(),
-        )?;
-    }
-    for (index, element) in request.elements.iter().enumerate() {
-        let coefficient = Complex {
-            re: element.stiffness,
-            im: omega * element.damping,
-        };
-        for (node, sign) in [(element.node_i, 1.0), (element.node_j, -1.0)] {
-            if let Some(row) = reduced_index[node] {
-                let coefficient = coefficient.scaled(coefficient_scales[row]);
-                let first = displacement[element.node_i].scaled(displacement_scales[row]);
-                let second = displacement[element.node_j].scaled(displacement_scales[row]);
-                let force = coefficient * (second - first);
-                residuals[row] = residuals[row] + Complex::real(sign) * force;
-                equation_scales[row] +=
-                    coefficient.amplitude() * (first.amplitude() + second.amplitude());
-            }
-        }
-        checkpoint_chunk(
-            SolverStage::HarmonicResidual,
-            index + 1,
-            request.elements.len(),
-        )?;
-    }
-
-    let tolerance = (128.0 * f64::EPSILON * free_count as f64).clamp(
-        MIN_COMPLEX_BACKWARD_ERROR_TOLERANCE,
-        MAX_COMPLEX_BACKWARD_ERROR_TOLERANCE,
-    );
-    for (row, (residual, equation_scale)) in residuals.into_iter().zip(equation_scales).enumerate()
-    {
-        if !(residual.is_finite() && equation_scale.is_finite()) {
-            return Err("harmonic spring 1d dynamic stiffness residual is non-finite".to_string());
-        }
-        let relative = if equation_scale == 0.0 {
-            0.0
-        } else {
-            residual.amplitude() / equation_scale
-        };
-        if !relative.is_finite() || relative > tolerance {
-            return Err(format!(
-                "harmonic spring 1d dynamic stiffness failed backward-error validation at free row {row} ({relative:.6e})"
-            ));
-        }
-        checkpoint_chunk(SolverStage::HarmonicResidual, row + 1, free_count)?;
-    }
-    Ok(())
+fn inertia_coefficient(omega: f64, mass: f64, node: usize) -> Result<f64, String> {
+    frequency_range::square_product(omega, mass)
+        .map_err(|error| format!("node {node} inertia coefficient {error}"))
 }
 
-fn normalized_load(
-    load: f64,
-    coefficient_scale: f64,
-    displacement_scale: f64,
-) -> Result<f64, String> {
-    let intermediate = load / coefficient_scale;
-    let normalized = if !intermediate.is_finite() || (load != 0.0 && intermediate == 0.0) {
-        (load / displacement_scale) / coefficient_scale
-    } else {
-        intermediate / displacement_scale
-    };
-    if !normalized.is_finite() || (load != 0.0 && normalized == 0.0) {
-        return Err(
-            "harmonic spring 1d load cannot be represented in residual normalization".to_string(),
-        );
-    }
-    Ok(normalized)
+fn element_coefficient(
+    element: &TransientSpring1dElementInput,
+    omega: f64,
+    index: usize,
+) -> Result<Complex, String> {
+    Ok(Complex {
+        re: element.stiffness,
+        im: frequency_range::product(omega, element.damping)
+            .map_err(|error| format!("element {index} damping coefficient {error}"))?,
+    })
 }
 
 #[cfg(test)]
@@ -530,10 +406,10 @@ mod tests {
         .unwrap();
         let mut displacement = [Complex::real(0.0), Complex::real(1.0), Complex::real(1.0)];
         let reduced = [None, Some(0), Some(1)];
-        validate_harmonic_equilibrium(&request, 0.0, 0.0, &displacement, &reduced).unwrap();
+        validate_harmonic_equilibrium(&request, 0.0, &displacement, &reduced).unwrap();
         displacement[1] = Complex::real(2.0);
         let error =
-            validate_harmonic_equilibrium(&request, 0.0, 0.0, &displacement, &reduced).unwrap_err();
+            validate_harmonic_equilibrium(&request, 0.0, &displacement, &reduced).unwrap_err();
         assert!(
             error.contains("backward-error") && error.contains("free row 0"),
             "{error}"

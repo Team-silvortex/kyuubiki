@@ -1,7 +1,8 @@
 use std::time::Instant;
 
 use crate::linear_algebra::{
-    SparseMatrix, reduce_sparse_system, solve_spd_system_profile_with_options,
+    PrescribedSystemValidator, SparseMatrix, reduce_sparse_system,
+    solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::solver_control::SolverStage;
@@ -70,6 +71,15 @@ pub(crate) fn solve_thermal_plane_displacements(
     );
 
     let displacements = restore_solution(nodes.len() * 2, &[], &free, &reduced_displacements)?;
+    let started = Instant::now();
+    PrescribedSystemValidator::new_homogeneous(global_stiffness, &constrained)?
+        .validate(force_vector, &displacements)?;
+    push_thermal_plane_stage(
+        stages,
+        collect_stages,
+        "validate_original_constraints",
+        started.elapsed(),
+    );
     Ok(ThermalPlaneSolvedDisplacements {
         displacements,
         solver_iterations,

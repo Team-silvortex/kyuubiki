@@ -1,4 +1,21 @@
 use super::*;
+
+#[test]
+fn original_constraint_stages_append_without_renumbering_existing_stages() {
+    assert_eq!(SolverStage::ConstraintReduceRow as u8, 85);
+    for (stage, id, label) in [
+        (SolverStage::ConstraintValidate, 86, "constraint_validate"),
+        (
+            SolverStage::ConstraintValidateRow,
+            87,
+            "constraint_validate_row",
+        ),
+    ] {
+        assert_eq!(stage as u8, id);
+        assert_eq!(SolverStage::decode(id), Some(stage));
+        assert_eq!(stage.as_str(), label);
+    }
+}
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 #[test]

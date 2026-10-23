@@ -60,6 +60,7 @@ pub(super) fn solve_with_prescribed(
         }
         solve_free_segment(start..cursor, &system, &mut values)?;
     }
+    super::constraint_validation::validate(&system, &fixed, prescribed, &values)?;
     checkpoint(SolverStage::ResultPrescribed, node_count)?;
     Ok(values)
 }

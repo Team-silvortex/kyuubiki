@@ -4,6 +4,466 @@
   "domain": "shared-linear-constraints",
   "profiles": [
     {
+      "profile_id": "harmonic-complex-arithmetic-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-complex-arithmetic-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "half_quantum_complex_product_and_division_closed_forms",
+        "complete_dense_and_pivoted_path_substitution_replay",
+        "canceled_overflowing_forward_products_and_deferred_wide_numerator_division",
+        "ordinary_complex_arithmetic_bit_controls_and_quantized_unknown_controls",
+        "invalid_pivot_operand_and_final_restoration_range_controls",
+        "wide_row_each_replay_and_division_phase_cancellation_then_replay",
+        "signed_oriented_force_publication_and_unrepresentable_force_extension_controls",
+        "serialized_path_dense_workflow_force_failure_and_in_recovery_cancellation"
+      ],
+      "formal_invariants": [
+        "exceptional_substitution_replays_all_upper_terms_before_complex_pivot_division",
+        "complex_products_combine_component_terms_before_final_range_restoration",
+        "ordinary_normal_arithmetic_retains_existing_order_and_bits",
+        "nonzero_quantum_element_forces_are_not_silently_published_as_zero",
+        "final_product_update_restoration_is_reversible_and_unknowns_still_require_original_equation_admission",
+        "extension_and_force_publication_range_errors_are_distinct",
+        "failure_or_cancellation_returns_no_successful_partial_sweep_or_force_array"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_1d.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_linear.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_complex_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_complex_range_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_complex_force_range.rs",
+        "workers/rust/crates/engine/tests/harmonic_constraint_admission.rs",
+        "reports/harmonic-complex-arithmetic-range-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-complex-arithmetic-unit-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib harmonic_complex_range -- --nocapture"
+        },
+        {
+          "id": "harmonic-complex-force-publication",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test harmonic_complex_force_range -- --nocapture"
+        },
+        {
+          "id": "harmonic-complex-force-workflow-consumers",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test harmonic_constraint_admission harmonic_complex_force_range -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "harmonic-frequency-product-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-frequency-product-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "underflowed_overflowed_and_rounded_subnormal_square_closed_forms",
+        "ordinary_product_bit_identity_and_exact_subnormal_restoration_controls",
+        "signed_operand_true_zero_nonfinite_and_final_range_controls",
+        "shared_recovered_inertia_in_path_dense_assembly_and_original_equation_admission",
+        "finite_displacement_velocity_acceleration_force_and_phase_reference_checks",
+        "serialized_workflow_failure_context_and_later_frequency_cancellation_then_replay"
+      ],
+      "formal_invariants": [
+        "angular_frequency_square_is_not_materialized_as_a_required_finite_coefficient",
+        "ordinary_normal_products_preserve_existing_arithmetic_order_and_bits",
+        "exceptional_frequency_products_restore_only_after_combining_all_factor_exponents",
+        "final_coefficient_or_response_range_loss_is_an_error_not_a_static_approximation",
+        "original_equation_gate_recomputes_inertia_from_frequency_and_mass",
+        "true_zero_frequency_and_zero_response_do_not_inherit_an_invalid_intermediate_square",
+        "failure_or_cancellation_returns_no_successful_partial_frequency_array"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_1d.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_frequency_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_constraint_validation.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_constraint_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_frequency_range.rs",
+        "workers/rust/crates/engine/tests/harmonic_constraint_admission.rs",
+        "reports/harmonic-frequency-product-range-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-frequency-product-unit-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib harmonic_frequency_ -- --nocapture"
+        },
+        {
+          "id": "harmonic-frequency-product-closed-forms",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test harmonic_frequency_range -- --nocapture"
+        },
+        {
+          "id": "harmonic-frequency-product-workflow-consumers",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test harmonic_constraint_admission harmonic_frequency_range -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "harmonic-original-equation-admission-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-original-equation-admission-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "public_solver_erased_incident_force_negative_control",
+        "complete_complex_state_exact_support_and_reduction_map_validation",
+        "binary_product_scaled_compensated_complex_original_equilibrium",
+        "signed_complex_closed_form_and_representable_contrast_controls",
+        "irreversible_alignment_rejection_without_tolerance_relaxation",
+        "all_wide_scan_phases_and_final_admission_cancellation_then_replay",
+        "serialized_path_dense_dispatch_and_workflow_frequency_admission"
+      ],
+      "formal_invariants": [
+        "each_frequency_checks_original_element_mass_and_load_terms_before_publication",
+        "fixed_real_and_imaginary_unknowns_equal_zero_independent_of_residual_tolerance",
+        "reduction_map_must_match_original_node_constraints",
+        "support_reaction_equations_are_not_required_to_vanish",
+        "residual_scaling_uses_actual_products_not_unrelated_operand_maxima",
+        "lost_product_or_tail_range_is_an_error_not_a_zero_contribution",
+        "cancelled_or_failed_sweeps_do_not_publish_a_successful_partial_result"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_1d.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_constraint_validation.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_constraint_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_spring_balance.rs",
+        "workers/rust/crates/solver/tests/harmonic_spring_reliability.rs",
+        "workers/rust/crates/engine/tests/harmonic_constraint_admission.rs",
+        "reports/harmonic-original-equation-admission-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-original-equation-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib harmonic_original_equations -- --nocapture"
+        },
+        {
+          "id": "harmonic-original-equation-workflow-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test harmonic_constraint_admission -- --nocapture"
+        },
+        {
+          "id": "harmonic-original-equation-existing-physics",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test harmonic_spring_balance --test harmonic_spring_reliability --test dynamic_spring_closed_form -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "newton-original-equation-admission-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "newton-original-equation-admission-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.nonlinear_spring_1d", "solve.contact_gap_1d"],
+      "validation_methods": [
+        "zero_residual_fixed_drift_complete_dimensions_and_isolated_nonfinite_state_controls",
+        "signed_binary_scaled_current_tangent_rhs_and_gather_scatter_negative_controls",
+        "invertible_indefinite_contact_switch_without_an_spd_only_admission_rule",
+        "scratch_index_full_equation_wide_row_and_completion_cancellation_then_replay",
+        "serialized_dispatch_workflow_and_correction_admission_count_parity",
+        "zero_iteration_all_fixed_states_partial_load_rollback_and_clean_replay",
+        "manufactured_branched_hardening_and_active_contact_equilibrium_controls"
+      ],
+      "formal_invariants": [
+        "every_evaluated_complete_nonlinear_state_has_finite_values_and_exact_fixed_zeros",
+        "unscaled_newton_increment_satisfies_pre_elimination_tangent_times_delta_equals_current_residual",
+        "the_nonlinear_state_is_not_tested_as_a_static_tangent_times_displacement_equation",
+        "increment_admission_precedes_line_search_and_scratch_is_reused",
+        "original_tangent_and_temporary_constraint_index_are_released_before_merit_assembly",
+        "budget_exhaustion_retains_last_committed_state_but_admission_errors_never_become_partial_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/nonlinear_spring_1d.rs",
+        "workers/rust/crates/solver/src/nonlinear_spring_constraint_tests.rs",
+        "workers/rust/crates/solver/src/linear_constraint_validation.rs",
+        "workers/rust/crates/engine/tests/nonlinear_constraint_admission.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_recovery.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_scaling.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_tangent_pivot.rs",
+        "reports/newton-original-equation-admission-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "newton-original-equation-state-and-increment-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib newton_original -- --nocapture"
+        },
+        {
+          "id": "newton-original-equation-workflow-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test nonlinear_constraint_admission -- --nocapture"
+        },
+        {
+          "id": "newton-original-equation-existing-physics-and-recovery",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_recovery --test nonlinear_spring_scaling --test nonlinear_spring_tangent_pivot --test nonlinear_spring_equation_scaling -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "newmark-original-equation-admission-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "newmark-original-equation-admission-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.transient_spring_1d"],
+      "validation_methods": [
+        "reduced_success_with_permuted_or_fixed_component_map_fault_injection",
+        "signed_binary_scaled_single_step_closed_form_and_borrowed_owned_parity",
+        "every_increment_checked_before_state_update_and_sampled_history",
+        "unsaved_step_entry_input_scan_completion_and_wide_row_cancellation_then_replay",
+        "serialized_dispatch_workflow_parity_and_all_fixed_loaded_controls",
+        "heterogeneous_damped_work_energy_balance_and_sampling_invariance"
+      ],
+      "formal_invariants": [
+        "full_velocity_increment_satisfies_pre_elimination_newmark_effective_equations",
+        "fixed_velocity_increments_equal_zero_independent_of_residual_tolerance",
+        "support_reactions_are_not_required_to_vanish",
+        "one_original_matrix_and_constraint_index_are_reused_across_steps",
+        "history_sampling_never_skips_increment_admission",
+        "admission_failure_or_cancellation_precedes_state_update_and_history_capture"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/transient_spring_1d.rs",
+        "workers/rust/crates/solver/src/transient_spring_1d_constraint_tests.rs",
+        "workers/rust/crates/solver/src/linear_constraint_validation.rs",
+        "workers/rust/crates/engine/tests/transient_spring_constraint_admission.rs",
+        "workers/rust/crates/solver/tests/transient_spring_balance.rs",
+        "reports/newmark-original-equation-admission-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "newmark-original-equation-map-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib newmark_original_constraints -- --nocapture"
+        },
+        {
+          "id": "newmark-original-equation-workflow-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test transient_spring_constraint_admission -- --nocapture"
+        },
+        {
+          "id": "newmark-original-equation-existing-physics",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test transient_spring_balance --test dynamic_spring_closed_form --test transient_spring_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "thermal-frame-reaction-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "thermal-frame-reaction-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.thermal_frame_3d"],
+      "validation_methods": [
+        "original_reaction_overflow_cancellation_and_subnormal_product_aggregation",
+        "normal_product_tail_recovery_in_zero_and_small_physical_residuals",
+        "scaled_qr_back_substitution_without_materializing_dot_or_numerator",
+        "independent_coordinate_scales_exact_subnormals_and_support_order_controls",
+        "irrecoverable_range_and_nonfinite_input_rejection_then_replay",
+        "wide_residual_and_reaction_coefficient_recovery_cancellation",
+        "signed_large_translation_and_rotation_dispatch_workflow_force_balance"
+      ],
+      "formal_invariants": [
+        "physical_reaction_sign_remains_stiffness_times_displacement_minus_assembled_force",
+        "final_reaction_residual_always_keeps_scaled_product_tails",
+        "iterative_plain_residual_arithmetic_is_not_changed",
+        "finite_reaction_coefficients_do_not_require_finite_unscaled_intermediate_sums",
+        "nonrepresentable_range_restoration_is_not_silently_published",
+        "failure_or_cancellation_prevents_successful_result_publication"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_constraints.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_constraint_basis.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_reaction_tests.rs",
+        "workers/rust/crates/engine/tests/thermal_frame_constraint_admission.rs",
+        "reports/thermal-frame-reaction-range-reliability-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "thermal-frame-reaction-range-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib thermal_frame_reactions_ -- --nocapture"
+        },
+        {
+          "id": "thermal-frame-reaction-range-workflow-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test thermal_frame_constraint_admission thermal_frame_reactions_ -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "projected-thermal-frame-original-equation-admission-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "projected-thermal-frame-original-equation-admission-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.thermal_frame_3d"],
+      "validation_methods": [
+        "signed_binary_scaled_translation_rotation_and_nonorthogonal_support_controls",
+        "coordinate_gate_parity_all_fixed_reactions_and_complete_input_checks",
+        "coefficient_merged_virtual_equations_and_fail_closed_range_controls",
+        "near_axis_nonzero_basis_components_through_projection_solve_restore_and_workflow",
+        "wide_row_admission_and_completion_cancellation_then_clean_replay",
+        "serialized_dispatch_workflow_artifact_parity_and_thermal_load_controls"
+      ],
+      "formal_invariants": [
+        "restored_physical_unknowns_satisfy_original_support_directions",
+        "original_assembled_equations_balance_in_each_admissible_free_direction",
+        "support_reactions_are_not_required_to_vanish",
+        "nonzero_basis_components_are_not_removed_by_an_absolute_cutoff",
+        "projection_range_loss_fails_admission_instead_of_publishing_success",
+        "failure_or_cancellation_prevents_successful_result_publication"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/thermal_frame_3d.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_constraints.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_constraint_validation.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_constraint_validation_tests.rs",
+        "workers/rust/crates/engine/tests/thermal_frame_constraint_admission.rs",
+        "reports/projected-thermal-frame-equation-admission-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "projected-original-equation-unit-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib projected_original_equations -- --nocapture"
+        },
+        {
+          "id": "projected-original-equation-workflow-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test thermal_frame_constraint_admission -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "homogeneous-mechanical-original-equation-admission-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "homogeneous-mechanical-original-equation-admission-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.spring_1d", "solve.spring_2d", "solve.spring_3d", "solve.thermal_bar_1d",
+        "solve.torsion_1d", "solve.truss_2d", "solve.truss_3d",
+        "solve.thermal_truss_2d", "solve.thermal_truss_3d",
+        "solve.beam_1d", "solve.thermal_beam_1d", "solve.frame_2d",
+        "solve.thermal_frame_2d", "solve.frame_3d", "solve.solid_tetra_3d",
+        "solve.plane_triangle_2d", "solve.plane_quad_2d",
+        "solve.thermal_plane_triangle_2d", "solve.thermal_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "signed_binary_scaled_original_spring_equilibrium_and_zero_identity",
+        "explicit_zero_equivalence_duplicate_support_signed_zero_and_reaction_controls",
+        "fixed_zero_roundoff_exclusion_for_wrong_weak_unknowns",
+        "full_input_and_support_index_validation_with_cancellable_long_indexes",
+        "wide_original_row_and_completion_cancellation_then_replay",
+        "nineteen_operator_dispatch_and_workflow_admission_entry_and_completion_controls",
+        "all_fixed_loaded_models_and_clean_replay_with_identical_artifacts",
+        "body_and_thermal_equivalent_loads_and_non_path_thermal_bar_controls"
+      ],
+      "formal_invariants": [
+        "all_fifteen_shared_static_mechanical_reconstruction_sites_check_original_equations",
+        "fixed_mechanical_unknowns_must_equal_zero_independent_of_residual_tolerance",
+        "support_reactions_are_not_required_to_vanish",
+        "assembled_rhs_includes_element_and_thermal_equivalent_loads",
+        "homogeneous_and_explicit_zero_constraints_share_one_row_admission_policy",
+        "failure_or_cancellation_prevents_successful_result_publication"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_constraint_validation.rs",
+        "workers/rust/crates/solver/src/linear_homogeneous_validation_tests.rs",
+        "workers/rust/crates/engine/tests/mechanical_constraint_admission.rs",
+        "workers/rust/crates/engine/tests/support/mechanical_constraints.rs",
+        "workers/rust/crates/solver/src/beam_1d_system.rs",
+        "workers/rust/crates/solver/src/frame_2d_system.rs",
+        "workers/rust/crates/solver/src/plane_2d_profile.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_solve.rs",
+        "reports/homogeneous-mechanical-equation-admission-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "homogeneous-mechanical-equation-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib constraint_validation::homogeneous_tests -- --nocapture"
+        },
+        {
+          "id": "homogeneous-mechanical-equation-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test mechanical_constraint_admission -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "original-prescribed-equation-admission-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "original-prescribed-equation-admission-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.heat_bar_1d", "solve.electrostatic_bar_1d", "solve.acoustic_bar_1d",
+        "solve.magnetostatic_bar_1d", "solve.advection_diffusion_bar_1d",
+        "solve.heat_plane_triangle_2d", "solve.heat_plane_quad_2d",
+        "solve.electrostatic_plane_triangle_2d", "solve.electrostatic_plane_quad_2d",
+        "solve.magnetostatic_plane_triangle_2d", "solve.magnetostatic_plane_quad_2d",
+        "solve.electric_conduction_plane_quad_2d", "solve.transient_heat_bar_1d"
+      ],
+      "validation_methods": [
+        "original_load_and_free_dof_reconstruction_negative_controls",
+        "exact_fixed_identity_signed_zero_and_reaction_controls",
+        "fixed_input_roundoff_exclusion_in_plain_and_range_rows",
+        "valid_quantized_unknown_and_erased_load_controls",
+        "complete_dimensions_finiteness_index_and_matrix_structure_controls",
+        "wide_original_row_cancellation_and_reusable_validation_context",
+        "chain_interior_equation_scan_and_final_publication_cancellation",
+        "transient_per_step_original_rhs_and_history_publication_controls",
+        "magnetic_dispatch_workflow_and_non_path_transport_replay"
+      ],
+      "formal_invariants": [
+        "expanded_solution_is_checked_against_pre_elimination_assembled_equations",
+        "each_fixed_value_must_equal_its_prescription_independent_of_residual_tolerance",
+        "fixed_reaction_equations_are_excluded_from_zero_residual_conditions",
+        "fixed_inputs_cannot_lend_an_unknown_representation_allowance",
+        "all_free_rows_not_only_segment_boundaries_are_checked",
+        "transient_checks_use_the_full_current_rhs_before_history_capture",
+        "cancellation_cannot_publish_a_successful_partial_result"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/linear_constraint_validation.rs",
+        "workers/rust/crates/solver/src/linear_constraint_validation_tests.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_constraint_validation.rs",
+        "workers/rust/crates/solver/src/chain_tridiagonal_constraint_validation_tests.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual_range.rs",
+        "workers/rust/crates/solver/src/transient_heat_bar_1d.rs",
+        "workers/rust/crates/solver/src/transport_bar_1d.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "workers/rust/crates/solver/tests/transient_heat_bar_reliability.rs",
+        "workers/rust/crates/solver/tests/advection_diffusion_bar_reliability.rs",
+        "workers/rust/crates/engine/tests/magnetostatic_prescribed_workflow.rs",
+        "reports/original-prescribed-equation-admission-20261023.md"
+      ],
+      "commands": [
+        {
+          "id": "original-prescribed-equation-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib constraint_validation -- --nocapture"
+        },
+        {
+          "id": "original-prescribed-equation-stage-contract",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib original_constraint_stages -- --nocapture"
+        },
+        {
+          "id": "original-prescribed-equation-consumers",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver -p kyuubiki-engine --test magnetostatic_prescribed_workflow --test transient_heat_bar_reliability --test advection_diffusion_bar_reliability original_ -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "prescribed-zero-cancellation-local-reliability",
       "profile_role": "component_profile",
       "qualification_candidate_id": "prescribed-zero-cancellation-local-reliability",

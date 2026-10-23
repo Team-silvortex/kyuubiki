@@ -3,6 +3,8 @@ use crate::solver_control::{SolverStage, checkpoint};
 #[path = "chain_tridiagonal_pivot.rs"]
 mod pivot;
 use pivot::PivotedTridiagonal;
+#[path = "chain_tridiagonal_constraint_validation.rs"]
+mod constraint_validation;
 #[path = "chain_tridiagonal_equilibration.rs"]
 mod equilibration;
 #[path = "chain_tridiagonal_forward_range.rs"]

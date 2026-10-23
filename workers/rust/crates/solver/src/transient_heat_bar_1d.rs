@@ -1,6 +1,8 @@
 use crate::linear_algebra::{
-    PreparedSpdSolver, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    PreparedSpdSolver, PrescribedSystemValidator, SparseMatrix, add_at,
+    reduce_sparse_system_with_prescribed,
 };
+use crate::solver_control::{SolverStage, checkpoint_chunk};
 use crate::transient_heat_bar_1d_validation::validate_request;
 use crate::transient_history::TransientHistoryPlan;
 use kyuubiki_protocol::{
@@ -68,6 +70,8 @@ fn solve_transient_heat_bar_1d_internal(
         reduce_sparse_system_with_prescribed(&system, &heat_load, &prescribed)?;
     let solver = PreparedSpdSolver::factor(reduced_system)
         .map_err(|error| format!("transient heat bar effective system failed: {error}"))?;
+    let validator = PrescribedSystemValidator::new(&system, &prescribed)?;
+    let mut original_rhs = heat_load.clone();
 
     let mut temperatures = request
         .nodes
@@ -80,6 +84,10 @@ fn solve_transient_heat_bar_1d_internal(
         .map_err(|_| "transient heat bar history allocation is too large".to_string())?;
     history.push(step_result(0, 0.0, &temperatures, &capacity)?);
     for step in 1..=request.steps {
+        for (dof, &previous) in temperatures.iter().enumerate() {
+            original_rhs[dof] = heat_load[dof] + capacity_rate[dof] * previous;
+            checkpoint_chunk(SolverStage::TransientState, dof + 1, temperatures.len())?;
+        }
         let mut rhs = reduced_base_rhs.clone();
         for (reduced_index, &dof) in free.iter().enumerate() {
             rhs[reduced_index] += capacity_rate[dof] * temperatures[dof];
@@ -96,6 +104,9 @@ fn solve_transient_heat_bar_1d_internal(
         for &(dof, value) in &prescribed {
             temperatures[dof] = value;
         }
+        validator
+            .validate(&original_rhs, &temperatures)
+            .map_err(|error| format!("transient heat bar step {step}: {error}"))?;
 
         if history_plan.captures(step, request.steps) {
             history.push(step_result(

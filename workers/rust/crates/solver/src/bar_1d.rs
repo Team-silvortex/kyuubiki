@@ -4,8 +4,8 @@ use crate::bar_1d_validation::{
 };
 use crate::chain_tridiagonal::solve_path_with_prescribed;
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, reduce_sparse_system_with_prescribed,
-    solve_spd_system,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system,
+    reduce_sparse_system_with_prescribed, solve_spd_system,
 };
 use crate::thermal_bar_1d_fast::{
     build_thermal_bar_1d_result, solve_thermal_bar_1d_chain_displacements,
@@ -171,6 +171,8 @@ fn solve_validated_thermal_bar_1d(
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
     }
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&force_vector, &displacements)?;
 
     Ok(build_thermal_bar_1d_result(request, displacements))
 }
@@ -386,7 +388,9 @@ fn solve_heat_bar_1d_temperatures(request: &SolveHeatBar1dRequest) -> Result<Vec
     let (reduced_stiffness, reduced_rhs, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &rhs, &prescribed)?;
     let reduced_values = solve_spd_system(&reduced_stiffness, &reduced_rhs)?;
-    expand_prescribed_values(node_count, &prescribed, &free, reduced_values)
+    let values = expand_prescribed_values(node_count, &prescribed, &free, reduced_values)?;
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?.validate(&rhs, &values)?;
+    Ok(values)
 }
 
 fn solve_electrostatic_bar_1d_potentials(
@@ -435,7 +439,9 @@ fn solve_electrostatic_bar_1d_potentials(
     let (reduced_stiffness, reduced_rhs, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &rhs, &prescribed)?;
     let reduced_values = solve_spd_system(&reduced_stiffness, &reduced_rhs)?;
-    expand_prescribed_values(node_count, &prescribed, &free, reduced_values)
+    let values = expand_prescribed_values(node_count, &prescribed, &free, reduced_values)?;
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?.validate(&rhs, &values)?;
+    Ok(values)
 }
 
 fn expand_prescribed_values(

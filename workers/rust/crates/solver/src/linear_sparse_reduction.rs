@@ -57,20 +57,7 @@ pub(crate) fn reduce_sparse_system_with_prescribed(
     checkpoint(SolverStage::ConstraintIndex, 0)?;
     validate_inputs(matrix, force)?;
     let size = force.len();
-    let mut prescribed_values = vec![None; size];
-    for (index, &(dof, value)) in prescribed.iter().enumerate() {
-        if dof >= size {
-            return Err("sparse reduction received an out-of-range prescribed value".into());
-        }
-        if !value.is_finite() {
-            return Err("sparse reduction received a non-finite prescribed value".into());
-        }
-        if prescribed_values[dof].is_some_and(|previous| previous != value) {
-            return Err("sparse reduction received conflicting prescribed values".into());
-        }
-        prescribed_values[dof] = Some(value);
-        checkpoint_chunk(SolverStage::ConstraintIndex, index + 1, prescribed.len())?;
-    }
+    let prescribed_values = index_prescribed(size, prescribed)?;
     let (free, free_map) = free_map(size, |index| prescribed_values[index].is_none())?;
     checkpoint(SolverStage::ConstraintReduce, 0)?;
     let mut reduced =
@@ -118,6 +105,27 @@ pub(crate) fn reduce_sparse_system_with_prescribed(
     Ok((reduced, reduced_force, free))
 }
 
+pub(super) fn index_prescribed(
+    size: usize,
+    prescribed: &[(usize, f64)],
+) -> Result<Vec<Option<f64>>, String> {
+    let mut prescribed_values = vec![None; size];
+    for (index, &(dof, value)) in prescribed.iter().enumerate() {
+        if dof >= size {
+            return Err("sparse reduction received an out-of-range prescribed value".into());
+        }
+        if !value.is_finite() {
+            return Err("sparse reduction received a non-finite prescribed value".into());
+        }
+        if prescribed_values[dof].is_some_and(|previous| previous != value) {
+            return Err("sparse reduction received conflicting prescribed values".into());
+        }
+        prescribed_values[dof] = Some(value);
+        checkpoint_chunk(SolverStage::ConstraintIndex, index + 1, prescribed.len())?;
+    }
+    Ok(prescribed_values)
+}
+
 fn recover_rhs(
     entries: &[(usize, f64)],
     prescribed: &[Option<f64>],
@@ -153,6 +161,10 @@ fn validate_inputs(matrix: &SparseMatrix, rhs: &[f64]) -> Result<(), String> {
         }
         checkpoint(SolverStage::SparseValidateRhs, index * 1024 + chunk.len())?;
     }
+    validate_matrix(matrix)
+}
+
+pub(super) fn validate_matrix(matrix: &SparseMatrix) -> Result<(), String> {
     checkpoint(SolverStage::SparseValidateMatrix, 0)?;
     for (row, entries) in matrix.rows.iter().enumerate() {
         let mut previous = None;

@@ -25,7 +25,7 @@ impl From<RangeError> for String {
 }
 
 pub(in crate::linear_algebra) struct ScaledRow {
-    pub(super) residual: f64,
+    pub(in crate::linear_algebra) residual: f64,
     pub(super) relative: f64,
     equation_scale: f64,
     solution_roundoff: f64,
@@ -87,6 +87,17 @@ pub(in crate::linear_algebra) fn scaled_entries(
     solution: &[f64],
     stage: SolverStage,
 ) -> Result<ScaledRow, RangeError> {
+    scaled_entries_with_roundoff(entries, length, expected, solution, stage, |_| true)
+}
+
+pub(in crate::linear_algebra) fn scaled_entries_with_roundoff(
+    entries: impl Iterator<Item = (usize, f64)> + Clone,
+    length: usize,
+    expected: f64,
+    solution: &[f64],
+    stage: SolverStage,
+    roundable: impl Fn(usize) -> bool,
+) -> Result<ScaledRow, RangeError> {
     let (rhs, rhs_exponent) = split(expected)?;
     let mut exponent = if rhs == 0.0 { i32::MIN } else { rhs_exponent };
     let mut solution_roundoff = 0.0;
@@ -96,7 +107,9 @@ pub(in crate::linear_algebra) fn scaled_entries(
         let component = component(solution, column)?;
         let (high, _, power) = product(coefficient, component)?;
         has_response |= high != 0.0;
-        solution_roundoff += super::subnormal_solution_roundoff(coefficient, component);
+        if roundable(column) {
+            solution_roundoff += super::subnormal_solution_roundoff(coefficient, component);
+        }
         if high != 0.0 {
             exponent = exponent.max(power);
         }

@@ -1,6 +1,50 @@
 use kyuubiki_engine::{run_solve_operator, run_workflow_graph};
 use kyuubiki_protocol::WorkflowGraphRunRequest;
+use kyuubiki_solver::solver_control::{SolverControl, SolverStage, with_solver_observer};
 use serde_json::{Value, json};
+
+#[test]
+fn magnetic_original_constraints_gate_cancels_dispatch_and_workflow_then_replays() {
+    for arms in [1, 4] {
+        let input = json!({
+            "nodes": (0..=arms).map(|index| json!({
+                "id":format!("n{index}"), "x":index,
+                "fix_magnetic_potential":index != 0,
+                "magnetic_potential":2.0, "magnetomotive_source":if index == 0 { 1.0 } else { 0.0 }
+            })).collect::<Vec<_>>(),
+            "elements": (1..=arms).map(|index| json!({
+                "id":format!("e{index}"), "node_i":0, "node_j":index,
+                "area":1.0, "permeability":index as f64
+            })).collect::<Vec<_>>()
+        });
+        for use_workflow in [false, true] {
+            let control = SolverControl::default();
+            let cancel = control.clone();
+            let result = with_solver_observer(
+                &control,
+                move |point| {
+                    if point.stage == SolverStage::ConstraintValidate && point.completed_steps == 0
+                    {
+                        cancel.request_cancel();
+                    }
+                },
+                || {
+                    if use_workflow {
+                        run_workflow_graph(workflow(input.clone())).map(|_| ())
+                    } else {
+                        run_solve_operator("solve.magnetostatic_bar_1d", input.clone()).map(|_| ())
+                    }
+                },
+            );
+            assert!(result.unwrap_err().contains("constraint_validate"));
+            assert!(control.was_interrupted());
+            let direct = run_solve_operator("solve.magnetostatic_bar_1d", input.clone()).unwrap();
+            let run = run_workflow_graph(workflow(input.clone())).unwrap();
+            assert!(run.failed_nodes.is_empty());
+            assert_eq!(run.artifacts["output.result"], direct);
+        }
+    }
+}
 
 #[test]
 fn magnetic_prescribed_cancellation_survives_serialized_dispatch_and_workflow() {

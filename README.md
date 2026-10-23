@@ -5,15 +5,16 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The current source and documentation version is **daji 3.6.0**.
+> The current source and documentation version is **daji 3.7.0**.
 > The last locally built and installed desktop/runtime baseline is **daji 3.4.0**.
-> Version 3.6.0 aligns package metadata but does not rebuild or replace that baseline.
+> Version 3.7.0 aligns package metadata but does not rebuild or replace that baseline.
 > Building or installing locally does not publish download artifacts or SDKs.
 > Historical evidence keeps its original version and scope. A version number
 > is not industrial certification; public distribution remains evidence-gated.
 
-See the [3.6.0 checkpoint](docs/current-line.md#daji-360-checkpoint) for workflow
-recovery, quality-evidence admission and cross-runtime ranking consistency.
+See the [3.7.0 checkpoint](docs/current-line.md#daji-370-checkpoint) for original
+constraint-equation admission, checked complex arithmetic and force recovery.
+Workflow recovery and quality-evidence admission remain part of the mainline.
 Earlier modal research remains scoped evidence, not admitted production recovery.
 
 Early Daji prioritizes hardening an **agent-driven industrial research system**,

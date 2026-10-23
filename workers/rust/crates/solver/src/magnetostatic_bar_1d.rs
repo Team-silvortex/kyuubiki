@@ -1,6 +1,7 @@
 use crate::chain_tridiagonal::solve_path_with_prescribed;
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    solve_spd_system,
 };
 use crate::magnetostatic_bar_1d_validation::validate_request;
 use kyuubiki_protocol::{
@@ -157,5 +158,7 @@ fn solve_magnetic_potentials(request: &SolveMagnetostaticBar1dRequest) -> Result
     for (index, &dof) in free.iter().enumerate() {
         values[dof] = reduced_values[index];
     }
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?
+        .validate(&source_vector, &values)?;
     Ok(values)
 }

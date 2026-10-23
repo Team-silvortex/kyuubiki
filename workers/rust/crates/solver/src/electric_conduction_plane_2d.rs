@@ -8,7 +8,7 @@ use crate::heat_plane_2d_element::{
     precompute_heat_plane_quad_from_coordinates,
 };
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
@@ -262,6 +262,7 @@ fn solve_potentials(
     for (index, &dof) in free.iter().enumerate() {
         potentials[dof] = solved[index];
     }
+    PrescribedSystemValidator::new(conductance, &prescribed)?.validate(currents, &potentials)?;
     Ok(potentials)
 }
 

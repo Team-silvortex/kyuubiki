@@ -1,6 +1,6 @@
 use crate::frame_3d_element::finite_fields;
 use crate::frame_3d_math::normalized_direction as normalize;
-use crate::linear_algebra::{SparseMatrix, add_at};
+use crate::linear_algebra::{SparseMatrix, add_at, sparse_scaled_residual_vector};
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use crate::solver_postprocess::try_collect_results;
 use crate::thermal_frame_3d_constraint_basis::{dot, free_basis, reaction_coefficients};
@@ -8,6 +8,13 @@ use kyuubiki_protocol::{
     SolveThermalFrame3dRequest, ThermalFrame3dDirectionalConstraintResult,
     ThermalFrame3dDirectionalRotationalConstraintResult,
 };
+
+#[path = "thermal_frame_3d_constraint_validation.rs"]
+mod validation;
+
+#[cfg(test)]
+#[path = "thermal_frame_3d_reaction_tests.rs"]
+mod reaction_tests;
 
 pub(crate) struct ThermalFrame3dConstraintSystem {
     physical_to_reduced: Vec<Vec<(usize, f64)>>,
@@ -76,7 +83,7 @@ impl ThermalFrame3dConstraintSystem {
             let physical_offset = (block / 2) * 6 + (block % 2) * 3;
             for basis in free_basis {
                 for component in 0..3 {
-                    if basis[component].abs() > 1.0e-15 {
+                    if basis[component] != 0.0 {
                         physical_to_reduced[physical_offset + component]
                             .push((reduced_size, basis[component]));
                     }
@@ -236,19 +243,23 @@ fn residual_vector(
     force: &[f64],
     displacement: &[f64],
 ) -> Result<Vec<f64>, String> {
-    try_collect_results(
-        SolverStage::ResidualValidate,
-        (0..force.len()).map(|row| {
-            let value = matrix
-                .row_entries(row)
-                .iter()
-                .map(|(column, value)| value * displacement[*column])
-                .sum::<f64>()
-                - force[row];
-            finite_fields("constraint reaction", "residual", &[value])?;
-            Ok(value)
-        }),
-    )
+    let mut residual =
+        sparse_scaled_residual_vector(matrix, force, displacement).map_err(|error| {
+            format!("3d frame constraint reaction: residual is not representable: {error}")
+        })?;
+    checkpoint(SolverStage::ResidualValidate, 0)?;
+    let size = residual.len();
+    for (index, value) in residual.iter_mut().enumerate() {
+        // Shared residuals use f - K u; physical support reactions use K u - f.
+        *value = -*value;
+        finite_fields(
+            "constraint reaction",
+            "residual operands",
+            &[*value, force[index], displacement[index]],
+        )?;
+        checkpoint_chunk(SolverStage::ResidualValidate, index + 1, size)?;
+    }
+    Ok(residual)
 }
 
 fn block_vector(vector: &[f64], block: usize) -> [f64; 3] {

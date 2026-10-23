@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-tensor/v5",
-  "version_line": "daji 3.6.x",
+  "version_line": "daji 3.7.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",
@@ -157,9 +157,9 @@
     "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
   },
   "release_profile": {
-    "id": "daji-3-6-hardening",
-    "current_checkpoint": "daji 3.6.0",
-    "target_release": "daji 3.6.x",
+    "id": "daji-3-7-hardening",
+    "current_checkpoint": "daji 3.7.0",
+    "target_release": "daji 3.7.x",
     "gate_mode": "advisory",
     "enforce_from": "explicit gate-mode decision",
     "required_target_met_percent": 100.0,

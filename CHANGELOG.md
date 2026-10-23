@@ -1,5 +1,29 @@
 # Changelog
 
+## daji 3.7.0
+
+October 23, 2026. Original-equation admission and numerical-range hardening.
+
+- Recheck complete assembled equations before constraint elimination in the
+  selected scalar, mechanical, projected thermal-frame, Newmark, Newton and
+  harmonic paths. Fixed values must match exactly; support reactions remain
+  valid outputs rather than being incorrectly forced to zero.
+- Recover representable frequency products, complex elimination updates and
+  complete-row back substitution without overflowing temporary expressions or
+  silently erasing tiny contributions. Reject genuinely unrepresentable outputs.
+- Check displacement, extension and force publication separately, with bounded
+  cancellation, explicit failure and clean same-input replay regressions.
+- Clarify Solver/Engine/Agent ownership and disposable build-storage rules;
+  preserve regression sources and historical evidence instead of generated bulk.
+- Align first-party packages, lockfiles, language-pack targets, release contracts,
+  the active tensor profile and current Markdown/HTML documentation to 3.7.0.
+
+See `docs/current-line.md#daji-370-checkpoint` and
+`releases/snapshots/3.7.0.json` for exact checks and retained report provenance.
+Earlier macOS/Linux source runs are not relabeled as installed acceptance.
+No desktop rebuild, installation, registry publication or public distribution
+is included; the installed baseline remains 3.4.0 and qualification stays blocked.
+
 ## daji 3.6.0
 
 October 12, 2026. Workflow recovery and evidence-admission checkpoint.

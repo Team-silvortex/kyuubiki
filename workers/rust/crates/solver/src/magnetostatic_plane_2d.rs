@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
@@ -101,6 +101,8 @@ fn solve_magnetostatic_plane_triangle_2d_internal(
     for (index, &dof) in free.iter().enumerate() {
         vector_potentials[dof] = reduced_potentials[index];
     }
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?
+        .validate(&source_vector, &vector_potentials)?;
 
     let nodes = request
         .nodes
@@ -283,6 +285,8 @@ fn solve_magnetostatic_plane_quad_2d_internal(
     for (index, &dof) in free.iter().enumerate() {
         vector_potentials[dof] = reduced_potentials[index];
     }
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?
+        .validate(&source_vector, &vector_potentials)?;
 
     let nodes = build_node_results(request.nodes.iter(), &vector_potentials, reference);
     let elements = request

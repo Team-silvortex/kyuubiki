@@ -1,6 +1,7 @@
 use crate::frame_2d_element::{FrameElement, finite_fields};
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system,
+    solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
@@ -59,5 +60,8 @@ pub(super) fn solve_system<'a>(
     }
     let (reduced, force, free) = reduce_sparse_system(&stiffness, &forces, &constrained)?;
     let solution = solve_spd_system_profile_with_options(&reduced, &force, options)?.solution;
-    restore_solution(dof_count, &[], &free, &solution)
+    let displacements = restore_solution(dof_count, &[], &free, &solution)?;
+    PrescribedSystemValidator::new_homogeneous(&stiffness, &constrained)?
+        .validate(&forces, &displacements)?;
+    Ok(displacements)
 }

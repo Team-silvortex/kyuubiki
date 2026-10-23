@@ -3,9 +3,9 @@
 Use this directory as the current source of truth for product shape, protocol
 boundaries, deployment modes, and engineering workflow.
 
-The current documentation checkpoint is **daji 3.6.0**. Start with the
-[current-line summary](current-line.md#daji-360-checkpoint) for recent progress.
-Source package metadata targets `3.6.0`; the last local desktop/runtime build
+The current documentation checkpoint is **daji 3.7.0**. Start with the
+[current-line summary](current-line.md#daji-370-checkpoint) for recent progress.
+Source package metadata targets `3.7.0`; the last local desktop/runtime build
 and installation remains `3.4.0`. Dated acceptance records retain their original
 versions and do not become fresh qualification when documentation advances.
 
@@ -42,7 +42,7 @@ Read these first, in order:
 17. `minimal-industrial-closure.md`
 18. `weakness-roadmap.md`
 
-For the current `3.6.x` hardening path, keep six threads mentally linked:
+For the current `3.7.x` hardening path, keep six threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks

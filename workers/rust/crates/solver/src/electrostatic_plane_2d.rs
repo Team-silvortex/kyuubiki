@@ -8,7 +8,7 @@ use crate::electrostatic_plane_2d_validation::{
     validate_electrostatic_plane_quad_request, validate_electrostatic_plane_triangle_request,
 };
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
@@ -96,6 +96,8 @@ fn solve_electrostatic_plane_triangle_2d_internal(
     for (index, &dof) in free.iter().enumerate() {
         potentials[dof] = reduced_potentials[index];
     }
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?
+        .validate(&source_vector, &potentials)?;
 
     let nodes = request
         .nodes
@@ -280,6 +282,8 @@ fn solve_electrostatic_plane_quad_2d_internal(
     for (index, &dof) in free.iter().enumerate() {
         potentials[dof] = reduced_potentials[index];
     }
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?
+        .validate(&source_vector, &potentials)?;
 
     let nodes = request
         .nodes

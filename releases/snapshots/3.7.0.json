@@ -1,0 +1,118 @@
+{
+  "version": "3.7.0",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-10-23",
+  "git_commit": "0a65f2e88b71b401909874fcd846704741f6938e",
+  "summary": "Daji 3.7.0 source checkpoint: original constraint-equation admission, checked harmonic complex arithmetic and force-range recovery. First-party metadata and current documentation aligned; no desktop rebuild, installation or publication.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "reliability": "docs/operator-reliability.md",
+    "architecture": "docs/current-architecture-map.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.7.0", "notes": ["Source metadata aligned; no new installed WebView acceptance."] },
+    "hub_gui": { "version": "3.7.0", "notes": ["Current book and language-pack target mirrors aligned; no new desktop artifact."] },
+    "workbench_gui": { "version": "3.7.0", "notes": ["Source metadata aligned; no new desktop artifact."] },
+    "installer_gui": { "version": "3.7.0", "notes": ["Source and installation contracts aligned; no new desktop artifact."] },
+    "web_api": { "version": "3.7.0", "notes": ["Source metadata aligned; workflow recovery and authority boundaries retained."] },
+    "rust_headless_sdk": { "version": "3.7.0", "notes": ["Control SDK metadata aligned; no registry publication."] },
+    "python_headless_sdk": { "version": "3.7.0", "notes": ["Metadata aligned; native numerical tests do not establish Python parity."] },
+    "elixir_headless_sdk": { "version": "3.7.0", "notes": ["Metadata aligned; native numerical tests do not establish Elixir SDK parity."] },
+    "rust_worker_sdk": { "version": "3.7.0", "notes": ["Rust-only operator extension remains separate from Headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "Execution and recovery retain invocation identity, ownership and no-replay gates.",
+      "Selected Engine/workflow regressions propagate original-equation, arithmetic-range and cancellation failures without successful partial publication."
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Operator extension remains Rust-only and separate from Headless control.",
+      "Solver owns numerical algorithms; Engine/Agent own execution authority.",
+      "TaskIR, operator payloads and result formats are unchanged by numerical-range repairs."
+    ]
+  },
+  "desktop_artifacts": {},
+  "verification": {
+    "source_revision_role": "Recorded base commit plus accumulated numerical changes and version-alignment overlay, not a clean-commit binary build.",
+    "release_checks": {
+      "source_version": "3.7.0",
+      "status": "passed",
+      "exact_version_contracts": { "checks": 224, "mismatched": 0 },
+      "cargo_manifest_resolution": "Six workspace, standalone SDK, desktop and operator-template manifests resolve with --locked --offline --no-deps; third-party dependency entries are unchanged.",
+      "post_alignment_tests": {
+        "platform": "macos-aarch64",
+        "toolchain": "Rust 1.88.0, offline locked dependencies",
+        "solver_library": { "passed": 786, "ignored": 9, "excluded_modal_tests": 292 },
+        "engine_library": { "passed": 711, "ignored": 1 },
+        "solver_integration": {
+          "passed": 48,
+          "targets": ["advection_diffusion_bar_reliability", "dynamic_spring_closed_form", "harmonic_complex_force_range", "harmonic_frequency_range", "harmonic_spring_balance", "harmonic_spring_reliability", "transient_heat_bar_reliability"]
+        },
+        "engine_integration": {
+          "passed": 53,
+          "targets": ["harmonic_constraint_admission", "magnetostatic_prescribed_workflow", "mechanical_constraint_admission", "nonlinear_constraint_admission", "thermal_frame_constraint_admission", "transient_spring_constraint_admission"]
+        },
+        "total_rust_passed": 1598,
+        "scope": "Source working-tree release overlay after version alignment. No fresh Linux, Windows, installed GUI, scale or full-workspace qualification."
+      },
+      "frontend_product_identity": { "passed": 1, "failed": 0, "scope": "Source package, brand, display label and language-pack target agreement, not installed WebView acceptance." },
+      "static_checks": "Solver/Engine all-target Clippy with warnings denied, Rust formatting and diff whitespace checks passed.",
+      "language_pack_metadata": "60 canonical packs validated for 3.7.0, Workbench 960/960 and Hub 510/510 indexed keys; translation content unchanged.",
+      "documentation": "26 HTML book files, manifest, research bootstrap and documentation inventory passed; repeated version synchronization made no changes.",
+      "desktop_mirrors": "Native shared-asset synchronization and independent verification passed; no binary build.",
+      "installation_integrity": "Disk-hygiene and component-integrity checks/self-tests passed, including 11 components and 16 required layout rules.",
+      "release_catalog": "Release-snapshot, version-audit and update-catalog self-tests passed; only 3.7.0 is current.",
+      "architecture": "Module extension standard, topology, matrix and tensor checks/self-tests passed. Thirteen modules, eleven paradigms, zero structural gaps, two maturity gaps, 23 evidence-grade gaps and 18 P0 gaps; qualification remains blocked.",
+      "project_organization": "Source limit 800, documentation limit 2000, tracked debt zero. Pending-file size/path and private-key/token-signature checks found no generated bulk, private config or matching secrets; this is not a full security audit.",
+      "scope": "Source release checks only; no App build/install, CI result, registry publication or public artifact distribution is claimed."
+    },
+    "prior_source_evidence": {
+      "date": "2026-10-23",
+      "base_commit": "0a65f2e8",
+      "source_version_line": "daji 3.6.x working-tree overlay",
+      "platforms": ["macos-aarch64", "linux-x86_64"],
+      "toolchain": "Rust 1.88.0, offline locked dependencies",
+      "final_complex_range_scope_per_platform": {
+        "passed": 1540,
+        "ignored": 10,
+        "excluded_modal_tests": 292,
+        "scope": "Selected Solver/Engine libraries and harmonic integration targets, not full workspace, installed, Windows or scale acceptance."
+      }
+    },
+    "reports": [
+      "reports/original-prescribed-equation-admission-20261023.md",
+      "reports/homogeneous-mechanical-equation-admission-20261023.md",
+      "reports/projected-thermal-frame-equation-admission-20261023.md",
+      "reports/thermal-frame-reaction-range-reliability-20261023.md",
+      "reports/newmark-original-equation-admission-20261023.md",
+      "reports/newton-original-equation-admission-20261023.md",
+      "reports/harmonic-original-equation-admission-20261023.md",
+      "reports/harmonic-frequency-product-range-20261023.md",
+      "reports/harmonic-complex-arithmetic-range-20261023.md",
+      "reports/architecture-disk-organization-20261023.md"
+    ],
+    "report_provenance": "Reports retain their original source metadata, working-tree overlay, platform and exclusions. Overlapping suites are not added together; advancing to 3.7.0 does not relabel earlier runs.",
+    "known_limits": [
+      "Original-equation admission is scoped to integrated consumers, not universal coverage or independent physical certification.",
+      "Modal physical-publication gaps, conditioning, independent solver correlation and sustained-scale performance remain separate work.",
+      "Same-input replay and cancellation checks are not host-power-loss durability or exactly-once recovery.",
+      "Native LAN authentication, installed journeys, multi-host Mesh load and cross-language SDK qualification remain open.",
+      "Tensor grades are not promoted by this release; qualification remains blocked."
+    ],
+    "desktop_packaging": { "status": "not performed", "last_local_installed_version": "3.4.0" },
+    "runtime_payload": { "status": "not rebuilt or replaced", "last_local_installed_version": "3.4.0" },
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "Source metadata alignment and scoped regressions do not close all readiness gaps or establish installed-platform acceptance."
+  }
+}

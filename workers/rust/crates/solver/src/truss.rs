@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system, solve_spd_system,
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
@@ -179,6 +179,8 @@ fn solve_truss_2d_internal(
 
     stage_started = Instant::now();
     let displacements = restore_solution(dof_count, &[], &free, &reduced_displacements)?;
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&force_vector, &displacements)?;
 
     let nodes = try_collect_results(
         SolverStage::ResultNodes,
@@ -410,6 +412,8 @@ fn solve_truss_3d_internal(
     let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
 
     let displacements = restore_solution(dof_count, &[], &free, &reduced_displacements)?;
+    PrescribedSystemValidator::new_homogeneous(&global_stiffness, &constrained)?
+        .validate(&force_vector, &displacements)?;
 
     let nodes = try_collect_results(
         SolverStage::ResultNodes,

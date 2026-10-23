@@ -1,5 +1,6 @@
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system, solve_tridiagonal_system,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system, solve_spd_system,
+    solve_tridiagonal_system,
 };
 use crate::nonlinear_spring_1d_validation::{validate_contact_request, validate_request};
 use crate::solver_control::{SolverStage, check_cancellation, checkpoint, checkpoint_chunk};
@@ -9,6 +10,10 @@ use kyuubiki_protocol::{
     SolveContactGap1dRequest, SolveContactGap1dResult, SolveNonlinearSpring1dRequest,
     SolveNonlinearSpring1dResult,
 };
+
+#[cfg(test)]
+#[path = "nonlinear_spring_constraint_tests.rs"]
+mod constraint_tests;
 
 pub fn solve_nonlinear_spring_1d(
     request: &SolveNonlinearSpring1dRequest,
@@ -143,6 +148,34 @@ struct SpringEquilibrium {
     norm: f64,
 }
 
+impl SpringEquilibrium {
+    fn validate_increment(
+        &self,
+        constrained: &[usize],
+        free: &[usize],
+        delta: &[f64],
+        complete: &mut [f64],
+    ) -> Result<(), String> {
+        if complete.len() != self.tangent.size() || free.len() != delta.len() {
+            return Err("original Newton increment dimensions must match".into());
+        }
+        checkpoint(SolverStage::ResultFreeDofs, 0)?;
+        for (index, chunk) in complete.chunks_mut(1024).enumerate() {
+            chunk.fill(0.0);
+            checkpoint(SolverStage::ResultFreeDofs, index * 1024 + chunk.len())?;
+        }
+        for (index, (&dof, &value)) in free.iter().zip(delta).enumerate() {
+            let target = complete.get_mut(dof).ok_or_else(|| {
+                format!("original Newton increment has an out-of-range free DOF {dof}")
+            })?;
+            *target = value;
+            checkpoint_chunk(SolverStage::ResultFreeDofs, index + 1, free.len())?;
+        }
+        PrescribedSystemValidator::new_homogeneous(&self.tangent, constrained)?
+            .validate(&self.residual, complete)
+    }
+}
+
 struct SpringStep<'a> {
     nodes: &'a [kyuubiki_protocol::NonlinearSpring1dNodeInput],
     elements: &'a [NonlinearSpring1dElementInput],
@@ -161,6 +194,7 @@ const SUFFICIENT_DECREASE: f64 = 1e-4;
 
 impl SpringStep<'_> {
     fn evaluate(&self, displacement: &[f64]) -> Result<SpringEquilibrium, String> {
+        self.validate_state(displacement)?;
         let (tangent, internal) = assemble_tangent_and_internal(
             self.nodes.len(),
             self.elements,
@@ -174,6 +208,27 @@ impl SpringStep<'_> {
             residual,
             norm,
         })
+    }
+
+    fn validate_state(&self, displacement: &[f64]) -> Result<(), String> {
+        checkpoint(SolverStage::StabilityRecovery, 0)?;
+        if displacement.len() != self.nodes.len() {
+            return Err("nonlinear spring original state dimensions must match".into());
+        }
+        for (index, (node, &value)) in self.nodes.iter().zip(displacement).enumerate() {
+            if !value.is_finite() {
+                return Err(format!(
+                    "nonlinear spring original state has non-finite displacement at node {index}"
+                ));
+            }
+            if node.fix_x && value != 0.0 {
+                return Err(format!(
+                    "nonlinear spring original state fixed value changed at node {index}"
+                ));
+            }
+            checkpoint_chunk(SolverStage::StabilityRecovery, index + 1, self.nodes.len())?;
+        }
+        Ok(())
     }
 
     fn correct(
@@ -255,6 +310,9 @@ fn solve_load_path(
             let delta = solve_chain_tangent(&reduced_tangent, &reduced_residual)?;
             drop(reduced_tangent);
             drop(reduced_residual);
+            // Admit the full undamped Newton increment, not K_t times the nonlinear state.
+            // The line search overwrites this same scratch buffer after validation.
+            state.validate_increment(&constrained, &free, &delta, &mut candidate)?;
             iterations += 1;
             let norm = state.norm;
             drop(state);

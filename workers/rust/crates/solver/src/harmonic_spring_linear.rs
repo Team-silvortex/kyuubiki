@@ -1,5 +1,13 @@
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
+#[path = "harmonic_spring_complex_range.rs"]
+pub(super) mod arithmetic;
+use arithmetic::{difference, divide, solve_row};
+
+#[cfg(test)]
+#[path = "harmonic_spring_complex_range_tests.rs"]
+mod range_tests;
+
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct Complex {
     pub(super) re: f64,
@@ -75,25 +83,50 @@ pub(super) fn solve_complex_tridiagonal(
             if diagonal_amplitude <= relative_pivot_floor {
                 return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
             }
-            let factor = lower[row] / diagonal[row];
-            diagonal[row + 1] = diagonal[row + 1] - factor * upper[row];
-            rhs[row + 1] = rhs[row + 1] - factor * rhs[row];
+            let factor = divide(lower[row], diagonal[row], SolverStage::TridiagonalFactor)?;
+            diagonal[row + 1] = difference(
+                diagonal[row + 1],
+                factor,
+                upper[row],
+                SolverStage::TridiagonalFactor,
+            )?;
+            rhs[row + 1] = difference(
+                rhs[row + 1],
+                factor,
+                rhs[row],
+                SolverStage::TridiagonalFactor,
+            )?;
             lower[row] = Complex::default();
         } else {
             if lower_amplitude <= relative_pivot_floor {
                 return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
             }
-            let factor = diagonal[row] / lower[row];
+            let factor = divide(diagonal[row], lower[row], SolverStage::TridiagonalFactor)?;
             let next_diagonal = diagonal[row + 1];
             diagonal[row] = lower[row];
-            diagonal[row + 1] = upper[row] - factor * next_diagonal;
+            diagonal[row + 1] = difference(
+                upper[row],
+                factor,
+                next_diagonal,
+                SolverStage::TridiagonalFactor,
+            )?;
             upper[row] = next_diagonal;
             let current_rhs = rhs[row];
             rhs[row] = rhs[row + 1];
-            rhs[row + 1] = current_rhs - factor * rhs[row + 1];
+            rhs[row + 1] = difference(
+                current_rhs,
+                factor,
+                rhs[row + 1],
+                SolverStage::TridiagonalFactor,
+            )?;
             if row + 1 < size - 1 {
                 lower[row] = upper[row + 1];
-                upper[row + 1] = Complex::default() - factor * lower[row];
+                upper[row + 1] = difference(
+                    Complex::default(),
+                    factor,
+                    lower[row],
+                    SolverStage::TridiagonalFactor,
+                )?;
             } else {
                 lower[row] = Complex::default();
             }
@@ -108,13 +141,26 @@ pub(super) fn solve_complex_tridiagonal(
     }
 
     checkpoint(SolverStage::TridiagonalSubstitution, 0)?;
-    rhs[size - 1] = rhs[size - 1] / diagonal[size - 1];
+    rhs[size - 1] = divide(
+        rhs[size - 1],
+        diagonal[size - 1],
+        SolverStage::TridiagonalSubstitutionRange,
+    )?;
     if size > 1 {
-        rhs[size - 2] = (rhs[size - 2] - upper[size - 2] * rhs[size - 1]) / diagonal[size - 2];
+        rhs[size - 2] = solve_row(
+            rhs[size - 2],
+            std::iter::once((upper[size - 2], rhs[size - 1])),
+            diagonal[size - 2],
+            SolverStage::TridiagonalSubstitutionRange,
+        )?;
     }
     for row in (0..size.saturating_sub(2)).rev() {
-        rhs[row] =
-            (rhs[row] - upper[row] * rhs[row + 1] - lower[row] * rhs[row + 2]) / diagonal[row];
+        rhs[row] = solve_row(
+            rhs[row],
+            [(upper[row], rhs[row + 1]), (lower[row], rhs[row + 2])].into_iter(),
+            diagonal[row],
+            SolverStage::TridiagonalSubstitutionRange,
+        )?;
         checkpoint_chunk(SolverStage::TridiagonalSubstitution, size - row, size)?;
     }
     checkpoint(SolverStage::TridiagonalSubstitution, size)?;
@@ -170,20 +216,29 @@ pub(super) fn solve_complex_system(
         }
 
         for row in (pivot + 1)..size {
-            let factor = matrix[row][pivot] / matrix[pivot][pivot];
+            let factor = divide(
+                matrix[row][pivot],
+                matrix[pivot][pivot],
+                SolverStage::DenseFactor,
+            )?;
             if !factor.is_finite() {
                 return Err("harmonic spring 1d dynamic stiffness elimination diverged".to_string());
             }
             matrix[row][pivot] = Complex::default();
             for column in (pivot + 1)..size {
-                matrix[row][column] = matrix[row][column] - factor * matrix[pivot][column];
+                matrix[row][column] = difference(
+                    matrix[row][column],
+                    factor,
+                    matrix[pivot][column],
+                    SolverStage::DenseFactor,
+                )?;
                 if !matrix[row][column].is_finite() {
                     return Err(
                         "harmonic spring 1d dynamic stiffness elimination diverged".to_string()
                     );
                 }
             }
-            rhs[row] = rhs[row] - factor * rhs[pivot];
+            rhs[row] = difference(rhs[row], factor, rhs[pivot], SolverStage::DenseFactor)?;
             if !rhs[row].is_finite() {
                 return Err("harmonic spring 1d dynamic stiffness elimination diverged".to_string());
             }
@@ -193,11 +248,16 @@ pub(super) fn solve_complex_system(
     let mut result = vec![Complex::default(); size];
     for row in (0..size).rev() {
         checkpoint(SolverStage::DenseSubstitution, size - row - 1)?;
-        let mut sum = rhs[row];
-        for (column, value) in result.iter().enumerate().skip(row + 1) {
-            sum = sum - matrix[row][column] * *value;
-        }
-        result[row] = sum / matrix[row][row];
+        result[row] = solve_row(
+            rhs[row],
+            matrix[row]
+                .iter()
+                .copied()
+                .skip(row + 1)
+                .zip(result.iter().copied().skip(row + 1)),
+            matrix[row][row],
+            SolverStage::DenseSubstitutionRange,
+        )?;
         if !result[row].is_finite() {
             return Err(
                 "harmonic spring 1d dynamic stiffness back substitution diverged".to_string(),
@@ -258,45 +318,6 @@ impl std::ops::Sub for Complex {
     }
 }
 
-impl std::ops::Mul for Complex {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        Self {
-            re: self.re * rhs.re - self.im * rhs.im,
-            im: self.re * rhs.im + self.im * rhs.re,
-        }
-    }
-}
-
-impl std::ops::Div for Complex {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        let scale = rhs.re.abs().max(rhs.im.abs());
-        let rhs_re = rhs.re / scale;
-        let rhs_im = rhs.im / scale;
-        let denominator = rhs_re * rhs_re + rhs_im * rhs_im;
-        let left_re = self.re / scale;
-        let left_im = self.im / scale;
-        let real_weight = rhs_re / denominator;
-        let imaginary_weight = rhs_im / denominator;
-        // Apply the bounded weights before addition; the unweighted sum can
-        // overflow even when the quotient (and its amplitude) is representable.
-        if left_re.is_finite() && left_im.is_finite() {
-            Self {
-                re: left_re * real_weight + left_im * imaginary_weight,
-                im: left_im * real_weight - left_re * imaginary_weight,
-            }
-        } else {
-            Self {
-                re: (self.re * real_weight) / scale + (self.im * imaginary_weight) / scale,
-                im: (self.im * real_weight) / scale - (self.re * imaginary_weight) / scale,
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -304,25 +325,35 @@ mod tests {
     #[test]
     fn complex_division_preserves_large_finite_quotients() {
         for divisor in [0.6, 0.9, 1.0] {
-            let value = Complex {
-                re: 1.0e308,
-                im: 1.0e308,
-            } / Complex {
-                re: divisor,
-                im: divisor,
-            };
+            let value = divide(
+                Complex {
+                    re: 1.0e308,
+                    im: 1.0e308,
+                },
+                Complex {
+                    re: divisor,
+                    im: divisor,
+                },
+                SolverStage::LinearPrepare,
+            )
+            .unwrap();
             assert!(value.is_finite(), "divisor={divisor}: {value:?}");
             assert!((value.re / (1.0e308 / divisor) - 1.0).abs() < 1.0e-14);
             assert!(value.im.abs() < 1.0e294);
         }
         for scale in [1.0e-300, 1.0, 1.0e300] {
-            let value = Complex {
-                re: 2.0 * scale,
-                im: 3.0 * scale,
-            } / Complex {
-                re: 4.0 * scale,
-                im: -5.0 * scale,
-            };
+            let value = divide(
+                Complex {
+                    re: 2.0 * scale,
+                    im: 3.0 * scale,
+                },
+                Complex {
+                    re: 4.0 * scale,
+                    im: -5.0 * scale,
+                },
+                SolverStage::LinearPrepare,
+            )
+            .unwrap();
             assert!((value.re + 7.0 / 41.0).abs() < 1.0e-14);
             assert!((value.im - 22.0 / 41.0).abs() < 1.0e-14);
         }
@@ -330,7 +361,12 @@ mod tests {
 
     #[test]
     fn complex_division_weights_before_an_unrepresentable_intermediate_quotient() {
-        let value = Complex::real(1.0e308) / Complex { re: 0.5, im: 0.5 };
+        let value = divide(
+            Complex::real(1.0e308),
+            Complex { re: 0.5, im: 0.5 },
+            SolverStage::LinearPrepare,
+        )
+        .unwrap();
         assert!(value.is_finite(), "{value:?}");
         assert!((value.re / 1.0e308 - 1.0).abs() < 1.0e-14);
         assert!((value.im / -1.0e308 - 1.0).abs() < 1.0e-14);

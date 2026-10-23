@@ -1,7 +1,58 @@
 use kyuubiki_protocol::{
     HeatBar1dNodeInput, SolveTransientHeatBar1dRequest, TransientHeatBar1dElementInput,
 };
-use kyuubiki_solver::solve_transient_heat_bar_1d;
+use kyuubiki_solver::solver_control::{SolverControl, SolverStage, with_solver_observer};
+use kyuubiki_solver::{solve_transient_heat_bar_1d, solve_transient_heat_bar_1d_owned};
+
+#[test]
+fn transient_heat_original_constraints_check_every_step_before_history_publication() {
+    let request = transient_heat_request();
+    let calls = std::rc::Rc::new(std::cell::Cell::new(0));
+    let observed = calls.clone();
+    let expected = with_solver_observer(
+        &SolverControl::default(),
+        move |point| {
+            if point.stage == SolverStage::ConstraintValidate && point.completed_steps == 0 {
+                observed.set(observed.get() + 1);
+            }
+        },
+        || solve_transient_heat_bar_1d(&request),
+    )
+    .unwrap();
+    assert_eq!(calls.get(), request.steps);
+    for completed in [0, request.nodes.len() * 2] {
+        let control = SolverControl::default();
+        let cancel = control.clone();
+        let calls = std::rc::Rc::new(std::cell::Cell::new(0));
+        let observed = calls.clone();
+        let result = with_solver_observer(
+            &control,
+            move |point| {
+                if point.stage == SolverStage::ConstraintValidate {
+                    if point.completed_steps == 0 {
+                        observed.set(observed.get() + 1);
+                    }
+                    if observed.get() == 3 && point.completed_steps == completed as u64 {
+                        cancel.request_cancel();
+                    }
+                }
+            },
+            || solve_transient_heat_bar_1d(&request),
+        );
+        let error = result.unwrap_err();
+        assert!(
+            error.contains("cancelled") && error.contains("constraint_validate"),
+            "{error}"
+        );
+        assert_eq!(calls.get(), 3);
+        assert!(control.was_interrupted());
+        let replay = solve_transient_heat_bar_1d_owned(request.clone()).unwrap();
+        assert_eq!(
+            serde_json::to_value(&expected).unwrap(),
+            serde_json::to_value(replay).unwrap()
+        );
+    }
+}
 
 #[test]
 fn transient_heat_bar_1d_rejects_non_finite_time_step_and_node_values() {

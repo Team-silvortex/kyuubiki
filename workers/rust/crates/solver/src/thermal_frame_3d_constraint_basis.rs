@@ -1,4 +1,5 @@
 use crate::frame_3d_element::{finite_fields, norm3};
+use crate::linear_substitution::{SubnormalResult, solve_scaled_rhs_row_with_policy};
 use crate::solver_control::{SolverStage, checkpoint};
 
 const DIRECTION_TOLERANCE: f64 = 1.0e-10;
@@ -70,6 +71,7 @@ pub(super) fn reaction_coefficients(
     directions: &[[f64; 3]],
     residual: [f64; 3],
 ) -> Result<Vec<f64>, String> {
+    finite_fields("constraint reaction", "residual", &residual)?;
     if directions.is_empty() {
         return Ok(Vec::new());
     }
@@ -80,11 +82,24 @@ pub(super) fn reaction_coefficients(
     checkpoint(SolverStage::DenseSubstitution, 0)?;
     let mut coefficients = vec![0.0; basis.rank];
     for row in (0..basis.rank).rev() {
-        let mut value = dot(basis.axes[row], residual);
-        for (column, &coefficient) in coefficients.iter().enumerate().skip(row + 1) {
-            value = (-basis.upper[row][column]).mul_add(coefficient, value);
+        // Form Q^T r - R_upper lambda in one scaled row, not a materialized dot.
+        let mut operands = [(0.0, 0.0); 5];
+        for (index, (&weight, &value)) in basis.axes[row].iter().zip(&residual).enumerate() {
+            operands[index] = (-weight, value);
         }
-        coefficients[row] = value / basis.upper[row][row];
+        for (column, &coefficient) in coefficients.iter().enumerate().skip(row + 1) {
+            operands[2 + column - row] = (basis.upper[row][column], coefficient);
+        }
+        coefficients[row] = solve_scaled_rhs_row_with_policy(
+            (0.0, 0),
+            operands[..2 + basis.rank - row].iter().copied(),
+            basis.upper[row][row],
+            SolverStage::DenseSubstitution,
+            SubnormalResult::RequireExactRange,
+        )
+        .map_err(|error| {
+            format!("3d frame constraint reaction: coefficient is not representable: {error}")
+        })?;
         finite_fields("constraint reaction", "coefficient", &[coefficients[row]])?;
         checkpoint(SolverStage::DenseSubstitution, basis.rank - row)?;
     }

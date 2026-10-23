@@ -87,12 +87,33 @@ pub(crate) fn sparse_residual_vector(
     rhs: &[f64],
     solution: &[f64],
 ) -> Result<Vec<f64>, String> {
+    residual_vector_with(matrix, rhs, solution, residual_row)
+}
+
+/// Final physical reactions need product tails even when a plain residual rounds to zero.
+pub(crate) fn sparse_scaled_residual_vector(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+    solution: &[f64],
+) -> Result<Vec<f64>, String> {
+    residual_vector_with(matrix, rhs, solution, |row, expected, solution| {
+        range::scaled_row(row, expected, solution, SolverStage::SparseResidualRow)
+            .map(|scaled| scaled.residual)
+    })
+}
+
+fn residual_vector_with(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+    solution: &[f64],
+    evaluate: impl Fn(&[(usize, f64)], f64, &[f64]) -> Result<f64, String>,
+) -> Result<Vec<f64>, String> {
     checkpoint(SolverStage::SparseResidual, 0)?;
     validate_dimensions(matrix, rhs, solution)?;
     let size = matrix.size();
     let mut residuals = Vec::with_capacity(size);
     for (index, (row, &expected)) in matrix.rows.iter().zip(rhs).enumerate() {
-        residuals.push(residual_row(row, expected, solution)?);
+        residuals.push(evaluate(row, expected, solution)?);
         checkpoint_chunk(SolverStage::SparseResidual, index + 1, size)?;
     }
     Ok(residuals)

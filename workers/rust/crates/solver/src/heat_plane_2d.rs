@@ -10,7 +10,7 @@ use crate::heat_plane_contact::{
 };
 use crate::heat_plane_results::{recover_nodes, recover_quad, recover_triangle, total_heat_flow};
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    PrescribedSystemValidator, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
     solve_spd_system_profile_with_options, sparse_residual_norm,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
@@ -157,6 +157,8 @@ fn solve_heat_plane_triangle_2d_internal(
         },
     )?;
 
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?
+        .validate(&heat_vector, &temperatures)?;
     let nodes = recover_nodes(&request.nodes, &temperatures, reference)?;
     let elements = try_collect_results(
         SolverStage::ResultElements,
@@ -433,6 +435,8 @@ fn solve_heat_plane_quad_2d_internal(
         );
     }
 
+    PrescribedSystemValidator::new(&global_stiffness, &prescribed)?
+        .validate(&heat_vector, &temperatures)?;
     let nodes = recover_nodes(&request.nodes, &temperatures, reference)?;
     let elements = try_collect_results(
         SolverStage::ResultElements,
