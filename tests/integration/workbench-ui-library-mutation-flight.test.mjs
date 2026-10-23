@@ -127,9 +127,15 @@ for (const surface of ["GUI", "PWDT"]) {
         if (surface === "PWDT") first = invoke(page, "model/save").catch((error) => ({ error: error.message }));
         else await click(page, actions.save);
         await held.received;
+        if (surface === "GUI") await waitForGuiTransition(page, true);
         await blocked(page, actions.modelDelete, surface === "GUI" ? "PWDT" : "GUI");
         const response = page.waitForResponse((response) => new URL(response.url()).pathname === actions.save.path(library) && response.request().method() === "POST");
-        held.release(); await response; await first; await page.waitForLoadState("networkidle");
+        held.release(); await response; const outcome = await first; await page.waitForLoadState("networkidle");
+        // Network idle does not confirm that the GUI action released its reservation.
+        if (surface === "GUI") {
+          await waitForGuiTransition(page);
+          await page.waitForFunction(() => window.__kyuubikiPwdt.state().message === "explicit save failure");
+        } else assert.match(outcome?.error ?? "", /explicit save failure/);
         assert.equal(library.models.length, 1); assert.equal(library.writes.length, 1);
         assert.equal((await invoke(page, "model/renameSelectedVersion")).ok, true);
         assert.equal(library.writes.length, 2, "only the explicit rename may run after failure");
