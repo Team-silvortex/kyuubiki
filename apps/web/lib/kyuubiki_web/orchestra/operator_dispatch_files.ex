@@ -13,7 +13,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
   def limits, do: %{max_records: @max_records, max_file_bytes: @max_file_bytes}
 
   def load(root) do
-    case File.lstat(root) do
+    case File.lstat(root, [:raw]) do
       {:error, :enoent} -> {:ok, %{}}
       {:ok, %{type: :directory}} -> load_existing(root)
       _ -> {:error, :operator_task_dispatch_journal_unavailable}
@@ -63,10 +63,10 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
 
   def verify(root, record) do
     with true <- valid?(record),
-         {:ok, %{type: :directory}} <- File.lstat(root) do
+         {:ok, %{type: :directory}} <- File.lstat(root, [:raw]) do
       path = Path.join(root, record["attempt_id"] <> ".json")
 
-      with {:error, :enoent} <- File.lstat(path <> ".next"),
+      with {:error, :enoent} <- File.lstat(path <> ".next", [:raw]),
            :ok <- expected_generation(path, record) do
         :ok
       else
@@ -78,7 +78,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
   end
 
   def verify_inventory(root, records) do
-    case File.lstat(root) do
+    case File.lstat(root, [:raw]) do
       {:error, :enoent} when map_size(records) == 0 ->
         :ok
 
@@ -153,7 +153,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
     as: :endpoint_fingerprint
 
   defp read(path) do
-    with {:ok, %{type: :regular, size: size}} <- File.lstat(path),
+    with {:ok, %{type: :regular, size: size}} <- File.lstat(path, [:raw]),
          true <- size <= @max_file_bytes,
          {:ok, bytes} <- bounded_read(path),
          {:ok, envelope} <- Jason.decode(bytes),
@@ -169,10 +169,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
   end
 
   defp bounded_read(path) do
-    with {:ok, file} <- File.open(path, [:read, :binary]) do
+    # Batch verification must not queue every record behind the VM-wide file server.
+    with {:ok, file} <- File.open(path, [:read, :binary, :raw]) do
       try do
-        case IO.binread(file, @max_file_bytes + 1) do
-          bytes when is_binary(bytes) and byte_size(bytes) <= @max_file_bytes -> {:ok, bytes}
+        case :file.read(file, @max_file_bytes + 1) do
+          {:ok, bytes} when byte_size(bytes) <= @max_file_bytes -> {:ok, bytes}
           _ -> {:error, :operator_task_dispatch_journal_invalid}
         end
       after
@@ -199,7 +200,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
 
   defp ensure_directory(root) do
     with :ok <- File.mkdir_p(root),
-         {:ok, %{type: :directory}} <- File.lstat(root),
+         {:ok, %{type: :directory}} <- File.lstat(root, [:raw]),
          :ok <- File.chmod(root, 0o700) do
       :ok
     else
@@ -208,7 +209,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchFiles do
   end
 
   defp expected_generation(path, nil) do
-    case File.lstat(path) do
+    case File.lstat(path, [:raw]) do
       {:error, :enoent} -> :ok
       _ -> {:error, :operator_task_dispatch_journal_invalid}
     end

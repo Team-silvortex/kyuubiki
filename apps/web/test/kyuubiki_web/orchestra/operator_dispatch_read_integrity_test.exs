@@ -171,6 +171,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchReadIntegrityTest do
     assert record == ctx.record
     assert {:ok, others} = Journal.lookup_task("other-task", ctx.journal)
     assert length(others) == Files.limits().max_records - 1
+
+    for _ <- 1..3 do
+      assert {:ok, ^others} = Journal.lookup_task("other-task", ctx.journal)
+    end
+
     assert :ok = read(ctx, :fence)
 
     assert {:error, :workflow_dispatch_outcome_unconfirmed} =
@@ -180,6 +185,15 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchReadIntegrityTest do
              Journal.begin_dispatch(ctx.request, ctx.endpoint, ctx.journal)
 
     assert snapshot(ctx) == before
+
+    # Verifying a full batch cannot skip its last record to meet the call budget.
+    last = List.last(others)
+    damaged_path = Path.join(ctx.root, last["attempt_id"] <> ".json")
+    File.write!(damaged_path, "broken")
+    assert {:ok, [^record]} = read(ctx, :lookup_task)
+    assert {:error, _} = Journal.lookup_task("other-task", ctx.journal)
+    assert File.read!(damaged_path) == "broken"
+    assert Process.alive?(ctx.journal)
   end
 
   defp read(ctx, :lookup), do: Journal.lookup("task", ctx.record["task_digest"], ctx.journal)
