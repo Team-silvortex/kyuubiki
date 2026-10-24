@@ -4,9 +4,37 @@ use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 pub(super) mod arithmetic;
 use arithmetic::{difference, divide, solve_row};
 
+#[path = "harmonic_spring_rhs.rs"]
+mod rhs;
+use rhs::ComplexRhs;
+
+#[path = "harmonic_spring_normalization.rs"]
+mod normalization;
+use normalization::{RowNormalization, pivot_score};
+
 #[cfg(test)]
 #[path = "harmonic_spring_complex_range_tests.rs"]
 mod range_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_scaling_tests.rs"]
+mod scaling_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_cancellation_tests.rs"]
+mod cancellation_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_near_cancellation_tests.rs"]
+mod near_cancellation_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_accumulation_tests.rs"]
+mod accumulation_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_normalization_tests.rs"]
+mod normalization_tests;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct Complex {
@@ -29,7 +57,7 @@ pub(super) fn solve_complex_tridiagonal(
         mut diagonal,
         mut lower,
         mut upper,
-        mut rhs,
+        rhs,
     } = system;
     let size = diagonal.len();
     if size == 0 || rhs.len() != size || lower.len() != size - 1 || upper.len() != size - 1 {
@@ -44,8 +72,9 @@ pub(super) fn solve_complex_tridiagonal(
     {
         return Err("harmonic spring 1d dynamic stiffness contains a non-finite value".to_string());
     }
+    let mut rhs = ComplexRhs::new(rhs);
 
-    let row_scales = (0..size)
+    let mut row_scales = (0..size)
         .map(|row| {
             checkpoint_chunk(SolverStage::LinearPrepare, row + 1, size)?;
             let mut scale = diagonal[row].component_scale();
@@ -62,25 +91,43 @@ pub(super) fn solve_complex_tridiagonal(
         return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
     }
     for row in 0..size {
-        let scale = row_scales[row];
-        diagonal[row] = diagonal[row].scaled(scale);
-        rhs[row] = rhs[row].scaled(scale);
+        let normalization = RowNormalization::choose(
+            row_scales[row],
+            [
+                diagonal[row],
+                if row > 0 {
+                    lower[row - 1]
+                } else {
+                    Complex::default()
+                },
+                if row + 1 < size {
+                    upper[row]
+                } else {
+                    Complex::default()
+                },
+            ]
+            .into_iter(),
+        )?;
+        let scale = normalization.divisor;
+        diagonal[row] = scale_coefficient(diagonal[row], scale, row, row)?;
+        rhs.normalize(row, scale)?;
         if row > 0 {
-            lower[row - 1] = lower[row - 1].scaled(scale);
+            lower[row - 1] = scale_coefficient(lower[row - 1], scale, row, row - 1)?;
         }
         if row + 1 < size {
-            upper[row] = upper[row].scaled(scale);
+            upper[row] = scale_coefficient(upper[row], scale, row, row + 1)?;
         }
+        row_scales[row] = normalization.weight;
         checkpoint_chunk(SolverStage::LinearPrepare, row + 1, size)?;
     }
 
     let relative_pivot_floor = 32.0 * f64::EPSILON * size as f64;
     checkpoint(SolverStage::TridiagonalFactor, 0)?;
     for row in 0..size - 1 {
-        let diagonal_amplitude = diagonal[row].amplitude();
-        let lower_amplitude = lower[row].amplitude();
-        if diagonal_amplitude >= lower_amplitude {
-            if diagonal_amplitude <= relative_pivot_floor {
+        let diagonal_score = pivot_score(diagonal[row], row_scales[row]);
+        let lower_score = pivot_score(lower[row], row_scales[row + 1]);
+        if diagonal_score >= lower_score {
+            if diagonal_score <= relative_pivot_floor {
                 return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
             }
             let factor = divide(lower[row], diagonal[row], SolverStage::TridiagonalFactor)?;
@@ -90,15 +137,18 @@ pub(super) fn solve_complex_tridiagonal(
                 upper[row],
                 SolverStage::TridiagonalFactor,
             )?;
-            rhs[row + 1] = difference(
-                rhs[row + 1],
-                factor,
-                rhs[row],
+            rhs.set(
+                row + 1,
+                rhs.get(row + 1).subtract_product(
+                    factor,
+                    rhs.get(row),
+                    SolverStage::TridiagonalFactor,
+                )?,
                 SolverStage::TridiagonalFactor,
             )?;
             lower[row] = Complex::default();
         } else {
-            if lower_amplitude <= relative_pivot_floor {
+            if lower_score <= relative_pivot_floor {
                 return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
             }
             let factor = divide(diagonal[row], lower[row], SolverStage::TridiagonalFactor)?;
@@ -111,12 +161,16 @@ pub(super) fn solve_complex_tridiagonal(
                 SolverStage::TridiagonalFactor,
             )?;
             upper[row] = next_diagonal;
-            let current_rhs = rhs[row];
-            rhs[row] = rhs[row + 1];
-            rhs[row + 1] = difference(
-                current_rhs,
-                factor,
-                rhs[row + 1],
+            let current_rhs = rhs.get(row);
+            rhs.swap(row, row + 1);
+            row_scales.swap(row, row + 1);
+            rhs.set(
+                row + 1,
+                current_rhs.subtract_product(
+                    factor,
+                    rhs.get(row),
+                    SolverStage::TridiagonalFactor,
+                )?,
                 SolverStage::TridiagonalFactor,
             )?;
             if row + 1 < size - 1 {
@@ -131,48 +185,64 @@ pub(super) fn solve_complex_tridiagonal(
                 lower[row] = Complex::default();
             }
         }
-        if !diagonal[row + 1].is_finite() || !rhs[row + 1].is_finite() {
+        if !diagonal[row + 1].is_finite() {
             return Err("harmonic spring 1d dynamic stiffness elimination diverged".to_string());
         }
         checkpoint_chunk(SolverStage::TridiagonalFactor, row + 1, size - 1)?;
     }
-    if diagonal[size - 1].amplitude() <= relative_pivot_floor {
+    if pivot_score(diagonal[size - 1], row_scales[size - 1]) <= relative_pivot_floor {
         return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
     }
 
     checkpoint(SolverStage::TridiagonalSubstitution, 0)?;
-    rhs[size - 1] = divide(
-        rhs[size - 1],
-        diagonal[size - 1],
+    rhs.set(
+        size - 1,
+        rhs.get(size - 1)
+            .divide(
+                diagonal[size - 1],
+                SolverStage::TridiagonalSubstitutionRange,
+            )?
+            .into(),
         SolverStage::TridiagonalSubstitutionRange,
     )?;
     if size > 1 {
-        rhs[size - 2] = solve_row(
-            rhs[size - 2],
-            std::iter::once((upper[size - 2], rhs[size - 1])),
+        let solved = solve_row(
+            rhs.get(size - 2),
+            std::iter::once((upper[size - 2], rhs.solution(size - 1)?)),
             diagonal[size - 2],
+            SolverStage::TridiagonalSubstitutionRange,
+        )?;
+        rhs.set(
+            size - 2,
+            solved.into(),
             SolverStage::TridiagonalSubstitutionRange,
         )?;
     }
     for row in (0..size.saturating_sub(2)).rev() {
-        rhs[row] = solve_row(
-            rhs[row],
-            [(upper[row], rhs[row + 1]), (lower[row], rhs[row + 2])].into_iter(),
+        let solved = solve_row(
+            rhs.get(row),
+            [
+                (upper[row], rhs.solution(row + 1)?),
+                (lower[row], rhs.solution(row + 2)?),
+            ]
+            .into_iter(),
             diagonal[row],
+            SolverStage::TridiagonalSubstitutionRange,
+        )?;
+        rhs.set(
+            row,
+            solved.into(),
             SolverStage::TridiagonalSubstitutionRange,
         )?;
         checkpoint_chunk(SolverStage::TridiagonalSubstitution, size - row, size)?;
     }
     checkpoint(SolverStage::TridiagonalSubstitution, size)?;
-    if rhs.iter().any(|value| !value.is_finite()) {
-        return Err("harmonic spring 1d dynamic stiffness back substitution diverged".to_string());
-    }
-    Ok(rhs)
+    rhs.into_solutions()
 }
 
 pub(super) fn solve_complex_system(
     mut matrix: Vec<Vec<Complex>>,
-    mut rhs: Vec<Complex>,
+    rhs: Vec<Complex>,
 ) -> Result<Vec<Complex>, String> {
     checkpoint(SolverStage::LinearPrepare, 0)?;
     let size = rhs.len();
@@ -184,7 +254,9 @@ pub(super) fn solve_complex_system(
     {
         return Err("harmonic spring 1d dynamic stiffness contains a non-finite value".to_string());
     }
-    for (index, (row, rhs)) in matrix.iter_mut().zip(&mut rhs).enumerate() {
+    let mut rhs = ComplexRhs::new(rhs);
+    let mut row_weights = Vec::with_capacity(size);
+    for (index, row) in matrix.iter_mut().enumerate() {
         let scale = row
             .iter()
             .map(|value| value.component_scale())
@@ -192,10 +264,13 @@ pub(super) fn solve_complex_system(
         if scale == 0.0 {
             return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
         }
-        for value in row {
-            *value = value.scaled(scale);
+        let normalization = RowNormalization::choose(scale, row.iter().copied())?;
+        let scale = normalization.divisor;
+        for (column, value) in row.iter_mut().enumerate() {
+            *value = scale_coefficient(*value, scale, index, column)?;
         }
-        *rhs = rhs.scaled(scale);
+        rhs.normalize(index, scale)?;
+        row_weights.push(normalization.weight);
         checkpoint(SolverStage::LinearPrepare, index + 1)?;
     }
     let relative_pivot_floor = 32.0 * f64::EPSILON * size as f64;
@@ -204,14 +279,14 @@ pub(super) fn solve_complex_system(
         checkpoint(SolverStage::DenseFactor, pivot)?;
         let best = (pivot..size)
             .max_by(|&a, &b| {
-                matrix[a][pivot]
-                    .amplitude()
-                    .total_cmp(&matrix[b][pivot].amplitude())
+                pivot_score(matrix[a][pivot], row_weights[a])
+                    .total_cmp(&pivot_score(matrix[b][pivot], row_weights[b]))
             })
             .expect("pivot range is non-empty");
         matrix.swap(pivot, best);
         rhs.swap(pivot, best);
-        if matrix[pivot][pivot].amplitude() <= relative_pivot_floor {
+        row_weights.swap(pivot, best);
+        if pivot_score(matrix[pivot][pivot], row_weights[pivot]) <= relative_pivot_floor {
             return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
         }
 
@@ -238,10 +313,12 @@ pub(super) fn solve_complex_system(
                     );
                 }
             }
-            rhs[row] = difference(rhs[row], factor, rhs[pivot], SolverStage::DenseFactor)?;
-            if !rhs[row].is_finite() {
-                return Err("harmonic spring 1d dynamic stiffness elimination diverged".to_string());
-            }
+            rhs.set(
+                row,
+                rhs.get(row)
+                    .subtract_product(factor, rhs.get(pivot), SolverStage::DenseFactor)?,
+                SolverStage::DenseFactor,
+            )?;
         }
     }
 
@@ -249,7 +326,7 @@ pub(super) fn solve_complex_system(
     for row in (0..size).rev() {
         checkpoint(SolverStage::DenseSubstitution, size - row - 1)?;
         result[row] = solve_row(
-            rhs[row],
+            rhs.get(row),
             matrix[row]
                 .iter()
                 .copied()
@@ -267,16 +344,45 @@ pub(super) fn solve_complex_system(
     Ok(result)
 }
 
+fn scale_coefficient(
+    value: Complex,
+    scale: f64,
+    row: usize,
+    column: usize,
+) -> Result<Complex, String> {
+    value
+        .scaled(scale)
+        .map_err(|error| format!("harmonic spring 1d prepared row {row} column {column}: {error}"))
+}
+
 impl Complex {
     pub(super) fn component_scale(self) -> f64 {
         self.re.abs().max(self.im.abs())
     }
 
-    pub(super) fn scaled(self, scale: f64) -> Self {
-        Self {
-            re: self.re / scale,
-            im: self.im / scale,
+    pub(super) fn scaled(self, scale: f64) -> Result<Self, String> {
+        if !scale.is_finite() || scale <= 0.0 || !self.is_finite() {
+            return Err(
+                "complex coefficient normalization requires finite values and a positive row scale"
+                    .into(),
+            );
         }
+        let component = |value: f64, name: &str| {
+            let scaled = value / scale;
+            // Normal division keeps its existing rounding; tiny coefficients must round-trip.
+            if !scaled.is_finite()
+                || ((scaled == 0.0 || scaled.is_subnormal()) && scaled * scale != value)
+            {
+                return Err(format!(
+                    "complex {name} coefficient normalization would lose numerical range"
+                ));
+            }
+            Ok(scaled)
+        };
+        Ok(Self {
+            re: component(self.re, "real")?,
+            im: component(self.im, "imaginary")?,
+        })
     }
 
     pub(super) fn real(value: f64) -> Self {

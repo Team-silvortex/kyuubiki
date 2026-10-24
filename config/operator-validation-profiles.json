@@ -6,6 +6,7 @@
     "config/operator-validation-profiles/buckling.json",
     "config/operator-validation-profiles/cfd.json",
     "config/operator-validation-profiles/electromagnetic.json",
+    "config/operator-validation-profiles/harmonic-cancellation.json",
     "config/operator-validation-profiles/line-field.json",
     "config/operator-validation-profiles/linear-admission.json",
     "config/operator-validation-profiles/linear-constraints.json",

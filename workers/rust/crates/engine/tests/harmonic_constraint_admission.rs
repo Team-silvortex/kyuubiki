@@ -56,6 +56,272 @@ fn execute(workflow: bool, model: Value) -> Result<Value, String> {
     }
 }
 
+fn wide_rhs_model(dense: bool) -> Value {
+    let mut input = model(dense);
+    for node in input["nodes"].as_array_mut().unwrap().iter_mut().skip(1) {
+        node["mass"] = json!(f64::from_bits(4));
+        node["load_x"] = json!(2.0);
+    }
+    input["elements"] = json!([]);
+    for node in 1..4 {
+        input["elements"].as_array_mut().unwrap().push(json!({
+            "id":format!("ground{node}"), "node_i":0, "node_j":node,
+            "stiffness":1e-308, "damping":1e-308
+        }));
+    }
+    for (first, second) in if dense {
+        vec![(1, 2), (2, 3), (3, 1)]
+    } else {
+        vec![(1, 2), (2, 3)]
+    } {
+        input["elements"].as_array_mut().unwrap().push(json!({
+            "id":format!("link{first}"), "node_i":first, "node_j":second,
+            "stiffness":1e-308 * 2.0_f64.powi(-20), "damping":0.0
+        }));
+    }
+    input["frequencies_hz"] = json!([1.0 / (2.0 * PI)]);
+    input
+}
+
+fn coefficient_loss_model(dense: bool, hard: f64, soft: f64) -> Value {
+    let mut input = model(dense);
+    if !dense {
+        input["nodes"].as_array_mut().unwrap().truncate(3);
+    }
+    input["nodes"][1]["load_x"] = json!(0.0);
+    for node in input["nodes"].as_array_mut().unwrap().iter_mut().skip(2) {
+        node["load_x"] = json!(2.0);
+    }
+    input["elements"] = json!([{"id":"hard-ground", "node_i":0, "node_j":1, "stiffness":hard}]);
+    for node in 2..input["nodes"].as_array().unwrap().len() {
+        input["elements"].as_array_mut().unwrap().extend([
+            json!({"id":format!("soft-ground{node}"), "node_i":0, "node_j":node, "stiffness":soft}),
+            json!({"id":format!("link{node}"), "node_i":1, "node_j":node, "stiffness":soft}),
+        ]);
+    }
+    if dense {
+        input["elements"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"id":"cycle", "node_i":2, "node_j":3, "stiffness":soft}));
+    }
+    input["frequencies_hz"] = json!([0.0]);
+    input
+}
+
+#[test]
+fn harmonic_coefficient_range_serialized_dispatch_and_workflows_reject_before_elimination() {
+    for dense in [false, true] {
+        for workflow in [false, true] {
+            let input = coefficient_loss_model(dense, 1e308, 1e-308);
+            let serialized = serde_json::from_slice(&serde_json::to_vec(&input).unwrap()).unwrap();
+            let entered = Rc::new(Cell::new(false));
+            let observed = Rc::clone(&entered);
+            let error = with_solver_observer(
+                &SolverControl::default(),
+                move |point| {
+                    if matches!(
+                        point.stage,
+                        SolverStage::DenseFactor
+                            | SolverStage::TridiagonalFactor
+                            | SolverStage::ConstraintValidate
+                    ) {
+                        observed.set(true);
+                    }
+                },
+                || execute(workflow, serialized),
+            )
+            .unwrap_err();
+            assert!(
+                !entered.get(),
+                "invalid normalization reached elimination: {error}"
+            );
+            assert!(
+                error.contains("frequency 0")
+                    && error.contains("prepared row 0 column 1")
+                    && error.contains("real coefficient normalization would lose numerical range"),
+                "{error}"
+            );
+            let result = execute(workflow, coefficient_loss_model(dense, 1e4, 1.0)).unwrap();
+            let count = if dense { 2.0 } else { 1.0 };
+            let expected = count / (1e4 + count / 2.0);
+            assert!(
+                (result["frequencies"][0]["nodes"][1]["displacement_amplitude"]
+                    .as_f64()
+                    .unwrap()
+                    / expected
+                    - 1.0)
+                    .abs()
+                    < 1e-12
+            );
+        }
+    }
+}
+
+#[test]
+fn harmonic_coefficient_range_later_frequency_failure_does_not_publish_a_partial_workflow() {
+    let mut input = model(false);
+    input["nodes"].as_array_mut().unwrap().truncate(2);
+    input["elements"].as_array_mut().unwrap().truncate(1);
+    input["nodes"][1]["mass"] = json!(f64::from_bits(1));
+    input["elements"][0]["stiffness"] = json!(1e-308);
+    input["elements"][0]["damping"] = json!(1e308);
+    input["frequencies_hz"] = json!([0.0]);
+    assert!(execute(false, input.clone()).is_ok());
+    input["frequencies_hz"] = json!([0.0, 1.0 / (2.0 * PI)]);
+    for workflow in [false, true] {
+        let error = execute(workflow, input.clone()).unwrap_err();
+        assert!(
+            error.contains("frequency 1")
+                && error.contains("row 0 column 0")
+                && error.contains("real coefficient normalization would lose numerical range"),
+            "{error}"
+        );
+        let mut corrected = input.clone();
+        corrected["elements"][0]["damping"] = json!(0.0);
+        assert_eq!(
+            execute(workflow, corrected).unwrap()["frequencies"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+    }
+}
+
+#[test]
+fn harmonic_coefficient_range_cancelled_prepare_replays_the_range_error_then_accepts_repair() {
+    for dense in [false, true] {
+        for workflow in [false, true] {
+            let input = coefficient_loss_model(dense, 1e308, 1e-308);
+            let control = SolverControl::default();
+            let cancel = control.clone();
+            let error = with_solver_observer(
+                &control,
+                move |point| {
+                    if point.stage == SolverStage::LinearPrepare && point.completed_steps == 0 {
+                        cancel.request_cancel();
+                    }
+                },
+                || execute(workflow, input.clone()),
+            )
+            .unwrap_err();
+            assert!(
+                control.was_interrupted() && error.contains(SolverStage::LinearPrepare.as_str()),
+                "{error}"
+            );
+            let replay = execute(workflow, input).unwrap_err();
+            assert!(
+                replay.contains("prepared row 0 column 1")
+                    && replay.contains("coefficient normalization would lose numerical range"),
+                "{replay}"
+            );
+            assert!(execute(workflow, coefficient_loss_model(dense, 1e4, 1.0)).is_ok());
+        }
+    }
+}
+
+#[test]
+fn harmonic_complex_rhs_range_serialized_dispatch_and_workflows_publish_finite_forces() {
+    for dense in [false, true] {
+        let input = wide_rhs_model(dense);
+        let baseline = execute(false, input.clone()).unwrap();
+        for workflow in [false, true] {
+            let serialized = serde_json::from_slice(&serde_json::to_vec(&input).unwrap()).unwrap();
+            let result = execute(workflow, serialized).unwrap();
+            assert_eq!(result, baseline);
+            let amplitude = result["max_displacement"].as_f64().unwrap();
+            assert!((amplitude / (1e308 * 2.0_f64.sqrt()) - 1.0).abs() < 1e-12);
+            assert!((result["max_force"].as_f64().unwrap() - 2.0).abs() < 1e-12);
+            for node in result["frequencies"][0]["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .skip(1)
+            {
+                assert!((node["displacement_phase_deg"].as_f64().unwrap() + 45.0).abs() < 1e-10);
+            }
+        }
+    }
+}
+
+#[test]
+fn harmonic_complex_rhs_range_late_output_failure_blocks_dispatch_and_workflow_publication() {
+    for dense in [false, true] {
+        let input = wide_rhs_model(dense);
+        let mut late = input.clone();
+        for node in late["nodes"].as_array_mut().unwrap().iter_mut().skip(1) {
+            node["load_x"] = json!(2.05);
+        }
+        late["frequencies_hz"] = json!([1.0 / (2.0 * PI), 0.5 / (2.0 * PI)]);
+        for workflow in [false, true] {
+            let error = execute(workflow, late.clone()).unwrap_err();
+            assert!(
+                error.contains("frequency 1") && error.contains("displacement amplitude"),
+                "{error}"
+            );
+            assert!(execute(workflow, input.clone()).is_ok());
+        }
+    }
+}
+
+#[test]
+fn harmonic_complex_rhs_range_cancel_late_promotion_factor_and_publication_then_replay() {
+    for dense in [false, true] {
+        let mut input = wide_rhs_model(dense);
+        input["frequencies_hz"] = json!([1.0 / (2.0 * PI), 1.0 / (2.0 * PI)]);
+        let baseline = execute(false, input.clone()).unwrap();
+        let factor = if dense {
+            SolverStage::DenseFactor
+        } else {
+            SolverStage::TridiagonalFactor
+        };
+        let substitution = if dense {
+            SolverStage::DenseSubstitutionRange
+        } else {
+            SolverStage::TridiagonalSubstitutionRange
+        };
+        for workflow in [false, true] {
+            for (stage, completed, occurrence) in [
+                (SolverStage::LinearPrepare, 0, 2),
+                (SolverStage::LinearPrepare, 3, 2),
+                (factor, 0, 2),
+                (substitution, 0, 1),
+                (SolverStage::ResultElements, if dense { 6 } else { 5 }, 1),
+            ] {
+                let control = SolverControl::default();
+                let cancel = control.clone();
+                let frequency = Cell::new(0);
+                let entered = Cell::new(0);
+                let error = with_solver_observer(
+                    &control,
+                    move |point| {
+                        if point.stage == SolverStage::HarmonicSweep {
+                            frequency.set(point.completed_steps);
+                        }
+                        if frequency.get() == 1
+                            && point.stage == stage
+                            && point.completed_steps == completed
+                        {
+                            entered.set(entered.get() + 1);
+                            if entered.get() == occurrence {
+                                cancel.request_cancel();
+                            }
+                        }
+                    },
+                    || execute(workflow, input.clone()),
+                )
+                .unwrap_err();
+                assert!(
+                    control.was_interrupted() && error.contains(stage.as_str()),
+                    "{error}"
+                );
+                assert_eq!(execute(workflow, input.clone()).unwrap(), baseline);
+            }
+        }
+    }
+}
+
 #[test]
 fn harmonic_original_equations_gate_every_frequency_in_path_and_dense_workflows() {
     for dense in [false, true] {
@@ -102,10 +368,11 @@ fn harmonic_original_equations_reject_erased_force_through_dispatch_and_workflow
     input["frequencies_hz"] = json!([0.0]);
     for workflow in [false, true] {
         let error = execute(workflow, input.clone()).unwrap_err();
+        // Coefficient loss now rejects before the erroneous state reaches equation admission.
         assert!(
             error.contains("frequency 0")
-                && error.contains("free row 0")
-                && error.contains("backward-error"),
+                && error.contains("prepared row 0 column 1")
+                && error.contains("real coefficient normalization would lose numerical range"),
             "{error}"
         );
         assert!(execute(workflow, model(false)).is_ok());

@@ -99,7 +99,38 @@
             Frequency products must also retain finite inertia and acceleration
             even when the intermediate angular-frequency square is out of range.
             Complex substitution replays complete exceptional rows before pivot
-            division; element-force products combine terms before restoration.</li>
+            division; element-force products combine terms before restoration.
+            Exceptional right-hand sides also retain binary-scaled components
+            through row normalization, elimination and pivot swaps until division.
+            Ordinary RHS storage keeps its allocation. Row normalization prefers
+            exact binary shifts, retaining the legacy divisor for reversible tiny
+            coefficients when necessary. Row weights follow pivot swaps, keeping
+            comparison units tied to the original row maxima; the pivot-floor
+            constant is unchanged. Coefficient normalization separately rejects
+            erased or non-round-tripping tiny components before elimination,
+            identifying the prepared row, column and real/imaginary component.
+            Nonzero normal component terms that cancel to rounded zero also
+            trigger complete-expression replay with product tails; this bounded
+            repair is not general forward-accuracy qualification. Strongly reduced
+            nonzero components also replay, with independent row-component peaks
+            detecting gradual cancellation. The relative replay heuristic changes
+            neither physical residual tolerances nor pivot admission. Replay sums
+            already aligned parts in fixed checked integer storage before one
+            binary64 rounding, so its own error balance cannot lose nested tails.
+            Assembly and subsequent division are not made exact by this step.
+            Exceptional axial divisors avoid complex squaring; scaled scalar
+            quotients near underflow round directly to quantum units. Exceptional
+            general divisors retain both products and the squared denominator in
+            checked fixed integer storage until final ratio rounding. Ordinary
+            divisors now use compact integer pairs and exact rounding-cell
+            midpoint admission for normal candidates, with checked exact replay
+            on unsupported or ambiguous cases. This can change ordinary division
+            bits, not standalone product/matrix-update bits or numerical gates.
+            RHS elimination and back-substitution updates use fused scalar
+            operations with a local rounding-risk budget that can request full
+            expression replay. This is not exact matrix updating or certified
+            division of an unrounded row expression. Upstream assembly and
+            whole-model forward accuracy are not thereby certified.</li>
           <li>These are named consumer scopes, not all-operator qualification.
             Cooperative cancellation/replay is not durable restart evidence.</li>
         </ul>

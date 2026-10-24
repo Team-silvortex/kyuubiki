@@ -32,8 +32,11 @@ fn harmonic_original_equations_reject_erased_incident_force() {
 #[test]
 fn harmonic_original_equations_gate_real_solver_publication() {
     let error = solve_harmonic_spring_1d(&contrast_request()).unwrap_err();
+    // This fixture now rejects at matrix preparation; the direct state control above still tests the equation gate.
     assert!(
-        error.contains("frequency 0") && error.contains("backward-error"),
+        error.contains("frequency 0")
+            && error.contains("prepared row 0 column 1")
+            && error.contains("real coefficient normalization would lose numerical range"),
         "{error}"
     );
 }

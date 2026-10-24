@@ -53,6 +53,85 @@ integration tests. Ten tests are ignored and 292 modal cases remain excluded.
 The frontend product-identity check also passes. This release rerun is not a
 fresh Linux or installed-platform run; the snapshot lists its exact targets.
 
+The [October 24 complex RHS follow-up](../reports/harmonic-complex-rhs-range-20261024.md)
+recovers finite harmonic solutions when row normalization or forward elimination
+temporarily puts a right-hand side outside binary64 range. Independent scaled
+components survive pivot swaps and solution division. Ordinary storage retains
+its allocation; matrix scaling, pivot floors and original-equation gates stay
+unchanged. Signed/oriented force readback, late output failure, cancellation and
+explicit clean replay have scoped tests. This follow-up is not a new release
+snapshot, full complex-solver qualification or durable recovery evidence.
+
+The [coefficient-normalization follow-up](../reports/harmonic-coefficient-normalization-range-20261024.md)
+rejects erased or partially rounded tiny matrix components before elimination,
+with explicit prepared-row/column/component diagnostics. Public extreme-contrast
+fixtures were already blocked by original-equation admission; the guard moves
+that rejection earlier and prevents the internal factorization from returning a
+candidate for a silently modified matrix. Exact tiny couplings, nonzero quantum
+responses, ordinary bits and explicit repaired runs retain bounded controls.
+This is conservative admission, not a wider-range factorization or new physics.
+
+The [complex zero-cancellation follow-up](../reports/harmonic-complex-zero-cancellation-20261024.md)
+also replays complete expressions when nonzero normal terms round to zero.
+Signed dyadic controls retain tiny product/determinant tails through complex
+products, elimination and back substitution. Exact zeros remain admissible and
+ordinary non-cancelling arithmetic keeps its order. These are internal arithmetic
+and manufactured-system counterexamples plus existing public/workflow regressions,
+not a newly qualified physical model or general forward-accuracy proof.
+
+The [nonzero near-cancellation follow-up](../reports/harmonic-complex-near-cancellation-20261024.md)
+extends this routing to strongly reduced nonzero components. Independent
+real/imaginary row peaks also detect gradual shrinkage that exposes earlier
+lost terms. The relative threshold selects compensated replay, not physical
+acceptance or singularity tolerance. Signed dyadic references, both internal
+factorizations, threshold controls and existing public/workflow regressions
+bound the evidence; general forward accuracy is still not certified.
+
+The [nested accumulation follow-up](../reports/harmonic-complex-exact-accumulation-20261024.md)
+fixes loss inside replay's own floating-point error balance. Already aligned
+parts now use checked fixed integer storage and one final binary64 rounding.
+Independent integer references, nested FMA tails, subnormal boundaries and
+cancellation controls bound this change. Ordinary routing, upstream alignment,
+matrix preparation and physical admission remain unchanged; assembly and final
+division are not thereby exact.
+
+The [binary-normalization follow-up](../reports/harmonic-binary-normalization-20261024.md)
+addresses upstream rounding that could flip a tiny component's sign in a
+well-conditioned manufactured system. Rows prefer exact power-of-two shifts,
+with legacy scaling retained when needed for reversible tiny couplings.
+Explicit row weights keep pivot comparisons in original max-normalized units
+through swaps. This changes preparation arithmetic, not the pivot-floor
+constant, original-equation gate or physical model.
+
+The [quotient-rounding follow-up](../reports/harmonic-quotient-rounding-20261024.md)
+fixes double rounding near the subnormal lattice and avoids unnecessary squaring
+for exceptional purely real/imaginary divisors. A public static spring fixture
+previously published a response one minimum quantum above the independent
+reference; Solver and serialized Engine/workflow readback now retain that
+reference bit pattern. Range admission stays unchanged, and general complex
+division or whole-model forward accuracy is not thereby certified.
+
+The [general-division follow-up](../reports/harmonic-general-division-20261024.md)
+retains exceptional complex numerator products and the positive squared
+denominator as bounded integers until final ratio rounding. This avoids false
+range errors from extreme component contrast and a public damped-response
+quantum error. Ordinary fast-path arithmetic and upstream assembly remain
+unchanged; local exact-ratio controls do not certify whole-model forward error.
+
+The [ordinary-division follow-up](../reports/harmonic-fast-division-20261024.md)
+replaces legacy weighted reciprocal rounding with a compact integer-pair
+candidate and exact midpoint admission. Normal candidates must fit the correct
+rounding cell, including ties; unsupported or ambiguous cases use exact replay.
+This deliberately changes some ordinary division bits, not product/update bits,
+pivot thresholds or original-equation acceptance. Upstream rounding remains separate.
+
+The [row-update follow-up](../reports/harmonic-row-update-20261024.md) addresses
+product tails lost before final division in RHS elimination and back substitution.
+Fused scalar updates retain selected weak numerators; an upward-padded local
+rounding budget routes amplified partial-sum loss into complete-expression replay.
+A two-spring public closed form now retains its weak tip response. Matrix updates
+and numerical gates are unchanged; the unrounded full expression is not certified.
+
 The active tensor profile becomes `daji-3-7-hardening`, without promoting
 evidence grades or changing thresholds. Release qualification remains blocked;
 the last recorded review has two maturity, 23 evidence-grade and 18 P0 gaps.

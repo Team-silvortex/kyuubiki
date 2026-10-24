@@ -1,6 +1,78 @@
 use super::*;
 
 #[test]
+fn harmonic_complex_rhs_range_preparation_preserves_a_finite_complex_solution() {
+    let coefficient = Complex {
+        re: 1e-308,
+        im: 1e-308,
+    };
+    for sign in [-1.0, 1.0] {
+        let dense = solve_complex_system(vec![vec![coefficient]], vec![Complex::real(sign * 2.0)]);
+        let path = solve_complex_tridiagonal(ComplexTridiagonalSystem {
+            diagonal: vec![coefficient],
+            lower: vec![],
+            upper: vec![],
+            rhs: vec![Complex::real(sign * 2.0)],
+        });
+        for result in [dense, path] {
+            let value = result.unwrap()[0];
+            assert!((value.re / (sign * 1e308) - 1.0).abs() < 1e-14, "{value:?}");
+            assert!(
+                (value.im / (-sign * 1e308) - 1.0).abs() < 1e-14,
+                "{value:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn harmonic_complex_rhs_range_elimination_keeps_a_wide_rhs_until_division() {
+    let one = Complex::real(1.0);
+    let lower = Complex::real(0.5);
+    let diagonal = Complex { re: 1.0, im: 1.0 };
+    let rhs = vec![Complex::real(-1.3e308), Complex::real(1.3e308)];
+    let dense = solve_complex_system(
+        vec![vec![one, Complex::default()], vec![lower, diagonal]],
+        rhs.clone(),
+    );
+    let path = solve_complex_tridiagonal(ComplexTridiagonalSystem {
+        diagonal: vec![one, diagonal],
+        lower: vec![lower],
+        upper: vec![Complex::default()],
+        rhs,
+    });
+    for result in [dense, path] {
+        let values = result.unwrap();
+        assert_eq!(values[0].re, -1.3e308);
+        assert!((values[1].re / 9.75e307 - 1.0).abs() < 1e-14);
+        assert!((values[1].im / -9.75e307 - 1.0).abs() < 1e-14);
+    }
+}
+
+#[test]
+fn harmonic_complex_rhs_range_pivoting_swaps_wide_rhs_and_back_substitutes() {
+    let phase = Complex {
+        re: 1e-308,
+        im: 1e-308,
+    };
+    let zero = Complex::default();
+    let rhs = vec![Complex::real(2.0), zero];
+    let dense = solve_complex_system(vec![vec![zero, phase], vec![phase, phase]], rhs.clone());
+    let path = solve_complex_tridiagonal(ComplexTridiagonalSystem {
+        diagonal: vec![zero, phase],
+        lower: vec![phase],
+        upper: vec![phase],
+        rhs,
+    });
+    for result in [dense, path] {
+        for (value, sign) in result.unwrap().iter().zip([-1.0, 1.0]) {
+            assert!((value.re / (sign * 1e308) - 1.0).abs() < 1e-14);
+            assert!((value.im / (-sign * 1e308) - 1.0).abs() < 1e-14);
+        }
+    }
+}
+
+#[test]
 fn harmonic_complex_range_division_combines_two_half_quanta() {
     let quantum = f64::from_bits(1);
     let value = divide(
@@ -139,7 +211,7 @@ fn harmonic_complex_range_divides_before_restoring_a_wide_numerator() {
 }
 
 #[test]
-fn harmonic_complex_range_preserves_ordinary_arithmetic_bits() {
+fn harmonic_complex_range_preserves_product_update_bits_and_exact_division_reference() {
     let a = Complex {
         re: 0.75,
         im: -0.125,
@@ -163,13 +235,11 @@ fn harmonic_complex_range_preserves_ordinary_arithmetic_bits() {
             (base.im - expected.im).to_bits()
         )
     );
-    let scale = a.component_scale();
-    let ar = a.re / scale;
-    let ai = a.im / scale;
-    let den = ar * ar + ai * ai;
+    // Exact dyadic operands give these small rational components. The previous
+    // divide-order reference reproduced its one-ULP real-component error.
     let expected = Complex {
-        re: (base.re / scale) * (ar / den) + (base.im / scale) * (ai / den),
-        im: (base.im / scale) * (ar / den) - (base.re / scale) * (ai / den),
+        re: 94.0 / 37.0,
+        im: 28.0 / 37.0,
     };
     let value = divide(base, a, SolverStage::DenseFactor).unwrap();
     assert_eq!(
@@ -220,16 +290,18 @@ fn harmonic_complex_range_wide_replay_and_division_cancel_then_replay() {
         })
         .collect::<Vec<_>>();
     let stage = SolverStage::DenseSubstitutionRange;
+    // Keep the three generic division passes covered independently of axial division.
     let run = || {
         solve_row(
             Complex::real(1e308),
             terms.iter().copied(),
-            Complex::real(1.0),
+            Complex { re: 1.0, im: 1.0 },
             stage,
         )
     };
     let baseline = run().unwrap();
-    assert_eq!(baseline.re, 1e308);
+    assert_eq!(baseline.re, 5e307);
+    assert_eq!(baseline.im, -5e307);
     for (completed, phase) in [
         (0, 1),
         (1024, 0),

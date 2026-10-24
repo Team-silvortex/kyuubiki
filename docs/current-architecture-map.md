@@ -151,10 +151,68 @@ also owns exceptional elimination updates, complete-row substitution replay and
 element-force product restoration. A wide temporary numerator may be divided
 before restoration; an unrepresentable final coefficient, force or extension
 must still fail instead of becoming a successful zero-valued result.
+The [exceptional RHS adapter](../workers/rust/crates/solver/src/harmonic_spring_rhs.rs)
+retains independent binary-scaled components across row normalization, elimination
+and pivot swaps until solution division. Ordinary RHS storage keeps its original
+allocation; coefficient preparation and pivot admission remain separate policies.
+See the [bounded RHS range report](../reports/harmonic-complex-rhs-range-20261024.md).
+Coefficient normalization separately rejects erased or irreversibly rounded tiny
+components before elimination, with reduced-row/column/component diagnostics.
+This [admission guard](../reports/harmonic-coefficient-normalization-range-20261024.md)
+does not expand matrix representability or replace the original-equation check.
+Nonzero component terms that cancel to a rounded zero also trigger complete
+expression replay, retaining FMA product tails and earlier row-sum tails.
+See the [bounded zero-cancellation report](../reports/harmonic-complex-zero-cancellation-20261024.md).
+Ordinary non-cancelling arithmetic keeps its existing order; this is not a
+general forward-accuracy guarantee for all nonzero cancellation.
+The [near-cancellation follow-up](../reports/harmonic-complex-near-cancellation-20261024.md)
+also replays strongly reduced nonzero components. Independent real/imaginary
+row peaks detect gradual cancellation without row copies. The relative
+`2^-26` trigger is an internal routing heuristic, not a physical residual
+tolerance, singularity threshold or forward-error certificate.
+Replay's [fixed integer accumulator](../workers/rust/crates/solver/src/harmonic_spring_exact_sum.rs)
+retains already aligned binary64 parts without a rounded floating-point error
+balance. Checked capacity and one final rounding prevent nested-tail loss;
+see the [scoped accumulation report](../reports/harmonic-complex-exact-accumulation-20261024.md).
+This does not make assembly, alignment or subsequent division exact.
+The [row-normalization policy](../workers/rust/crates/solver/src/harmonic_spring_normalization.rs)
+prefers exact binary shifts before elimination, falling back to the legacy
+divisor when a tiny coefficient would otherwise be lost. Row weights travel
+with pivot swaps so comparison units remain tied to each original row maximum.
+See the [bounded preparation report](../reports/harmonic-binary-normalization-20261024.md);
+this does not certify exact factorization or all weak-response components.
+Exceptional purely real/imaginary divisors use independent scaled scalar
+quotients rather than squared complex denominators. The
+[near-underflow quotient helper](../workers/rust/crates/solver/src/harmonic_spring_quotient.rs)
+rounds directly to quantum units using bounded integer arithmetic, retaining
+the nonzero-to-zero rejection policy. See the
+[public readback and cancellation report](../reports/harmonic-quotient-rounding-20261024.md);
+this does not by itself remove general complex numerator/denominator rounding.
+The exceptional general-divisor path now uses a separate
+[bounded exact-ratio helper](../workers/rust/crates/solver/src/harmonic_spring_complex_quotient.rs).
+It retains both products as integers and rounds each final component once,
+without first restoring tiny squared terms or rounding a reciprocal. See the
+[range, public readback and cancellation report](../reports/harmonic-general-division-20261024.md).
+Its checked fixed capacity is not arbitrary precision. The ordinary divisor
+path now uses a [compact integer-pair candidate](../workers/rust/crates/solver/src/harmonic_spring_fast_division.rs)
+and exact rounding-cell midpoint comparisons before admitting normal components.
+An FMA-refined candidate is not trusted without that check; capacity, subnormal
+and ambiguous cases retain checked exact replay. Shared product decoding serves
+both branches. See the [fast-path evidence](../reports/harmonic-fast-division-20261024.md).
+Ordinary division bits may change; standalone product/matrix-update bits and
+numerical gates do not. RHS elimination and back-substitution numerator updates
+now have a separate [fused row helper](../workers/rust/crates/solver/src/harmonic_spring_row_update.rs).
+Its upward-padded local FMA rounding estimate selects complete-expression replay
+when partial-sum loss is amplified relative to the final numerator. The eight
+epsilon budget is an internal routing rule, not physical admission. See the
+[weak-response and cancellation evidence](../reports/harmonic-row-update-20261024.md).
+Earlier assembly and matrix updates remain rounded; final division still receives
+a represented numerator, not a certified exact unrounded row expression.
 
 Solver unit tests own mathematical and range counterexamples. Engine integration
 tests own serialized dispatch/workflow equality, gate reachability and failure
-propagation. [Validation profiles](../config/operator-validation-profiles/linear-constraints.json)
+propagation. [Constraint profiles](../config/operator-validation-profiles/linear-constraints.json)
+and [complex cancellation profiles](../config/operator-validation-profiles/harmonic-cancellation.json)
 register commands; [tensor evidence](../config/architecture/module-function-coverage-evidence/runtime-constraint-validation.json)
 binds their bounded claims. Cooperative cancellation and same-input replay are
 not durable process-restart or host-power-loss evidence.
