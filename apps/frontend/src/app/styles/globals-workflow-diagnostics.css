@@ -471,6 +471,7 @@
 
 .runtime-overview-grid {
   display: grid;
+  align-items: start;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }

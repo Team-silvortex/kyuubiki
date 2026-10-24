@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded exact final quotient rounding for admitted replayed harmonic substitution rows; ordinary fused rows, upstream assembly and elimination remain rounded.",
+  "evidence_claims": [
+    {
+      "id": "harmonic-row-quotient-local-reliability",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/harmonic_spring_complex_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_exact_sum.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_complex_quotient.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_expression_quotient.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_expression_quotient_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_row_quotient_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_row_quotient.rs",
+        "workers/rust/crates/engine/tests/harmonic_row_quotient.rs",
+        "config/operator-validation-profiles/harmonic-cancellation.json",
+        "reports/harmonic-row-quotient-20261024.md"
+      ],
+      "required_text": [
+        "harmonic_row_quotient_replay_divides_the_unrounded_expression",
+        "harmonic_row_quotient_replay_reaches_both_factorizations",
+        "harmonic_row_quotient_replay_rounds_once_at_the_subnormal_midpoint",
+        "harmonic_row_quotient_retains_alignment_and_final_range_guards",
+        "harmonic_row_quotient_new_integer_phases_cancel_then_reuse_without_partial_results",
+        "harmonic_row_quotient_ordinary_positive_control_needs_no_integer_replay",
+        "harmonic_row_quotient_wide_rhs_cancels_before_exact_complex_division",
+        "harmonic_row_quotient_integer_multiply_and_signed_alignment_check_capacity",
+        "harmonic_row_quotient_accumulation_handoff_preserves_unrounded_parts_and_poisoning",
+        "harmonic_row_quotient_public_balanced_load_replay_preserves_analytical_nodes_and_forces",
+        "harmonic_row_quotient_late_frequency_failure_cannot_return_the_balanced_prefix",
+        "harmonic_row_quotient_serialized_dispatch_and_workflow_reach_the_integer_replay",
+        "harmonic_row_quotient_late_failure_prevents_workflow_publication_then_reuses",
+        "harmonic_row_quotient_cancelled_integer_phases_cannot_publish_a_workflow_prefix",
+        "This is bounded exact quotient rounding of admitted replayed harmonic row expressions, not correct rounding of ordinary rows, exact assembly or factorization, a whole-solver forward-error certificate, independent physical qualification or durable restart."
+      ]
+    }
+  ]
+}

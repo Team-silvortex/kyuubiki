@@ -1,5 +1,25 @@
 # Changelog
 
+## daji 3.7.1
+
+October 24, 2026. Local desktop refresh and version reconciliation.
+
+- Align first-party packages, lockfiles, runtime manifests, language-pack targets,
+  brand mirrors and current documentation with the existing 3.7.1 Git checkpoint.
+- Keep desktop runtime cards content-sized, place selected details on a separate
+  row, and stop informational side panels from stretching short cards vertically.
+- Preserve compact responsive layouts and correct semantic console headings
+  across Hub, Installer and Workbench.
+- Include the retained harmonic Schur-update, factor-compensation, row-quotient
+  and RHS-promotion hardening without relabeling earlier numerical evidence.
+- Refresh the macOS native runtime, static frontend and three separate desktop
+  applications. Local installation and acceptance are recorded in the snapshot.
+
+See `docs/current-line.md#daji-371-local-packaging` and
+`releases/snapshots/3.7.1.json` for working-tree provenance and exact scope.
+This is not SDK registry publication, public distribution, notarization or
+new cross-platform/physical-solver qualification.
+
 ## daji 3.7.0
 
 October 23, 2026. Original-equation admission and numerical-range hardening.

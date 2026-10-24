@@ -4,6 +4,155 @@
   "domain": "harmonic-complex-cancellation",
   "profiles": [
     {
+      "profile_id": "harmonic-row-quotient-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-row-quotient-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "independent_exact_rational_row_reference_and_subnormal_midpoint_controls",
+        "dense_path_phase_scale_row_swap_and_wide_rhs_controls",
+        "checked_integer_handoff_multiply_alignment_and_poisoning_controls",
+        "public_balanced_load_displacement_and_force_readback",
+        "serialized_dispatch_workflow_integer_phase_cancellation_and_clean_reuse"
+      ],
+      "formal_invariants": [
+        "admitted_replayed_rows_retain_exact_integer_numerator_until_quotient_rounding",
+        "ordinary_fused_rows_keep_the_existing_fast_route",
+        "replay_alignment_capacity_nonzero_underflow_and_overflow_guards_remain_checked",
+        "assembly_elimination_updates_pivot_and_original_equation_gates_are_not_relaxed",
+        "cancelled_integer_phases_and_late_frequency_errors_publish_no_successful_prefix"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_complex_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_exact_sum.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_complex_quotient.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_expression_quotient.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_expression_quotient_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_row_quotient_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_row_quotient.rs",
+        "workers/rust/crates/engine/tests/harmonic_row_quotient.rs",
+        "reports/harmonic-row-quotient-20261024.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-row-quotient-local-expression-rounding-and-recovery",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_row_quotient -- --nocapture"
+        },
+        {
+          "id": "harmonic-row-quotient-existing-shared-exact-arithmetic-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_general_division -- --nocapture"
+        },
+        {
+          "id": "harmonic-row-quotient-public-and-workflow-readback",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver -p kyuubiki-engine --test harmonic_row_quotient -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "harmonic-factor-compensation-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-factor-compensation-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "independent_non_dyadic_factor_and_dynamic_mass_rational_references",
+        "real_complex_scaled_row_swap_and_generated_fill_consistency_controls",
+        "shared_matrix_rhs_two_term_update_and_exact_factor_zero_correction_controls",
+        "bounded_headroom_quantum_wide_rhs_and_invalid_operand_controls",
+        "serialized_dispatch_workflow_signed_load_and_orientation_readback",
+        "residual_and_update_phase_cancellation_late_failure_and_clean_reuse"
+      ],
+      "formal_invariants": [
+        "one_transient_two_term_factor_is_shared_by_coefficient_and_rhs_updates",
+        "correction_is_a_rounded_residual_quotient_not_exact_factorization",
+        "nonzero_numerator_pivot_high_factor_and_row_operands_require_2pow_minus100_to_2pow100_headroom",
+        "step_preflight_disables_all_correction_if_any_coefficient_or_rhs_operand_is_unsupported",
+        "outside_headroom_or_wide_rhs_retains_preexisting_range_checked_updates",
+        "weighted_pivot_and_original_equation_admission_are_not_relaxed",
+        "cancelled_or_late_failed_runs_publish_no_successful_workflow_prefix"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_linear.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_complex_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_factor.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_factor_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_factor_system_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_factor_compensation.rs",
+        "workers/rust/crates/engine/tests/harmonic_factor_compensation.rs",
+        "reports/harmonic-factor-compensation-20261024.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-factor-compensation-local-residual-and-consistency",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_factor_compensation -- --nocapture"
+        },
+        {
+          "id": "harmonic-factor-compensation-existing-schur-range-and-pivot-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_schur_update -- --nocapture"
+        },
+        {
+          "id": "harmonic-factor-compensation-public-and-workflow-readback",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver -p kyuubiki-engine --test harmonic_factor_compensation -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "harmonic-schur-update-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-schur-update-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "independent_soft_mode_schur_complement_and_three_spring_rational_references",
+        "dense_path_binary_scale_complex_phase_and_row_swap_controls",
+        "complex_partial_sum_replay_and_generated_second_superdiagonal_controls",
+        "weighted_pivot_floor_exact_quantized_coefficient_and_range_rejection_controls",
+        "serialized_dispatch_workflow_signed_load_and_orientation_readback",
+        "coefficient_phase_factor_result_cancellation_and_late_failure_clean_reuse"
+      ],
+      "formal_invariants": [
+        "matrix_diagonal_and_fill_updates_use_the_existing_fused_precision_risk_policy",
+        "eight_epsilon_local_budget_selects_expression_replay_not_pivot_regularization",
+        "irreversible_coefficient_range_loss_and_true_overflow_are_not_published",
+        "weighted_pivot_constant_and_original_equation_admission_are_unchanged",
+        "standalone_product_and_legacy_difference_arithmetic_remain_separate",
+        "cancelled_or_late_failed_runs_publish_no_successful_workflow_prefix"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_linear.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_complex_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_row_update.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_schur_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_schur_update.rs",
+        "workers/rust/crates/engine/tests/harmonic_schur_update.rs",
+        "reports/harmonic-schur-update-20261024.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-schur-update-local-coefficient-and-pivot-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_schur_update -- --nocapture"
+        },
+        {
+          "id": "harmonic-schur-update-shared-fused-policy-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_row_update -- --nocapture"
+        },
+        {
+          "id": "harmonic-schur-update-public-and-workflow-mode-readback",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver -p kyuubiki-engine --test harmonic_schur_update -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "harmonic-row-update-local-reliability",
       "profile_role": "component_profile",
       "qualification_candidate_id": "harmonic-row-update-local-reliability",
@@ -21,7 +170,7 @@
         "rhs_and_back_substitution_updates_use_fused_scalar_multiply_add",
         "eight_epsilon_local_rounding_budget_selects_replay_not_physical_admission",
         "nonfinite_subnormal_or_strongly_cancelling_ordinary_states_are_not_published",
-        "matrix_updates_standalone_products_pivot_and_original_equation_gates_are_unchanged",
+        "standalone_products_legacy_differences_pivot_and_original_equation_gates_are_unchanged",
         "unsafe_prefixes_do_not_hide_invalid_later_operands",
         "failed_or_cancelled_rows_and_frequencies_publish_no_successful_workflow_prefix"
       ],
@@ -70,7 +219,7 @@
         "fma_refinement_is_not_itself_a_precision_or_range_certificate",
         "capacity_subnormal_or_ambiguous_cases_use_checked_exact_replay",
         "strong_cancellation_retains_observed_replay_and_supported_zero_input_needs_no_replay",
-        "standalone_product_matrix_update_bits_pivot_and_original_equation_gates_are_not_relaxed",
+        "standalone_product_legacy_difference_bits_pivot_and_original_equation_gates_are_not_relaxed",
         "partial_or_cancelled_workflow_results_are_not_published"
       ],
       "evidence_paths": [
@@ -169,7 +318,7 @@
         "scaled_scalar_quotients_near_underflow_round_directly_to_quantum_units",
         "nonzero_unknowns_cannot_silently_round_to_zero",
         "exceptional_axial_division_does_not_square_the_divisor",
-        "standalone_products_and_matrix_updates_keep_their_previous_bits",
+        "standalone_products_and_legacy_differences_keep_their_previous_bits",
         "range_pivot_and_original_equation_admission_are_not_relaxed",
         "cancelled_components_or_late_frequency_failures_publish_no_successful_prefix"
       ],
@@ -273,7 +422,7 @@
         "aligned_parts_do_not_share_a_rounded_floating_point_error_balance",
         "integer_sum_rounds_once_to_binary64_with_half_and_sticky_bits",
         "capacity_or_operand_failure_cannot_publish_a_wrapped_or_partial_sum",
-        "standalone_product_matrix_update_fast_paths_alignment_and_pivot_gates_remain_unchanged",
+        "standalone_product_legacy_difference_fast_paths_alignment_and_pivot_gates_remain_unchanged",
         "cooperative_cancellation_still_discards_private_partial_state"
       ],
       "evidence_paths": [
@@ -322,7 +471,7 @@
         "strongly_cancelled_nonzero_components_replay_the_original_expression",
         "independent_component_row_peaks_detect_gradual_cancellation",
         "relative_replay_routing_does_not_relax_original_equation_or_pivot_admission",
-        "nonexceptional_standalone_products_and_matrix_updates_keep_their_previous_order_and_bits",
+        "nonexceptional_standalone_products_and_legacy_differences_keep_their_previous_order_and_bits",
         "no_new_matrix_or_row_copy_is_added",
         "late_invalid_operands_or_cancellation_do_not_publish_a_partial_solution"
       ],
@@ -377,7 +526,7 @@
       "formal_invariants": [
         "zero_from_nonzero_component_terms_triggers_complete_expression_replay",
         "replay_retains_product_tails_without_adding_a_matrix_or_row_copy",
-        "ordinary_non_cancelling_standalone_products_and_matrix_updates_keep_existing_order_and_bits",
+        "ordinary_non_cancelling_standalone_products_and_legacy_differences_keep_existing_order_and_bits",
         "exact_zero_controls_remain_admissible",
         "pivot_floors_and_original_equation_admission_are_unchanged",
         "cooperative_cancellation_does_not_return_a_partial_solution"

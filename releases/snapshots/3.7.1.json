@@ -1,0 +1,76 @@
+{
+  "version": "3.7.1",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-10-24",
+  "git_commit": "c4cc2f96",
+  "summary": "Reconcile the existing Daji 3.7.1 Git checkpoint with package and current-document metadata; rebuild the compact desktop UI and current local runtime from the working-tree overlay.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md"
+  },
+  "desktop_artifacts": {
+    "hub_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+    "installer_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+    "workbench_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app"
+  },
+  "verification": {
+    "source_revision_role": "Recorded base commit plus uncommitted numerical, UI-density and version-alignment changes; not a clean-commit artifact.",
+    "prior_source_evidence": {
+      "reports": [
+        "reports/harmonic-factor-compensation-20261024.md",
+        "reports/harmonic-row-quotient-20261024.md",
+        "reports/harmonic-rhs-promotion-20261024.md",
+        "reports/desktop-content-density-20261024.md"
+      ],
+      "scope": "These reports retain their pre-alignment version, platforms, working-tree provenance and exclusions; their overlapping counts are not additive."
+    },
+    "desktop_packaging": {
+      "status": "built and installed",
+      "platform": "macos-aarch64",
+      "kind": "app",
+      "independent_shells": 3,
+      "installed_version_checks": { "passed": 3, "failed": 0 },
+      "local_signature_verification": "passed for all three apps; ad-hoc signing",
+      "interactive_startup_passed": 3,
+      "startup_report": "releases/usability-evidence/3.7.1/macos-installed-desktop-smoke.json",
+      "executable_sha256": {
+        "hub": "9da3d07924284e622115809d15a9a558467b737e33a86bcded94437ed7d6e27e",
+        "installer": "84b37ed1640da9741a24119df7a5db650861c702052f90d72c55d5654a6bebc8",
+        "workbench": "de8c7f928f662924ebed5a0e082aac7254e9b4ced0e9d705cac6fd60d820a7f8"
+      },
+      "installed_build_digest_comparison": "all three installed executables match the build outputs",
+      "observed_workbench": "Installed WebView shows 3.7.1, compact four-card runtime overview, separate detail row, natural auxiliary stack, working embedded frontend, logs and keyboard return to status."
+    },
+    "runtime_payload": {
+      "status": "sealed, installed, activated and started",
+      "version": "3.7.1",
+      "manifest_file_count": 1736,
+      "manifest_sha256": "60bad8d56315ced19cb72bb1418e5699b84328ae431e74974c62a4970c840bcb",
+      "installed_manifest_digest_comparison": "matches the sealed build manifest",
+      "node_runtime_required": false,
+      "running_services": ["frontend", "orchestrator", "agent[5001]", "agent[5002]"],
+      "orchestra_health": "ok; two ready endpoints; healthy watchdog",
+      "served_frontend_brand_version": "3.7.1",
+      "previous_active_version": "3.4.0",
+      "state_scope": "Existing runtime versions and state were not deleted or migrated; new-version startup only, not data-migration or recovery qualification."
+    },
+    "local_checks": {
+      "exact_version_contracts": { "checks": 225, "mismatched": 0 },
+      "locked_manifest_metadata": { "passed": 6, "failed": 0 },
+      "desktop_density_browser_fixtures": { "passed": 3, "failed": 0, "skipped": 0 },
+      "language_pack_contracts": "60 validated; workbench 960/960, hub 510/510; not independent linguistic review",
+      "shared_assets": "passed",
+      "documentation_book_and_inventory": "passed",
+      "project_organization": "passed; source 800 lines, docs 2000 lines; no tracked debt",
+      "tensor_structure": "passed; maturity and qualification gaps unchanged",
+      "report": "reports/daji-3.7.1-local-rebuild-20261024.md"
+    },
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "Local packaging and installation do not promote overall readiness or qualify every solver, platform or language."
+  }
+}

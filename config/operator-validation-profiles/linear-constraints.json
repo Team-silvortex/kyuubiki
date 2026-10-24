@@ -59,6 +59,7 @@
         "dense_and_adjacent_pivot_rhs_identity_and_complete_row_substitution",
         "subquantum_temporary_rhs_restoration_after_final_division",
         "ordinary_rhs_allocation_and_arithmetic_bit_controls",
+        "cancelled_promotion_preserves_same_object_rows_allocation_and_retry",
         "signed_oriented_public_force_and_borrowed_owned_controls",
         "true_final_solution_and_late_amplitude_failure_controls",
         "promotion_conversion_late_frequency_and_publication_cancellation_then_replay"
@@ -67,6 +68,7 @@
         "matrix_row_scaling_pivot_floors_and_original_equation_admission_are_unchanged",
         "exceptional_rhs_values_remain_binary_scaled_until_solution_division",
         "ordinary_rhs_storage_is_not_promoted_or_copied",
+        "promotion_checkpoint_errors_leave_the_original_finite_buffer_unchanged",
         "wide_rhs_swaps_preserve_independent_rows_and_component_identity",
         "final_unknowns_and_physical_output_fields_must_still_be_representable",
         "failure_or_cancellation_returns_no_successful_partial_sweep_or_workflow_result"
@@ -79,23 +81,24 @@
         "workers/rust/crates/solver/src/harmonic_spring_complex_range_tests.rs",
         "workers/rust/crates/solver/tests/harmonic_complex_force_range.rs",
         "workers/rust/crates/engine/tests/harmonic_constraint_admission.rs",
-        "reports/harmonic-complex-rhs-range-20261024.md"
+        "reports/harmonic-complex-rhs-range-20261024.md",
+        "reports/harmonic-rhs-promotion-20261024.md"
       ],
       "commands": [
         {
           "id": "harmonic-complex-rhs-unit-boundaries",
           "kind": "boundary_regression",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib harmonic_complex_rhs_range -- --nocapture"
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_complex_rhs_range -- --nocapture"
         },
         {
           "id": "harmonic-complex-rhs-public-force",
           "kind": "cross_check",
-          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test harmonic_complex_force_range harmonic_complex_rhs_range -- --nocapture"
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --test harmonic_complex_force_range harmonic_complex_rhs_range -- --nocapture"
         },
         {
           "id": "harmonic-complex-rhs-workflow-recovery",
           "kind": "cross_check",
-          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test harmonic_constraint_admission harmonic_complex_rhs_range -- --nocapture"
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test harmonic_constraint_admission harmonic_complex_rhs_range -- --nocapture"
         }
       ]
     },

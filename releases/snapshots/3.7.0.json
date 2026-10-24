@@ -2,7 +2,7 @@
   "version": "3.7.0",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-10-23",
   "git_commit": "0a65f2e88b71b401909874fcd846704741f6938e",
   "summary": "Daji 3.7.0 source checkpoint: original constraint-equation admission, checked harmonic complex arithmetic and force-range recovery. First-party metadata and current documentation aligned; no desktop rebuild, installation or publication.",

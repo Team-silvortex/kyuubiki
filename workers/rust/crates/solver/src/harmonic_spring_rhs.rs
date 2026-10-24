@@ -49,30 +49,24 @@ impl ComplexRhs {
         match self {
             Self::Wide(values) => {
                 values[row] = value;
-                return Ok(());
             }
             Self::Finite(values) => {
                 if let Some(finite) = value.finite() {
                     values[row] = finite;
                     return Ok(());
                 }
-            }
-        }
-        checkpoint(stage, 0)?;
-        let mut wide = match std::mem::replace(self, Self::Finite(Vec::new())) {
-            Self::Finite(values) => {
+                checkpoint(stage, 0)?;
                 let size = values.len();
                 let mut wide = Vec::with_capacity(size);
-                for (index, entry) in values.into_iter().enumerate() {
+                // Keep the finite source intact until every fallible checkpoint passes.
+                for (index, entry) in values.iter().copied().enumerate() {
                     wide.push(entry.into());
                     checkpoint_chunk(stage, index + 1, size)?;
                 }
-                wide
+                wide[row] = value;
+                *self = Self::Wide(wide);
             }
-            Self::Wide(values) => values,
-        };
-        wide[row] = value;
-        *self = Self::Wide(wide);
+        }
         Ok(())
     }
 

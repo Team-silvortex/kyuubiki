@@ -69,6 +69,7 @@
     "config/architecture/module-function-coverage-evidence/runtime-banded-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-chain-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-constraint-validation.json",
+    "config/architecture/module-function-coverage-evidence/runtime-harmonic-row-quotient.json",
     "config/architecture/module-function-coverage-evidence/runtime-thermal-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-transport-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-transport-upwind.json",
@@ -158,7 +159,7 @@
   },
   "release_profile": {
     "id": "daji-3-7-hardening",
-    "current_checkpoint": "daji 3.7.0",
+    "current_checkpoint": "daji 3.7.1",
     "target_release": "daji 3.7.x",
     "gate_mode": "advisory",
     "enforce_from": "explicit gate-mode decision",

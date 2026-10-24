@@ -148,18 +148,28 @@ button {
 
 .desktop-runtime-plane {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.desktop-runtime-plane__overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
 }
 
 .desktop-runtime-plane__card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 96px;
-  padding: 12px 14px;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
   border-radius: 14px;
   border: 1px solid rgba(96, 112, 128, 0.28);
   background:
@@ -377,6 +387,7 @@ button {
 .desktop-mesh-topology__stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  align-items: start;
   gap: 10px;
 }
 
@@ -480,8 +491,8 @@ button {
 }
 
 @media (max-width: 900px) {
-  .desktop-runtime-plane {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  .desktop-runtime-plane__overview {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
   }
 
   .desktop-mesh-topology__stats {

@@ -1,6 +1,7 @@
 .sidebar-list div,
 .metric-grid div {
   display: grid;
+  align-content: start;
   gap: 4px;
 }
 

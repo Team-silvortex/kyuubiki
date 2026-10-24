@@ -11,6 +11,10 @@ const FRACTION: u64 = (1 << 52) - 1;
 const CAPACITY_ERROR: &str = "complex exact division capacity exceeded";
 const RANGE_ERROR: &str = "complex solution is outside the representable range";
 
+#[path = "harmonic_spring_expression_quotient.rs"]
+mod expression;
+pub(super) use expression::divide_accumulated;
+
 pub(super) fn divide(
     real: Scaled,
     imaginary: Scaled,

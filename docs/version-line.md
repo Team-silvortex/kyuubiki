@@ -8,10 +8,10 @@ The active product identity is defined by the
 
 - codename: `daji`
 - active line: `3.x`
-- current development point: `daji 3.7.0`
+- current development point: `daji 3.7.1`
 - current documentation target: `daji 3.7.x` line
-- current source packaging target: `daji 3.7.0`
-- last locally built and installed baseline: `daji 3.4.0`
+- current source packaging target: `daji 3.7.1`
+- last locally built and installed macOS baseline: `daji 3.7.1`
 - first version: `3.0.0`
 - terminal version: `3.20.9`
 - cadence: minor positions `0..20`, patch positions `0..9`
@@ -26,12 +26,12 @@ the active Daji line. This transition does not assert that every planned moxi
 patch was shipped.
 
 Current development documentation follows `docs/book-manifest.json` and is
-aligned on `3.7.0`. Desktop/runtime manifests, first-party SDK package metadata,
-brand mirrors, update channels, and language-pack targets also use `3.7.0`.
-This source release does not rebuild or install binaries: the last local
-desktop/runtime baseline remains `3.4.0`. Registry publication and public
-distribution are separate actions; metadata alignment does not establish
-installed-platform qualification.
+aligned on `3.7.1`. Desktop/runtime manifests, first-party SDK package metadata,
+brand mirrors, update channels, and language-pack targets also use `3.7.1`.
+The 3.7.1 macOS rebuild, installation, three-shell startup checks and bounded
+Workbench observation are tracked in the release snapshot. Registry publication
+and public distribution are separate actions; this local acceptance does not
+establish all-platform or complete GUI qualification.
 Protocol/schema versions and persistent storage identifiers do not follow
 product SemVer mechanically.
 

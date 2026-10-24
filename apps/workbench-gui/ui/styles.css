@@ -122,7 +122,6 @@ kbd {
   flex-direction: column;
   gap: var(--desktop-content-gap);
   min-width: 0;
-  height: 100%;
 }
 
 .shell-tabs {
@@ -143,7 +142,8 @@ kbd {
 }
 
 .shell-language select {
-  min-width: 112px;
+  width: clamp(112px, 14vw, 180px);
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(58, 62, 69, 0.95);
@@ -174,10 +174,17 @@ kbd {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.72fr);
   grid-template-areas:
-    "console runtime"
-    "console controls";
+    "console aside";
   gap: var(--desktop-content-gap);
-  align-items: stretch;
+  align-items: start;
+}
+
+.control-aside {
+  grid-area: aside;
+  display: grid;
+  align-content: start;
+  gap: var(--desktop-content-gap);
+  min-width: 0;
 }
 
 .workflow-ribbon {
@@ -213,7 +220,7 @@ kbd {
 }
 
 .workflow-step {
-  min-height: 112px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -247,17 +254,8 @@ kbd {
     linear-gradient(180deg, rgba(69, 79, 91, 0.98), rgba(45, 53, 63, 0.98));
 }
 
-.panel--runtime {
-  grid-area: runtime;
-}
-
 .panel--console {
   grid-area: console;
-  min-height: clamp(470px, 58vh, 680px);
-}
-
-.panel--controls {
-  grid-area: controls;
 }
 
 .panel,
@@ -344,7 +342,7 @@ button:hover {
 
 .status-output {
   margin: 0;
-  min-height: 132px;
+  min-height: 84px;
   max-height: 220px;
   overflow: auto;
   padding: 14px;
@@ -367,6 +365,11 @@ button:hover {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+#log-output {
+  min-height: clamp(180px, 30vh, 320px);
+  max-height: max(220px, 40vh);
 }
 
 .logs-panel__toolbar {
@@ -513,8 +516,7 @@ button:hover {
   .control-grid {
     grid-template-areas:
       "console"
-      "runtime"
-      "controls";
+      "aside";
   }
 
   .workflow-ribbon {
@@ -550,7 +552,7 @@ button:hover {
   }
 
   .workflow-step {
-    min-height: 88px;
+    min-height: 0;
   }
 
   .shell-shell--workbench .viewer__toolbar {

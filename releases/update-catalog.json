@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-10-23T06:50:28Z",
-  "shipping_version": "3.7.0",
+  "generated_at": "2026-10-24T05:44:20Z",
+  "shipping_version": "3.7.1",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -17,13 +17,13 @@
         "daji:latest",
         "daji:3",
         "daji:3.7",
-        "daji:3.7.0"
+        "daji:3.7.1"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.7.0",
-      "summary": "Daji 3.7.0 source checkpoint: original constraint-equation admission, checked harmonic complex arithmetic and force-range recovery. First-party metadata and current documentation aligned; no desktop rebuild, installation or publication.",
-      "date": "2026-10-23",
+      "version": "3.7.1",
+      "summary": "Reconcile the existing Daji 3.7.1 Git checkpoint with package and current-document metadata; rebuild the compact desktop UI and current local runtime from the working-tree overlay.",
+      "date": "2026-10-24",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,82 +65,46 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.7.0.json",
+      "snapshot_path": "releases/snapshots/3.7.1.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
-        "reliability": "docs/operator-reliability.md",
-        "architecture": "docs/current-architecture-map.md",
-        "packaging": "docs/packaging-and-deployment.md",
-        "desktop_release_checklist": "docs/desktop-release-checklist.md"
+        "packaging": "docs/packaging-and-deployment.md"
       },
-      "product_surfaces": {
-        "frontend_workbench": {
-          "version": "3.7.0",
-          "notes": [
-            "Source metadata aligned; no new installed WebView acceptance."
-          ]
+      "product_surfaces": {},
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": true
         },
-        "hub_gui": {
-          "version": "3.7.0",
-          "notes": [
-            "Current book and language-pack target mirrors aligned; no new desktop artifact."
-          ]
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": true
         },
-        "workbench_gui": {
-          "version": "3.7.0",
-          "notes": [
-            "Source metadata aligned; no new desktop artifact."
-          ]
-        },
-        "installer_gui": {
-          "version": "3.7.0",
-          "notes": [
-            "Source and installation contracts aligned; no new desktop artifact."
-          ]
-        },
-        "web_api": {
-          "version": "3.7.0",
-          "notes": [
-            "Source metadata aligned; workflow recovery and authority boundaries retained."
-          ]
-        },
-        "rust_headless_sdk": {
-          "version": "3.7.0",
-          "notes": [
-            "Control SDK metadata aligned; no registry publication."
-          ]
-        },
-        "python_headless_sdk": {
-          "version": "3.7.0",
-          "notes": [
-            "Metadata aligned; native numerical tests do not establish Python parity."
-          ]
-        },
-        "elixir_headless_sdk": {
-          "version": "3.7.0",
-          "notes": [
-            "Metadata aligned; native numerical tests do not establish Elixir SDK parity."
-          ]
-        },
-        "rust_worker_sdk": {
-          "version": "3.7.0",
-          "notes": [
-            "Rust-only operator extension remains separate from Headless control."
-          ]
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": true
         }
-      },
-      "desktop_artifacts": []
+      ]
     }
   ],
   "versions": [
     {
-      "version": "3.7.0",
+      "version": "3.7.1",
       "line": "3.x",
       "status": "current",
-      "date": "2026-10-23",
-      "summary": "Daji 3.7.0 source checkpoint: original constraint-equation admission, checked harmonic complex arithmetic and force-range recovery. First-party metadata and current documentation aligned; no desktop rebuild, installation or publication.",
-      "snapshot_path": "releases/snapshots/3.7.0.json",
+      "date": "2026-10-24",
+      "summary": "Reconcile the existing Daji 3.7.1 Git checkpoint with package and current-document metadata; rebuild the compact desktop UI and current local runtime from the working-tree overlay.",
+      "snapshot_path": "releases/snapshots/3.7.1.json",
       "channels": [
         "stable"
       ],
@@ -149,8 +113,42 @@
         "daji:latest",
         "daji:3",
         "daji:3.7",
-        "daji:3.7.0"
+        "daji:3.7.1"
       ],
+      "product_surfaces": {},
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "version": "3.7.0",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-10-23",
+      "summary": "Daji 3.7.0 source checkpoint: original constraint-equation admission, checked harmonic complex arithmetic and force-range recovery. First-party metadata and current documentation aligned; no desktop rebuild, installation or publication.",
+      "snapshot_path": "releases/snapshots/3.7.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.7.0",

@@ -4,6 +4,71 @@
   "summary": "Bounded chain/sparse prescribed-value consistency, reduction contracts, boundary-load recovery and original assembled-equation admission for selected prescribed-value, homogeneous static mechanical, projected thermal-frame 3D, transient-spring Newmark-increment, nonlinear-spring/contact Newton-increment and harmonic-spring complex consumers, with complete state constraint checks, range-checked thermal-frame reaction recovery, harmonic frequency products and selected complex elimination/substitution/force range recovery. Scope excludes general forward accuracy, other projected/eigen/nonlinear/dynamic formulations, physical qualification and durable restart.",
   "evidence_claims": [
     {
+      "id": "harmonic-factor-compensation-local-reliability",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/harmonic_spring_linear.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_complex_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_factor.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_factor_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_factor_system_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_factor_compensation.rs",
+        "workers/rust/crates/engine/tests/harmonic_factor_compensation.rs",
+        "config/operator-validation-profiles/harmonic-cancellation.json",
+        "reports/harmonic-factor-compensation-20261024.md"
+      ],
+      "required_text": [
+        "harmonic_factor_compensation_real_path_retains_the_non_dyadic_factor_tail",
+        "harmonic_factor_compensation_complex_leading_phase_reaches_both_factorizations",
+        "harmonic_factor_compensation_adjacent_swap_keeps_the_generated_fill_and_rhs_consistent",
+        "harmonic_factor_compensation_updates_coefficients_and_rhs_with_one_shared_tail",
+        "harmonic_factor_compensation_bounded_eligibility_preserves_range_and_operand_guards",
+        "harmonic_factor_compensation_cancelled_residual_prevents_factor_publication_then_replays",
+        "harmonic_factor_compensation_cancelled_two_term_replay_discards_partial_updates_then_reuses",
+        "harmonic_factor_compensation_public_dynamic_response_matches_an_independent_rational_model",
+        "harmonic_factor_compensation_late_frequency_range_failure_discards_the_dynamic_prefix",
+        "harmonic_factor_compensation_serialized_dispatch_and_workflow_recover_the_dynamic_response",
+        "harmonic_factor_compensation_late_failure_cannot_publish_a_dynamic_workflow_prefix",
+        "harmonic_factor_compensation_cancelled_factor_and_result_boundaries_prevent_publication",
+        "This is bounded harmonic elimination-factor residual compensation, not exact factorization, arbitrary-range compensation or unrounded-expression division, a whole-solver forward-error certificate, independent physical qualification or durable restart."
+      ]
+    },
+    {
+      "id": "harmonic-schur-update-local-reliability",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/harmonic_spring_linear.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_complex_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_row_update.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_schur_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_schur_update.rs",
+        "workers/rust/crates/engine/tests/harmonic_schur_update.rs",
+        "config/operator-validation-profiles/harmonic-cancellation.json",
+        "reports/harmonic-schur-update-20261024.md"
+      ],
+      "required_text": [
+        "harmonic_schur_update_weak_coefficient_retains_the_square_product_tail",
+        "harmonic_schur_update_both_factorizations_preserve_the_soft_mode_with_row_swaps",
+        "harmonic_schur_update_complex_partial_loss_uses_complete_expression_replay",
+        "harmonic_schur_update_rejects_range_loss_but_keeps_exact_quantized_coefficients",
+        "harmonic_schur_update_replay_cancels_at_each_component_phase_then_reuses_inputs",
+        "harmonic_schur_update_preserves_weighted_pivot_floor_admission_with_and_without_swaps",
+        "harmonic_schur_update_adjacent_swap_preserves_the_generated_second_superdiagonal",
+        "harmonic_schur_update_public_three_spring_mode_matches_the_rational_stiffness_reference",
+        "harmonic_schur_update_late_frequency_range_error_discards_the_corrected_mode_prefix",
+        "harmonic_schur_update_serialized_dispatch_and_workflow_preserve_the_soft_mode_response",
+        "harmonic_schur_update_late_range_error_cannot_publish_a_workflow_mode_prefix",
+        "harmonic_schur_update_cancelled_factor_and_result_boundaries_prevent_publication",
+        "This is bounded harmonic Schur-coefficient update hardening, not exact factorization, exact assembly or unrounded-expression division, a whole-solver forward-error certificate, independent physical qualification or durable restart."
+      ]
+    },
+    {
       "id": "harmonic-row-update-local-reliability",
       "status": "proven", "grade": "verified",
       "modules": ["runtime-engine-solver"],
@@ -299,7 +364,8 @@
         "workers/rust/crates/solver/tests/harmonic_complex_force_range.rs",
         "workers/rust/crates/engine/tests/harmonic_constraint_admission.rs",
         "config/operator-validation-profiles/linear-constraints.json",
-        "reports/harmonic-complex-rhs-range-20261024.md"
+        "reports/harmonic-complex-rhs-range-20261024.md",
+        "reports/harmonic-rhs-promotion-20261024.md"
       ],
       "required_text": [
         "harmonic_complex_rhs_range_preparation_preserves_a_finite_complex_solution",
@@ -308,12 +374,17 @@
         "harmonic_complex_rhs_range_ordinary_storage_and_arithmetic_keep_the_original_allocation",
         "harmonic_complex_rhs_range_subquantum_temporaries_survive_until_division",
         "harmonic_complex_rhs_range_promotion_and_solution_collection_cancel_then_replay",
+        "harmonic_complex_rhs_range_cancelled_promotion_preserves_same_object_and_allocation",
+        "harmonic_complex_rhs_range_repeated_cancel_and_short_final_boundary_keep_retryable_source",
+        "harmonic_complex_rhs_range_failed_normalization_preserves_finite_and_wide_rows",
+        "harmonic_complex_rhs_range_cancelled_promotion_preserves_borrowed_input_and_clean_reuse",
         "harmonic_complex_rhs_range_public_solve_recovers_finite_displacement_and_force",
         "harmonic_complex_rhs_range_recovered_rhs_does_not_allow_unrepresentable_output",
         "harmonic_complex_rhs_range_serialized_dispatch_and_workflows_publish_finite_forces",
         "harmonic_complex_rhs_range_late_output_failure_blocks_dispatch_and_workflow_publication",
         "harmonic_complex_rhs_range_cancel_late_promotion_factor_and_publication_then_replay",
-        "This is bounded harmonic complex RHS range recovery, not general complex-solver qualification, arbitrary precision, independent physical assembly or durable restart."
+        "This is bounded harmonic complex RHS range recovery, not general complex-solver qualification, arbitrary precision, independent physical assembly or durable restart.",
+        "This is local failure atomicity of harmonic RHS promotion at its fallible checkpoints, not whole-solver rollback, in-place solve resume, general forward accuracy or durable restart."
       ]
     },
     {

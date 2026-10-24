@@ -370,6 +370,8 @@ th {
 
 .metric-grid {
   display: grid;
+  align-content: start;
+  align-items: start;
   gap: 12px;
   margin-top: 14px;
 }

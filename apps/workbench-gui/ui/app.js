@@ -269,9 +269,9 @@ function renderLanguage() {
 
   document.querySelector('[data-shell-page="control"]')?.replaceChildren(t.shellPages.control);
   document.querySelector('[data-shell-page="workbench"]')?.replaceChildren(t.shellPages.workbench);
-  document.querySelector(".panel:nth-of-type(1) .panel__title")?.replaceChildren(t.runtime);
-  document.querySelector(".panel:nth-of-type(2) .panel__title")?.replaceChildren(t.runtimeConsole);
-  document.querySelector(".panel:nth-of-type(3) .panel__title")?.replaceChildren(t.viewerControls);
+  document.querySelector(".panel--runtime .panel__title")?.replaceChildren(t.runtime);
+  document.querySelector(".panel--console .panel__title")?.replaceChildren(t.runtimeConsole);
+  document.querySelector(".panel--controls .panel__title")?.replaceChildren(t.viewerControls);
   document.querySelector('[data-console-tab="status"]')?.replaceChildren(t.status);
   document.querySelector('[data-console-tab="logs"]')?.replaceChildren(t.logs);
   document.querySelector('.panel--console [data-action="start-local"]')?.replaceChildren(t.startLocal);

@@ -2,7 +2,10 @@ use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
 #[path = "harmonic_spring_complex_range.rs"]
 pub(super) mod arithmetic;
-use arithmetic::{difference, divide, solve_row};
+use arithmetic::{EliminationFactor, solve_row};
+
+#[cfg(test)]
+use arithmetic::{difference, divide, matrix_difference};
 
 #[path = "harmonic_spring_rhs.rs"]
 mod rhs;
@@ -35,6 +38,14 @@ mod accumulation_tests;
 #[cfg(test)]
 #[path = "harmonic_spring_normalization_tests.rs"]
 mod normalization_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_schur_tests.rs"]
+mod schur_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_factor_system_tests.rs"]
+mod factor_system_tests;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct Complex {
@@ -130,17 +141,22 @@ pub(super) fn solve_complex_tridiagonal(
             if diagonal_score <= relative_pivot_floor {
                 return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
             }
-            let factor = divide(lower[row], diagonal[row], SolverStage::TridiagonalFactor)?;
-            diagonal[row + 1] = difference(
+            let mut factor =
+                EliminationFactor::new(lower[row], diagonal[row], SolverStage::TridiagonalFactor)?;
+            factor.restrict(
+                std::iter::once((diagonal[row + 1], upper[row])),
+                rhs.get(row + 1),
+                rhs.get(row),
+            )?;
+            diagonal[row + 1] = factor.update_matrix(
                 diagonal[row + 1],
-                factor,
                 upper[row],
                 SolverStage::TridiagonalFactor,
             )?;
             rhs.set(
                 row + 1,
-                rhs.get(row + 1).subtract_product(
-                    factor,
+                factor.update_rhs(
+                    rhs.get(row + 1),
                     rhs.get(row),
                     SolverStage::TridiagonalFactor,
                 )?,
@@ -151,33 +167,41 @@ pub(super) fn solve_complex_tridiagonal(
             if lower_score <= relative_pivot_floor {
                 return Err("harmonic spring 1d dynamic stiffness is singular".to_string());
             }
-            let factor = divide(diagonal[row], lower[row], SolverStage::TridiagonalFactor)?;
+            let mut factor =
+                EliminationFactor::new(diagonal[row], lower[row], SolverStage::TridiagonalFactor)?;
+            factor.restrict(
+                [
+                    (upper[row], diagonal[row + 1]),
+                    (
+                        Complex::default(),
+                        if row + 1 < size - 1 {
+                            upper[row + 1]
+                        } else {
+                            Complex::default()
+                        },
+                    ),
+                ]
+                .into_iter(),
+                rhs.get(row),
+                rhs.get(row + 1),
+            )?;
             let next_diagonal = diagonal[row + 1];
             diagonal[row] = lower[row];
-            diagonal[row + 1] = difference(
-                upper[row],
-                factor,
-                next_diagonal,
-                SolverStage::TridiagonalFactor,
-            )?;
+            diagonal[row + 1] =
+                factor.update_matrix(upper[row], next_diagonal, SolverStage::TridiagonalFactor)?;
             upper[row] = next_diagonal;
             let current_rhs = rhs.get(row);
             rhs.swap(row, row + 1);
             row_scales.swap(row, row + 1);
             rhs.set(
                 row + 1,
-                current_rhs.subtract_product(
-                    factor,
-                    rhs.get(row),
-                    SolverStage::TridiagonalFactor,
-                )?,
+                factor.update_rhs(current_rhs, rhs.get(row), SolverStage::TridiagonalFactor)?,
                 SolverStage::TridiagonalFactor,
             )?;
             if row + 1 < size - 1 {
                 lower[row] = upper[row + 1];
-                upper[row + 1] = difference(
+                upper[row + 1] = factor.update_matrix(
                     Complex::default(),
-                    factor,
                     lower[row],
                     SolverStage::TridiagonalFactor,
                 )?;
@@ -291,19 +315,27 @@ pub(super) fn solve_complex_system(
         }
 
         for row in (pivot + 1)..size {
-            let factor = divide(
+            let mut factor = EliminationFactor::new(
                 matrix[row][pivot],
                 matrix[pivot][pivot],
                 SolverStage::DenseFactor,
             )?;
-            if !factor.is_finite() {
+            factor.restrict(
+                matrix[row]
+                    .iter()
+                    .copied()
+                    .skip(pivot + 1)
+                    .zip(matrix[pivot].iter().copied().skip(pivot + 1)),
+                rhs.get(row),
+                rhs.get(pivot),
+            )?;
+            if !factor.value().is_finite() {
                 return Err("harmonic spring 1d dynamic stiffness elimination diverged".to_string());
             }
             matrix[row][pivot] = Complex::default();
             for column in (pivot + 1)..size {
-                matrix[row][column] = difference(
+                matrix[row][column] = factor.update_matrix(
                     matrix[row][column],
-                    factor,
                     matrix[pivot][column],
                     SolverStage::DenseFactor,
                 )?;
@@ -315,8 +347,7 @@ pub(super) fn solve_complex_system(
             }
             rhs.set(
                 row,
-                rhs.get(row)
-                    .subtract_product(factor, rhs.get(pivot), SolverStage::DenseFactor)?,
+                factor.update_rhs(rhs.get(row), rhs.get(pivot), SolverStage::DenseFactor)?,
                 SolverStage::DenseFactor,
             )?;
         }

@@ -64,28 +64,6 @@
         </section>
 
         <div class="control-grid">
-          <section class="panel panel--runtime desktop-shell-surface-card">
-            <div class="panel__title desktop-shell-card-title">Runtime</div>
-            <div class="status-grid">
-              <div>
-                <div class="status-grid__label desktop-shell-stat-label">Workbench</div>
-                <div class="status-grid__value" id="workbench-url">--</div>
-              </div>
-              <div>
-                <div class="status-grid__label desktop-shell-stat-label">Orchestrator</div>
-                <div class="status-grid__value" id="orchestrator-url">--</div>
-              </div>
-              <div>
-                <div class="status-grid__label desktop-shell-stat-label">Mode</div>
-                <div class="status-grid__value desktop-shell-state" data-desktop-state="activity" id="deployment-mode">--</div>
-              </div>
-              <div>
-                <div class="status-grid__label desktop-shell-stat-label">Shell</div>
-                <div class="status-grid__value desktop-shell-state" data-desktop-state="activity">Tauri</div>
-              </div>
-            </div>
-          </section>
-
           <section class="panel panel--console desktop-shell-surface-card">
             <div class="panel__title desktop-shell-card-title">Runtime Console</div>
             <div class="segmented-tabs">
@@ -114,25 +92,49 @@
             </div>
           </section>
 
-          <section class="panel panel--controls desktop-shell-surface-card">
-            <div class="panel__title desktop-shell-card-title">Viewer controls</div>
-            <div class="button-row desktop-shell-action-row">
-              <button data-action="reload-frame">Reload frame</button>
-              <button class="desktop-shell-button-primary" data-action="open-local">Load local UI</button>
-              <button class="desktop-shell-button-primary" data-shell-target="workbench" type="button">Open Workbench page</button>
-            </div>
-            <div class="shortcut-list">
-              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>R</kbd> reload embedded workbench</span></div>
-              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>1</kbd> status console</span></div>
-              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>2</kbd> runtime logs</span></div>
-              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>L</kbd> refresh current log</span></div>
-              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>Shift</kbd> + <kbd>R</kbd> restart local stack</span></div>
-              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>3</kbd> open workbench page</span></div>
-            </div>
-            <p class="panel__note desktop-shell-note">
-              Keep control work here, then jump into the Workbench page when you want the analysis surface to be the only thing on stage.
-            </p>
-          </section>
+          <aside class="control-aside">
+            <section class="panel panel--runtime desktop-shell-surface-card">
+              <div class="panel__title desktop-shell-card-title">Runtime</div>
+              <div class="status-grid">
+                <div>
+                  <div class="status-grid__label desktop-shell-stat-label">Workbench</div>
+                  <div class="status-grid__value" id="workbench-url">--</div>
+                </div>
+                <div>
+                  <div class="status-grid__label desktop-shell-stat-label">Orchestrator</div>
+                  <div class="status-grid__value" id="orchestrator-url">--</div>
+                </div>
+                <div>
+                  <div class="status-grid__label desktop-shell-stat-label">Mode</div>
+                  <div class="status-grid__value desktop-shell-state" data-desktop-state="activity" id="deployment-mode">--</div>
+                </div>
+                <div>
+                  <div class="status-grid__label desktop-shell-stat-label">Shell</div>
+                  <div class="status-grid__value desktop-shell-state" data-desktop-state="activity">Tauri</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel panel--controls desktop-shell-surface-card">
+              <div class="panel__title desktop-shell-card-title">Viewer controls</div>
+              <div class="button-row desktop-shell-action-row">
+                <button data-action="reload-frame">Reload frame</button>
+                <button class="desktop-shell-button-primary" data-action="open-local">Load local UI</button>
+                <button class="desktop-shell-button-primary" data-shell-target="workbench" type="button">Open Workbench page</button>
+              </div>
+              <div class="shortcut-list">
+                <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>R</kbd> reload embedded workbench</span></div>
+                <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>1</kbd> status console</span></div>
+                <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>2</kbd> runtime logs</span></div>
+                <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>L</kbd> refresh current log</span></div>
+                <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>Shift</kbd> + <kbd>R</kbd> restart local stack</span></div>
+                <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>3</kbd> open workbench page</span></div>
+              </div>
+              <p class="panel__note desktop-shell-note">
+                Keep control work here, then jump into the Workbench page when you want the analysis surface to be the only thing on stage.
+              </p>
+            </section>
+          </aside>
         </div>
       </section>
 

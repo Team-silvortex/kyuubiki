@@ -227,6 +227,62 @@ fn harmonic_complex_rhs_range_recovered_rhs_does_not_allow_unrepresentable_outpu
 }
 
 #[test]
+fn harmonic_complex_rhs_range_cancelled_promotion_preserves_borrowed_input_and_clean_reuse() {
+    use kyuubiki_solver::solver_control::{SolverControl, SolverStage, with_solver_observer};
+    use std::cell::Cell;
+    for dense in [false, true] {
+        for sign in [-1.0, 1.0] {
+            let mut input = wide_rhs_model(dense);
+            for node in input.nodes.iter_mut().skip(1) {
+                node.load_x *= sign;
+            }
+            let snapshot = serde_json::to_vec(&input).unwrap();
+            let baseline = solve_harmonic_spring_1d(&input).unwrap();
+            let size = input.nodes.len() as u64 - 1;
+            for owned in [false, true] {
+                for _ in 0..3 {
+                    let control = SolverControl::default();
+                    let cancel = control.clone();
+                    let starts = Cell::new(0);
+                    let error = with_solver_observer(
+                        &control,
+                        move |p| {
+                            if p.stage == SolverStage::LinearPrepare {
+                                if p.completed_steps == 0 {
+                                    starts.set(starts.get() + 1);
+                                }
+                                // The second zero opens RHS promotion, not row preparation.
+                                if starts.get() == 2 && p.completed_steps == size {
+                                    cancel.request_cancel();
+                                }
+                            }
+                        },
+                        || {
+                            if owned {
+                                solve_harmonic_spring_1d_owned(input.clone())
+                            } else {
+                                solve_harmonic_spring_1d(&input)
+                            }
+                        },
+                    )
+                    .unwrap_err();
+                    assert!(
+                        control.was_interrupted() && error.contains("cancelled"),
+                        "{error}"
+                    );
+                    assert_eq!(serde_json::to_vec(&input).unwrap(), snapshot);
+                    let replay = solve_harmonic_spring_1d(&input).unwrap();
+                    assert_eq!(
+                        serde_json::to_value(&replay).unwrap(),
+                        serde_json::to_value(&baseline).unwrap()
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn harmonic_complex_force_range_publishes_a_nonzero_quantum_force() {
     for sign in [-1.0, 1.0] {
         for reversed in [false, true] {

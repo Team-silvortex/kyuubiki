@@ -102,7 +102,11 @@
             division; element-force products combine terms before restoration.
             Exceptional right-hand sides also retain binary-scaled components
             through row normalization, elimination and pivot swaps until division.
-            Ordinary RHS storage keeps its allocation. Row normalization prefers
+            Ordinary RHS storage keeps its allocation. Promotion retains the
+            original finite buffer until all conversion checkpoints pass, so a
+            checkpoint error preserves that adapter for explicit retry. This
+            is local conversion atomicity, not whole-solver rollback.
+            Row normalization prefers
             exact binary shifts, retaining the legacy divisor for reversible tiny
             coefficients when necessary. Row weights follow pivot swaps, keeping
             comparison units tied to the original row maxima; the pivot-floor
@@ -125,11 +129,21 @@
             divisors now use compact integer pairs and exact rounding-cell
             midpoint admission for normal candidates, with checked exact replay
             on unsupported or ambiguous cases. This can change ordinary division
-            bits, not standalone product/matrix-update bits or numerical gates.
+            bits, not standalone product/legacy-difference bits or numerical gates.
             RHS elimination and back-substitution updates use fused scalar
             operations with a local rounding-risk budget that can request full
-            expression replay. This is not exact matrix updating or certified
-            division of an unrounded row expression. Upstream assembly and
+            expression replay. Dense Schur cells, path diagonals and generated
+            fill-in now reuse that policy through a separate coefficient wrapper.
+            Eligible elimination factors carry a transient residual correction
+            shared by coefficient and RHS updates. Conservative exponent headroom
+            bounds compensation. A shared preflight disables it for the entire
+            step if any coefficient or RHS is unsupported, retaining one effective
+            factor and prior range checks without a full factor snapshot.
+            Replayed substitution rows retain admitted integer numerator sums
+            through final complex quotient rounding, avoiding a second rounding
+            of their numerator. Ordinary fused rows retain their prior fast route.
+            This is not exact factorization or a correctly rounded whole solve.
+            Upstream assembly and
             whole-model forward accuracy are not thereby certified.</li>
           <li>These are named consumer scopes, not all-operator qualification.
             Cooperative cancellation/replay is not durable restart evidence.</li>

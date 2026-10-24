@@ -128,3 +128,177 @@ fn harmonic_complex_rhs_range_promotion_and_solution_collection_cancel_then_repl
         }
     }
 }
+
+fn promotion_source(size: usize) -> Vec<Complex> {
+    (0..size)
+        .map(|i| Complex {
+            re: if i == 2 {
+                f64::from_bits(1)
+            } else {
+                i as f64 + 2.0
+            },
+            im: if i == 1 { -0.0 } else { -(i as f64 + 0.5) },
+        })
+        .collect()
+}
+
+fn assert_finite_source(rhs: &ComplexRhs, expected: &[Complex], pointer: *const Complex) {
+    let ComplexRhs::Finite(values) = rhs else {
+        panic!("cancelled promotion changed representation");
+    };
+    assert_eq!(
+        values.len(),
+        expected.len(),
+        "cancelled promotion lost rows"
+    );
+    assert_eq!(
+        values.as_ptr(),
+        pointer,
+        "cancelled promotion replaced allocation"
+    );
+    for (actual, expected) in values.iter().zip(expected) {
+        assert_eq!(
+            [actual.re.to_bits(), actual.im.to_bits()],
+            [expected.re.to_bits(), expected.im.to_bits()]
+        );
+    }
+}
+
+fn assert_same_rhs(actual: &ComplexRhs, expected: &ComplexRhs, size: usize) {
+    for row in 0..size {
+        let a = actual.get(row);
+        let b = expected.get(row);
+        let (a, b) = match (a.finite(), b.finite()) {
+            (Some(a), Some(b)) => (a, b),
+            (None, None) => (
+                a.divide(Complex::real(1e308), SolverStage::DenseSubstitutionRange)
+                    .unwrap(),
+                b.divide(Complex::real(1e308), SolverStage::DenseSubstitutionRange)
+                    .unwrap(),
+            ),
+            _ => panic!("RHS representation changed numerical value at row {row}"),
+        };
+        assert_eq!(
+            [a.re.to_bits(), a.im.to_bits()],
+            [b.re.to_bits(), b.im.to_bits()]
+        );
+    }
+}
+
+#[test]
+fn harmonic_complex_rhs_range_cancelled_promotion_preserves_same_object_and_allocation() {
+    for stage in [
+        SolverStage::LinearPrepare,
+        SolverStage::DenseFactor,
+        SolverStage::TridiagonalFactor,
+    ] {
+        for row in [0, 1025, 2049] {
+            for completed in [0, 1024, 2048, 2050] {
+                for normalize in [false, true] {
+                    let original = promotion_source(2050);
+                    let mut rhs = ComplexRhs::new(original.clone());
+                    let pointer = match &rhs {
+                        ComplexRhs::Finite(v) => v.as_ptr(),
+                        _ => unreachable!(),
+                    };
+                    let incoming = WideComplex::from(Complex::real(2.0))
+                        .normalized(1e-308)
+                        .unwrap();
+                    let run = |rhs: &mut ComplexRhs| {
+                        if normalize {
+                            rhs.normalize(row, 1e-308)
+                        } else {
+                            rhs.set(row, incoming, stage)
+                        }
+                    };
+                    let observed_stage = if normalize {
+                        SolverStage::LinearPrepare
+                    } else {
+                        stage
+                    };
+                    let control = SolverControl::default();
+                    let cancel = control.clone();
+                    let error = with_solver_observer(
+                        &control,
+                        move |p| {
+                            if p.stage == observed_stage && p.completed_steps == completed {
+                                cancel.request_cancel();
+                            }
+                        },
+                        || run(&mut rhs),
+                    )
+                    .unwrap_err();
+                    assert!(control.was_interrupted() && error.contains("cancelled"));
+                    assert_finite_source(&rhs, &original, pointer);
+                    run(&mut rhs).unwrap();
+                    let mut clean = ComplexRhs::new(original);
+                    run(&mut clean).unwrap();
+                    assert_same_rhs(&rhs, &clean, 2050);
+                    rhs.swap(0, row);
+                    clean.swap(0, row);
+                    assert_same_rhs(&rhs, &clean, 2050);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn harmonic_complex_rhs_range_repeated_cancel_and_short_final_boundary_keep_retryable_source() {
+    for size in [1, 63, 64, 65, 2050] {
+        let original = promotion_source(size);
+        let mut rhs = ComplexRhs::new(original.clone());
+        let pointer = match &rhs {
+            ComplexRhs::Finite(v) => v.as_ptr(),
+            _ => unreachable!(),
+        };
+        for completed in [0, size.min(64), size, size] {
+            let control = SolverControl::default();
+            let cancel = control.clone();
+            let error = with_solver_observer(
+                &control,
+                move |p| {
+                    if p.stage == SolverStage::LinearPrepare
+                        && p.completed_steps == completed as u64
+                    {
+                        cancel.request_cancel();
+                    }
+                },
+                || rhs.normalize(0, 1e-308),
+            )
+            .unwrap_err();
+            assert!(control.was_interrupted() && error.contains("cancelled"));
+            assert_finite_source(&rhs, &original, pointer);
+        }
+        rhs.normalize(0, 1e-308).unwrap();
+        let mut clean = ComplexRhs::new(original);
+        clean.normalize(0, 1e-308).unwrap();
+        assert_same_rhs(&rhs, &clean, size);
+    }
+}
+
+#[test]
+fn harmonic_complex_rhs_range_failed_normalization_preserves_finite_and_wide_rows() {
+    let original = promotion_source(65);
+    let mut rhs = ComplexRhs::new(original.clone());
+    let pointer = match &rhs {
+        ComplexRhs::Finite(v) => v.as_ptr(),
+        _ => unreachable!(),
+    };
+    for bad in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+        assert!(rhs.normalize(0, bad).is_err());
+        assert_finite_source(&rhs, &original, pointer);
+    }
+    rhs.normalize(0, 1e-308).unwrap();
+    let mut clean = ComplexRhs::new(original);
+    clean.normalize(0, 1e-308).unwrap();
+    let wide_pointer = match &rhs {
+        ComplexRhs::Wide(v) => v.as_ptr(),
+        _ => unreachable!(),
+    };
+    for bad in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+        assert!(rhs.normalize(0, bad).is_err());
+        assert_same_rhs(&rhs, &clean, 65);
+        assert!(matches!(&rhs, ComplexRhs::Wide(v) if v.as_ptr() == wide_pointer));
+    }
+}

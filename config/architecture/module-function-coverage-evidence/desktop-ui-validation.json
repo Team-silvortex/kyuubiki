@@ -341,6 +341,30 @@
   },
   "evidence_claims": [
     {
+      "id": "desktop-content-density-local-controls",
+      "status": "proven", "grade": "verified",
+      "modules": ["desktop-shared-ui", "workbench-shell", "installer-shell"],
+      "paradigms": ["validation"],
+      "dimensions": ["ux_closure"],
+      "files": [
+        "apps/desktop-shared/src/runtime-status-summary.ts",
+        "apps/desktop-shared/ui/desktop-shell.css",
+        "apps/desktop-shared/ui/desktop-shell-runtime-mesh.css",
+        "apps/workbench-gui/ui/index.html",
+        "apps/workbench-gui/ui/app.js",
+        "apps/workbench-gui/ui/styles.css",
+        "tests/integration/desktop-gui-content-density.test.mjs",
+        "config/architecture/desktop-ui-validation.json",
+        "reports/desktop-content-density-20261024.md"
+      ],
+      "required_text": [
+        "runtime summaries keep short cards compact across all three desktop shells",
+        "Workbench control overview stacks auxiliary cards without reserved empty height",
+        "informational overview grids do not stretch short cards to match long siblings",
+        "This is bounded browser-fixture content-density and interaction coverage, not full frontend, installed WebView, all-language or all-platform qualification."
+      ]
+    },
+    {
       "id": "desktop-ui-cross-shell-qualification",
       "status": "proven",
       "grade": "qualified",

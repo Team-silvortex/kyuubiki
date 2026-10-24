@@ -1,11 +1,22 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.7.0`.
-Source package metadata targets `3.7.0`; the last locally built and installed
-desktop/runtime baseline remains `daji 3.4.0`.
+The current development point in this line is `daji 3.7.1`.
+Source package metadata targets `3.7.1`; the locally built and installed
+macOS desktop/runtime baseline is `daji 3.7.1`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
+
+## Daji 3.7.1 Local Packaging
+
+October 24, 2026. Package metadata is reconciled with the existing 3.7.1 Git
+checkpoint. This working-tree build includes compact desktop information cards
+and the retained harmonic reliability changes. Local build and installation
+results are recorded in [the snapshot](../releases/snapshots/3.7.1.json): all three
+installed shells boot, the current runtime is healthy, and the compact Workbench
+layout and logs are observed in the installed WebView. See [the local rebuild
+report](../reports/daji-3.7.1-local-rebuild-20261024.md) for scope; historical
+reports keep their original versions and qualification scopes.
 
 ## Daji 3.7.0 Checkpoint
 
@@ -61,6 +72,12 @@ its allocation; matrix scaling, pivot floors and original-equation gates stay
 unchanged. Signed/oriented force readback, late output failure, cancellation and
 explicit clean replay have scoped tests. This follow-up is not a new release
 snapshot, full complex-solver qualification or durable recovery evidence.
+
+The [RHS promotion follow-up](../reports/harmonic-rhs-promotion-20261024.md)
+keeps the finite source intact until the complete wide buffer passes conversion
+checkpoints. A cancelled promotion leaves the same object's rows and allocation
+unchanged, permitting an explicit retry with fresh control. This is local
+conversion failure atomicity, not whole-solver rollback or persisted recovery.
 
 The [coefficient-normalization follow-up](../reports/harmonic-coefficient-normalization-range-20261024.md)
 rejects erased or partially rounded tiny matrix components before elimination,
@@ -131,6 +148,27 @@ Fused scalar updates retain selected weak numerators; an upward-padded local
 rounding budget routes amplified partial-sum loss into complete-expression replay.
 A two-spring public closed form now retains its weak tip response. Matrix updates
 and numerical gates are unchanged; the unrounded full expression is not certified.
+
+The [Schur-update follow-up](../reports/harmonic-schur-update-20261024.md) applies
+the shared fused/replay policy to dense coefficients, path diagonals and fill-in.
+A three-spring soft mode isolates coefficient-tail loss with an unchanged RHS;
+independent rational readback now meets the selected component accuracy checks.
+Coefficient update bits may change, but weighted pivot gates and legacy standalone
+product/difference arithmetic do not. Factorization and assembly remain rounded.
+
+The [factor-compensation follow-up](../reports/harmonic-factor-compensation-20261024.md)
+adds one transient residual correction to eligible rounded elimination factors.
+The same two-term factor updates coefficients and RHS, including pivot-generated
+fill-in, without a full factor snapshot. Shared step preflight checks read-only
+headroom; unsupported coefficients or RHS disable correction for the entire step.
+This improves selected non-dyadic-factor examples, not exact global factorization.
+
+The [replayed-row quotient follow-up](../reports/harmonic-row-quotient-20261024.md)
+retains admitted integer numerator sums until final complex quotient rounding.
+This removes a reproduced second rounding in cancellation-sensitive substitution,
+including axial and general complex divisors. Ordinary fused rows retain their
+previous fast route; alignment, pivot and physical-admission gates are unchanged.
+The local expression guarantee does not remove upstream factor or assembly error.
 
 The active tensor profile becomes `daji-3-7-hardening`, without promoting
 evidence grades or changing thresholds. Release qualification remains blocked;

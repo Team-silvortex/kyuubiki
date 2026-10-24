@@ -349,7 +349,7 @@ export function renderRuntimeStatusPlane(
   if (!target) return;
   const { model, options: resolvedOptions } = normalizeRenderInputs(payload, options);
   target.innerHTML = `
-    ${model.runtimes.map((runtime) => buildRuntimeStateCard(runtime)).join("")}
+    ${model.runtimes.length ? `<div class="desktop-runtime-plane__overview">${model.runtimes.map((runtime) => buildRuntimeStateCard(runtime)).join("")}</div>` : ""}
     ${model.meshPanels.length ? `<div class="desktop-runtime-plane__mesh">${model.meshPanels.map((panel) => buildMeshPanel(panel)).join("")}</div>` : ""}
     ${buildFilterRow(model.filters, model.selectedFilter)}
     ${model.topology.length ? `<div class="desktop-mesh-topology">${model.topology.map((section) => buildTopologySection(section)).join("")}</div>` : ""}

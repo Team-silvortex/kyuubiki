@@ -5,15 +5,15 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The current source and documentation version is **daji 3.7.0**.
-> The last locally built and installed desktop/runtime baseline is **daji 3.4.0**.
-> Version 3.7.0 aligns package metadata but does not rebuild or replace that baseline.
+> The current source and documentation version is **daji 3.7.1**.
+> The locally built and installed macOS desktop/runtime baseline is **daji 3.7.1**.
+> Installation checks and their limits are tracked in the release snapshot.
 > Building or installing locally does not publish download artifacts or SDKs.
 > Historical evidence keeps its original version and scope. A version number
 > is not industrial certification; public distribution remains evidence-gated.
 
-See the [3.7.0 checkpoint](docs/current-line.md#daji-370-checkpoint) for original
-constraint-equation admission, checked complex arithmetic and force recovery.
+See the [3.7.1 checkpoint](docs/current-line.md#daji-371-local-packaging) for
+local packaging, compact desktop layouts and the retained numerical hardening.
 Workflow recovery and quality-evidence admission remain part of the mainline.
 Earlier modal research remains scoped evidence, not admitted production recovery.
 

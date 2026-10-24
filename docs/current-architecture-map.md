@@ -156,6 +156,11 @@ retains independent binary-scaled components across row normalization, eliminati
 and pivot swaps until solution division. Ordinary RHS storage keeps its original
 allocation; coefficient preparation and pivot admission remain separate policies.
 See the [bounded RHS range report](../reports/harmonic-complex-rhs-range-20261024.md).
+Promotion now builds its wide buffer from an intact finite source and replaces
+it only after every fallible conversion checkpoint passes. On checkpoint error,
+the same adapter retains all rows and its original allocation for explicit retry;
+see the [local promotion atomicity report](../reports/harmonic-rhs-promotion-20261024.md).
+This does not roll back earlier matrix/RHS mutations or resume an interrupted solve.
 Coefficient normalization separately rejects erased or irreversibly rounded tiny
 components before elimination, with reduced-row/column/component diagnostics.
 This [admission guard](../reports/harmonic-coefficient-normalization-range-20261024.md)
@@ -199,15 +204,34 @@ and exact rounding-cell midpoint comparisons before admitting normal components.
 An FMA-refined candidate is not trusted without that check; capacity, subnormal
 and ambiguous cases retain checked exact replay. Shared product decoding serves
 both branches. See the [fast-path evidence](../reports/harmonic-fast-division-20261024.md).
-Ordinary division bits may change; standalone product/matrix-update bits and
+Ordinary division bits may change; standalone product/legacy-difference bits and
 numerical gates do not. RHS elimination and back-substitution numerator updates
 now have a separate [fused row helper](../workers/rust/crates/solver/src/harmonic_spring_row_update.rs).
 Its upward-padded local FMA rounding estimate selects complete-expression replay
 when partial-sum loss is amplified relative to the final numerator. The eight
 epsilon budget is an internal routing rule, not physical admission. See the
 [weak-response and cancellation evidence](../reports/harmonic-row-update-20261024.md).
-Earlier assembly and matrix updates remain rounded; final division still receives
-a represented numerator, not a certified exact unrounded row expression.
+Schur coefficient updates now enter a separate `matrix_difference` wrapper that
+reuses the same fused/replay policy for dense cells, path diagonals and generated
+fill-in. See the [coefficient-tail and soft-mode evidence](../reports/harmonic-schur-update-20261024.md).
+This intentionally changes coefficient-update bits, not the weighted pivot floor,
+standalone product/difference semantics or operator contracts. Assembly, factors
+and updated coefficients remain rounded. Ordinary fused rows still divide a
+represented numerator. For replayed substitution rows, the admitted integer sums
+now pass directly to the checked quotient machinery without intermediate numerator
+rounding. See the [complete replayed-row quotient evidence](../reports/harmonic-row-quotient-20261024.md).
+The unchanged alignment guards bound that local expression guarantee; it is not a
+correct-rounding guarantee for ordinary rows or a global solution certificate.
+An [elimination-step factor](../workers/rust/crates/solver/src/harmonic_spring_factor.rs)
+now carries a rounded value plus a residual-quotient correction through both
+matrix and RHS updates. It is transient, not a stored factor snapshot. Nonzero
+inputs and update operands must fit the conservative `2^-100` to `2^100`
+compensation headroom. Shared preflight disables correction for the whole step
+if any updated coefficient or RHS operand is unsupported, preserving one effective
+factor and the prior range-checked path, including wide RHS values.
+See the [non-dyadic factor evidence](../reports/harmonic-factor-compensation-20261024.md).
+The correction is approximate and bounded, not an exact factor or a general
+conditioning-independent solution certificate.
 
 Solver unit tests own mathematical and range counterexamples. Engine integration
 tests own serialized dispatch/workflow equality, gate reachability and failure

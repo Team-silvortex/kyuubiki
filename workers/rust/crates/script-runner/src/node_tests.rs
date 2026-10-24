@@ -90,6 +90,7 @@ pub(crate) fn run_node_command(
                 "tests/integration/desktop-gui-call-chain-contract.test.mjs",
                 "tests/integration/desktop-gui-compact-navigation.test.mjs",
                 "tests/integration/desktop-gui-layout-priority.test.mjs",
+                "tests/integration/desktop-gui-content-density.test.mjs",
                 "tests/integration/desktop-gui-navigation-closure.test.mjs",
                 "tests/integration/desktop-hub-assistant-context.test.mjs",
                 "tests/integration/desktop-installer-action-recovery.test.mjs",

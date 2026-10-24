@@ -23,6 +23,10 @@ mod fast_division;
 #[path = "harmonic_spring_row_update.rs"]
 mod row_update;
 
+#[path = "harmonic_spring_factor.rs"]
+mod factor;
+pub(crate) use factor::EliminationFactor;
+
 #[cfg(test)]
 #[path = "harmonic_spring_quotient_tests.rs"]
 mod quotient_tests;
@@ -38,6 +42,10 @@ mod fast_division_tests;
 #[cfg(test)]
 #[path = "harmonic_spring_row_update_tests.rs"]
 mod row_update_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_row_quotient_tests.rs"]
+mod row_quotient_tests;
 
 pub(crate) fn product(
     left: Complex,
@@ -75,6 +83,23 @@ pub(crate) fn difference(
     })
 }
 
+pub(crate) fn matrix_difference(
+    base: Complex,
+    left: Complex,
+    right: Complex,
+    stage: SolverStage,
+) -> Result<Complex, String> {
+    let terms = std::iter::once((left, right));
+    if let Some(value) = row_update::numerator(base, terms.clone())? {
+        return Ok(value);
+    }
+    let (real, imaginary) = numerator(base, terms, stage)?;
+    Ok(Complex {
+        re: real.restore_exact()?,
+        im: imaginary.restore_exact()?,
+    })
+}
+
 pub(crate) fn divide(left: Complex, right: Complex, stage: SolverStage) -> Result<Complex, String> {
     validate_pivot(right)?;
     if !left.is_finite() {
@@ -102,8 +127,8 @@ where
             return divide(numerator, pivot, stage);
         }
     }
-    let (real, imaginary) = wide_numerator(rhs, terms.map(|(a, x)| (a, x.into())), stage)?;
-    divide_wide(real, imaginary, pivot, stage)
+    let (real, imaginary) = accumulate_row(rhs, terms.map(|(a, x)| (a, x.into())), stage)?;
+    complex_quotient::divide_accumulated(real, imaginary, pivot, stage)
 }
 
 #[derive(Clone, Copy)]
@@ -256,6 +281,22 @@ fn wide_numerator<I>(
 where
     I: ExactSizeIterator<Item = (Complex, WideComplex)> + Clone,
 {
+    let (real, imaginary) = accumulate_row(rhs, terms, stage)?;
+    let finish =
+        |(sum, exponent): (ExactSum, i32)| sum.finish().map(|value| Scaled { value, exponent });
+    Ok((finish(real)?, finish(imaginary)?))
+}
+
+type Accumulated = (ExactSum, i32);
+
+fn accumulate_row<I>(
+    rhs: WideComplex,
+    terms: I,
+    stage: SolverStage,
+) -> Result<(Accumulated, Accumulated), String>
+where
+    I: ExactSizeIterator<Item = (Complex, WideComplex)> + Clone,
+{
     let length = terms.len().saturating_mul(2).saturating_add(1);
     let real = std::iter::once((rhs.real.value, 1.0, rhs.real.exponent)).chain(
         terms.clone().flat_map(|(a, x)| {
@@ -274,8 +315,8 @@ where
         }),
     );
     Ok((
-        sum_products(real, length, stage)?,
-        sum_products(imaginary, length, stage)?,
+        accumulate_products(real, length, stage)?,
+        accumulate_products(imaginary, length, stage)?,
     ))
 }
 
@@ -360,11 +401,11 @@ impl Scaled {
 }
 
 // Two passes retain FMA tails; aligned parts accumulate without a rounded error balance.
-fn sum_products(
+fn accumulate_products(
     entries: impl Iterator<Item = (f64, f64, i32)> + Clone,
     length: usize,
     stage: SolverStage,
-) -> Result<Scaled, String> {
+) -> Result<Accumulated, String> {
     checkpoint(stage, 0)?;
     let mut exponent = i32::MIN;
     for (index, entry) in entries.clone().enumerate() {
@@ -389,8 +430,7 @@ fn sum_products(
         }
         checkpoint_chunk(stage, length + index + 1, length.saturating_mul(2))?;
     }
-    let value = sum.finish()?;
-    Ok(Scaled { value, exponent })
+    Ok((sum, exponent))
 }
 
 fn split_product((left, right, exponent): (f64, f64, i32)) -> Result<(f64, f64, i32), String> {

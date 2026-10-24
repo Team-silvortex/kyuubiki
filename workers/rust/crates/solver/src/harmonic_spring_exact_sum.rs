@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 const LIMBS: usize = 18;
 const FRACTION: u64 = (1 << 52) - 1;
 
-// Parts aligned by sum_products have magnitude <= 4. Each is an integer multiple
+// Parts aligned by accumulate_products have magnitude <= 4. Each is an integer multiple
 // of 2^-1074; 1,152 bits leave room for sums below 2^78, with checked carries.
 #[derive(Default)]
 pub(super) struct ExactSum {
@@ -47,12 +47,20 @@ impl ExactSum {
         Ok(())
     }
 
-    pub(super) fn finish(mut self) -> Result<f64, String> {
+    pub(super) fn finish(self) -> Result<f64, String> {
+        let (magnitude, negative) = self.into_magnitude()?;
+        if magnitude.iter().all(|&word| word == 0) {
+            return Ok(0.0);
+        }
+        rounded(&magnitude, negative)
+    }
+
+    pub(super) fn into_magnitude(mut self) -> Result<([u64; LIMBS], bool), String> {
         if self.failed {
             return Err("complex exact accumulation is invalid".into());
         }
         let negative = match self.positive.iter().rev().cmp(self.negative.iter().rev()) {
-            Ordering::Equal => return Ok(0.0),
+            Ordering::Equal => return Ok(([0; LIMBS], false)),
             Ordering::Less => true,
             Ordering::Greater => false,
         };
@@ -71,7 +79,7 @@ impl ExactSum {
         if borrow {
             return Err("complex exact accumulation subtraction underflowed".into());
         }
-        rounded(magnitude, negative)
+        Ok((*magnitude, negative))
     }
 }
 
