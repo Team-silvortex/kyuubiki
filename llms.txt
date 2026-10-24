@@ -21,6 +21,10 @@ runtime behavior from UI text or isolated source files.
 - [Automated research example](docs/automated-material-research-example.md):
   executable material screening, quality gates, retained evidence, and limits.
 - [Documentation book](docs/book.html): complete architecture and trust context.
+- [Current status and version ledger](docs/current-line.md): distinguish package,
+  recorded installation, source follow-ups and current acceptance work.
+- [Task-first documentation map](docs/README.md): choose the primary contract
+  before reading historical checkpoint archives or isolated reports.
 
 ## Non-Negotiable Rules
 

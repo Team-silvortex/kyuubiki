@@ -23,6 +23,7 @@
 .PHONY: test-workflow-artifact-publication
 .PHONY: test-workflow-condition-contract
 .PHONY: test-workflow-named-input-contract
+.PHONY: test-workflow-execution-evidence
 
 test: test-web test-rust test-frontend test-sdk test-playground
 
@@ -47,6 +48,10 @@ test-workflow-condition-contract:
 test-workflow-named-input-contract:
 	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_named_input_contract_test.exs test/kyuubiki_web/workflow_branch_recovery_test.exs
 	@cd workers/rust && cargo test --locked -p kyuubiki-engine --test shared_named_input_contract
+
+test-workflow-execution-evidence:
+	@cd apps/web && mix test test/kyuubiki_web/workflow_execution_evidence_test.exs test/kyuubiki_web/api/workflow_execution_evidence_api_test.exs
+	@cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test shared_execution_evidence
 
 test-rust:
 	@$(ENTRYPOINT) rust-test

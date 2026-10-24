@@ -61,6 +61,13 @@ Examples:
 These live under `apps/hub-gui/ui/docs/`. They are desktop-facing operator
 reading surfaces, not the deeper repository narrative source.
 
+### Historical checkpoint records
+
+The `daji-*-history.md` files retain superseded checkpoint descriptions. Keep
+their original test scope, version and limits. They are neither active runtime
+instructions nor new installed evidence. When moving a checkpoint, preserve
+its text and relative links and leave its old current-line anchor reachable.
+
 ## Curation rules
 
 1. If two docs cover the same thing, keep one as the deeper source and reduce
@@ -83,8 +90,9 @@ Run `make check-doc-inventory` to catch invisible local docs before review.
 ## Current overlap watchlist
 
 - `current-line.md` vs `version-line.md`
-  Keep `current-line.md` as the broader narrative and `version-line.md` as the
-  short formal release-line note.
+  Keep current status and the version/evidence ledger in `current-line.md`,
+  formal cadence in `version-line.md`, and the accumulated diary in checkpoint
+  archives. Do not let the current entry grow back into the full history.
 - `system-overview.md` vs `app-runtime-boundaries.md` vs
   `agent-orchestrator-boundary.md` vs `headless-agent-contract.md` vs
   `agent-control-authority.md` vs `operations.md` vs

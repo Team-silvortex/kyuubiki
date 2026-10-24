@@ -30,8 +30,11 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The current source checkpoint is `daji 3.7.0`, with profile
-`daji-3-7-hardening`; version alignment does not promote evidence grades.
+The active profile is `daji-3-7-hardening`; package/book metadata is `3.7.1`.
+The [version ledger](current-line.md#version-and-evidence-ledger) distinguishes
+later Git/source work from the recorded installation. The October 24 local
+readback has zero structural gaps, two maturity gaps, 23 evidence-grade gaps
+and 18 P0 gaps; Daji remains blocked. These are tensor counts, not code coverage.
 The last retained recalibration below is October 16, 2026 for the earlier
 `daji-3-6-hardening` profile. At that review source metadata was `daji 3.6.0`
 and commit `301ba02c` was titled 3.6.4. Later scoped evidence is tracked by the
@@ -41,8 +44,9 @@ The [calibration record](../reports/tensor-recalibration-20261016.md) preserves
 that provenance and the [current-line entry](current-line.md) separates source
 progress from the last installed baseline.
 
-All 386 earlier claims are preserved. One verified local desktop binding brings
-the total to 387: 384 proven, two partial, one open. Hub/Installer execution and
+At the October 16 calibration, all 386 earlier claims were preserved. One
+verified local desktop binding brought the total to 387: 384 proven, two partial,
+one open. Hub/Installer execution and
 contract evidence no longer remains merely declared when the matching mock-IPC
 tests have actually run. Shared UI reaches its verified target; no installed
 or operational promotion follows from this correction.
@@ -67,7 +71,7 @@ is code/test coverage, supported physics or reliability; the registry remains a
 reviewed subset. Release qualification stays `blocked` and the independent
 usability release gate remains false. Thresholds and priority weights are unchanged.
 
-The release-weighted queue now begins with `sdk-headless/sdk_headless`,
+That retained October 16 release-weighted queue began with `sdk-headless/sdk_headless`,
 `runtime-protocol/sdk_operator`, `workbench-shell/validation`, then
 `runtime-engine-solver/validation`. The two missing required dimensions are
 protocol Worker-SDK security and Workbench/Headless execution evidence.

@@ -21,16 +21,17 @@
         <div class="docs-meta">
           <span class="docs-chip">Version line: daji 3.7.1</span>
           <span class="docs-chip">Current development: 3.7.1</span>
-          <span class="docs-chip">Local packaging: 3.3.0</span>
+          <span class="docs-chip">Recorded local installation: 3.7.1</span>
           <span class="docs-chip">Active baseline: daji 3.0.0</span>
-          <span class="docs-chip">Public launch target: daji 3.0.0</span>
+          <span class="docs-chip">Public distribution: evidence-gated</span>
           <span class="docs-chip">Audience: humans + large models</span>
           <span class="docs-chip">Use: orientation before deep diving</span>
         </div>
         <p class="docs-copy">
-          Start with the <a href="./book-ch02-version-line.html#current-checkpoint">3.3.0
-          checkpoint</a> for recent progress and limits. Updating this book does not
-          rebuild the packaged baseline or promote historical evidence to a new release.
+          Start with <a href="./book-ch02-version-line.html#current-checkpoint">current
+          package and installation posture</a>, then follow source progress or a
+          task tutorial. Git checkpoint names are not package or installed versions.
+          Updating this book does not rebuild applications or promote old evidence.
         </p>
       </section>
 
@@ -82,15 +83,15 @@
         <p class="docs-copy">
           Kyuubiki is an engine-first FEM workstation and control plane. The
           user-facing surface is split across desktop shells and a browser
-          workbench, while the execution layer is split across a Phoenix control
+          workbench, while the execution layer is split across an Elixir/Plug control
           plane and Rust solver agents.
         </p>
         <ul class="docs-list">
           <li><strong>Hub</strong>: operator shell, runtime control, workload shelf, docs, packaging entrypoint.</li>
-          <li><strong>Workbench</strong>: modeling, analysis setup, results, and future deeper 3D interaction.</li>
+          <li><strong>Workbench</strong>: modeling, workflow authoring, analysis setup, results and human review.</li>
           <li><strong>Installer</strong>: bootstrap, deployment prep, installation integrity, release structure.</li>
           <li><strong>Orchestrator</strong>: job control, persistence, workflow coordination, remote/runtime management.</li>
-          <li><strong>Rust agents</strong>: solver data plane, headless execution, future mesh and peer-networking growth.</li>
+          <li><strong>Rust agents</strong>: task admission, local engine execution, and authority-scoped direct or peer-Mesh operation.</li>
         </ul>
         <div class="docs-links">
           <a class="docs-link" href="./book-ch01-what-is-kyuubiki.html">Open chapter page</a>
@@ -155,7 +156,7 @@
           <li><strong>local workstation</strong>: frontend + orchestrator + local Rust agents.</li>
           <li><strong>cloud control plane</strong>: browser and orchestrator with remote persistence and external agents.</li>
           <li><strong>distributed control plane</strong>: separated control plane with remotely deployed solver nodes.</li>
-          <li><strong>headless peer mesh</strong>: future or selective mode where Rust agents can cluster without GUI/Phoenix on the hot path.</li>
+          <li><strong>headless peer mesh</strong>: explicit offline peer operation without GUI or Orchestra authority on the hot path; discovery is not distributed consensus or recovery qualification.</li>
         </ul>
         <div class="docs-links">
           <a class="docs-link" href="./book-ch04-runtime-modes.html">Open chapter page</a>

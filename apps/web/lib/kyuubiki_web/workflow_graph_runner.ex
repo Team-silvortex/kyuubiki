@@ -162,7 +162,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
                 WorkflowGraphRunnerMetrics.mark_failed(
                   state,
                   node,
-                  incoming_artifact_keys(incoming, state.artifacts),
+                  consumed_artifacts_for_node(node, incoming, state.artifacts),
                   reason,
                   (System.monotonic_time(:microsecond) - started_at_us) / 1000.0,
                   Keyword.get(opts, :result_options, %{})

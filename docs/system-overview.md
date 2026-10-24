@@ -6,7 +6,7 @@ contract surface:
 - `Frontend GUI`
   The browser workbench and installer GUI.
 - `Control plane`
-  The Phoenix/Plug orchestration layer.
+  The Elixir/Plug orchestration layer, served through Bandit.
 - `Solver data plane`
   Rust engine crates and headless Rust agents.
 
@@ -99,7 +99,7 @@ Those boundaries exist to prevent two common failures:
 The current default product mode:
 
 - browser workbench
-- Phoenix/Plug orchestrator
+- Elixir/Plug orchestrator
 - one or more Rust agents
 - SQLite or PostgreSQL persistence
 
@@ -122,7 +122,7 @@ This mode is the best fit for:
 
 - LAN solver clusters
 - lower-latency direct solve experimentation
-- environments where Phoenix should stay out of the hot path
+- environments where Orchestra should stay out of the execution hot path
 
 ### `headless peer mesh`
 

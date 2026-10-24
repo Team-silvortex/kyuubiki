@@ -44,6 +44,18 @@ fn first_available_waits_for_all_predecessors_then_uses_edge_priority() {
     );
     assert_eq!(run.artifacts["join.merged"]["source"], "b");
     assert_eq!(run.artifacts["output.result"]["source"], "b");
+    let selected = run
+        .node_runs
+        .iter()
+        .find(|node| node.node_id == "join")
+        .unwrap();
+    assert_eq!(selected.consumed_artifacts, ["input_b.value"]);
+    let lineage = run
+        .artifact_lineage
+        .iter()
+        .find(|entry| entry.node_id == "join")
+        .unwrap();
+    assert_eq!(lineage.source_artifacts, ["input_b.value"]);
 }
 
 #[test]

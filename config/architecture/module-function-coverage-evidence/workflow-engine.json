@@ -4,6 +4,69 @@
   "summary": "Compiled workflow execution, deterministic scheduling, cache-aware and projected artifact retention, solver-pipeline hot-path evidence, fail-closed summary validation, guarded quality ranking, and budget-safe, target-validated, identity-safe sweep execution with complete summary evidence and branch-local recovery for the Rust engine.",
   "evidence_claims": [
     {
+      "id": "workflow-output-retention-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_artifact_retention.rs",
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/tests/workflow_output_retention.rs",
+        "workers/rust/crates/engine/tests/workflow_payload_ownership.rs",
+        "workers/rust/crates/engine/tests/workflow_selected_input.rs",
+        "workers/rust/crates/engine/src/tests/workflow_artifact_projection.rs",
+        "workers/rust/crates/engine/src/tests/workflow_execution_plan.rs",
+        "config/operator-validation-profiles/workflow-runtime.json",
+        "docs/book-ch05-workflow-and-operators.html",
+        "reports/workflow-output-retention-20261024.md"
+      ],
+      "required_text": [
+        "workflow_output_retention_explicit_terminal_ports_do_not_change_projected_results",
+        "workflow_output_retention_declared_outputs_survive_downstream_consumption",
+        "workflow_output_retention_unlisted_outputs_still_release_and_forward_owned_data",
+        "workflow_output_retention_aliased_ports_keep_separate_values_and_direct_lineage",
+        "workflow_output_retention_recovered_failure_cannot_discard_a_declared_raw_output",
+        "workflow_payload_ownership_projection_cache_and_declaration_order_preserve_evidence",
+        "workflow_selected_input_unused_and_aliased_edges_keep_later_shared_consumers_alive",
+        "rust-output-retention",
+        "This is bounded in-process Rust workflow output retention and recovery regression evidence, not durable checkpointing, authenticated provenance, distributed recovery, installed acceptance or a scale qualification."
+      ]
+    },
+    {
+      "id": "workflow-selected-input-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/src/workflow_execution_plan.rs",
+        "workers/rust/crates/engine/src/workflow_artifact_retention.rs",
+        "workers/rust/crates/engine/src/tests/workflow_execution_plan.rs",
+        "workers/rust/crates/engine/tests/workflow_selected_input.rs",
+        "workers/rust/crates/engine/tests/shared_named_input_contract.rs",
+        "workers/rust/crates/engine/tests/shared_branch_recovery.rs",
+        "docs/book-ch05-workflow-and-operators.html",
+        "config/operator-validation-profiles/workflow-runtime.json",
+        "reports/workflow-selected-input-20261024.md"
+      ],
+      "required_text": [
+        "workflow_selected_input_priority_and_lineage_name_only_the_selected_source",
+        "workflow_selected_input_equal_false_and_null_values_do_not_erase_source_identity",
+        "workflow_selected_input_unused_and_aliased_edges_keep_later_shared_consumers_alive",
+        "workflow_selected_input_failed_selection_does_not_retry_a_different_present_source",
+        "workflow_selected_input_nested_joins_record_direct_selected_edges_without_flattening",
+        "workflow_selected_input_output_metadata_cannot_enable_partial_readiness",
+        "first_available_waits_for_all_predecessors_then_uses_edge_priority",
+        "same_source_fanout_preserves_both_bindings_under_transient_retention",
+        "shared_fallback_selection_uses_declared_priority_after_dependencies_resolve",
+        "This is bounded Rust workflow selected-input attribution and branch-retention regression evidence, not authenticated data provenance, numerical qualification, cross-runtime execution, distributed recovery, durable restart or a scale benchmark."
+      ]
+    },
+    {
       "id": "workflow-cancellation-boundaries-local-reliability",
       "status": "proven",
       "grade": "verified",

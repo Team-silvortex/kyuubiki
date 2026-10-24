@@ -82,10 +82,13 @@ fn is_transient(
     default_policy: WorkflowCachePolicy,
     projection: WorkflowArtifactProjection,
 ) -> bool {
+    // Output nodes publish incoming target ports; classify those keys separately.
+    if node.kind == WorkflowNodeKind::Output {
+        return false;
+    }
     match projection {
         WorkflowArtifactProjection::All => {
-            node.kind != WorkflowNodeKind::Output
-                && node.cache_policy.unwrap_or(default_policy) == WorkflowCachePolicy::Ephemeral
+            node.cache_policy.unwrap_or(default_policy) == WorkflowCachePolicy::Ephemeral
         }
         WorkflowArtifactProjection::Outputs | WorkflowArtifactProjection::None => true,
     }

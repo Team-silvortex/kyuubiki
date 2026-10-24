@@ -148,11 +148,12 @@ Typical commands:
 - `./scripts/kyuubiki package-desktop linux`
 - `./scripts/kyuubiki desktop-verify linux`
 
-Staged descriptor paths:
+Expected staged descriptor paths after packaging; these generated directories
+are not retained documentation or guaranteed files in a clean checkout:
 
-- [dist/linux/desktop/hub-gui](../dist/linux/desktop/hub-gui)
-- [dist/linux/desktop/installer-gui](../dist/linux/desktop/installer-gui)
-- [dist/linux/desktop/workbench-gui](../dist/linux/desktop/workbench-gui)
+- `dist/linux/desktop/hub-gui`
+- `dist/linux/desktop/installer-gui`
+- `dist/linux/desktop/workbench-gui`
 
 Suggested verification:
 
@@ -180,11 +181,12 @@ Typical commands:
 - `./scripts/kyuubiki package-desktop windows`
 - `./scripts/kyuubiki desktop-verify windows`
 
-Staged descriptor paths:
+Expected staged descriptor paths after packaging; these generated directories
+are not retained documentation or guaranteed files in a clean checkout:
 
-- [dist/windows/desktop/hub-gui](../dist/windows/desktop/hub-gui)
-- [dist/windows/desktop/installer-gui](../dist/windows/desktop/installer-gui)
-- [dist/windows/desktop/workbench-gui](../dist/windows/desktop/workbench-gui)
+- `dist/windows/desktop/hub-gui`
+- `dist/windows/desktop/installer-gui`
+- `dist/windows/desktop/workbench-gui`
 
 Suggested verification:
 

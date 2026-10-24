@@ -1,522 +1,216 @@
 # Documentation Map
 
-Use this directory as the current source of truth for product shape, protocol
-boundaries, deployment modes, and engineering workflow.
+Choose a task first; the reference catalog below is not a required reading order.
+The [HTML book](book.html) is the human/WebView entrypoint.
+[Current status](current-line.md#version-and-evidence-ledger) separates package
+metadata, the last recorded installation, Git checkpoints and source follow-ups.
 
-The current documentation checkpoint is **daji 3.7.0**. Start with the
-[current-line summary](current-line.md#daji-370-checkpoint) for recent progress.
-Source package metadata targets `3.7.0`; the last local desktop/runtime build
-and installation remains `3.4.0`. Dated acceptance records retain their original
-versions and do not become fresh qualification when documentation advances.
+## Choose A Path
 
-## Ownership
+| Goal | Start here | Continue with |
+| --- | --- | --- |
+| Understand the product | [Book chapter 1](book-ch01-what-is-kyuubiki.html) | [Current architecture](current-architecture-map.md) |
+| Finish a first study | [First research tutorial](tutorial-first-research.html) | [Failure and recovery](tutorial-recovery.html) |
+| Compose operators | [Workflow tutorial](tutorial-composite-workflow.html) | [Workflow contracts](book-ch05-workflow-and-operators.html) |
+| Integrate a research agent | [Model entry](../llms.txt), [bootstrap](model-research-bootstrap.json) | [Research onboarding](model-research-onboarding.html) |
+| Implement an operator | [Rust Operator SDK tutorial](tutorial-operator-sdk.html) | [Reliability policy](operator-reliability.md) |
+| Automate the GUI | [PWDT tutorial](tutorial-pwdt-automation.html) | [UI contract](ui-automation-contract.html) |
+| Deploy or update | [Runtime chapter](book-ch04-runtime-modes.html) | [Installer remote control](installer-remote-control.md) |
+| Assess trust or debug a failure | [Testing and CI](testing-and-ci.md) | [Weakness roadmap](weakness-roadmap.md), [accuracy plan](accuracy-plan.md) |
 
-- `docs/`
-  is the repository-level source of truth for engineering, architecture,
-  protocol, deployment, and product-shape documents.
-- `apps/hub-gui/ui/docs/`
-  is the desktop-facing HTML shelf used inside Hub for operator-facing reading.
-  Keep it aligned with this directory, but do not treat the Hub copy as the
-  deeper source narrative by default.
+## Ownership And Evidence
 
-## Start Here
+- Repository topic documents own behavior; the [ownership map](runtime-doc-ownership.md)
+  identifies the primary owner when architecture/runtime pages overlap.
+- HTML chapter pages explain those topics to users. The [Hub shelf](../apps/hub-gui/ui/docs/index.html)
+  is a short mirror, not a second release diary or independent source of truth.
+- JSON schemas and manifests define checked contracts. A registered command is
+  a plan until its execution has evidence.
+- Dated reports and release records retain their platform, version, backend
+  and exclusions. Current summaries link to them rather than adding overlapping counts.
+- Historical planning files are not active deployment instructions. Use the
+  current version ledger and live tensor before interpreting old readiness claims.
 
-Read these first, in order:
+## Reference Catalog
 
-1. `../llms.txt` for model ingestion, or `book.html` for human reading
-2. `model-research-bootstrap.json` for a model preparing research
-3. `model-research-onboarding.html`
-4. `tutorials.html` for task-oriented onboarding
-5. `book-manifest.json`
-6. `navigation-matrix.html`
-7. `current-line.md`
-8. `current-architecture-map.md`
-9. `system-overview.md`
-10. `module-architecture.md`
-11. `project-architecture-organization.md`
-12. `protocols.md`
-13. `repository-structure.md`
-14. `testing-and-ci.md`
-15. `maintenance.md`
-16. `installer-remote-control.md`
-17. `minimal-industrial-closure.md`
-18. `weakness-roadmap.md`
+### Book And Tutorials
 
-For the current `3.7.x` hardening path, keep six threads mentally linked:
+Start with the book for context, or a tutorial for a concrete completion contract.
 
-- centralized docs book and Hub shelf mirrors
-- headless live execution checks
-- native usability journey readiness reports
-- Installer-owned remote control
-- orchestrated and direct-mesh runtime posture
-- task-oriented tutorials with explicit completion contracts
+- [book.html](book.html)
+- [book-manifest.json](book-manifest.json)
+- [navigation-matrix.html](navigation-matrix.html)
+- [book-ch01-what-is-kyuubiki.html](book-ch01-what-is-kyuubiki.html)
+- [book-ch02-version-line.html](book-ch02-version-line.html)
+- [book-ch03-architecture-boundaries.html](book-ch03-architecture-boundaries.html)
+- [book-ch04-runtime-modes.html](book-ch04-runtime-modes.html)
+- [book-ch05-workflow-and-operators.html](book-ch05-workflow-and-operators.html)
+- [book-ch06-sdk-surfaces.html](book-ch06-sdk-surfaces.html)
+- [book-ch07-trust-and-safety.html](book-ch07-trust-and-safety.html)
+- [book-ch08-reading-paths.html](book-ch08-reading-paths.html)
+- [tutorials.html](tutorials.html)
+- [tutorial-first-research.html](tutorial-first-research.html)
+- [tutorial-composite-workflow.html](tutorial-composite-workflow.html)
+- [tutorial-pwdt-automation.html](tutorial-pwdt-automation.html)
+- [tutorial-headless-rust.html](tutorial-headless-rust.html)
+- [tutorial-operator-sdk.html](tutorial-operator-sdk.html)
+- [tutorial-recovery.html](tutorial-recovery.html)
 
-`3.0.0` starts the active `daji 3.x` product line. Documentation changes
-in this window should connect each capability to its contract, evidence,
-runtime owner, automation surface, and explicit limitation.
+### Current Status And Historical Records
 
-## Central Book
+Only current-line.md and version-line.md own active version posture. Checkpoint archives, Moxi/Tamamono notes and 1.x release plans retain their historical scope.
 
-- `book.html`
-  Single-entry HTML book for humans and assistants that need the whole project
-  picture before diving into chapter-level documents.
-- `../llms.txt`
-  Minimal model-facing root entry that points to the authoritative bootstrap
-  and states the non-negotiable execution and evidence rules.
-- `model-research-bootstrap.json`
-  Machine-readable model ingestion order, SDK entrypoints, first bounded
-  workflow, stop conditions, and research completion contract.
-- `model-research-onboarding.html`
-  WebView-readable route from document ingestion to a retained screening
-  research artifact.
-- `book-manifest.json`
-  Machine-readable chapter map and reading-path manifest for future large-model
-  ingestion and tooling.
-- `navigation-matrix.html`
-  Cross-cutting role and lane matrix that ties the book, verification, remote
-  control, mesh posture, and headless SDK paths together.
-- `book-ch*.html`
-  Chapter pages for the centralized book, so the book can grow by section
-  without turning the main entrypoint back into one oversized page.
-- `book-ch01-what-is-kyuubiki.html`
-- `book-ch02-version-line.html`
-- `book-ch03-architecture-boundaries.html`
-- `book-ch04-runtime-modes.html`
-- `book-ch05-workflow-and-operators.html`
-- `book-ch06-sdk-surfaces.html`
-- `book-ch07-trust-and-safety.html`
-- `book-ch08-reading-paths.html`
-- `../apps/hub-gui/ui/docs/index.html`
-  Desktop-facing mirror entry for the same narrative, tuned for the Hub shelf.
+- [current-line.md](current-line.md)
+- [version-line.md](version-line.md)
+- [daji-3.0.0.md](daji-3.0.0.md)
+- [daji-3.6-to-3.7-history.md](daji-3.6-to-3.7-history.md)
+- [daji-3.5-history.md](daji-3.5-history.md)
+- [daji-3.3-to-3.4-history.md](daji-3.3-to-3.4-history.md)
+- [moxi-closeout.md](moxi-closeout.md)
+- [moxi-handoff.md](moxi-handoff.md)
+- [moxi-handoff.manifest.json](moxi-handoff.manifest.json)
+- [moxi-minor-lines.md](moxi-minor-lines.md)
+- [tamamono-minor-lines.md](tamamono-minor-lines.md)
+- [release-prep-1.7.md](release-prep-1.7.md)
+- [release-prep-1.8.md](release-prep-1.8.md)
+- [release-prep-1.9-to-1.20.md](release-prep-1.9-to-1.20.md)
 
-## Tutorial Center
+### Architecture And Documentation Ownership
 
-- `tutorials.html`
-  Task-oriented entrypoint that routes users by outcome and keeps GUI, PWDT,
-  Headless, and Operator SDK responsibilities separate.
-- `tutorial-first-research.html`
-  First Workbench closure: project, bounded model, saved state, terminal job,
-  result inspection, evidence identity, and persistence check.
-- `tutorial-composite-workflow.html`
-  Catalog-to-builder route for graph and dataset contracts, validation,
-  node-level run evidence, exports, and KCore boundaries.
-- `tutorial-pwdt-automation.html`
-  Workbench PWDT route using the registered action catalog, product recipes,
-  observable waits, and the stable UI contract instead of raw DOM guessing.
-- `acceptance-immersive-modeling.html`
-  Bounded daji 3.2.0 macOS acceptance: installed WKWebView, actual PWDT, fullscreen
-  compatibility, batch edits, saved model versions and real-solver restart recovery.
-- `tutorial-headless-rust.html`
-  Rust Headless route from template discovery through validation, retained plan,
-  mock orchestration, live service execution, and material evidence.
-- `research-layered-thermal.html`
-  Direct public-SDK research verification: 14 layered heat-to-structure cases,
-  independent analytical gates, retained failures, and installed/source boundaries.
-- `tutorial-operator-sdk.html`
-  Rust-only operator extension route from the crate template through descriptor
-  readiness, baselines, package preflight, and dynamic smoke.
-- `tutorial-recovery.html`
-  Cross-surface failure classification, evidence retention, bounded retry, and
-  escalation stop conditions.
+Responsibility and authority maps belong here; benchmark diaries and runtime procedures have separate owners.
 
-## Maintenance
+- [current-architecture-map.md](current-architecture-map.md)
+- [system-overview.md](system-overview.md)
+- [module-architecture.md](module-architecture.md)
+- [architecture-extension-standard.md](architecture-extension-standard.md)
+- [architecture-red-lines.md](architecture-red-lines.md)
+- [app-runtime-boundaries.md](app-runtime-boundaries.md)
+- [hub-architecture.md](hub-architecture.md)
+- [agent-orchestrator-boundary.md](agent-orchestrator-boundary.md)
+- [agent-control-authority.md](agent-control-authority.md)
+- [mobile-gui-runtime-boundary.md](mobile-gui-runtime-boundary.md)
+- [repository-structure.md](repository-structure.md)
+- [project-architecture-organization.md](project-architecture-organization.md)
+- [philosophy.md](philosophy.md)
+- [documentation-system.md](documentation-system.md)
+- [runtime-doc-ownership.md](runtime-doc-ownership.md)
+- [maintenance.md](maintenance.md)
+- [development.md](development.md)
+- [toolchain-contract.md](toolchain-contract.md)
 
-- `maintenance.md`
-  Curation rules for deciding which docs are source-of-truth, planning-only,
-  generated, or desktop-facing mirrors.
-- `runtime-doc-ownership.md`
-  Runtime, authority, mesh, and Installer remote-control documentation
-  ownership map for avoiding duplicate narrative drift.
-- `documentation-system.md`
-  System-level documentation topology, inventory guard, and source/mirror
-  ownership rules.
+### Headless And Operator SDKs
 
-Then branch by intent:
+Headless controls the backend; the Rust-only Worker SDK extends operators. Model collaboration is an adapter, not execution authority.
 
-- `moxi-minor-lines.md`
-  Historical Moxi roadmap; not the active Daji plan.
-- `commercial-readiness-2.0.md`
-  Trust-gate checklist for deciding whether `2.0` can honestly ship as an
-  early-commercial / research-partner line.
-- `store-deployment-boundary.md`
-  Open-source self-hosted store, external adapter, optional identity-provider,
-  credential, and runtime-authority boundary.
-- `moxi-handoff.md`
-  Historical gate that defined the transition into the `moxi 2.x` line.
-- `weakness-roadmap.md`
-  Current `daji 3.x` weak-spot roadmap covering numerical trust, operator SDK
-  industrialization, agent/orchestra/mesh reliability, TaskIR stability,
-  frontend/runtime consistency, security fuzz coverage, and the flagship
-  material research loop.
-- `commercial-readiness-2.0.manifest.json`
-  Machine-readable gate map for the same `2.0` checklist, validated by
-  `./scripts/kyuubiki validate-commercial-readiness`.
-- `moxi-handoff.manifest.json`
-  Machine-readable gate map for the final `tamamono -> moxi` handoff checklist,
-  validated by `make check-moxi-handoff`.
-- `minimal-industrial-closure.md`
-  Minimum industrial loop checklist carried into `daji 3.x` as the practical
-  closure gate for bounded research and early partner workflows.
-- `module-architecture.md`
-  System-wide module map for product shells, control plane, runtime data
-  plane, SDKs, contracts, verification gates, and where new work belongs.
-- `minimal-industrial-closure.manifest.json`
-  Machine-readable gate map for the same minimum industrial loop, validated by
-  `./scripts/kyuubiki validate-minimal-industrial-closure`.
-- `fem-blender-roadmap.md`
-  Product north star and staged path toward becoming the Blender of FEM,
-  including the `2.0` early-commercial trust line and `3.0`
-  giant-challenge line.
-- `rendering-roadmap.html`
-  Render-capability upgrade path from the current SVG viewport toward a
-  dedicated simulation field renderer.
-- `ui-architecture-migration.md`
-  UI refactor tracker for moving shared desktop and app-specific JavaScript
-  into typed contracts without destabilizing Tauri packaging.
-- `ui-automation-contract.html`
-  Product-owned DOM automation contract for the built-in workbench shell.
-- `ui-automation-contract.json`
-  Machine-readable selector contract paired with the UI automation HTML page.
-- `accuracy-plan.md`
-  Quality direction and verification policy.
-- `accuracy-baselines.md`
-  Current numerical baselines.
-- `solver-matrix-optimization-pack.md`
-  Benchmark-backed note for the retained Rust solver matrix optimizations and
-  the experiments that should not be repeated blindly.
-- `solver-matrix-optimization-pack.html`
-  HTML mirror for the retained solver optimization pack.
-- `operator-sdk.md`
-  Current extension-contract direction for new operator capabilities.
-- `model-collaboration-sdk.md`
-  Provider-neutral large-model tool projection, response normalization,
-  context redaction, policy filtering, and safe proposal-to-Headless-plan
-  compilation for OpenAI, Anthropic, Gemini, and canonical clients.
-- `model-collaboration-sdk.html`
-  WebView-readable presentation of the same model collaboration boundary and
-  portable session/proposal contracts.
-- `model-research-onboarding.md`
-  Engineering source for models and integrators that need to turn the
-  collaboration contract into a bounded, dependency-aware research loop.
-- `operator-reliability.md`
-  Machine-readable reliability manifest policy for solve operators, including
-  trust levels, evidence expectations, and the current release minimum coverage
-  gate.
-- `thermal-contact-operator.md`
-  Steady planar matching-edge contact resistance: data contract, operator-owned
-  integration, temperature-jump transfer, verification and deployment limits.
-- `operator-category-taxonomy.md`
-  Operator-family taxonomy for keeping the growing operator catalog organized.
-- `operator-library-centralization.md`
-  Central operator-library ownership and pull/cache policy for distributed
-  agents.
-- `operator-task-ir-digest.md`
-  TaskIR digest and mirror-field contract for executable operator task files.
-- `material-research-roadmap.md`
-  Reliability roadmap for moving material studies from runnable prototypes to
-  reproducible screening, review, and eventual qualification workflows.
-- `automated-material-research-example.md`
-  First executable heat-spreader material research loop with real solver
-  outputs, optimization metrics, chain convergence assessment, and a
-  machine-checkable evidence artifact.
-- `automated-material-research-example.manifest.json`
-  Machine-readable evidence envelope for the automated material research
-  example.
-- `material-score-contract.md`
-  Cross-runtime result contract for material candidate scoring, including
-  criteria, ranges, feasibility policy, ranking semantics, and stable errors.
-- `material-score-contract.manifest.json`
-  Machine-readable material scoring contract paired with the Markdown note.
-- `physics-coverage-map.md`
-  `daji 3.x` coverage map for broad solver-family execution coverage and the
-  reliability gates that protect engine and task-format contracts.
-- `workflow-graph.md`
-  Multi-operator composition model for shader-like workflow growth.
-- `workflow-dataset.md`
-  ONNX-like cross-operator data contract for workflow-carried values.
-- `kcore-exchange-format.html`
-  Visual entry for the frozen `.kcore` simulation and research exchange layer.
-- `kcore-exchange-format.md`
-  Normative container, manifest, integrity, role, and evolution contract.
-- `installer-remote-control.md`
-  Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
-  control-surface note for the active `daji 3.x` line.
-- `remote-deployment-roadmap.html`
-  Maturity roadmap for moving Installer remote deployment from policy-bounded
-  SSH transport to a deployment service with plans, journals, artifact
-  delivery, host trust, and tests.
-- `component-integrity-protocol.html`
-  Component ownership, required-path coverage, protection, cleanup, and visible
-  rule protocol used by the Installer integrity report.
-- `remote-pilot.md`
-  Practical first-Ubuntu-host rollout sketch for introducing remote solver
-  nodes, then remote control-plane and workload-source validation.
-- `fem-blender-roadmap.md`
-  Product north star linking workbench, workflow, SDK, and operator-ecosystem growth.
+- [headless-sdks.md](headless-sdks.md)
+- [operator-sdk.md](operator-sdk.md)
+- [headless-agent-contract.md](headless-agent-contract.md)
+- [protocols.md](protocols.md)
+- [model-collaboration-sdk.html](model-collaboration-sdk.html)
+- [model-collaboration-sdk.md](model-collaboration-sdk.md)
+- [model-research-onboarding.html](model-research-onboarding.html)
+- [model-research-onboarding.md](model-research-onboarding.md)
+- [model-research-bootstrap.json](model-research-bootstrap.json)
 
-## By Goal
+### Physics Workflows And Research Contracts
 
-### Understand the system
+Execution coverage, result identity and numerical qualification are distinct. Research examples are bounded reference journeys, not material certification.
 
-- `daji-3.0.0.md`
-  Current release-line transition, package identity, and verification limits.
-- `moxi-closeout.md`
-  Retained 2.x checkpoint and evidence scope, not fresh Daji qualification.
-- `current-line.md`
-  Single-entry explanation of the current product line, boundaries, and
-  release posture.
-- `current-architecture-map.md`
-  Compact current architecture map across product shells, Orchestra, agents,
-  runtime crates, SDKs, contracts, verification lanes, and authority modes.
-- `system-overview.md`
-  Full runtime map across GUI, control plane, and solver data plane.
-- `module-architecture.md`
-  First architecture map for understanding which module owns a capability and
-  how the product, control plane, runtime, SDK, contract, and verification
-  layers fit together.
-- `app-runtime-boundaries.md`
-  Hard role split between Hub, Workbench, Installer, and runtime/agent layers.
-- `mobile-gui-runtime-boundary.md`
-  Mobile WebView GUI contract: remote-control only, no local agent/orchestra
-  hosting.
-- `agent-control-authority.md`
-  Agent binding-state and one-authority policy for orchestrated, direct-mesh,
-  and offline modes.
-- `agent-orchestrator-boundary.md`
-  Runtime-side contract for keeping Rust agents, Elixir orchestration, and UI shells decoupled.
-  Also includes the current transitional inventory and convergence checklist.
-- `headless-agent-contract.md`
-  Stable runtime contract for headless Rust agents, including solver-RPC
-  authority, descriptor expectations, and the boundary between runtime
-  protocols and frontend-owned gateways.
-- `architecture-red-lines.md`
-  Practical do-not-cross checklist for keeping product and runtime layers clean.
-- `architecture-extension-standard.md`
-  Standard flow for adding modules, paradigms, service surfaces, evidence
-  lanes, and contract families.
-- `philosophy.md`
-  Shared product, engineering, and review principles across all layers.
-- `hub-architecture.md`
-  Hub-specific entrypoint and operator-shell rationale.
-- `repository-structure.md`
-  Directory ownership, generated-path boundaries, and source-of-truth rules.
-- `browser-storage-security-audit.html`
-  Browser storage security review for frontend persistence and local state.
-- `project-architecture-organization.md`
-  Current `daji 3.x` architecture organization map for Hub, Workbench,
-  Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and line-limit cleanup
-  boundaries.
-- `minimal-industrial-closure.md`
-  Current bounded industrial-loop closure map tying executable TaskIR,
-  operator reliability, agent/orchestra, installer, persistence, security,
-  UX, and benchmark gates together.
+- [physics-coverage-map.md](physics-coverage-map.md)
+- [operator-category-taxonomy.md](operator-category-taxonomy.md)
+- [operator-library-centralization.md](operator-library-centralization.md)
+- [workflow-graph.md](workflow-graph.md)
+- [workflow-dataset.md](workflow-dataset.md)
+- [operator-task-ir-digest.md](operator-task-ir-digest.md)
+- [thermal-contact-operator.md](thermal-contact-operator.md)
+- [axial-bar-input-normalization.md](axial-bar-input-normalization.md)
+- [graph-entity-input-normalization.md](graph-entity-input-normalization.md)
+- [advection-diffusion-service-chain.md](advection-diffusion-service-chain.md)
+- [advection-diffusion-upwind.md](advection-diffusion-upwind.md)
+- [advection-diffusion-research-chain.md](advection-diffusion-research-chain.md)
+- [automated-material-research-example.md](automated-material-research-example.md)
+- [automated-material-research-example.manifest.json](automated-material-research-example.manifest.json)
+- [research-layered-thermal.html](research-layered-thermal.html)
+- [material-research-roadmap.md](material-research-roadmap.md)
+- [material-score-contract.md](material-score-contract.md)
+- [material-score-contract.manifest.json](material-score-contract.manifest.json)
+- [kcore-exchange-format.html](kcore-exchange-format.html)
+- [kcore-exchange-format.md](kcore-exchange-format.md)
+- [headless-research-input-identity.md](headless-research-input-identity.md)
+- [headless-saved-model-sources.md](headless-saved-model-sources.md)
+- [headless-model-artifact-identity.md](headless-model-artifact-identity.md)
+- [headless-result-artifact-readback.md](headless-result-artifact-readback.md)
+- [solver-matrix-optimization-pack.html](solver-matrix-optimization-pack.html)
+- [solver-matrix-optimization-pack.md](solver-matrix-optimization-pack.md)
 
-### Build against stable boundaries
+### GUI PWDT And Localization
 
-- `protocols.md`
-  Public HTTP and TCP contracts that let the GUI, control plane, and solver
-  agents run as separate programs.
-- `headless-agent-contract.md`
-  Practical runtime-side contract for solver agents, SDK callers, and
-  orchestrators that need a cleaner boundary than frontend gateway flows.
-- `headless-sdks.md`
-  Protocol-first Rust, Elixir, and Python SDK layer for headless AI and
-  automation clients.
-- `headless-research-input-identity.md`
-  Native research report input fingerprints, evidence admission, safe recovery,
-  exact encoding and unchanged legacy lineage boundaries.
-- `headless-saved-model-sources.md`
-  Saved-snapshot content fingerprints, optional pre-submit pins, retained source
-  evidence and limits of fetched-content consistency.
-- `headless-model-artifact-identity.md`
-  Prepared/sent/upload-reply byte identity, retained upload bindings and the
-  remaining large-model normalization/result-file readback boundaries.
-- `axial-bar-input-normalization.md`
-  Shared HTTP/Agent Pa/GPa scalar rules, invalid-input admission stages and
-  verified inline/artifact bar result parity without full-model buffering.
-- `headless-result-artifact-readback.md`
-  Bounded native physical-result downloads, original byte receipts, reference-only
-  mode and explicit same-job recovery without computation replay.
-- `graph-entity-input-normalization.md`
-  Typed entity-object and unique-ID rules for ten field models, ten actual HTTP
-  inline/file physical comparisons and rejection/recovery without later writes.
-- `advection-diffusion-service-chain.md`
-  Transport service and official SDK route/RPC mappings, native source-bound
-  research metrics, analytic flux checks and actual Agent workflow/recovery.
-- `advection-diffusion-upwind.md`
-  Explicit conservative 1D upwind, separate artificial-diffusion diagnostics,
-  independent refinement/balance tests and actual source-Agent execution.
-- `advection-diffusion-research-chain.md`
-  Stabilized solve/diagnose/score/objective decisions, strict flux consistency,
-  opt-in research targets, native TaskIR routing, cooperative diagnostic cancellation
-  and explicit failure recovery, with bounded cross-domain Engine cancellation
-  and native diagnostic/scoring service chains for five additional domains.
-- `operator-sdk.md`
-  Proposed operator descriptor, runtime contract, and validation shape for
-  future extensible solver and transform capabilities.
-- `workflow-graph.md`
-  Proposed graph/runtime model for chaining multiple operators into stable
-  headless workflows.
-- `workflow-dataset.md`
-  Portable dataset/value contract shared across workflow nodes, ports, and
-  operator schemas.
-- `kcore-exchange-format.md`
-  Portable frozen result envelope carrying those workflow, TaskIR, model,
-  result, evidence, and preview contracts together.
-- `installer-remote-control.md`
-  Installer-side remote deployment and runtime-control contract for the
-  operator-facing remote node surface.
-- `remote-pilot.md`
-  Operator rollout sketch for bringing up the first Ubuntu-hosted remote target
-  without overloading `operations.md`.
+PWDT automates the fixed product-owned GUI; it is not the Python Headless SDK. Installed UI acceptance remains version/platform-specific.
 
-### Verify changes
+- [frontend-style.md](frontend-style.md)
+- [frontend-implementation.md](frontend-implementation.md)
+- [ui-architecture-migration.md](ui-architecture-migration.md)
+- [ui-automation-contract.html](ui-automation-contract.html)
+- [ui-automation-contract.json](ui-automation-contract.json)
+- [language-packs.md](language-packs.md)
+- [rendering-roadmap.html](rendering-roadmap.html)
+- [acceptance-immersive-modeling.html](acceptance-immersive-modeling.html)
+- [browser-storage-security-audit.html](browser-storage-security-audit.html)
 
-- `version-line.md`
-  Current version-line note for `daji 3.x`, including codename and major
-  version policy.
-- `release-prep-1.9-to-1.20.md`
-  Historical late-`tamamono` industrialization roadmap for the boundary
-  hardening path that fed into `moxi 2.0.0`, retained as preparation context.
-- `release-prep-1.7.md`
-  Historical release-prep checklist retained for older tamamono context.
-- `release-prep-1.8.md`
-  Historical release-prep checklist retained for older tamamono context.
-- `commercial-readiness-2.0.md`
-  Commercial trust-gate checklist for numerical confidence, workflow assets,
-  SDK credibility, installer/update hygiene, agent authority, security, UX, and
-  docs readiness before `2.0`.
-- `installer-remote-control.md`
-  Source-of-truth note for the Installer remote control surface that now sits
-  inside the `daji 3.x` trust-hardening and asset-formalization path.
-- `component-integrity-protocol.html`
-  Protocol page for adding new components without leaving required layout,
-  brand metadata, protection, or cleanup behavior outside integrity coverage.
-- `tamamono-minor-lines.md`
-  Historical `tamamono 1.x` minor-release grouping retained for handoff context.
-- `testing-and-ci.md`
-  Test-layer map, local verification entry points, and CI job layout.
-- `toolchain-contract.md`
-  Rust, Node, Elixir, OTP, Docker, and lab default toolchain expectations.
-- frontend and Rust headless live execution now sit here as first-class
-  service-executor validation paths for `service_health`,
-  `workflow_submit_catalog`, and `workflow_submit_graph`
-- `solver-matrix-optimization-pack.md`
-  Current matrix-side optimization pack for the Rust solver, with A/B evidence
-  and benchmark interpretation notes.
-- `development.md`
-  Day-to-day contributor workflow, including when workflow-heavy frontend work
-  should run the dedicated `workflow-preflight` guard.
-- `accuracy-plan.md`
-  Accuracy-validation plan for `v1.x`, with benchmark targets, tolerances,
-  and automation priorities by study family.
-- `accuracy-baselines.md`
-  First concrete numerical baseline set for `v1.x`, starting with axial,
-  thermal-bar, and beam seed cases.
-- `tests/integration/README.md`
-  Cross-process smoke map, including the current orchestrated API path for
-  `axial_bar_1d`, `thermal_bar_1d`, `frame_3d`, `truss_2d`,
-  `thermal_frame_3d`, and `thermal_truss_3d`.
-- `development.md`
-  Day-to-day contributor workflow, launcher choices, current priorities, and
-  the test-first loop for Elixir, Rust, and shared contract work.
-- `frontend-style.md`
-  Workbench visual language, layout rules, and interaction feel.
-- `frontend-implementation.md`
-  Frontend component boundaries, state placement, naming, and performance rules.
-- `ui-automation-contract.html`
-  Human-readable contract for stable automation selectors used by wasm Python
-  and headless control tooling.
-- `ui-automation-contract.json`
-  Machine-readable selector map and rules for the built-in workbench UI shell.
-- `language-packs.md`
-  Local-first language-pack format, override behavior, and the future remote
-  delivery shape for Workbench UI translation packs.
-- `central-server-components.md`
-  Preview contract for the future central server: operator store, template
-  store, frontend DSL template store, language-pack delivery, and login policy.
-- `store-deployment-boundary.md`
-  Portable store and deployment-owned identity boundary while preserving
-  open-source self-hosted store support.
-- `fem-blender-roadmap.md`
-  Long-range product shape for turning Kyuubiki into a full FEM creation platform.
-- `rendering-roadmap.html`
-  Concrete rendering-capability staging for `1.6.x` through later `1.x`
-  minors, including what can ship before a dedicated field renderer exists.
-- `troubleshooting.md`
-  First-line operational recovery guide for startup, runtime, packaging, and
-  verification failures.
+### Operations Installation And Data
 
-### Operate and deploy
+Installer owns deployment, lifecycle, integrity and update visibility. Runtime procedures must keep secrets and host-local configuration outside Git.
 
-- `version-line.md`
-  Current product-line anchor and version policy.
-- `../releases/README.md`
-  Lightweight release-snapshot registry for shipped or staged product points.
-- `operations.md`
-  Deployment modes, watchdog knobs, and runtime entry points.
-- `installer-remote-control.md`
-  Installer-owned remote node, certificate, mesh, and workflow-snapshot
-  control surface for operator-facing deployment work.
-- `security.md`
-  Current guardrails, token protection, and deployment safety notes.
-- `packaging-and-deployment.md`
-  Component build commands, artifact paths, and packaging output boundaries.
-- `desktop-release-checklist.md`
-  Platform-specific desktop bundle targets, icon requirements, and release
-  checks.
-- `testing-and-ci.md`
-  Verification map for repo checks, CI layers, and the dedicated workflow
-  preflight path used for workflow-heavy frontend changes.
-- `update-catalog.html`
-  Generated operator-facing view of the unified update tags, release channels,
-  and shipped version bindings.
-- `installation-integrity-contract.html`
-  Generated installation integrity contract view for required paths, protected
-  state, cleanup policy, and version alignment.
-- `rendering-roadmap.html`
-  Human-facing staging map for viewport limits, field-render priorities, and
-  future multi-physics visualization work.
+- [operations.md](operations.md)
+- [security.md](security.md)
+- [packaging-and-deployment.md](packaging-and-deployment.md)
+- [desktop-release-checklist.md](desktop-release-checklist.md)
+- [installer-remote-control.md](installer-remote-control.md)
+- [remote-deployment-roadmap.html](remote-deployment-roadmap.html)
+- [remote-pilot.md](remote-pilot.md)
+- [central-server-components.md](central-server-components.md)
+- [store-deployment-boundary.md](store-deployment-boundary.md)
+- [component-integrity-protocol.html](component-integrity-protocol.html)
+- [installation-integrity-contract.html](installation-integrity-contract.html)
+- [update-catalog.html](update-catalog.html)
+- [data-lifecycle.html](data-lifecycle.html)
+- [troubleshooting.md](troubleshooting.md)
 
-### Directory entrypoints
+### Validation And Readiness
 
-- `scripts/README.md`
-  Unified launcher, host-side workflow commands, and packaging entrypoints.
-- `../config/README.md`
-  Checked-in configuration contracts for reliability gates, qualification
-  planning, benchmark coverage, audit lanes, and self-host toolchains.
-- `deploy/README.md`
-  Deployment descriptors, agent manifests, and workload-catalog examples.
-- `project-architecture-organization.md#generated-disk-use`
-  Source-controlled storage policy: rebuildable caches are separate from
-  runtime databases, journals, execution receipts and process ownership records.
-- `../tmp/nightly-overview.html`
-  Human-readable local index for the latest retained nightly regression
-  artifacts across direct-mesh, workflow-catalog, and standard benchmark lanes.
-- `schemas/README.md`
-  Shared JSON contract map for jobs, projects, materials, catalogs, language
-  packs, and workflow graphs.
+Test totals, instrumented code coverage, tensor depth and release permission answer different questions.
 
-## Suggested Reading Paths
+- [testing-and-ci.md](testing-and-ci.md)
+- [accuracy-plan.md](accuracy-plan.md)
+- [accuracy-baselines.md](accuracy-baselines.md)
+- [operator-reliability.md](operator-reliability.md)
+- [weakness-roadmap.md](weakness-roadmap.md)
+- [minimal-industrial-closure.md](minimal-industrial-closure.md)
+- [minimal-industrial-closure.manifest.json](minimal-industrial-closure.manifest.json)
+- [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
+- [commercial-readiness-2.0.manifest.json](commercial-readiness-2.0.manifest.json)
+- [fem-blender-roadmap.md](fem-blender-roadmap.md)
 
-- Data management and upgrades:
-  [Data lifecycle](data-lifecycle.html) covers ownership, native project migration,
-  digest-bound verification, retained-source rollback, and the remaining database,
-  archive, settings and credential migration work.
+## Maintain This Map
 
-- Browser/frontend work:
-  `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md` -> `ui-automation-contract.html` -> `rendering-roadmap.html`
-- Workflow-heavy frontend work:
-  `workflow-graph.md` -> `workflow-dataset.md` -> `development.md` -> `testing-and-ci.md` -> `release-prep-1.9-to-1.20.md`
-- Installer remote/runtime-control work:
-  `system-overview.md` -> `app-runtime-boundaries.md` -> `installer-remote-control.md` -> `security.md` -> `testing-and-ci.md`
-- Desktop product boundary work:
-  `system-overview.md` -> `project-architecture-organization.md` -> `app-runtime-boundaries.md` -> `agent-orchestrator-boundary.md` -> `architecture-red-lines.md` -> `hub-architecture.md` -> `repository-structure.md`
-- Orchestrator/control-plane work:
-  `philosophy.md` -> `system-overview.md` -> `project-architecture-organization.md` -> `agent-orchestrator-boundary.md` -> `operations.md`
-- Rust solver/agent work:
-  `philosophy.md` -> `system-overview.md` -> `project-architecture-organization.md` -> `agent-orchestrator-boundary.md` -> `protocols.md` -> `solver-matrix-optimization-pack.md`
-- Material research work:
-  `material-research-roadmap.md` -> `automated-material-research-example.md` -> `headless-sdks.md` -> `accuracy-plan.md` -> `workflow-dataset.md` -> `operator-sdk.md`
-- Packaging/release work:
-  `packaging-and-deployment.md` -> `testing-and-ci.md` -> `desktop-release-checklist.md` -> `commercial-readiness-2.0.md` -> `update-catalog.html`
+Keep one owner per topic. Update source contracts first, then relevant HTML
+chapters and short Hub mirrors. New local documentation belongs in this catalog;
+new central reading paths also belong in [book-manifest.json](book-manifest.json).
+
+Current status is a concise handoff. Put experiments in dated reports and move
+superseded checkpoint narratives into the history files without relabeling their
+results. Keep old checkpoint anchors reachable. Do not delete retained evidence
+to reduce duplication in a mirror.
+
+Run the focused documentation gates after changes:
+
+```sh
+make check-doc-inventory
+make check-doc-book
+make check-version-line
+make audit-project-organization
+```
+
+These validate structure and metadata, not the truth of numerical or installed
+acceptance claims. Use [testing-and-ci.md](testing-and-ci.md) for execution lanes
+and [documentation-system.md](documentation-system.md) for curation rules.

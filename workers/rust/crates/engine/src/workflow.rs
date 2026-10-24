@@ -122,10 +122,11 @@ pub fn run_workflow_graph_with_options(
         let node = &graph.nodes[node_index];
         let incoming = execution_plan.incoming(node_index);
         let incoming_state = execution_plan.resolve_incoming(node_index, &artifacts);
-        let supports_partial_inputs = node
-            .operator_id
-            .as_deref()
-            .is_some_and(transform_operator_accepts_partial_inputs);
+        let supports_partial_inputs = node.kind == WorkflowNodeKind::Transform
+            && node
+                .operator_id
+                .as_deref()
+                .is_some_and(transform_operator_accepts_partial_inputs);
         let ready = if supports_partial_inputs {
             incoming_state.any_resolved
         } else {
@@ -159,7 +160,11 @@ pub fn run_workflow_graph_with_options(
             continue;
         }
 
-        let consumed_artifacts = incoming_state.resolved_artifact_keys;
+        let mut consumed_artifacts = incoming_state.resolved_artifact_keys;
+        if supports_partial_inputs {
+            // Only one source contributes; retention still retires every incoming edge below.
+            consumed_artifacts.truncate(1);
+        }
         let mut produced_artifacts = Vec::with_capacity(node.outputs.len().max(incoming.len()));
         let artifact_lineage_checkpoint = artifact_lineage.len();
         let branch_decision_checkpoint = branch_decisions.len();

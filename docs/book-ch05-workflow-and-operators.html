@@ -194,6 +194,22 @@
           <li>Input nodes read <code>input_artifacts</code> and cannot have
             incoming edges. Output nodes may receive multiple ports; each port
             retains its own value and source lineage.</li>
+          <li id="workflow-execution-receipts">Completed-node produced-artifact records name
+            actual publications, not every declared port: a condition publishes
+            only its chosen branch. A failed first-available transform records
+            its selected source, whereas named-input transforms retain every
+            real binding, including aliases. Full and payload-omitted Orchestra
+            responses preserve requested traces; compact failures still expose
+            their node and cause. Shared Rust/Orchestra regressions and local
+            SQLite result readback cover this evidence contract, not an
+            authenticated or power-loss-safe provenance system.</li>
+          <li id="rust-output-retention">Rust output-only projection retains published ports of
+            nodes listed in <code>output_nodes</code>, even when those nodes declare
+            optional output ports, request ephemeral caching, or feed later nodes.
+            Unlisted output nodes may still forward data but are not retained in
+            that projection; no-artifact projection retains no payloads. Cache and
+            projection choices do not change execution evidence. This is in-process
+            result retention, not a durable checkpoint or restart guarantee.</li>
           <li><code>on_error: "skip"</code>, compact responses, retained solve
             artifacts, and retained branch decisions cannot bypass this graph
             gate. Synchronous and asynchronous API requests return a validation

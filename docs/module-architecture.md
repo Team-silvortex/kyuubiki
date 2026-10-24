@@ -142,8 +142,10 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
-The active source profile is `daji-3-7-hardening`, checkpoint `daji 3.7.0`.
-This metadata advance does not promote grades or rerun installed qualification.
+The active source profile is `daji-3-7-hardening`; package/book metadata is
+`daji 3.7.1`. The [version ledger](current-line.md#version-and-evidence-ledger)
+separates Git checkpoint names and later source work from recorded installation.
+Neither metadata changes nor this map rerun installed qualification or promote grades.
 The retained October 16, 2026 recalibration kept tensor v5 and updated the hardening
 profile to `daji-3-6-hardening`, with source metadata checkpoint `daji 3.6.0`.
 The commit subject at `301ba02c` says 3.6.4; this review does not relabel source

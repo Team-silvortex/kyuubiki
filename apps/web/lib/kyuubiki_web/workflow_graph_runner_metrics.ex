@@ -154,7 +154,9 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
             resolvers.incoming_artifact_keys
           ),
         "produced_artifacts" =>
-          produced_artifacts_for_run(node, incoming, resolvers.artifact_key),
+          node
+          |> produced_artifacts_for_run(incoming, resolvers.artifact_key)
+          |> Enum.filter(&Map.has_key?(state.artifacts, &1)),
         "duration_ms" => duration_ms
       }
       |> maybe_put_task_ir_ref(node)

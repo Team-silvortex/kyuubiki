@@ -5,17 +5,20 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The current source and documentation version is **daji 3.7.1**.
-> The locally built and installed macOS desktop/runtime baseline is **daji 3.7.1**.
+> The current package and book baseline is **daji 3.7.1**.
+> The last recorded local macOS desktop/runtime installation is **daji 3.7.1**.
 > Installation checks and their limits are tracked in the release snapshot.
 > Building or installing locally does not publish download artifacts or SDKs.
 > Historical evidence keeps its original version and scope. A version number
 > is not industrial certification; public distribution remains evidence-gated.
 
-See the [3.7.1 checkpoint](docs/current-line.md#daji-371-local-packaging) for
-local packaging, compact desktop layouts and the retained numerical hardening.
-Workflow recovery and quality-evidence admission remain part of the mainline.
-Earlier modal research remains scoped evidence, not admitted production recovery.
+Start with the [HTML status chapter](docs/book-ch02-version-line.html) and
+[version/evidence ledger](docs/current-line.md#version-and-evidence-ledger).
+Git checkpoint `091b1393` is titled `daji 3.7.3`; subsequent source repairs do
+not change package metadata or prove a new installation. The active work is
+numerical admission, workflow ownership/cancellation, correct source attribution,
+result retention and consistent execution receipts. Historical experiments keep
+their own scope rather than becoming new production qualification.
 
 Early Daji prioritizes hardening an **agent-driven industrial research system**,
 not increasing feature count. Research agents use the Headless SDKs to run
@@ -109,13 +112,14 @@ See:
 - `deploy/`: portable deployment, update, Agent, and integrity descriptors
 - `language-packs/`: local-first product translation packs
 - `releases/`: retained release and qualification evidence
+- `reports/`: dated source investigations and validation reports with scoped claims
 - `tests/`: cross-module integration and contract checks
 - `docs/`: source-of-truth architecture, operations, and research documentation
 - `make/` and `scripts/`: native-first development and verification entrypoints
 
 Generated run output belongs under ignored `tmp/`, `runs/`, `results/`, or
-`dist/` paths. Retained claims belong under the versioned `releases/` evidence
-surface, not at the repository root.
+`dist/` paths. Keep scoped source reports under `reports/` and release/installed
+acceptance under `releases/`; neither belongs loose at the repository root.
 
 ## Quick Start
 
@@ -140,7 +144,8 @@ make hot-cloud
 make hot-distributed
 ```
 
-Run the lightweight architecture and repository gates:
+Run architecture and repository gates. The architecture lane includes compiled,
+live-service and dependency-audit checks; it is not a documentation-only smoke:
 
 ```sh
 make architecture-check
@@ -195,12 +200,13 @@ benchmark evidence must not be presented as broader certification.
 
 ## Documentation
 
-Use the HTML book for the whole-system reading path:
+Use the HTML book for the whole-system reading path, or the task-first index
+when you already know the outcome you need:
 
 - [Kyuubiki book](docs/book.html)
 - [Current Daji line](docs/current-line.md)
 - [Daji 3.0.0 release notes](docs/daji-3.0.0.md)
-- [Documentation index](docs/README.md)
+- [Task-first documentation index](docs/README.md#choose-a-path)
 - [Navigation matrix](docs/navigation-matrix.html)
 - [Minimal industrial closure](docs/minimal-industrial-closure.md)
 - [Commercial readiness](docs/commercial-readiness-2.0.md)

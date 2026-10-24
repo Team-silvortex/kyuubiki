@@ -24,7 +24,7 @@
       "id": "version-line",
       "title": "What daji 3.x is optimizing for",
       "chapter_page": "docs/book-ch02-version-line.html",
-      "summary": "Current-line posture and the trust-first philosophy for daji 3.x.",
+      "summary": "Active research priorities, package/Git/recorded-installation distinctions, scoped evidence and separately linked checkpoint history for daji 3.x.",
       "sources": [
         "docs/current-line.md",
         "docs/version-line.md",
@@ -67,7 +67,7 @@
       "id": "workflow-and-operators",
       "title": "Workflow and operator philosophy",
       "chapter_page": "docs/book-ch05-workflow-and-operators.html",
-      "summary": "Composite workflow direction, dataset contracts, and centralized operator ownership.",
+      "summary": "Composite workflow contracts, selected-source attribution, result retention, execution receipts, dataset boundaries and centralized operator ownership.",
       "sources": [
         "docs/workflow-graph.md",
         "docs/workflow-dataset.md",

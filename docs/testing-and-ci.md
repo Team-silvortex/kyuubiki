@@ -3,6 +3,47 @@
 This document is the quick map for how Kyuubiki currently validates itself in
 the `daji 3.x` line.
 
+## Choose A Validation Lane
+
+| Change or question | First focused check | What it does not prove |
+| --- | --- | --- |
+| Document navigation or version posture | `make check-doc-inventory`, `make check-doc-book`, `make check-version-line` | Correct numerical or installed acceptance claims |
+| Workflow publications or execution traces | `make test-workflow-execution-evidence` | Remote Agent execution or restart/power-loss durability |
+| Rust retained outputs or selected inputs | Native `check-operator-validation` with the matching component profile and `--execute` | Full Solver or all-workspace qualification |
+| Backend recovery, admission or persistence | `make test-web`, then the specific recovery/qualification lane below | Every backend, platform or interruption model |
+| Numerical kernel | The affected Solver/Engine tests and independent reference fixture | Untested physics or external correlation |
+| UI change | Frontend tests, matching GUI journey, then installed acceptance if required | Headless equivalence or packaged behavior from mocks alone |
+| Readiness or coverage | `make check-module-function-coverage-tensor`, `make check-test-coverage-posture` | Test execution merely because a command is registered |
+
+Keep totals in dated reports with exact targets, platform and skips. A passing
+test suite is not a coverage percentage. Structural tensor success, required
+evidence depth and release permission are separate results. An advisory tensor
+may return success while its readiness remains blocked.
+
+## Workflow Contract Regressions
+
+The shared execution-evidence lane covers real runtime semantics rather than
+GUI text: actual condition publications, selected failed-fallback inputs,
+named-input aliases, local API routing and asynchronous SQLite result readback.
+Rust uses the same fixture across artifact projections. Reproduce it with:
+
+```sh
+make test-workflow-execution-evidence
+```
+
+For narrower controls, execute the existing native component profiles:
+
+```sh
+./scripts/kyuubiki check-operator-validation --profile workflow-selected-input-local-reliability --execute
+./scripts/kyuubiki check-operator-validation --profile workflow-output-retention-local-reliability --execute
+./scripts/kyuubiki check-operator-validation --profile workflow-execution-evidence-local-reliability --execute
+```
+
+Without `--execute`, profile inspection validates definitions, not the tested
+behavior. These commands overlap ordinary suite runs and their counts are not
+additive. In-process retention and same-process SQLite readback must not be
+renamed durable checkpoint, distributed recovery or installed acceptance.
+
 ## Why the test stack is layered
 
 Kyuubiki is no longer one program. It has:

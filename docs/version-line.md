@@ -12,6 +12,7 @@ The active product identity is defined by the
 - current documentation target: `daji 3.7.x` line
 - current source packaging target: `daji 3.7.1`
 - last locally built and installed macOS baseline: `daji 3.7.1`
+- latest version-named Git checkpoint: `091b1393`, subject `daji 3.7.3`; not a package or installed version
 - first version: `3.0.0`
 - terminal version: `3.20.9`
 - cadence: minor positions `0..20`, patch positions `0..9`
@@ -34,6 +35,10 @@ and public distribution are separate actions; this local acceptance does not
 establish all-platform or complete GUI qualification.
 Protocol/schema versions and persistent storage identifiers do not follow
 product SemVer mechanically.
+
+The [version/evidence ledger](current-line.md#version-and-evidence-ledger) owns
+the active distinction between package metadata, recorded installation and
+later source work. A commit subject alone does not reconcile those identities.
 
 `make check-version-line` verifies the active policy rather than assuming
 that the major must be 2. Historical snapshots and evidence keep their

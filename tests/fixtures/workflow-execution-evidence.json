@@ -1,0 +1,48 @@
+{
+  "schema_version": "kyuubiki.workflow-execution-evidence-fixture/v1",
+  "cases": [
+    {"id": "true", "value": true, "chosen_output": "if_true"},
+    {"id": "false", "value": false, "chosen_output": "if_false"},
+    {"id": "zero", "value": 0, "chosen_output": "if_false"},
+    {"id": "null", "value": null, "chosen_output": "if_false"}
+  ],
+  "request": {
+    "graph": {
+      "schema_version": "kyuubiki.workflow-graph/v1",
+      "id": "workflow.execution-evidence",
+      "name": "Execution evidence",
+      "version": "1.0.0",
+      "entry_nodes": ["a", "b"],
+      "output_nodes": ["yes", "no", "raw_a", "raw_b"],
+      "nodes": [
+        {"id": "a", "kind": "input", "inputs": [], "outputs": [{"id": "payload", "artifact_type": "artifact/json"}]},
+        {
+          "id": "choose", "kind": "transform", "operator_id": "transform.first_available",
+          "config": {"on_error": "skip"},
+          "inputs": [{"id": "left", "artifact_type": "artifact/json"}, {"id": "right", "artifact_type": "artifact/json"}],
+          "outputs": [{"id": "payload", "artifact_type": "artifact/json"}]
+        },
+        {
+          "id": "branch", "kind": "condition", "config": {"predicate": {"operator": "truthy"}},
+          "inputs": [{"id": "payload", "artifact_type": "artifact/json"}],
+          "outputs": [{"id": "if_false", "artifact_type": "artifact/json"}, {"id": "unused", "artifact_type": "artifact/json"}, {"id": "if_true", "artifact_type": "artifact/json"}]
+        },
+        {"id": "yes", "kind": "output", "inputs": [{"id": "payload", "artifact_type": "artifact/json"}], "outputs": []},
+        {"id": "b", "kind": "input", "inputs": [], "outputs": [{"id": "payload", "artifact_type": "artifact/json"}]},
+        {"id": "no", "kind": "output", "inputs": [{"id": "payload", "artifact_type": "artifact/json"}], "outputs": []},
+        {"id": "raw_a", "kind": "output", "inputs": [{"id": "payload", "artifact_type": "artifact/json"}], "outputs": []},
+        {"id": "raw_b", "kind": "output", "inputs": [{"id": "payload", "artifact_type": "artifact/json"}], "outputs": []}
+      ],
+      "edges": [
+        {"id": "a-choose", "artifact_type": "artifact/json", "from": {"node": "a", "port": "payload"}, "to": {"node": "choose", "port": "left"}},
+        {"id": "b-choose", "artifact_type": "artifact/json", "from": {"node": "b", "port": "payload"}, "to": {"node": "choose", "port": "right"}},
+        {"id": "choose-branch", "artifact_type": "artifact/json", "from": {"node": "choose", "port": "payload"}, "to": {"node": "branch", "port": "payload"}},
+        {"id": "branch-yes", "artifact_type": "artifact/json", "from": {"node": "branch", "port": "if_true"}, "to": {"node": "yes", "port": "payload"}},
+        {"id": "branch-no", "artifact_type": "artifact/json", "from": {"node": "branch", "port": "if_false"}, "to": {"node": "no", "port": "payload"}},
+        {"id": "a-raw", "artifact_type": "artifact/json", "from": {"node": "a", "port": "payload"}, "to": {"node": "raw_a", "port": "payload"}},
+        {"id": "b-raw", "artifact_type": "artifact/json", "from": {"node": "b", "port": "payload"}, "to": {"node": "raw_b", "port": "payload"}}
+      ]
+    },
+    "input_artifacts": {"a": true, "b": true}
+  }
+}

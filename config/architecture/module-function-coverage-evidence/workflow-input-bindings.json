@@ -4,6 +4,41 @@
   "summary": "Source macOS Rust/Orchestra graph input binding validation rejects silently ignored connections before execution, restored checkpoint lookup and asynchronous admission. Shared negative fixtures, callback/lineage checks and two actual branch/join restart rounds establish contract consistency only, not durable continuation, independent numerical accuracy or operational qualification.",
   "evidence_claims": [
     {
+      "id": "workflow-execution-evidence-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner_metrics.ex",
+        "apps/web/test/support/workflow_execution_evidence.exs",
+        "apps/web/test/kyuubiki_web/workflow_execution_evidence_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_execution_evidence_api_test.exs",
+        "tests/fixtures/workflow-execution-evidence.json",
+        "workers/rust/crates/engine/tests/shared_execution_evidence.rs",
+        "config/operator-validation-profiles/workflow-runtime.json",
+        "make/tests.mk",
+        "docs/book-ch05-workflow-and-operators.html",
+        "reports/workflow-execution-evidence-20261024.md"
+      ],
+      "required_text": [
+        "condition traces name only actual publications, including false zero and null",
+        "failed fallback traces keep the selected source without claiming unused alternatives",
+        "failed named inputs preserve both bindings even when the source is aliased",
+        "async branch receipts stay consistent after SQLite result readback",
+        "persisted failed fallback receipts preserve selected input and compact failure cause",
+        "shared_execution_evidence_conditions_record_only_actual_publications_in_all_projections",
+        "shared_execution_evidence_failed_fallbacks_name_only_selected_and_aliased_sources",
+        "shared_execution_evidence_failed_named_inputs_keep_both_real_bindings",
+        "workflow-execution-evidence-fixture/v1",
+        "test-workflow-execution-evidence",
+        "workflow-execution-receipts",
+        "This is bounded Rust/Orchestra execution-trace consistency and local SQLite result readback evidence, not authenticated provenance, process-restart or power-loss qualification, distributed recovery, installed acceptance or numerical certification."
+      ]
+    },
+    {
       "id": "workflow-consumed-input-binding-contract",
       "status": "proven",
       "grade": "verified",

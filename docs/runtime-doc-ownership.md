@@ -18,6 +18,10 @@ back to it instead of re-explaining the same boundary in full.
   repository storage/cleanup rules.
 - `current-line.md` indexes active progress. Dated `reports/` and release
   evidence keep their original results, versions and limitations.
+- `version-line.md` owns cadence and formal product-line policy. The active
+  version/evidence ledger belongs in `current-line.md`, not every topic page.
+- The `daji-*-history.md` checkpoint archives own superseded progress narratives.
+  Current entry anchors point there; book chapters and Hub mirrors stay short.
 - `book-ch03-architecture-boundaries.html` is the book-facing entry to these
   boundaries. Point to the primary owner rather than copying all historical
   results into every map; do not delete retained evidence when trimming prose.

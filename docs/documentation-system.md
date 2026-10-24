@@ -12,14 +12,19 @@ The goal is to keep the documentation useful for three readers at once:
 
 ### Central entrypoints
 
-- `README.md`
-  Complete local inventory and role-based reading paths.
+- repository `README.md`
+  Product overview, boundaries and a short startup route.
+- `docs/README.md`
+  Complete local inventory grouped by task and responsibility.
 - `book.html`
   Narrative book entry for humans and assistants.
 - `book-manifest.json`
   Machine-readable book map and reading-path manifest.
 - `current-line.md`
-  Product-line posture and current handoff direction.
+  Compact active status, version/evidence ledger and current handoff direction.
+- `daji-3.6-to-3.7-history.md`, `daji-3.5-history.md`,
+  `daji-3.3-to-3.4-history.md`
+  Historical checkpoint narratives with their original evidence scope.
 - `moxi-handoff.md`
   Historical gate that defined the transition into `moxi 2.x`.
 
@@ -58,9 +63,12 @@ Do not treat generated HTML as the primary edit surface:
 
 - `update-catalog.html`
 - `installation-integrity-contract.html`
-- Hub shelf pages under `apps/hub-gui/ui/docs/`
 
 When generated docs drift, change the source JSON/generator first.
+Central book chapters and the short Hub shelf narratives are hand-maintained
+presentations, not generated behavioral contracts. Edit their topic owner first,
+then update those presentations. Keep user-facing reading in HTML rather than
+making an operator follow a raw Markdown source as the only route.
 
 ## Inventory Rules
 
@@ -92,12 +100,13 @@ document is good; it ensures no document is invisible.
 6. Avoid absolute local paths, machine-specific commands, or chat-only context
    in source docs.
 
-## Moxi Maintenance Posture
+## Daji Maintenance Posture
 
 During the active `daji 3.x` line, documentation changes should close one of
 these gaps:
 
-- keep the current shipping point and the `2.0.0` historical baseline distinct
+- separate package/book version, version-named Git checkpoint, recorded
+  installation and source working-tree evidence
 - turn hidden operational knowledge into a source document
 - link a capability to its test, evidence, or limitation
 - reduce duplicate source-of-truth narratives
@@ -105,3 +114,20 @@ these gaps:
 
 If a documentation change does none of these, it probably belongs in a later
 cleanup rather than the current release checkpoint.
+
+## Current Status And History
+
+Keep the active page short enough to answer what exists, what changed and what
+must be verified next. Move superseded checkpoint descriptions to the matching
+history file rather than copying them into book chapters or Hub mirrors.
+Preserve their body, dates, relative links and old entry anchors; do not relabel
+historical source tests as fresh installed acceptance.
+
+Package labels follow the manifests. Recorded installation labels follow a
+specific retained snapshot and must not be advanced by the book-version sync.
+Git subjects are a separate ledger field. On any release edit, check all three
+identities rather than replacing every version-like string.
+
+The document inventory proves discoverability; the book check proves its
+configured HTML paths and metadata. Neither validates the scientific truth of
+a report, every Markdown fragment or the current health of a user's machine.
