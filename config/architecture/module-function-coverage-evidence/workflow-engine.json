@@ -2,6 +2,70 @@
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
   "summary": "Compiled workflow execution, deterministic scheduling, cache-aware and projected artifact retention, solver-pipeline hot-path evidence, fail-closed summary validation, guarded quality ranking, and budget-safe, target-validated, identity-safe sweep execution with complete summary evidence and branch-local recovery for the Rust engine.",
+  "evidence_claims": [
+    {
+      "id": "workflow-cancellation-boundaries-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/tests/workflow_cancellation_boundaries.rs",
+        "workers/rust/crates/engine/tests/diagnostic_cancellation_workflow.rs",
+        "workers/rust/crates/engine/tests/support/diagnostic_chain.rs",
+        "config/operator-validation-profiles/workflow-runtime.json",
+        "reports/workflow-cancellation-boundaries-20261024.md"
+      ],
+      "required_text": [
+        "check_cancellation",
+        "active_scope_poll_preserves_checkpoints_observers_and_sticky_cancellation",
+        "active_scope_poll_observes_parent_without_leaking_into_an_unrelated_thread",
+        "workflow_cancellation_boundaries_skip_policy_cannot_return_an_inner_success",
+        "workflow_cancellation_boundaries_stop_before_a_queued_independent_node",
+        "workflow_cancellation_boundaries_final_recoverable_node_cannot_complete_the_graph",
+        "workflow_cancellation_boundaries_pending_cancel_stops_a_pure_forwarding_graph",
+        "workflow_cancellation_boundaries_ordinary_errors_keep_recovery_and_unobserved_error_identity",
+        "diagnostic_graph_error_policy_cannot_publish_cancelled_work_and_fresh_run_recovers",
+        "This is bounded same-thread cooperative workflow cancellation admission, not preemption of opaque callbacks, rollback of operator side effects, a wall-clock latency bound, distributed or installed cancellation qualification, or durable restart."
+      ]
+    },
+    {
+      "id": "workflow-payload-ownership-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/src/workflow_artifact_retention.rs",
+        "workers/rust/crates/engine/src/tests/workflow_publication_ownership.rs",
+        "workers/rust/crates/engine/tests/workflow_payload_ownership.rs",
+        "workers/rust/crates/engine/src/tests/workflow_artifact_contract.rs",
+        "workers/rust/crates/engine/src/tests/workflow_execution_plan.rs",
+        "tests/fixtures/workflow-artifact-contract.json",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-payload-ownership-20261024.md"
+      ],
+      "required_text": [
+        "workflow_publication_ownership_moves_last_port_and_clones_only_independent_siblings",
+        "workflow_payload_ownership_compact_and_ephemeral_chains_move_the_original_buffer",
+        "workflow_payload_ownership_cached_input_keeps_the_original_without_aliasing_outputs",
+        "workflow_payload_ownership_last_shared_consumer_moves_without_aliasing_other_outputs",
+        "workflow_payload_ownership_projection_cache_and_declaration_order_preserve_evidence",
+        "workflow_payload_ownership_failed_generated_output_retains_raw_evidence_and_clean_reuse",
+        "workflow_payload_ownership_raw_and_condition_forwarding_keep_the_existing_input_budget",
+        "workflow_payload_ownership_zero_output_producers_still_validate_generated_results",
+        "first_available_validates_direct_input_before_reusing_it",
+        "raw_input_and_condition_forwarding_keep_the_input_budget",
+        "This is bounded in-process Rust workflow payload-ownership and recovery regression evidence, not zero-copy transport, elimination of required retained copies, an aggregate memory bound, a remote benchmark, Elixir ownership qualification or durable restart."
+      ]
+    }
+  ],
   "paradigm_contract_evidence": {
     "validation": [
       {

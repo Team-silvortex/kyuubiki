@@ -147,3 +147,61 @@ fn cancellation_request_does_not_relabel_an_unrelated_error() {
     assert_eq!(result.unwrap_err(), "numerical singularity");
     assert!(!control.was_interrupted());
 }
+
+#[test]
+fn active_scope_poll_preserves_checkpoints_observers_and_sticky_cancellation() {
+    use std::{cell::Cell, rc::Rc};
+    check_cancellation().unwrap();
+    let control = SolverControl::default();
+    let calls = Rc::new(Cell::new(0));
+    let observed = calls.clone();
+    let error = with_solver_observer(
+        &control,
+        move |_| observed.set(observed.get() + 1),
+        || {
+            checkpoint(SolverStage::DenseFactor, 7)?;
+            let before = control.last_checkpoint();
+            check_cancellation()?;
+            control.request_cancel();
+            let first = check_cancellation().unwrap_err();
+            assert_eq!(check_cancellation().unwrap_err(), first);
+            assert_eq!(control.last_checkpoint(), before);
+            assert_eq!(calls.get(), 1);
+            Err::<(), String>(first)
+        },
+    )
+    .unwrap_err();
+    assert!(error.contains("dense_factor after 7 steps"), "{error}");
+    assert!(control.was_interrupted());
+    let fresh = SolverControl::default();
+    with_solver_control(&fresh, check_cancellation).unwrap();
+    assert!(fresh.last_checkpoint().is_none());
+    assert!(!fresh.was_interrupted());
+}
+
+#[test]
+fn active_scope_poll_observes_parent_without_leaking_into_an_unrelated_thread() {
+    let parent = SolverControl::default();
+    let child = SolverControl::default();
+    let result = with_solver_control(&parent, || {
+        with_solver_control(&child, || {
+            checkpoint(SolverStage::ResultDiagnostics, 64)?;
+            parent.request_cancel();
+            assert!(
+                std::thread::spawn(check_cancellation)
+                    .join()
+                    .unwrap()
+                    .is_ok()
+            );
+            check_cancellation()
+        })
+    });
+    assert!(
+        result
+            .unwrap_err()
+            .contains("result_diagnostics after 64 steps")
+    );
+    assert!(parent.was_interrupted() && child.was_interrupted());
+    assert_eq!(parent.last_checkpoint(), child.last_checkpoint());
+    check_cancellation().unwrap();
+}

@@ -151,7 +151,7 @@ fn harmonic_original_equations_keep_complex_balance_and_loaded_supports() {
 }
 
 #[test]
-fn harmonic_original_equations_preserve_representable_contrast_but_reject_lost_range() {
+fn harmonic_original_equations_certify_bounded_contrast_without_hiding_erased_force() {
     for power in [500, 1000] {
         let mut request = contrast_request();
         request.elements[0].stiffness = 2.0_f64.powi(power);
@@ -163,21 +163,35 @@ fn harmonic_original_equations_preserve_representable_contrast_but_reject_lost_r
                 Complex::real(sign * 2.0_f64.powi(-power)),
                 Complex::real(sign * 2.0_f64.powi(power)),
             ];
-            let validation = validate_harmonic_equilibrium(
-                &request,
-                0.0,
-                &displacement,
-                &[None, Some(0), Some(1)],
-            );
+            // The rounded closed-form state leaves only sign * 2^(-2*power)
+            // in either free row, against a scale of at least two unit terms.
+            validate_harmonic_equilibrium(&request, 0.0, &displacement, &[None, Some(0), Some(1)])
+                .unwrap();
+            for (node, factor) in [(1, 0.0), (2, 0.5)] {
+                let mut forged = displacement;
+                forged[node].re *= factor;
+                let error = validate_harmonic_equilibrium(
+                    &request,
+                    0.0,
+                    &forged,
+                    &[None, Some(0), Some(1)],
+                )
+                .unwrap_err();
+                assert!(error.contains("backward-error"), "{error}");
+            }
             if power == 500 {
-                validation.unwrap();
                 let result = solve_harmonic_spring_1d(&request).unwrap();
                 assert_eq!(
                     result.frequencies[0].nodes[1].displacement_amplitude,
                     2.0_f64.powi(-power)
                 );
             } else {
-                assert!(validation.unwrap_err().contains("lose numerical range"));
+                let error = solve_harmonic_spring_1d(&request).unwrap_err();
+                assert!(
+                    error.contains("prepared row")
+                        && error.contains("normalization would lose numerical range"),
+                    "{error}"
+                );
             }
         }
     }

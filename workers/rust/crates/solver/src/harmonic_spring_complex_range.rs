@@ -7,6 +7,7 @@ use crate::{
 #[path = "harmonic_spring_exact_sum.rs"]
 mod exact_sum;
 use exact_sum::ExactSum;
+pub(crate) use exact_sum::{CoefficientSum, InertiaSum};
 
 #[path = "harmonic_spring_quotient.rs"]
 mod quotient;

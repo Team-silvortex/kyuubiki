@@ -4,6 +4,210 @@
   "domain": "harmonic-complex-cancellation",
   "profiles": [
     {
+      "profile_id": "harmonic-residual-many-term-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-residual-many-term-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "compensated_endpoint_sums_with_explicit_outward_remaining_error_radius",
+        "independent_integer_endpoints_full_significands_and_subnormal_tail_controls",
+        "interleaved_ordinary_and_replayed_row_forgery_denials",
+        "65536_parallel_element_equivalent_response_and_member_force_references",
+        "32768_element_workflow_readback_and_65536_element_output_budget_denial",
+        "long_replay_cancellation_and_fresh_complete_request_reuse"
+      ],
+      "formal_invariants": [
+        "each_endpoint_exact_sum_stays_within_high_plus_low_plus_or_minus_radius",
+        "compensation_rounding_tails_are_bounded_not_discarded",
+        "invalid_bounds_or_overflow_cannot_publish_a_partially_updated_interval",
+        "only_flagged_rows_use_constant_size_endpoint_accumulators",
+        "ordinary_rows_pivot_floors_original_tolerance_and_workflow_security_budgets_are_unchanged",
+        "mixed_row_validation_never_skips_an_ordinary_or_replayed_row",
+        "cooperative_cancellation_and_output_budget_failure_publish_no_successful_prefix"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_constraint_validation.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_residual_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_residual_sum.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_residual_sum_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_residual_mixed_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_residual_interval_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_residual_enclosure.rs",
+        "workers/rust/crates/engine/tests/harmonic_residual_enclosure.rs",
+        "reports/harmonic-residual-many-term-20261024.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-residual-many-term-integer-mixed-row-and-parallel-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_residual_m -- --nocapture"
+        },
+        {
+          "id": "harmonic-residual-many-term-public-workflow-cancellation-and-budget-controls",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver -p kyuubiki-engine --test harmonic_residual_enclosure harmonic_residual_many -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "harmonic-residual-enclosure-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-residual-enclosure-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "outward_normalization_bounds_and_independent_signed_integer_lattices",
+        "rounded_complex_response_and_static_contrast_closed_form_controls",
+        "forged_amplitude_phase_erased_force_support_and_reduction_map_denials",
+        "ordinary_row_storage_and_no_replay_controls",
+        "dense_path_signed_scaled_oriented_public_and_serialized_workflow_readback",
+        "replay_entry_accumulation_and_final_validation_cancellation_with_clean_reuse"
+      ],
+      "formal_invariants": [
+        "irreversible_alignment_replays_the_complete_original_equation_not_a_partial_sum",
+        "normalized_product_intervals_enclose_nonzero_underflow_and_fma_tails",
+        "residual_l1_upper_over_scale_lower_must_certify_the_existing_tolerance",
+        "invalid_nonfinite_or_uncertain_certificates_fail_closed",
+        "only_flagged_rows_allocate_sparse_enclosure_state",
+        "ordinary_compensated_rows_pivot_floors_and_matrix_range_admission_are_unchanged",
+        "cooperative_cancellation_and_late_failure_cannot_publish_a_successful_prefix"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_constraint_validation.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_residual_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_residual_interval_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_residual_enclosure_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_constraint_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_residual_enclosure.rs",
+        "workers/rust/crates/engine/tests/harmonic_residual_enclosure.rs",
+        "workers/rust/crates/solver/tests/harmonic_inertia_precision.rs",
+        "reports/harmonic-residual-enclosure-20261024.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-residual-enclosure-integer-boundaries-and-denial-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_residual_enclosure -- --nocapture"
+        },
+        {
+          "id": "harmonic-residual-original-equation-and-admission-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_original_equations -- --nocapture"
+        },
+        {
+          "id": "harmonic-residual-enclosure-public-and-workflow-readback",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver -p kyuubiki-engine --test harmonic_residual_enclosure -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "harmonic-inertia-precision-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-inertia-precision-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "independent_cubic_identity_and_u128_product_difference_references",
+        "dense_path_frequency_mass_scale_sign_orientation_and_force_readback",
+        "zero_fma_underflow_scaled_sticky_bit_and_final_subnormal_controls",
+        "original_equation_scaled_inertia_term_visitation",
+        "serialized_dispatch_workflow_cancellation_failure_and_clean_reuse"
+      ],
+      "formal_invariants": [
+        "admitted_inertia_terms_keep_normalized_product_residuals_until_final_assembly",
+        "zero_fma_exactness_shortcut_requires_a_safe_residual_range",
+        "unrestorable_intermediate_parts_defer_to_a_checked_scaled_lattice",
+        "nonexact_subnormal_outputs_capacity_loss_and_true_overflow_fail_closed",
+        "ordinary_correction_storage_is_not_widened_for_every_coefficient",
+        "postprocessing_order_pivot_thresholds_and_original_equation_tolerance_are_unchanged",
+        "cancelled_or_failed_runs_publish_no_successful_workflow_prefix"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_1d.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_frequency_range.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_inertia_product_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_inertia_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_inertia_residual_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_assembly.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_assembly_sum_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_exact_sum.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_exact_sum_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_constraint_validation.rs",
+        "workers/rust/crates/solver/tests/harmonic_inertia_precision.rs",
+        "workers/rust/crates/engine/tests/harmonic_inertia_precision.rs",
+        "reports/harmonic-inertia-precision-20261024.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-inertia-product-assembly-lattice-and-equation-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_inertia_precision -- --nocapture"
+        },
+        {
+          "id": "harmonic-inertia-existing-postprocessing-order-and-range-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_frequency_product -- --nocapture"
+        },
+        {
+          "id": "harmonic-inertia-public-and-workflow-response-recovery-controls",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver -p kyuubiki-engine --test harmonic_inertia_precision -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "harmonic-assembly-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-assembly-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "independent_damped_and_undamped_dynamic_diagonal_closed_forms",
+        "dense_path_order_orientation_and_binary_scale_controls",
+        "signed_integer_lattice_full_range_midpoint_and_overflow_controls",
+        "serialized_dispatch_workflow_member_force_and_failed_prefix_readback",
+        "grouping_replay_and_final_rounding_cancellation_with_clean_reuse"
+      ],
+      "formal_invariants": [
+        "represented_coefficient_additions_retain_exact_twosum_tails_before_final_rounding",
+        "partial_sum_overflow_defers_finite_operands_to_checked_final_accumulation",
+        "exact_addition_controls_allocate_no_correction_buffer",
+        "normalized_eighteen_limb_accumulation_keeps_its_existing_admission_bound",
+        "pivot_threshold_original_equation_gate_and_operator_protocol_are_unchanged",
+        "failed_or_cancelled_assembly_cannot_publish_a_successful_workflow_prefix"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_1d.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_assembly.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_assembly_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_assembly_sum_tests.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_exact_sum.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_exact_sum_tests.rs",
+        "workers/rust/crates/solver/tests/harmonic_assembly.rs",
+        "workers/rust/crates/engine/tests/harmonic_assembly.rs",
+        "reports/harmonic-assembly-20261024.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-assembly-coefficient-and-tail-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_assembly -- --nocapture"
+        },
+        {
+          "id": "harmonic-assembly-existing-normalized-accumulator-controls",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib harmonic_complex_accumulation -- --nocapture"
+        },
+        {
+          "id": "harmonic-assembly-public-and-workflow-closed-form-readback",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver -p kyuubiki-engine --test harmonic_assembly -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "harmonic-row-quotient-local-reliability",
       "profile_role": "component_profile",
       "qualification_candidate_id": "harmonic-row-quotient-local-reliability",

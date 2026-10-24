@@ -4,6 +4,47 @@
   "domain": "workflow",
   "profiles": [
     {
+      "profile_id": "workflow-payload-ownership-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-payload-ownership-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["transform.first_available"],
+      "validation_methods": [
+        "owned_buffer_identity_through_compact_and_ephemeral_chains",
+        "zero_single_and_multiport_original_move_with_independent_sibling_values",
+        "cached_and_shared_source_isolation_under_mutation",
+        "projection_cache_and_reordered_graph_execution_evidence_parity",
+        "generated_output_budget_denial_raw_evidence_retention_and_clean_reuse",
+        "existing_raw_forwarding_and_zero_output_generated_budget_controls"
+      ],
+      "formal_invariants": [
+        "admitted_owned_input_is_moved_not_cloned_from_the_request_map",
+        "publication_moves_the_original_to_the_last_declared_port",
+        "other_retained_ports_own_independent_deep_values",
+        "only_last_transient_consumers_may_take_a_shared_artifact",
+        "port_order_payload_schema_cache_policy_and_lineage_are_unchanged",
+        "output_validation_still_precedes_generated_publication_even_without_ports",
+        "raw_input_forwarding_keeps_its_distinct_existing_budget",
+        "failed_producers_publish_no_ports_or_lineage_and_independent_raw_evidence_survives"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/src/workflow_artifact_retention.rs",
+        "workers/rust/crates/engine/src/tests/workflow_publication_ownership.rs",
+        "workers/rust/crates/engine/tests/workflow_payload_ownership.rs",
+        "workers/rust/crates/engine/src/tests/workflow_artifact_contract.rs",
+        "workers/rust/crates/engine/src/tests/workflow_execution_plan.rs",
+        "tests/fixtures/workflow-artifact-contract.json",
+        "reports/workflow-payload-ownership-20261024.md"
+      ],
+      "commands": [
+        {"id": "workflow-publication-value-ownership", "kind": "invariant", "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --lib workflow_publication_ownership -- --nocapture"},
+        {"id": "workflow-payload-public-ownership-and-recovery", "kind": "boundary_regression", "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test workflow_payload_ownership -- --nocapture"},
+        {"id": "workflow-payload-existing-publication-budgets", "kind": "contract", "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --lib workflow_artifact_contract -- --nocapture"},
+        {"id": "workflow-payload-existing-priority-and-retention", "kind": "contract", "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --lib workflow_execution_plan -- --nocapture"}
+      ]
+    },
+    {
       "profile_id": "workflow-named-input-contract",
       "profile_role": "component_profile",
       "qualification_candidate_id": "workflow-named-input-contract",

@@ -1,0 +1,45 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "daji 3.0.x",
+  "domain": "workflow-runtime",
+  "profiles": [
+    {
+      "profile_id": "workflow-cancellation-boundaries-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-cancellation-boundaries-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["extract.stokes_flow_result_diagnostics", "transform.first_available"],
+      "validation_methods": [
+        "captured_inner_workflow_errors_distinguished_from_outer_scope_protection",
+        "pending_pure_graph_node_handoff_and_final_recoverable_node_controls",
+        "all_output_none_projections_and_top_level_or_nested_skip_policy",
+        "ordinary_error_recovery_and_unobserved_error_identity_controls",
+        "nested_parent_cancellation_checkpoint_observer_and_thread_scope_controls",
+        "five_domain_diagnostic_quality_chains_and_fresh_complete_reuse"
+      ],
+      "formal_invariants": [
+        "active_scope_cancellation_is_polled_before_workflow_entry_and_node_execution",
+        "observed_cancellation_cannot_become_an_inner_completed_graph_via_skip_policy",
+        "final_graph_admission_rechecks_cancellation_after_a_skipped_last_node",
+        "polling_preserves_the_last_real_checkpoint_and_does_not_emit_fake_progress",
+        "ordinary_errors_are_not_classified_by_cancellation_words_in_their_text",
+        "fail_fast_errors_return_without_relabeling_an_unobserved_late_request",
+        "fresh_execution_uses_a_fresh_control_without_inherited_interruption"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_control_tests.rs",
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/tests/workflow_cancellation_boundaries.rs",
+        "workers/rust/crates/engine/tests/diagnostic_cancellation_workflow.rs",
+        "workers/rust/crates/engine/tests/support/diagnostic_chain.rs",
+        "reports/workflow-cancellation-boundaries-20261024.md"
+      ],
+      "commands": [
+        {"id": "workflow-cancellation-active-scope-controls", "kind": "invariant", "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-solver --lib solver_control::tests -- --nocapture"},
+        {"id": "workflow-cancellation-node-and-completion-boundaries", "kind": "boundary_regression", "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test workflow_cancellation_boundaries -- --nocapture"},
+        {"id": "workflow-cancellation-existing-cross-domain-controls", "kind": "cross_check", "command": "cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test diagnostic_cancellation_workflow -- --nocapture"}
+      ]
+    }
+  ]
+}

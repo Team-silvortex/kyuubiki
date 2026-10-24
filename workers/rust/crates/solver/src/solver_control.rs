@@ -431,7 +431,9 @@ fn cancellation_error() -> Option<SolverCancelled> {
     })
 }
 
-pub(crate) fn check_cancellation() -> Result<(), String> {
+/// Poll this thread's active control scopes without creating a numerical checkpoint.
+/// An observed request stays sticky; scopes and observers keep their last checkpoint.
+pub fn check_cancellation() -> Result<(), String> {
     cancellation_error().map_or(Ok(()), |error| Err(error.to_string()))
 }
 

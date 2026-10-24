@@ -20,7 +20,8 @@
     "config/operator-validation-profiles/structural-spatial-frame.json",
     "config/operator-validation-profiles/thermal-structural.json",
     "config/operator-validation-profiles/transport.json",
-    "config/operator-validation-profiles/workflow.json"
+    "config/operator-validation-profiles/workflow.json",
+    "config/operator-validation-profiles/workflow-runtime.json"
   ],
   "profiles": [
     {

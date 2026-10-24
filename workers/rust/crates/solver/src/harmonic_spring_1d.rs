@@ -23,9 +23,21 @@ use constraint_validation::validate_harmonic_equilibrium;
 #[path = "harmonic_spring_frequency_range.rs"]
 mod frequency_range;
 
+#[path = "harmonic_spring_assembly.rs"]
+mod assembly;
+use assembly::Corrections;
+
 #[cfg(test)]
 #[path = "harmonic_spring_constraint_tests.rs"]
 mod constraint_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_assembly_tests.rs"]
+mod assembly_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_inertia_tests.rs"]
+mod inertia_tests;
 
 struct ReducedLayout {
     free: Vec<usize>,
@@ -286,8 +298,15 @@ fn assemble_reduced_dynamic_stiffness(
     checkpoint(SolverStage::ElementAssembly, 0)?;
     let mut matrix = vec![vec![Complex::default(); free.len()]; free.len()];
     let mut rhs = vec![Complex::default(); free.len()];
+    let mut corrections = Corrections::default();
     for (row, &node) in free.iter().enumerate() {
-        matrix[row][row].re = -inertia_coefficient(omega, request.nodes[node].mass, node)?;
+        let inertia = inertia_coefficient(omega, request.nodes[node].mass, node)?;
+        corrections.add_scaled_real(
+            row * free.len() + row,
+            &mut matrix[row][row],
+            inertia.parts.map(|part| -part),
+            inertia.exponent,
+        )?;
         rhs[row] = Complex::real(request.nodes[node].load_x);
         checkpoint_chunk(SolverStage::ConstraintReduce, row + 1, free.len())?;
     }
@@ -296,14 +315,34 @@ fn assemble_reduced_dynamic_stiffness(
         let first = reduced_index[element.node_i];
         let second = reduced_index[element.node_j];
         if let Some(first) = first {
-            matrix[first][first] = matrix[first][first] + coefficient;
+            corrections.add(
+                first * free.len() + first,
+                &mut matrix[first][first],
+                coefficient,
+            )?;
         }
         if let Some(second) = second {
-            matrix[second][second] = matrix[second][second] + coefficient;
+            corrections.add(
+                second * free.len() + second,
+                &mut matrix[second][second],
+                coefficient,
+            )?;
         }
         if let (Some(first), Some(second)) = (first, second) {
-            matrix[first][second] = matrix[first][second] - coefficient;
-            matrix[second][first] = matrix[second][first] - coefficient;
+            let negative = Complex {
+                re: -coefficient.re,
+                im: -coefficient.im,
+            };
+            corrections.add(
+                first * free.len() + second,
+                &mut matrix[first][second],
+                negative,
+            )?;
+            corrections.add(
+                second * free.len() + first,
+                &mut matrix[second][first],
+                negative,
+            )?;
         }
         checkpoint_chunk(
             SolverStage::ElementAssembly,
@@ -311,6 +350,7 @@ fn assemble_reduced_dynamic_stiffness(
             request.elements.len(),
         )?;
     }
+    corrections.finish(matrix.iter_mut().flatten(), request.elements.len())?;
     Ok((matrix, rhs))
 }
 
@@ -326,9 +366,16 @@ fn assemble_path_dynamic_stiffness(
     let mut lower = vec![Complex::default(); size.saturating_sub(1)];
     let mut upper = vec![Complex::default(); size.saturating_sub(1)];
     let mut rhs = vec![Complex::default(); size];
+    let mut corrections = Corrections::default();
     for (reduced, &node) in layout.free.iter().enumerate() {
         let row = path_position[reduced];
-        diagonal[row].re = -inertia_coefficient(omega, request.nodes[node].mass, node)?;
+        let inertia = inertia_coefficient(omega, request.nodes[node].mass, node)?;
+        corrections.add_scaled_real(
+            row,
+            &mut diagonal[row],
+            inertia.parts.map(|part| -part),
+            inertia.exponent,
+        )?;
         rhs[row] = Complex::real(request.nodes[node].load_x);
         checkpoint_chunk(SolverStage::ConstraintReduce, reduced + 1, size)?;
     }
@@ -337,10 +384,12 @@ fn assemble_path_dynamic_stiffness(
         let first = layout.reduced_index[element.node_i];
         let second = layout.reduced_index[element.node_j];
         if let Some(first) = first {
-            diagonal[path_position[first]] = diagonal[path_position[first]] + coefficient;
+            let row = path_position[first];
+            corrections.add(row, &mut diagonal[row], coefficient)?;
         }
         if let Some(second) = second {
-            diagonal[path_position[second]] = diagonal[path_position[second]] + coefficient;
+            let row = path_position[second];
+            corrections.add(row, &mut diagonal[row], coefficient)?;
         }
         if let (Some(first), Some(second)) = (first, second) {
             let first = path_position[first];
@@ -351,8 +400,12 @@ fn assemble_path_dynamic_stiffness(
                     "harmonic spring 1d path layout is inconsistent with its topology".to_string(),
                 );
             }
-            upper[left] = upper[left] - coefficient;
-            lower[left] = lower[left] - coefficient;
+            let negative = Complex {
+                re: -coefficient.re,
+                im: -coefficient.im,
+            };
+            corrections.add(size + lower.len() + left, &mut upper[left], negative)?;
+            corrections.add(size + left, &mut lower[left], negative)?;
         }
         checkpoint_chunk(
             SolverStage::ElementAssembly,
@@ -360,6 +413,10 @@ fn assemble_path_dynamic_stiffness(
             request.elements.len(),
         )?;
     }
+    corrections.finish(
+        diagonal.iter_mut().chain(&mut lower).chain(&mut upper),
+        request.elements.len(),
+    )?;
     Ok(ComplexTridiagonalSystem {
         diagonal,
         lower,
@@ -368,8 +425,12 @@ fn assemble_path_dynamic_stiffness(
     })
 }
 
-fn inertia_coefficient(omega: f64, mass: f64, node: usize) -> Result<f64, String> {
-    frequency_range::square_product(omega, mass)
+fn inertia_coefficient(
+    omega: f64,
+    mass: f64,
+    node: usize,
+) -> Result<frequency_range::Inertia, String> {
+    frequency_range::inertia_parts(omega, mass)
         .map_err(|error| format!("node {node} inertia coefficient {error}"))
 }
 

@@ -5,6 +5,21 @@ use crate::{
 };
 use kyuubiki_protocol::SolveHarmonicSpring1dRequest;
 
+#[cfg(test)]
+#[path = "harmonic_spring_inertia_residual_tests.rs"]
+mod inertia_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_residual_enclosure_tests.rs"]
+mod enclosure_tests;
+
+#[cfg(test)]
+#[path = "harmonic_spring_residual_mixed_tests.rs"]
+mod mixed_tests;
+
+#[path = "harmonic_spring_residual_range.rs"]
+mod range;
+
 pub(super) fn validate_harmonic_equilibrium(
     request: &SolveHarmonicSpring1dRequest,
     omega: f64,
@@ -16,6 +31,7 @@ pub(super) fn validate_harmonic_equilibrium(
     let mut rows = (0..free_count)
         .map(|_| Equation::default())
         .collect::<Vec<_>>();
+    let mut needs_replay = false;
     for (index, node) in request.nodes.iter().enumerate() {
         if let Some(row) = reduced_index[index] {
             rows[row].observe(&[Product::new(node.load_x, 1.0)?]);
@@ -42,10 +58,16 @@ pub(super) fn validate_harmonic_equilibrium(
             if equation.exponent == i32::MIN {
                 equation.exponent = 0;
             }
-            let (load, tail) = Product::new(node.load_x, 1.0)?.normalized(equation.exponent)?;
-            equation.real.add(load);
-            equation.real.add(tail);
-            equation.scale.add(load.abs());
+            if let Some((load, tail)) =
+                Product::new(node.load_x, 1.0)?.normalized(equation.exponent)?
+            {
+                equation.real.add(load);
+                equation.real.add(tail);
+                equation.scale.add(load.abs());
+            } else {
+                equation.needs_replay = true;
+                needs_replay = true;
+            }
         }
         checkpoint_chunk(
             SolverStage::HarmonicResidual,
@@ -61,11 +83,27 @@ pub(super) fn validate_harmonic_equilibrium(
         |row, products| {
             rows[row]
                 .subtract(products)
-                .map_err(|error| format!("harmonic original-system free row {row}: {error}"))
+                .map_err(|error| format!("harmonic original-system free row {row}: {error}"))?;
+            needs_replay |= rows[row].needs_replay;
+            Ok(())
         },
     )?;
     let tolerance = (128.0 * f64::EPSILON * free_count as f64).clamp(1.0e-12, 1.0e-8);
+    if needs_replay {
+        range::validate(
+            request,
+            omega,
+            displacement,
+            reduced_index,
+            &rows,
+            tolerance,
+        )?;
+    }
     for (row, equation) in rows.into_iter().enumerate() {
+        if equation.needs_replay {
+            checkpoint_chunk(SolverStage::HarmonicResidual, row + 1, free_count)?;
+            continue;
+        }
         let residual = equation.real.value().hypot(equation.imaginary.value());
         let scale = equation.scale.value();
         let relative = if scale == 0.0 { 0.0 } else { residual / scale };
@@ -131,13 +169,19 @@ fn visit_terms(
 ) -> Result<(), String> {
     for (index, node) in request.nodes.iter().enumerate() {
         if let Some(row) = reduced_index[index] {
-            visit(
-                row,
-                products(
-                    Complex::real(-inertia_coefficient(omega, node.mass, index)?),
-                    displacement[index],
-                )?,
-            )?;
+            let inertia = inertia_coefficient(omega, node.mass, index)?;
+            for part in inertia.parts {
+                if part != 0.0 {
+                    visit(
+                        row,
+                        products_scaled(
+                            Complex::real(-part),
+                            inertia.exponent,
+                            displacement[index],
+                        )?,
+                    )?;
+                }
+            }
         }
         checkpoint_chunk(
             SolverStage::HarmonicResidual,
@@ -177,11 +221,19 @@ fn visit_terms(
 // Keep the original element terms, rather than summing a dynamic diagonal first.
 // Choose the binary scale from actual products, never unrelated coefficient/unknown maxima.
 fn products(coefficient: Complex, value: Complex) -> Result<[Product; 4], String> {
+    products_scaled(coefficient, 0, value)
+}
+
+fn products_scaled(
+    coefficient: Complex,
+    exponent: i32,
+    value: Complex,
+) -> Result<[Product; 4], String> {
     Ok([
-        Product::new(coefficient.re, value.re)?,
-        Product::new(coefficient.im, value.im)?,
-        Product::new(coefficient.re, value.im)?,
-        Product::new(coefficient.im, value.re)?,
+        Product::scaled(coefficient.re, exponent, value.re)?,
+        Product::scaled(coefficient.im, exponent, value.im)?,
+        Product::scaled(coefficient.re, exponent, value.im)?,
+        Product::scaled(coefficient.im, exponent, value.re)?,
     ])
 }
 
@@ -193,38 +245,57 @@ struct Product {
 
 impl Product {
     fn new(coefficient: f64, value: f64) -> Result<Self, String> {
+        Self::scaled(coefficient, 0, value)
+    }
+
+    fn scaled(coefficient: f64, exponent: i32, value: f64) -> Result<Self, String> {
         if !coefficient.is_finite() || !value.is_finite() {
             return Err("harmonic original-system contains a non-finite operand".into());
         }
         let (coefficient, ce) = split_finite(coefficient);
         let (value, ve) = split_finite(value);
         let high = coefficient * value;
+        let exponent = ce
+            .checked_add(ve)
+            .and_then(|power| power.checked_add(exponent))
+            .ok_or("harmonic original-system product exponent exceeds range")?;
         Ok(Self {
             high,
             low: coefficient.mul_add(value, -high),
-            exponent: ce + ve,
+            exponent,
         })
     }
 
-    fn normalized(&self, exponent: i32) -> Result<(f64, f64), String> {
-        let shift = self.exponent - exponent;
-        let normalize = |value| -> Result<f64, String> {
-            let scaled = restore(value, shift);
-            if !scaled.is_finite() || restore(scaled, -shift) != value {
-                Err(
-                    "harmonic original-system residual normalization would lose numerical range"
-                        .into(),
-                )
-            } else {
-                Ok(scaled)
-            }
-        };
-        Ok((normalize(self.high)?, normalize(self.low)?))
+    fn normalized(&self, exponent: i32) -> Result<Option<(f64, f64)>, String> {
+        let (shift, reverse) = self.shifts(exponent)?;
+        let high = restore(self.high, shift);
+        let low = restore(self.low, shift);
+        if !high.is_finite() || !low.is_finite() {
+            return Err(
+                "harmonic original-system residual normalization would lose numerical range".into(),
+            );
+        }
+        Ok(
+            (restore(high, reverse) == self.high && restore(low, reverse) == self.low)
+                .then_some((high, low)),
+        )
+    }
+
+    fn shifts(&self, exponent: i32) -> Result<(i32, i32), String> {
+        let shift = self
+            .exponent
+            .checked_sub(exponent)
+            .ok_or("harmonic residual normalization exponent exceeds range")?;
+        let reverse = shift
+            .checked_neg()
+            .ok_or("harmonic residual normalization exponent exceeds range")?;
+        Ok((shift, reverse))
     }
 }
 
 struct Equation {
     exponent: i32,
+    needs_replay: bool,
     real: CompensatedSum,
     imaginary: CompensatedSum,
     scale: CompensatedSum,
@@ -234,6 +305,7 @@ impl Default for Equation {
     fn default() -> Self {
         Self {
             exponent: i32::MIN,
+            needs_replay: false,
             real: CompensatedSum::default(),
             imaginary: CompensatedSum::default(),
             scale: CompensatedSum::default(),
@@ -251,9 +323,15 @@ impl Equation {
     }
 
     fn subtract(&mut self, products: [Product; 4]) -> Result<(), String> {
+        if self.needs_replay {
+            return Ok(());
+        }
         let mut norm = 0.0_f64;
         for (index, product) in products.iter().enumerate() {
-            let (high, low) = product.normalized(self.exponent)?;
+            let Some((high, low)) = product.normalized(self.exponent)? else {
+                self.needs_replay = true;
+                return Ok(());
+            };
             norm = norm.hypot(high + low);
             let sum = if index < 2 {
                 &mut self.real

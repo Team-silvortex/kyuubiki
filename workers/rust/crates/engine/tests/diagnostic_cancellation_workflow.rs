@@ -319,7 +319,7 @@ fn diagnostic_graph_error_policy_cannot_publish_cancelled_work_and_fresh_run_rec
         let control = SolverControl::default();
         let mut internal_run = None;
         let error = with_solver_observer(&control, cancel_on_scan(&control, 1, 64), || {
-            internal_run = Some(run_workflow_graph(request(true))?);
+            internal_run = Some(run_workflow_graph(request(true)));
             Ok::<(), String>(())
         })
         .unwrap_err();
@@ -327,28 +327,35 @@ fn diagnostic_graph_error_policy_cannot_publish_cancelled_work_and_fresh_run_rec
             error.contains("cancelled at result_diagnostics after 64 steps"),
             "{error}"
         );
-        // Inspect the inner trace only; the cancelled execution scope rejects its publication.
-        let interrupted = internal_run.unwrap();
+        let inner_error = internal_run
+            .unwrap()
+            .expect_err("cancelled workflow must not return an inner completed graph");
+        assert!(inner_error.contains("cancelled at result_diagnostics after 64 steps"));
         assert!(control.was_interrupted());
-        assert_eq!(interrupted.failed_nodes, ["diagnose"]);
-        assert_eq!(interrupted.skipped_nodes.len(), 3);
+
+        // Ordinary malformed input still follows branch-local skip policy.
+        let mut malformed = request(true);
+        malformed
+            .input_artifacts
+            .insert("input".into(), Value::Null);
+        let ordinary = SolverControl::default();
+        let rejected = with_solver_control(&ordinary, || run_workflow_graph(malformed)).unwrap();
+        assert!(!ordinary.was_interrupted());
+        assert_eq!(rejected.failed_nodes, ["diagnose"]);
+        assert_eq!(rejected.skipped_nodes.len(), 3);
         for node in ["quality", "objective", "decision"] {
-            assert!(interrupted.skipped_nodes.iter().any(|id| id == node));
+            assert!(rejected.skipped_nodes.iter().any(|id| id == node));
         }
         for node in ["diagnose", "quality", "objective", "decision"] {
-            assert!(
-                !interrupted
-                    .artifacts
-                    .contains_key(&format!("{node}.summary"))
-            );
+            assert!(!rejected.artifacts.contains_key(&format!("{node}.summary")));
         }
-        assert_eq!(interrupted.artifacts["raw.payload"], input);
+        assert_eq!(rejected.artifacts["raw.payload"], Value::Null);
         assert_eq!(
-            interrupted.artifacts["independent_output.value"],
+            rejected.artifacts["independent_output.value"],
             json!({"value":7})
         );
         assert_eq!(
-            interrupted
+            rejected
                 .node_runs
                 .iter()
                 .find(|node| node.node_id == "diagnose")
@@ -366,8 +373,8 @@ fn diagnostic_graph_error_policy_cannot_publish_cancelled_work_and_fresh_run_rec
             true
         );
         assert!(!fresh.was_interrupted());
-        assert_eq!(interrupted.failed_nodes, ["diagnose"]);
-        assert!(!interrupted.artifacts.contains_key("decision.summary"));
+        assert_eq!(rejected.failed_nodes, ["diagnose"]);
+        assert!(!rejected.artifacts.contains_key("decision.summary"));
     }
 }
 

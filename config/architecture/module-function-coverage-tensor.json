@@ -70,6 +70,7 @@
     "config/architecture/module-function-coverage-evidence/runtime-chain-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-constraint-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-harmonic-row-quotient.json",
+    "config/architecture/module-function-coverage-evidence/runtime-harmonic-assembly.json",
     "config/architecture/module-function-coverage-evidence/runtime-thermal-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-transport-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-transport-upwind.json",

@@ -1,4 +1,79 @@
+use super::arithmetic::InertiaSum;
 use crate::linear_binary_scale::{restore, split_finite};
+
+// 2^-968 leaves room for a full product's low bit, including a rounding carry.
+// Below it, a rounded-zero FMA can hide a nonzero product tail.
+const EXACT_RESIDUAL_FLOOR: f64 = f64::from_bits(55_u64 << 52);
+
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Inertia {
+    pub(super) parts: [f64; 4],
+    pub(super) exponent: i32,
+}
+
+pub(super) fn inertia_parts(frequency: f64, mass: f64) -> Result<Inertia, String> {
+    validate(frequency, mass)?;
+    if frequency == 0.0 || mass == 0.0 {
+        return Ok(Inertia {
+            parts: [0.0; 4],
+            exponent: 0,
+        });
+    }
+    let square = frequency * frequency;
+    let product = square * mass;
+    if square.is_normal()
+        && product.is_normal()
+        && square >= EXACT_RESIDUAL_FLOOR
+        && product.abs() >= EXACT_RESIDUAL_FLOOR
+        && frequency.mul_add(frequency, -square) == 0.0
+        && square.mul_add(mass, -product) == 0.0
+    {
+        return Ok(Inertia {
+            parts: [product, 0.0, 0.0, 0.0],
+            exponent: 0,
+        });
+    }
+    let (frequency, fe) = split_finite(frequency);
+    let (mass, me) = split_finite(mass);
+    let square = frequency * frequency;
+    let square_tail = frequency.mul_add(frequency, -square);
+    let high = square * mass;
+    let low = square_tail * mass;
+    // Both normalized products retain their FMA residual. Do not round their
+    // sum before stiffness and inertia have met in coefficient assembly.
+    let raw = [
+        high,
+        square.mul_add(mass, -high),
+        low,
+        square_tail.mul_add(mass, -low),
+    ];
+    let exponent = 2 * fe + me;
+    if exponent > 1023 {
+        return Err("exceeds the finite numeric range".into());
+    }
+    let tail_bound = raw[1..]
+        .iter()
+        .fold(0.0, |sum: f64, part| (sum + part.abs()).next_up());
+    let lower = restore((raw[0].abs() - tail_bound).next_down(), exponent);
+    let upper = restore((raw[0].abs() + tail_bound).next_up(), exponent);
+    if !lower.is_normal() || !upper.is_finite() {
+        let mut total = InertiaSum::default();
+        for part in raw {
+            total.add_scaled(part, exponent)?;
+        }
+        total.finish().map_err(|error| {
+            if error.contains("lose numerical range") {
+                error
+            } else {
+                "exceeds the finite numeric range".into()
+            }
+        })?;
+    }
+    Ok(Inertia {
+        parts: raw,
+        exponent,
+    })
+}
 
 pub(super) fn product(frequency: f64, value: f64) -> Result<f64, String> {
     validate(frequency, value)?;
@@ -123,3 +198,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "harmonic_spring_inertia_product_tests.rs"]
+mod inertia_tests;

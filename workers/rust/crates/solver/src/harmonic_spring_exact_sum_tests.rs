@@ -135,3 +135,58 @@ fn harmonic_complex_accumulation_invalid_parts_and_capacity_errors_cannot_publis
     }
     assert_eq!(sum([1.0, -1.0, 2.0]), 2.0);
 }
+
+#[test]
+fn harmonic_assembly_full_range_accumulator_capacity_failure_remains_poisoned() {
+    for negative in [false, true] {
+        let mut sum = CoefficientSum::default();
+        if negative {
+            sum.0.negative.fill(u64::MAX);
+        } else {
+            sum.0.positive.fill(u64::MAX);
+        }
+        let quantum = f64::from_bits(1);
+        assert!(
+            sum.add(if negative { -quantum } else { quantum })
+                .unwrap_err()
+                .contains("capacity")
+        );
+        assert!(sum.add(1.0).is_err());
+        assert!(sum.finish().is_err());
+    }
+}
+
+#[test]
+fn harmonic_inertia_precision_scaled_lattice_rounding_range_and_poisoning_are_checked() {
+    for sign in [-1.0, 1.0] {
+        let mut sum = InertiaSum::default();
+        sum.add_scaled(sign * f64::MAX, 0).unwrap();
+        sum.add_scaled(sign, 970).unwrap();
+        sum.add_scaled(-sign, -3222).unwrap();
+        assert_eq!(sum.finish().unwrap(), sign * f64::MAX);
+        let mut sum = InertiaSum::default();
+        sum.add_scaled(sign * f64::MIN_POSITIVE, 0).unwrap();
+        sum.add_scaled(-sign, -1075).unwrap();
+        assert_eq!(sum.finish().unwrap(), sign * f64::MIN_POSITIVE);
+        let mut sum = InertiaSum::default();
+        sum.add_scaled(sign * 0.75, -1074).unwrap();
+        assert!(sum.finish().unwrap_err().contains("lose numerical range"));
+    }
+    let mut sum = InertiaSum::default();
+    sum.0.positive.fill(u64::MAX);
+    assert!(sum.add_scaled(1.0, -3222).unwrap_err().contains("capacity"));
+    assert!(sum.add_scaled(1.0, 0).is_err());
+    assert!(sum.finish().is_err());
+    let mut sum = InertiaSum::default();
+    assert!(
+        sum.add_scaled(1.0, -3223)
+            .unwrap_err()
+            .contains("lose numerical range")
+    );
+    assert!(sum.finish().is_err());
+    let mut sum = InertiaSum::default();
+    sum.add_scaled(1.0, -3222).unwrap();
+    sum.add_scaled(-1.0, -3222).unwrap();
+    assert_eq!(sum.finish().unwrap().to_bits(), 0);
+    assert!(std::mem::size_of::<InertiaSum>() <= 1120);
+}

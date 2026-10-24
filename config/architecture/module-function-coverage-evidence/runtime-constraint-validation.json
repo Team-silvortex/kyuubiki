@@ -474,7 +474,7 @@
         "harmonic_original_equations_check_isolated_fixed_unknowns",
         "harmonic_original_equations_reject_bad_dimensions_and_mapping_without_panics",
         "harmonic_original_equations_keep_complex_balance_and_loaded_supports",
-        "harmonic_original_equations_preserve_representable_contrast_but_reject_lost_range",
+        "harmonic_original_equations_certify_bounded_contrast_without_hiding_erased_force",
         "harmonic_original_equations_cancel_all_wide_scan_phases_then_replay",
         "harmonic_original_equations_gate_every_frequency_in_path_and_dense_workflows",
         "harmonic_original_equations_reject_erased_force_through_dispatch_and_workflow",

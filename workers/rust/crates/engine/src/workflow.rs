@@ -12,6 +12,7 @@ use kyuubiki_protocol::{
     WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNodeKind, WorkflowNodeRunStatus,
     WorkflowNodeRunTrace, WorkflowProgressEvent,
 };
+use kyuubiki_solver::solver_control::check_cancellation;
 use serde_json::Value;
 use std::any::Any;
 use std::collections::{BTreeMap, HashSet};
@@ -88,8 +89,10 @@ pub fn run_workflow_graph_with_options(
     request: WorkflowGraphRunRequest,
     options: WorkflowGraphRunOptions,
 ) -> Result<WorkflowGraphRunResult, String> {
+    check_cancellation()?;
     validate_workflow_security(&request)?;
     let graph = request.graph;
+    let mut input_artifacts = request.input_artifacts;
     validate_workflow_dataset_contract(&graph)?;
     let execution_plan = WorkflowExecutionPlan::compile(&graph)?;
     let mut artifact_retention =
@@ -115,6 +118,7 @@ pub fn run_workflow_graph_with_options(
     let total_nodes = node_count.max(1) as f32;
 
     for &node_index in execution_plan.node_order() {
+        check_cancellation()?;
         let node = &graph.nodes[node_index];
         let incoming = execution_plan.incoming(node_index);
         let incoming_state = execution_plan.resolve_incoming(node_index, &artifacts);
@@ -163,17 +167,12 @@ pub fn run_workflow_graph_with_options(
         let run_result = run_with_panic_boundary(&node.id, || -> Result<(), String> {
             match node.kind {
                 WorkflowNodeKind::Input => {
-                    let value =
-                        request
-                            .input_artifacts
-                            .get(&node.id)
-                            .cloned()
-                            .ok_or_else(|| {
-                                format!("missing workflow input artifact for node {}", node.id)
-                            })?;
-                    for output in &node.outputs {
+                    let value = input_artifacts.remove(&node.id).ok_or_else(|| {
+                        format!("missing workflow input artifact for node {}", node.id)
+                    })?;
+                    for_each_output_value(&node.outputs, value, |output, value| {
                         let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), value.clone());
+                        artifacts.insert(key.clone(), value);
                         produced_artifacts.push(key.clone());
                         artifact_lineage.push(WorkflowArtifactLineage {
                             artifact_key: key,
@@ -181,7 +180,7 @@ pub fn run_workflow_graph_with_options(
                             port_id: output.id.clone(),
                             source_artifacts: Vec::new(),
                         });
-                    }
+                    });
                 }
                 WorkflowNodeKind::Solve => {
                     let operator_id = node.operator_id.as_deref().ok_or_else(|| {
@@ -198,9 +197,9 @@ pub fn run_workflow_graph_with_options(
                         &format!("workflow node {} output", node.id),
                         &output_value,
                     )?;
-                    for output in &node.outputs {
+                    for_each_output_value(&node.outputs, output_value, |output, value| {
                         let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), output_value.clone());
+                        artifacts.insert(key.clone(), value);
                         output_budget_validated_artifacts.insert(key.clone());
                         produced_artifacts.push(key.clone());
                         artifact_lineage.push(WorkflowArtifactLineage {
@@ -209,7 +208,7 @@ pub fn run_workflow_graph_with_options(
                             port_id: output.id.clone(),
                             source_artifacts: consumed_artifacts.clone(),
                         });
-                    }
+                    });
                 }
                 WorkflowNodeKind::Transform => {
                     let operator_id = node.operator_id.as_deref().ok_or_else(|| {
@@ -252,9 +251,9 @@ pub fn run_workflow_graph_with_options(
                             &output_value,
                         )?;
                     }
-                    for output in &node.outputs {
+                    for_each_output_value(&node.outputs, output_value, |output, value| {
                         let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), output_value.clone());
+                        artifacts.insert(key.clone(), value);
                         output_budget_validated_artifacts.insert(key.clone());
                         produced_artifacts.push(key.clone());
                         artifact_lineage.push(WorkflowArtifactLineage {
@@ -263,7 +262,7 @@ pub fn run_workflow_graph_with_options(
                             port_id: output.id.clone(),
                             source_artifacts: consumed_artifacts.clone(),
                         });
-                    }
+                    });
                 }
                 WorkflowNodeKind::Extract => {
                     let operator_id = node.operator_id.as_deref().ok_or_else(|| {
@@ -284,9 +283,9 @@ pub fn run_workflow_graph_with_options(
                         &format!("workflow node {} output", node.id),
                         &output_value,
                     )?;
-                    for output in &node.outputs {
+                    for_each_output_value(&node.outputs, output_value, |output, value| {
                         let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), output_value.clone());
+                        artifacts.insert(key.clone(), value);
                         output_budget_validated_artifacts.insert(key.clone());
                         produced_artifacts.push(key.clone());
                         artifact_lineage.push(WorkflowArtifactLineage {
@@ -295,7 +294,7 @@ pub fn run_workflow_graph_with_options(
                             port_id: output.id.clone(),
                             source_artifacts: consumed_artifacts.clone(),
                         });
-                    }
+                    });
                 }
                 WorkflowNodeKind::Export => {
                     let operator_id = node.operator_id.as_deref().ok_or_else(|| {
@@ -316,9 +315,9 @@ pub fn run_workflow_graph_with_options(
                         &format!("workflow node {} output", node.id),
                         &output_value,
                     )?;
-                    for output in &node.outputs {
+                    for_each_output_value(&node.outputs, output_value, |output, value| {
                         let key = artifact_key(&node.id, &output.id);
-                        artifacts.insert(key.clone(), output_value.clone());
+                        artifacts.insert(key.clone(), value);
                         output_budget_validated_artifacts.insert(key.clone());
                         produced_artifacts.push(key.clone());
                         artifact_lineage.push(WorkflowArtifactLineage {
@@ -327,7 +326,7 @@ pub fn run_workflow_graph_with_options(
                             port_id: output.id.clone(),
                             source_artifacts: consumed_artifacts.clone(),
                         });
-                    }
+                    });
                 }
                 WorkflowNodeKind::Output => {
                     for planned_edge in incoming {
@@ -452,6 +451,7 @@ pub fn run_workflow_graph_with_options(
             return Err(format!("workflow node {} failed: {}", node.id, error));
         }
 
+        check_cancellation()?;
         remove_releasable_artifacts(
             artifact_retention.finish_node(incoming, &produced_artifacts),
             &mut artifacts,
@@ -477,6 +477,7 @@ pub fn run_workflow_graph_with_options(
         ));
     }
 
+    check_cancellation()?;
     progress_events.push(workflow_progress_event(
         JobStatus::Postprocessing,
         1.0,
@@ -505,6 +506,20 @@ pub fn run_workflow_graph_with_options(
     })
 }
 
+fn for_each_output_value(
+    outputs: &[kyuubiki_protocol::WorkflowPort],
+    value: Value,
+    mut publish: impl FnMut(&kyuubiki_protocol::WorkflowPort, Value),
+) {
+    // Retained ports need independent values, but the last can own the original.
+    if let Some((last, others)) = outputs.split_last() {
+        for output in others {
+            publish(output, value.clone());
+        }
+        publish(last, value);
+    }
+}
+
 fn remove_releasable_artifacts(
     keys: Vec<String>,
     artifacts: &mut BTreeMap<String, Value>,
@@ -515,6 +530,10 @@ fn remove_releasable_artifacts(
         output_budget_validated_artifacts.remove(&key);
     }
 }
+
+#[cfg(test)]
+#[path = "tests/workflow_publication_ownership.rs"]
+mod publication_ownership;
 
 fn resolve_single_input_payload_for_execution(
     node: &kyuubiki_protocol::WorkflowNode,

@@ -18,6 +18,39 @@ layout and logs are observed in the installed WebView. See [the local rebuild
 report](../reports/daji-3.7.1-local-rebuild-20261024.md) for scope; historical
 reports keep their original versions and qualification scopes.
 
+### Harmonic Assembly Source Follow-up
+
+The [assembly follow-up](../reports/harmonic-assembly-20261024.md) retains lost
+addition tails in represented dynamic coefficients before elimination. A
+cancelling oscillator previously returned amplitude 0.5 instead of about
+0.4472136, or falsely reported singularity without damping. Dense/path, Engine
+and workflow regressions now cover the corrected response, force and failure
+boundaries. This source change does not replace the installed 3.7.1 payload,
+alter the operator protocol or promote physical/platform qualification.
+
+### Harmonic Inertia Source Follow-up
+
+The [inertia follow-up](../reports/harmonic-inertia-precision-20261024.md) carries
+admitted frequency-square/mass product tails into assembly and original-equation
+checks. An independent unit-response oscillator previously returned about 0.625.
+Scaled intermediate tails now avoid breaking the existing tiny common-scale
+control; final range guards remain. This is source-only, not a new installed,
+all-physics or platform qualification.
+
+### Harmonic Residual Source Follow-up
+
+The [residual follow-up](../reports/harmonic-residual-enclosure-20261024.md) uses
+outward bounds when original-equation scaling loses tiny terms. Only a certified
+backward-error upper bound admits those rows; ordinary rows and pivot thresholds
+stay unchanged. This is source-only evidence, not a new installed qualification.
+The [many-term follow-up](../reports/harmonic-residual-many-term-20261024.md)
+prevents interval growth from falsely rejecting parallel-element models while
+preserving mixed-row checks, cancellation and workflow output security budgets.
+
+### Workflow Source Follow-ups
+
+[Payload ownership](../reports/workflow-payload-ownership-20261024.md) removes redundant copies; [cancellation boundaries](../reports/workflow-cancellation-boundaries-20261024.md) stop cancelled inner graphs despite skip policy. Ordinary recovery, cache and budget contracts remain separate and unchanged.
+
 ## Daji 3.7.0 Checkpoint
 
 October 23, 2026. Source packages, SDK metadata, language-pack targets,
