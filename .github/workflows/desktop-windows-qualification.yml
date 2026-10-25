@@ -76,10 +76,13 @@ jobs:
           cargo run --locked --manifest-path workers/rust/Cargo.toml
           -p kyuubiki-script-runner -- desktop-build-host --bundles nsis
       - name: Install, launch, verify, and remove all desktop packages
+        # A fresh hosted runner can exceed the ordinary 25s local startup budget.
+        # Keep one bounded launch and require the original UI/IPC receipt; no retries.
         run: >-
           cargo run --locked --manifest-path workers/rust/Cargo.toml
           -p kyuubiki-script-runner -- desktop-packaged-smoke windows
           --install-nsis
+          --timeout-secs 90
           --out tmp/windows-installed-desktop-smoke.json
       - name: Verify portable qualification evidence
         run: >-

@@ -5,7 +5,6 @@ use std::ffi::OsString;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::RunnerResult;
@@ -325,32 +324,22 @@ fn launch_and_wait(
     let spawned_pid = child.id();
     let mut guard = ChildGuard(Some(child));
     let deadline = Instant::now() + Duration::from_secs(timeout_secs);
-
-    loop {
-        if receipt_path.is_file() {
-            let expected_pid = (platform != Platform::Linux).then_some(spawned_pid);
-            let receipt = read_and_validate_receipt(receipt_path, surface, expected_pid)?;
-            guard.stop();
-            return Ok(receipt);
-        }
-        if let Some(status) = guard
-            .child_mut()?
-            .try_wait()
-            .map_err(|error| format!("failed to inspect {surface} process: {error}"))?
-        {
-            return Err(format!(
-                "packaged {surface} exited before readiness with {status}; see {}",
-                log_path.display()
-            ));
-        }
-        if Instant::now() >= deadline {
-            return Err(format!(
-                "packaged {surface} did not report readiness within {timeout_secs}s; see {}",
-                log_path.display()
-            ));
-        }
-        thread::sleep(Duration::from_millis(100));
-    }
+    let expected_pid = (platform != Platform::Linux).then_some(spawned_pid);
+    let receipt = readiness::wait_for_receipt(
+        guard.child_mut()?,
+        receipt_path,
+        surface,
+        expected_pid,
+        deadline,
+    )
+    .map_err(|error| {
+        format!(
+            "{error} (startup budget {timeout_secs}s); see {}",
+            log_path.display()
+        )
+    })?;
+    guard.stop();
+    Ok(receipt)
 }
 
 fn read_and_validate_receipt(
@@ -758,6 +747,7 @@ fn portable_detail(root: &Path, bundle_root: &Path, detail: &str) -> String {
         .replace(&bundle_root.to_string_lossy().to_string(), "@bundle-root")
 }
 
+mod readiness;
 mod windows;
 
 #[cfg(test)]

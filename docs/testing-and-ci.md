@@ -342,6 +342,19 @@ The full integration entrypoint list stays in:
   lane is meant to catch contract drift early before heavier build or
   integration jobs spend time.
 
+The separate `Desktop Windows Qualification` workflow installs and launches
+all three NSIS desktop packages. It explicitly allows 90 seconds per launch on
+a fresh hosted Windows runner; the ordinary local smoke default remains 25
+seconds. This is an availability deadline, not a startup-performance claim.
+There is one launch per application, without automatic retry. Passing still
+requires the actual UI-to-native receipt with the expected application,
+version and process identity before the deadline while that process is alive.
+The runner emits waiting progress every five seconds because a Windows GUI
+process may produce no stdout/stderr. Missing, malformed, expired or foreign
+receipts remain failures, and a failed report cannot be promoted. Reports and
+logs are uploaded with the run attempt number; inspect the matching attempt
+instead of treating an earlier failed artifact as the final rerun result.
+
 The language-pack lane uses the native runner for full visible-copy reporting
 and strict coverage. The native script audit also rejects direct
 `node scripts/*.mjs` calls from Make and CI, so release checks cannot silently
