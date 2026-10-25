@@ -176,7 +176,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         end
 
       unresolved_missing_inputs?(incoming, state) ->
-        updated = mark_skipped(state, node_id, node, incoming, opts)
+        updated = mark_skipped(state, node_id, node, opts)
         maybe_emit_progress(updated, node_id, "skipped", indexes.node_count, opts)
         {:ok, updated, true}
 
@@ -572,15 +572,13 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         &artifact_key/2
       )
 
-  defp mark_skipped(state, node_id, node, incoming, opts),
+  defp mark_skipped(state, node_id, node, opts),
     do:
       WorkflowGraphRunnerMetrics.mark_skipped(
         state,
         node_id,
         node,
-        incoming,
-        Keyword.get(opts, :result_options, %{}),
-        &incoming_artifact_keys/2
+        Keyword.get(opts, :result_options, %{})
       )
 
   defp maybe_emit_progress(state, node_id, status, node_count, opts) do

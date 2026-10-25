@@ -85,7 +85,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
     }
   end
 
-  def mark_skipped(state, node_id, node, incoming, result_options, incoming_artifact_keys) do
+  def mark_skipped(state, node_id, node, result_options) do
     run =
       if detailed_node_runs?(result_options) do
         %{
@@ -93,7 +93,8 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
           "kind" => Map.get(node, "kind"),
           "operator_id" => Map.get(node, "operator_id"),
           "status" => "skipped",
-          "consumed_artifacts" => incoming_artifact_keys.(incoming, state.artifacts),
+          # Available inputs were never passed to an executor on this path.
+          "consumed_artifacts" => [],
           "produced_artifacts" => [],
           "duration_ms" => 0.0
         }

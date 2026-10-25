@@ -17,11 +17,14 @@
         "apps/web/test/kyuubiki_web/workflow_execution_evidence_test.exs",
         "apps/web/test/kyuubiki_web/api/workflow_execution_evidence_api_test.exs",
         "tests/fixtures/workflow-execution-evidence.json",
+        "tests/fixtures/workflow-skipped-input-evidence.json",
+        "workers/rust/crates/engine/src/workflow.rs",
         "workers/rust/crates/engine/tests/shared_execution_evidence.rs",
         "config/operator-validation-profiles/workflow-runtime.json",
         "make/tests.mk",
         "docs/book-ch05-workflow-and-operators.html",
-        "reports/workflow-execution-evidence-20261024.md"
+        "reports/workflow-execution-evidence-20261024.md",
+        "reports/workflow-skipped-input-evidence-20261024.md"
       ],
       "required_text": [
         "condition traces name only actual publications, including false zero and null",
@@ -32,6 +35,10 @@
         "shared_execution_evidence_conditions_record_only_actual_publications_in_all_projections",
         "shared_execution_evidence_failed_fallbacks_name_only_selected_and_aliased_sources",
         "shared_execution_evidence_failed_named_inputs_keep_both_real_bindings",
+        "shared_execution_evidence_skipped_joins_do_not_consume_available_inputs",
+        "shared_execution_evidence_executed_failures_still_record_inputs",
+        "skipped joins do not consume available inputs or invoke their operators",
+        "skipped join receipts stay empty after asynchronous result storage and shaping",
         "workflow-execution-evidence-fixture/v1",
         "test-workflow-execution-evidence",
         "workflow-execution-receipts",

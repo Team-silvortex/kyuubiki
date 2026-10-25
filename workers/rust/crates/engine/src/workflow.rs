@@ -145,7 +145,8 @@ pub fn run_workflow_graph_with_options(
                 kind: node.kind,
                 operator_id: node.operator_id.clone(),
                 status: WorkflowNodeRunStatus::Skipped,
-                consumed_artifacts: incoming_state.resolved_artifact_keys,
+                // Retiring dependency edges above is not execution or consumption.
+                consumed_artifacts: Vec::new(),
                 produced_artifacts: Vec::new(),
                 error_message: None,
             });

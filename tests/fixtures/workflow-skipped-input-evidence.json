@@ -1,0 +1,290 @@
+{
+  "graph": {
+    "schema_version": "kyuubiki.workflow-graph/v1",
+    "id": "workflow.skipped-input-evidence",
+    "name": "Skipped input evidence",
+    "version": "1.0.0",
+    "entry_nodes": [
+      "a",
+      "flag"
+    ],
+    "output_nodes": [
+      "blocked",
+      "result",
+      "raw",
+      "strict_result"
+    ],
+    "nodes": [
+      {
+        "id": "a",
+        "kind": "input",
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "payload",
+            "artifact_type": "artifact/json"
+          }
+        ]
+      },
+      {
+        "id": "strict",
+        "kind": "transform",
+        "inputs": [
+          {
+            "id": "left",
+            "artifact_type": "artifact/json"
+          },
+          {
+            "id": "right",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "payload",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "operator_id": "transform.benchmark_structural_pair",
+        "config": {
+          "on_error": "skip"
+        }
+      },
+      {
+        "id": "blocked",
+        "kind": "output",
+        "inputs": [
+          {
+            "id": "left",
+            "artifact_type": "artifact/json"
+          },
+          {
+            "id": "right",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "outputs": []
+      },
+      {
+        "id": "fallback",
+        "kind": "transform",
+        "inputs": [
+          {
+            "id": "preferred",
+            "artifact_type": "artifact/json"
+          },
+          {
+            "id": "backup",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "payload",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "operator_id": "transform.first_available"
+      },
+      {
+        "id": "result",
+        "kind": "output",
+        "inputs": [
+          {
+            "id": "payload",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "outputs": []
+      },
+      {
+        "id": "flag",
+        "kind": "input",
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "payload",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "config": {
+          "on_error": "skip"
+        }
+      },
+      {
+        "id": "gate",
+        "kind": "condition",
+        "inputs": [
+          {
+            "id": "payload",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "if_true",
+            "artifact_type": "artifact/json"
+          },
+          {
+            "id": "if_false",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "config": {
+          "predicate": {
+            "operator": "truthy"
+          },
+          "on_error": "skip"
+        }
+      },
+      {
+        "id": "raw",
+        "kind": "output",
+        "inputs": [
+          {
+            "id": "payload",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "outputs": []
+      },
+      {
+        "id": "strict_result",
+        "kind": "output",
+        "inputs": [
+          {
+            "id": "payload",
+            "artifact_type": "artifact/json"
+          }
+        ],
+        "outputs": []
+      }
+    ],
+    "edges": [
+      {
+        "id": "a-strict-left",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "a",
+          "port": "payload"
+        },
+        "to": {
+          "node": "strict",
+          "port": "left"
+        }
+      },
+      {
+        "id": "gate-strict-right",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "gate",
+          "port": "if_true"
+        },
+        "to": {
+          "node": "strict",
+          "port": "right"
+        }
+      },
+      {
+        "id": "a-blocked-left",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "a",
+          "port": "payload"
+        },
+        "to": {
+          "node": "blocked",
+          "port": "left"
+        }
+      },
+      {
+        "id": "gate-blocked-right",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "gate",
+          "port": "if_true"
+        },
+        "to": {
+          "node": "blocked",
+          "port": "right"
+        }
+      },
+      {
+        "id": "gate-fallback-preferred",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "gate",
+          "port": "if_true"
+        },
+        "to": {
+          "node": "fallback",
+          "port": "preferred"
+        }
+      },
+      {
+        "id": "a-fallback-backup",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "a",
+          "port": "payload"
+        },
+        "to": {
+          "node": "fallback",
+          "port": "backup"
+        }
+      },
+      {
+        "id": "fallback-result-payload",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "fallback",
+          "port": "payload"
+        },
+        "to": {
+          "node": "result",
+          "port": "payload"
+        }
+      },
+      {
+        "id": "flag-gate-payload",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "flag",
+          "port": "payload"
+        },
+        "to": {
+          "node": "gate",
+          "port": "payload"
+        }
+      },
+      {
+        "id": "a-raw-payload",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "a",
+          "port": "payload"
+        },
+        "to": {
+          "node": "raw",
+          "port": "payload"
+        }
+      },
+      {
+        "id": "strict-strict_result-payload",
+        "artifact_type": "artifact/json",
+        "from": {
+          "node": "strict",
+          "port": "payload"
+        },
+        "to": {
+          "node": "strict_result",
+          "port": "payload"
+        }
+      }
+    ]
+  },
+  "input_artifacts": {
+    "a": null,
+    "flag": false
+  }
+}

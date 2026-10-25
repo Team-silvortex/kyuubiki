@@ -6,6 +6,31 @@ defmodule KyuubikiWeb.TestSupport.WorkflowExecutionEvidence do
 
   def cases, do: @fixture["cases"]
 
+  @skipped Path.expand("../../../../tests/fixtures/workflow-skipped-input-evidence.json", __DIR__)
+           |> File.read!()
+           |> Jason.decode!()
+
+  def skipped(value, mode, reverse \\ false) do
+    request =
+      @skipped
+      |> put_in(["input_artifacts", "a"], value)
+      |> update_in(["graph", "nodes"], &if(reverse, do: Enum.reverse(&1), else: &1))
+
+    case mode do
+      :inactive ->
+        request
+
+      :active ->
+        put_in(request, ["input_artifacts", "flag"], true)
+
+      :missing ->
+        update_in(request, ["input_artifacts"], &Map.delete(&1, "flag"))
+
+      :failed ->
+        node(request, "gate", &put_in(&1, ["config", "predicate", "operator"], "invalid"))
+    end
+  end
+
   def request(value, reverse_nodes \\ false, backup_first \\ false) do
     @fixture["request"]
     |> Map.put("input_artifacts", %{"a" => value, "b" => value})

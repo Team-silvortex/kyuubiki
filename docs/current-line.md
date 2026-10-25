@@ -14,9 +14,9 @@ Reviewed October 24, 2026. Distinguish these identities before reproducing a run
 | Active product line | `daji 3.x`, hardening profile `daji-3-7-hardening` | [Version policy](../config/version-line-policy.json), [brand](../assets/brand/brand.json) |
 | Package and book baseline | `3.7.1` | [Book manifest](book-manifest.json), package manifests |
 | Last recorded local macOS installation | `3.7.1` | [Release snapshot](../releases/snapshots/3.7.1.json), [installation report](../reports/daji-3.7.1-local-rebuild-20261024.md) |
-| Latest version-named Git checkpoint | `091b1393`, subject `daji 3.7.3` | Git history; not an artifact version |
-| Subsequent committed repair | `308eb93c`, isolated CI dependency/read repair | Git history; no new desktop build |
-| Latest workflow follow-ups | Source working-tree changes | Dated reports below; not installed acceptance |
+| Latest version-named Git checkpoint | `305e3009`, subject `daji 3.7.3` | Git history; not an artifact version |
+| Earlier committed repair | `308eb93c`, isolated CI dependency/read repair | Git history; no new desktop build |
+| Latest workflow follow-up | Source-verified skipped-node execution evidence | Dated report below; not installed acceptance |
 
 A commit subject does not update package metadata or installed files. The last
 recorded installation is not a live health check. Local builds do not publish
@@ -37,6 +37,7 @@ execution/publication in Engine and Agent; the GUI is not runtime authority.
 | Selected-input attribution | Name the actual fallback source without weakening readiness or named-input bindings | Fresh Rust execution traces and direct lineage |
 | Requested output retention | Keep requested published outputs despite optional ports, cache hints or later consumers | Local result retention, not a durable checkpoint |
 | Execution receipts | Align Orchestra branch/failed-fallback traces with Rust and actual publications | Shared fixture, local API routing and SQLite result readback |
+| Skipped-node receipts | Never claim consumption for nodes that did not execute; keep dependency retirement separate | Shared branch/failure fixture, retained raw outputs and local SQLite readback |
 
 Follow the evidence rather than treating this table as a new combined run:
 
@@ -48,10 +49,11 @@ Follow the evidence rather than treating this table as a new combined run:
   [cancellation boundaries](../reports/workflow-cancellation-boundaries-20261024.md).
 - [Selected-input attribution](../reports/workflow-selected-input-20261024.md),
   [output retention](../reports/workflow-output-retention-20261024.md) and
-  [execution receipts](../reports/workflow-execution-evidence-20261024.md).
+  [execution receipts](../reports/workflow-execution-evidence-20261024.md) and
+  [skipped-node receipts](../reports/workflow-skipped-input-evidence-20261024.md).
 
-The latest execution-receipt report records 3,475 web tests with zero failures
-and 77 skips, plus 737 passed Rust Engine/selected integration tests and one
+The latest skipped-node receipt report records 3,478 web tests with zero failures
+and 77 skips, plus 739 passed Rust Engine/selected integration tests and one
 ignored test. These are that report's source checks, not coverage percentages,
 a new Solver-wide campaign, remote CI results or installed acceptance. Overlapping
 earlier report counts must not be added.

@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.WorkflowExecutionEvidenceTest do
   use ExUnit.Case, async: true
   alias KyuubikiWeb.Orchestra.Engine
+  alias KyuubikiWeb.WorkflowGraphRunner
   alias KyuubikiWeb.TestSupport.WorkflowExecutionEvidence, as: Fixture
 
   test "condition traces name only actual publications, including false zero and null" do
@@ -92,6 +93,76 @@ defmodule KyuubikiWeb.WorkflowExecutionEvidenceTest do
     for trace <- result["node_runs"] do
       assert Enum.sort(trace["produced_artifacts"]) == Fixture.published(result, trace["node_id"])
       if trace["status"] != "completed", do: assert(trace["produced_artifacts"] == [])
+    end
+  end
+
+  test "skipped joins do not consume available inputs or invoke their operators" do
+    for value <- [false, 0, nil],
+        mode <- [:inactive, :failed, :missing],
+        reverse <- [false, true] do
+      request = Fixture.skipped(value, mode, reverse)
+
+      opts = [
+        execute_solve: fn _, _, _ -> flunk("unexpected solve") end,
+        execute_extract: fn _, _, _ -> flunk("unexpected extract") end,
+        execute_export: fn _, _, _ -> flunk("unexpected export") end,
+        execute_transform: fn
+          "transform.first_available", payload, _ -> {:ok, payload}
+          _, _, _ -> flunk("skipped strict join must not invoke the operator")
+        end
+      ]
+
+      assert {:ok, result} =
+               WorkflowGraphRunner.run(request["graph"], request["input_artifacts"], opts)
+
+      for trace <- result["node_runs"], trace["status"] == "skipped" do
+        assert trace["consumed_artifacts"] == [], trace["node_id"]
+        assert trace["produced_artifacts"] == []
+        assert Fixture.published(result, trace["node_id"]) == []
+      end
+
+      for id <- ["strict", "blocked", "strict_result"] do
+        assert Fixture.trace(result, id)["status"] == "skipped"
+      end
+
+      expected_failures =
+        case mode do
+          :inactive -> []
+          :failed -> ["gate"]
+          :missing -> ["flag"]
+        end
+
+      assert result["failed_nodes"] == expected_failures
+
+      assert Fixture.trace(result, "fallback")["consumed_artifacts"] == ["a.payload"]
+      assert Map.fetch!(result["artifacts"], "result.payload") === value
+      assert Map.fetch!(result["artifacts"], "raw.payload") === value
+      assert_publications(result)
+    end
+  end
+
+  test "executed failures retain their inputs while subsequent skipped nodes consume nothing" do
+    for value <- [false, 0, nil], reverse <- [false, true] do
+      assert {:ok, result} = Engine.run_workflow_graph(Fixture.skipped(value, :active, reverse))
+      assert result["failed_nodes"] == ["strict"]
+
+      assert Fixture.trace(result, "strict")["consumed_artifacts"] == [
+               "a.payload",
+               "gate.if_true"
+             ]
+
+      assert Fixture.trace(result, "strict_result")["consumed_artifacts"] == []
+      assert Fixture.trace(result, "blocked")["status"] == "completed"
+
+      assert Fixture.trace(result, "blocked")["consumed_artifacts"] == [
+               "a.payload",
+               "gate.if_true"
+             ]
+
+      assert Fixture.trace(result, "fallback")["consumed_artifacts"] == ["gate.if_true"]
+      assert result["artifacts"]["result.payload"] == true
+      assert Map.fetch!(result["artifacts"], "raw.payload") === value
+      assert_publications(result)
     end
   end
 end

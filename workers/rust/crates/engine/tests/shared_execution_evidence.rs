@@ -220,3 +220,121 @@ fn shared_execution_evidence_failed_named_inputs_keep_both_real_bindings() {
         assert_publications(&result);
     }
 }
+
+fn skipped_request(value: Value, mode: &str, reverse: bool) -> WorkflowGraphRunRequest {
+    let mut input: WorkflowGraphRunRequest = serde_json::from_str(include_str!(
+        "../../../../../tests/fixtures/workflow-skipped-input-evidence.json"
+    ))
+    .unwrap();
+    input.input_artifacts.insert("a".into(), value);
+    match mode {
+        "inactive" => (),
+        "active" => {
+            input.input_artifacts.insert("flag".into(), json!(true));
+        }
+        "missing" => {
+            input.input_artifacts.remove("flag");
+        }
+        "failed" => {
+            input
+                .graph
+                .nodes
+                .iter_mut()
+                .find(|node| node.id == "gate")
+                .unwrap()
+                .config
+                .as_mut()
+                .unwrap()["predicate"]["operator"] = json!("invalid");
+        }
+        _ => unreachable!(),
+    }
+    if reverse {
+        input.graph.nodes.reverse();
+    }
+    input
+}
+
+#[test]
+fn shared_execution_evidence_skipped_joins_do_not_consume_available_inputs() {
+    for value in [json!(false), json!(0), Value::Null] {
+        for mode in ["inactive", "failed", "missing"] {
+            for reverse in [false, true] {
+                for projection in PROJECTIONS {
+                    for cache in [WorkflowCachePolicy::Cached, WorkflowCachePolicy::Ephemeral] {
+                        let mut input = skipped_request(value.clone(), mode, reverse);
+                        input.graph.defaults.cache_policy = Some(cache);
+                        let result = run(input, projection);
+                        let expected_failures: &[&str] = match mode {
+                            "inactive" => &[],
+                            "failed" => &["gate"],
+                            _ => &["flag"],
+                        };
+                        assert_eq!(result.failed_nodes, expected_failures);
+                        for id in ["strict", "blocked", "strict_result"] {
+                            assert!(result.skipped_nodes.iter().any(|node| node == id));
+                        }
+                        for trace in &result.node_runs {
+                            if trace.status == WorkflowNodeRunStatus::Skipped {
+                                assert!(
+                                    trace.consumed_artifacts.is_empty(),
+                                    "{}: {:?}",
+                                    trace.node_id,
+                                    trace.consumed_artifacts
+                                );
+                                assert!(trace.produced_artifacts.is_empty());
+                                assert!(
+                                    !result
+                                        .artifact_lineage
+                                        .iter()
+                                        .any(|entry| entry.node_id == trace.node_id)
+                                );
+                            }
+                            if trace.node_id == "fallback" {
+                                assert_eq!(trace.consumed_artifacts, ["a.payload"]);
+                            }
+                        }
+                        assert_publications(&result);
+                        if projection == WorkflowArtifactProjection::None {
+                            assert!(result.artifacts.is_empty());
+                        } else {
+                            assert_eq!(result.artifacts.get("result.payload"), Some(&value));
+                            assert_eq!(result.artifacts.get("raw.payload"), Some(&value));
+                            if projection == WorkflowArtifactProjection::Outputs
+                                || cache == WorkflowCachePolicy::Ephemeral
+                            {
+                                assert_eq!(result.artifacts.len(), 2);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn shared_execution_evidence_executed_failures_still_record_inputs() {
+    for projection in PROJECTIONS {
+        for reverse in [false, true] {
+            let result = run(skipped_request(Value::Null, "active", reverse), projection);
+            assert_eq!(result.failed_nodes, ["strict"]);
+            assert_eq!(result.skipped_nodes, ["strict_result"]);
+            for trace in &result.node_runs {
+                match trace.node_id.as_str() {
+                    "strict" | "blocked" => {
+                        assert_eq!(trace.consumed_artifacts, ["a.payload", "gate.if_true"])
+                    }
+                    "strict_result" => assert!(trace.consumed_artifacts.is_empty()),
+                    "fallback" => assert_eq!(trace.consumed_artifacts, ["gate.if_true"]),
+                    _ => (),
+                }
+            }
+            assert_publications(&result);
+            if projection != WorkflowArtifactProjection::None {
+                assert_eq!(result.artifacts.get("result.payload"), Some(&json!(true)));
+                assert_eq!(result.artifacts.get("blocked.left"), Some(&Value::Null));
+                assert_eq!(result.artifacts.get("blocked.right"), Some(&json!(true)));
+            }
+        }
+    }
+}

@@ -76,6 +76,42 @@ defmodule KyuubikiWeb.Api.WorkflowExecutionEvidenceApiTest do
     end
   end
 
+  test "skipped join receipts stay empty after asynchronous result storage and shaping" do
+    for mode <- [:inactive, :failed, :missing],
+        options <- [%{}, %{"include_artifacts" => false}, %{"response_mode" => "compact"}] do
+      request = Fixture.skipped(nil, mode, true) |> Map.put("response_options", options)
+      {202, submitted} = post_graph("jobs", request)
+      job_id = submitted["job"]["job_id"]
+      completed = WorkflowApi.wait_for_job(job_id, @opts)
+      assert completed["job"]["status"] == "completed"
+      result = completed["result"]
+      assert "strict" in result["skipped_nodes"]
+      assert "blocked" in result["skipped_nodes"]
+
+      if Map.has_key?(result, "node_runs") do
+        for trace <- result["node_runs"], trace["status"] == "skipped" do
+          assert trace["consumed_artifacts"] == []
+          assert trace["produced_artifacts"] == []
+          assert Fixture.published(result, trace["node_id"]) == []
+        end
+
+        assert_publications(result)
+      else
+        assert options["response_mode"] == "compact"
+      end
+
+      if Map.has_key?(result, "artifacts") do
+        assert Map.fetch!(result["artifacts"], "result.payload") == nil
+        assert Map.fetch!(result["artifacts"], "raw.payload") == nil
+      end
+
+      assert {:ok, retained} = AnalysisResultStore.get(job_id)
+
+      assert Map.take(retained, ~w(skipped_nodes node_runs artifact_lineage artifacts)) ==
+               Map.take(result, ~w(skipped_nodes node_runs artifact_lineage artifacts))
+    end
+  end
+
   defp post_graph(action, request) do
     conn =
       :post

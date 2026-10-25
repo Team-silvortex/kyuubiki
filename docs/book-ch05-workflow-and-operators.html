@@ -198,7 +198,11 @@
             actual publications, not every declared port: a condition publishes
             only its chosen branch. A failed first-available transform records
             its selected source, whereas named-input transforms retain every
-            real binding, including aliases. Full and payload-omitted Orchestra
+            real binding, including aliases. Skipped nodes consume and publish
+            nothing, even if some inputs arrived before another dependency became
+            unavailable. Retiring their dependency edges does not count as
+            operator execution; live fallback consumers still retain their inputs.
+            Full and payload-omitted Orchestra
             responses preserve requested traces; compact failures still expose
             their node and cause. Shared Rust/Orchestra regressions and local
             SQLite result readback cover this evidence contract, not an
