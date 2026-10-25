@@ -1,0 +1,16 @@
+[
+  {"name":"empty", "method":"solve_modal_frame_2d", "params":{}, "digest":"898c5e8ca798fe2b535ff4d39d6a53fe91c6b644212e1e334ed1230963051022"},
+  {"name":"nested", "method":"solve_modal_frame_2d", "params":{"z":[null,true,false,"\u70ed\n"],"a":{"b":2,"a":1}}, "digest":"33487e6936de3b8eb8653b129230449763ebec4c424eb4a66bab473c37245ddc"},
+  {"name":"reordered", "method":"solve_modal_frame_2d", "params":{"a":{"a":1,"b":2},"z":[null,true,false,"\u70ed\n"]}, "digest":"33487e6936de3b8eb8653b129230449763ebec4c424eb4a66bab473c37245ddc"},
+  {"name":"integers", "method":"solve_modal_frame_2d", "params":{"v":[-9223372036854775808,18446744073709551615,9007199254740993]}, "digest":"795e83b9c2c0a4a484c4e8a406f14300d9f1b2bae19ac69a49843cefcaca55e4"},
+  {"name":"integer_one", "method":"solve_modal_frame_2d", "params":{"v":1}, "digest":"113f95e7c4ecd01a2078d22254b4c479cc4f93b3472fda852cc01109950a9d99"},
+  {"name":"float_one", "method":"solve_modal_frame_2d", "params":{"v":1.0}, "digest":"4db7c5dda1115db44cea954bee954df3781ce6f638725aecd746841da1a195bd"},
+  {"name":"adjacent_float", "method":"solve_modal_frame_2d", "params":{"v":1.0000000000000002}, "digest":"7e7b4efec7802e3d65e91ffa797356cc98226947bf202d733891da480bf5d1bf"},
+  {"name":"positive_zero", "method":"solve_modal_frame_2d", "params":{"v":0.0}, "digest":"536dd1520de8b5d4908490d52c144180803c6be5e909505b40db2f07c6b0ad52"},
+  {"name":"negative_zero", "method":"solve_modal_frame_2d", "params":{"v":-0.0}, "digest":"b0e6b0cfdd295012718737e1ca11e47fd3dab66ff9b769851c2849f0997c03e5"},
+  {"name":"float_range", "method":"solve_modal_frame_2d", "params":{"v":[5e-324,1.7976931348623157e308,-1.7976931348623157e308]}, "digest":"807e3fcc31b6933a9c46894dcc970548551d3a63fd938cbb0ac004a5cbd3e79c"},
+  {"name":"array_reordered", "method":"solve_modal_frame_2d", "params":{"v":[1,2]}, "digest":"2c2cf5a155eea8ec324f523f454cbbe616e9cbfc47f9b8070d8ce9dec6959fd1"},
+  {"name":"array_reverse", "method":"solve_modal_frame_2d", "params":{"v":[2,1]}, "digest":"a942965b8ceef963b841c7ef6eeb4f000e39ea32cde4100dfca659d82051c933"},
+  {"name":"method_binding", "method":"solve_bar_1d", "params":{}, "digest":"272dcc01f98a21a655559eb1ca004f95dc35c87e3487f4a7972a13a735360c71"},
+  {"name":"task_ir", "method":"run_operator_task_ir", "params":{"mode":"execute","task":{"params":{"x":1.0}}}, "digest":"2a7d6bd0908c24265b0001324c4ba9c79af81ca91671c5f31d7a064fa56a1b4d"}
+]

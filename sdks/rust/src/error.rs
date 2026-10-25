@@ -16,6 +16,10 @@ pub enum SdkError {
     Rpc {
         message: String,
         code: Option<String>,
+        /// Identity from a validated remote response, absent for local configuration errors.
+        request_id: Option<String>,
+        /// Untrusted diagnostics, never execution/retry authority; omitted from Display.
+        details: Option<serde_json::Value>,
     },
     Timeout(String),
 }
@@ -32,7 +36,7 @@ impl fmt::Display for SdkError {
                 errors.join("\n- ")
             ),
             Self::HttpStatus { status_code, body } => write!(f, "http {status_code}: {body}"),
-            Self::Rpc { message, code } => match code {
+            Self::Rpc { message, code, .. } => match code {
                 Some(code) => write!(f, "{code}: {message}"),
                 None => write!(f, "{message}"),
             },

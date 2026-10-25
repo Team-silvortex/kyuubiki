@@ -187,6 +187,50 @@
             port. Use an existing combination operator to construct a solver
             payload, then connect that one artifact to the solve node. A custom
             operator name does not itself declare a multi-input binding mode.</li>
+          <li>Named-input source wrappers unwrap only when the complete artifact
+            has one field matching the source port. If it has sibling metrics,
+            status or diagnostic fields, the complete artifact reaches the operator;
+            a nested same-named field cannot replace it. Rust and Orchestra apply
+            the same one-level rule. Retained raw outputs are unchanged.</li>
+          <li id="summary-result-admission">Summary extraction, normalization, pair merge,
+            comparison, collection aggregation and best-summary selection check
+            final convergence status before reducing or scoring data. Rust and
+            Orchestra reject explicit non-convergence or malformed status at the
+            payload root and each named source. For collections,
+            <code>converged</code> and <code>stability_result</code> are reserved
+            status fields, not candidates. Absent status remains accepted for
+            metric-only inputs; it is not proof of convergence. Historical trial
+            failures do not override final success, and generic consumers do not
+            reinterpret load factors. Explicit skip policy may retain raw failed
+            results without publishing an assessment; raw JSON export remains
+            available for diagnosis. See the
+            <a href="../reports/workflow-summary-admission-20261025.md">bounded
+            local regression record</a>, not a distributed recovery guarantee.</li>
+          <li id="summary-comparison-range"><code>transform.compare_summary_pair</code>
+            evaluates only enabled metrics. A zero baseline omits undefined ratios
+            and percentage changes while retaining requested originals and deltas.
+            An enabled metric outside the finite numeric range fails the node
+            instead of publishing <code>null</code> or partial comparisons. If the
+            delta is disabled, representable relative metrics remain available
+            even when the absolute difference would overflow. Nearby values still
+            use subtraction before relative scaling. Raw inputs remain available
+            under explicit skip policy; no comparison output is published for
+            the failed node. See the
+            <a href="../reports/workflow-summary-comparison-range-20261025.md">local
+            comparison regression record</a> for scope and limitations.</li>
+          <li id="summary-reduction-range">Summary aggregation uses compensated summation
+            and rescales on sum overflow so a finite mean can remain usable. An
+            unrepresentable span still fails the node. Normalization validates
+            declared numeric rules even for absent source fields, rejects inverted
+            clamp bounds, and checks finite arithmetic before applying clamps.
+            Best-summary selection checks every weighted score and running total
+            before choosing a candidate, even when score details are hidden.
+            Zero and negative finite weights retain their existing meaning;
+            malformed weights are not replaced by defaults. Named sources are
+            enumerated deterministically. These are bounded safeguards, not an
+            extended-precision affine transform or a general rounding guarantee;
+            see the <a href="../reports/workflow-summary-reduction-range-20261025.md">local
+            reduction regression record</a>.</li>
           <li><code>transform.first_available</code> waits for all predecessors
             to resolve and chooses the first available artifact in edge
             declaration order. Consumed-artifact and lineage records name only

@@ -130,7 +130,7 @@ defmodule KyuubikiWeb.WorkflowGraphInputBindingTest do
   defp join_lineage(result),
     do: Enum.find(result["artifact_lineage"], &(&1["artifact_key"] == "join.payload"))
 
-  defp input(id), do: %{"value" => id, "status" => "ready"}
+  defp input(id), do: %{"value" => id, "status" => "ready", "payload" => %{"value" => "nested"}}
   defp port(id), do: %{"id" => id, "artifact_type" => "artifact/json"}
 
   defp request(operator, reverse) do

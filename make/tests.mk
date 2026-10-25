@@ -24,6 +24,10 @@
 .PHONY: test-workflow-condition-contract
 .PHONY: test-workflow-named-input-contract
 .PHONY: test-workflow-execution-evidence
+.PHONY: test-workflow-summary-admission
+.PHONY: test-workflow-summary-comparison
+.PHONY: test-workflow-summary-reduction
+.PHONY: test-sdk-modal-recovery
 
 test: test-web test-rust test-frontend test-sdk test-playground
 
@@ -46,12 +50,25 @@ test-workflow-condition-contract:
 	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_condition_contract_test.exs test/kyuubiki_web/workflow_branch_recovery_test.exs
 
 test-workflow-named-input-contract:
-	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_named_input_contract_test.exs test/kyuubiki_web/workflow_branch_recovery_test.exs
+	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_named_input_contract_test.exs test/kyuubiki_web/workflow_named_source_integrity_test.exs test/kyuubiki_web/workflow_graph_input_binding_test.exs test/kyuubiki_web/workflow_branch_recovery_test.exs
 	@cd workers/rust && cargo test --locked -p kyuubiki-engine --test shared_named_input_contract
+	@cd apps/web && mix test test/kyuubiki_web/api/workflow_named_input_contract_api_test.exs
 
 test-workflow-execution-evidence:
 	@cd apps/web && mix test test/kyuubiki_web/workflow_execution_evidence_test.exs test/kyuubiki_web/api/workflow_execution_evidence_api_test.exs
 	@cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test shared_execution_evidence
+
+test-workflow-summary-admission:
+	@cd apps/web && mix test test/kyuubiki_web/workflow_summary_admission_test.exs test/kyuubiki_web/api/workflow_summary_admission_api_test.exs
+	@cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test shared_summary_admission
+
+test-workflow-summary-comparison:
+	@cd apps/web && mix test test/kyuubiki_web/workflow_summary_comparison_range_test.exs test/kyuubiki_web/api/workflow_summary_comparison_api_test.exs
+	@cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test shared_summary_comparison_range
+
+test-workflow-summary-reduction:
+	@cd apps/web && mix test test/kyuubiki_web/workflow_summary_reduction_range_test.exs test/kyuubiki_web/api/workflow_summary_reduction_api_test.exs
+	@cd workers/rust && cargo test --locked --offline -p kyuubiki-engine --test shared_summary_reduction_range
 
 test-rust:
 	@$(ENTRYPOINT) rust-test
@@ -73,6 +90,14 @@ test-runtime-surfaces:
 test-sdk:
 	@$(ENTRYPOINT) sdk-smoke
 	@$(MAKE) check-material-study-sdk-examples
+
+# Keep both development caches explicit; these tests never use installed services.
+test-sdk-modal-recovery:
+	@cargo build --locked --offline --manifest-path workers/rust/Cargo.toml --target-dir workers/rust/target -p kyuubiki-cli --bin kyuubiki-cli
+	@cargo build --locked --offline --manifest-path sdks/rust/Cargo.toml --target-dir sdks/rust/target --example durable_modal_research
+	@cargo test --locked --offline --manifest-path workers/rust/Cargo.toml --target-dir workers/rust/target -p kyuubiki-protocol --test durable_execution_digest_contract
+	@cargo test --locked --offline --manifest-path sdks/rust/Cargo.toml --target-dir sdks/rust/target --test durable_execution --test durable_execution_intent --test solver_rpc_transport --test durable_modal_ack_loss_live --test durable_modal_evidence --test durable_modal_contract --test durable_modal_records
+	@KYUUBIKI_TEST_AGENT_BINARY="$(CURDIR)/workers/rust/target/debug/kyuubiki-cli$(if $(filter Windows_NT,$(OS)),.exe,)" KYUUBIKI_TEST_MODAL_EXAMPLE_BINARY="$(CURDIR)/sdks/rust/target/debug/examples/durable_modal_research$(if $(filter Windows_NT,$(OS)),.exe,)" cargo test --locked --offline --manifest-path sdks/rust/Cargo.toml --target-dir sdks/rust/target --test durable_modal_live --test durable_modal_ack_loss_live --test durable_modal_publication_live --test durable_modal_readback_live --test durable_modal_preflight_live --test durable_modal_record_kill_live --test durable_modal_export_recovery_live -- --ignored --test-threads=1
 
 test-agent-capability-smoke:
 	@$(ENTRYPOINT) agent-capability-smoke --host $${AGENT_HOST:-127.0.0.1} --port $${AGENT_PORT:-5001} --profile $${AGENT_SMOKE_PROFILE:-advertised} --output $${OUTPUT:-tmp/agent-capability-smoke.json} $${AGENT_SMOKE_ARGS:-}

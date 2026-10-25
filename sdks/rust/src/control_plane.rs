@@ -321,6 +321,8 @@ impl ControlPlaneClient {
             .ok_or_else(|| SdkError::Rpc {
                 message: format!("unsupported solve kind: {solve_kind}"),
                 code: None,
+                request_id: None,
+                details: None,
             })?;
         self.request_json("POST", path, Some(payload))
     }

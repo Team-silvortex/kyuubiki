@@ -9,6 +9,13 @@ defmodule KyuubikiWeb.TestSupport.WorkflowNamedInputContract do
       [@fixture["sweep"]]
   end
 
+  def source_integrity_cases do
+    source = @fixture["source_integrity"]
+    Enum.map(source["operators"], &Map.merge(Map.take(source, ["ports", "values"]), &1))
+  end
+
+  def invalid_source_markers, do: @fixture["source_integrity"]["invalid_markers"]
+
   def request(sample, envelope \\ nil) do
     ports = sample["ports"]
     [left, right] = sample["values"]

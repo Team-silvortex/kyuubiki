@@ -5,29 +5,33 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
   alias KyuubikiWeb.WorkflowElectrostaticRuntime
   alias KyuubikiWeb.WorkflowPeakRuntime
   alias KyuubikiWeb.WorkflowThermalRuntime
+  alias KyuubikiWeb.WorkflowReportingChecks, as: Check
 
   def extract_result_summary(payload, config) when is_map(payload) and is_map(config) do
-    requested_fields =
-      case Map.get(config, "fields") do
-        fields when is_list(fields) -> Enum.filter(fields, &is_binary/1)
-        _ -> nil
-      end
+    with {:ok, _} <-
+           Check.run("extract.result_summary", fn -> Check.converged(payload, "payload") end) do
+      requested_fields =
+        case Map.get(config, "fields") do
+          fields when is_list(fields) -> Enum.filter(fields, &is_binary/1)
+          _ -> nil
+        end
 
-    summary =
-      if is_list(requested_fields) do
-        Enum.reduce(requested_fields, %{}, fn field, acc ->
-          case Map.fetch(payload, field) do
-            {:ok, value} -> Map.put(acc, field, value)
-            :error -> acc
-          end
-        end)
-      else
-        payload
-        |> Enum.filter(fn {key, _value} -> String.starts_with?(key, "max_") end)
-        |> Map.new()
-      end
+      summary =
+        if is_list(requested_fields) do
+          Enum.reduce(requested_fields, %{}, fn field, acc ->
+            case Map.fetch(payload, field) do
+              {:ok, value} -> Map.put(acc, field, value)
+              :error -> acc
+            end
+          end)
+        else
+          payload
+          |> Enum.filter(fn {key, _value} -> String.starts_with?(key, "max_") end)
+          |> Map.new()
+        end
 
-    if map_size(summary) == 0, do: {:error, :empty_summary}, else: {:ok, summary}
+      if map_size(summary) == 0, do: {:error, :empty_summary}, else: {:ok, summary}
+    end
   end
 
   def export_summary_json(payload) when is_map(payload) do

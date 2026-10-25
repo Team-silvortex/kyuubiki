@@ -12,6 +12,7 @@
     "config/operator-validation-profiles/linear-constraints.json",
     "config/operator-validation-profiles/linear-system.json",
     "config/operator-validation-profiles/modal.json",
+    "config/operator-validation-profiles/modal-sdk-recovery.json",
     "config/operator-validation-profiles/structural.json",
     "config/operator-validation-profiles/structural-frame.json",
     "config/operator-validation-profiles/structural-nonlinear.json",
@@ -21,6 +22,7 @@
     "config/operator-validation-profiles/thermal-structural.json",
     "config/operator-validation-profiles/transport.json",
     "config/operator-validation-profiles/workflow.json",
+    "config/operator-validation-profiles/workflow-summary-numerics.json",
     "config/operator-validation-profiles/workflow-runtime.json"
   ],
   "profiles": [

@@ -81,6 +81,53 @@ defmodule KyuubikiWeb.Api.WorkflowNamedInputContractApiTest do
     end
   end
 
+  test "async named sources keep real metrics and diagnostic rejection after SQLite readback" do
+    for sample <- Fixture.source_integrity_cases() do
+      {202, submitted} = post_graph("jobs", Fixture.request(sample))
+      job_id = submitted["job"]["job_id"]
+      completed = WorkflowApi.wait_for_job(job_id, @opts)
+      assert completed["job"]["status"] == "completed"
+      result = completed["result"]
+      summary = result["artifacts"]["result.summary"]
+      assert Map.take(summary, Map.keys(sample["expected"])) == sample["expected"]
+      assert {:ok, retained} = AnalysisResultStore.get(job_id)
+      assert retained["artifacts"] == result["artifacts"]
+    end
+
+    sample = List.last(Fixture.source_integrity_cases())
+
+    for marker <- Fixture.invalid_source_markers() do
+      request =
+        sample
+        |> Fixture.request()
+        |> update_in(["input_artifacts", "left"], &Map.merge(&1, marker))
+
+      {422, error} = post_graph("run", request)
+      assert error["error"] =~ "combine"
+
+      request =
+        update_in(request, ["graph", "nodes"], fn nodes ->
+          Enum.map(nodes, fn node ->
+            if node["id"] == "combine",
+              do: put_in(node, ["config", "on_error"], "skip"),
+              else: node
+          end)
+        end)
+
+      {202, submitted} = post_graph("jobs", request)
+      job_id = submitted["job"]["job_id"]
+      completed = WorkflowApi.wait_for_job(job_id, @opts)
+      result = completed["result"]
+      assert result["failed_nodes"] == ["combine"]
+      assert result["skipped_nodes"] == ["result"]
+      refute Map.has_key?(result["artifacts"], "result.summary")
+      assert result["artifacts"]["raw.payload"] == request["input_artifacts"]["left"]
+      assert {:ok, retained} = AnalysisResultStore.get(job_id)
+      assert retained["node_failures"] == result["node_failures"]
+      assert retained["artifacts"] == result["artifacts"]
+    end
+  end
+
   defp post_graph(action, request) do
     conn =
       :post

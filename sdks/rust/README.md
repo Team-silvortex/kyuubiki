@@ -49,6 +49,277 @@ SDK library/example fixtures are bundled under `fixtures/`; repository tests
 additionally check their parity with shared schemas. Bootstrap-document tests
 still require repository documentation and the other official SDK surfaces.
 
+## Durable Direct-Agent Modal Research
+
+`examples/durable_modal_research.rs` submits a synthetic two-material,
+unequal-length cantilever through the official `SolverRpcClient`. It requests
+four bending modes and checks them against independently assembled stiffness,
+original lumped masses, bracketed spectral roots, physical residuals and mass
+orthogonality. This is a small numerical reference, not material certification.
+
+Use an explicitly managed Agent with a durable execution store. Set
+`KYUUBIKI_RESEARCH_AGENT_ENDPOINT` to its loopback `host:port`; this raw RPC
+example adds no network authentication and must not expose an Agent publicly.
+Choose a new caller-owned 32-character lowercase hexadecimal execution ID:
+
+```sh
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example durable_modal_research -- submit tmp/modal-study-001 0123456789abcdef0123456789abcdef
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example durable_modal_research -- inspect tmp/modal-study-001 tmp/modal-export-001
+```
+
+The parent `tmp` directory must exist. `submit` saves input and a typed-digest
+`DurableExecutionIntent` before sending, then retains admission separately.
+`inspect` only reads the original store/ID and exports to a new directory.
+If acknowledgement was lost, a completed receipt can be reconciled against
+that saved intent and exact input, then independently checked before publication.
+Changed input, different endpoint/store/digest, non-completed status, or a
+present but corrupt/contradictory admission blocks result export. An old intent
+without the typed digest cannot be upgraded by trusting a returned receipt.
+After a valid observation, a later inspection failure keeps the raw receipt;
+use a fresh output directory for another explicit read.
+
+The example's formal export now lives under `verified/result.json` and
+`verified/verification.json`, not directly in the output root. `receipt.json`
+is raw diagnostic evidence, not a qualified result. The example checks the
+physical result before staging, compares staged bytes with the original
+serialization, and independently checks the disk readback. A same-parent
+directory rename then publishes result and verification together. Consumers
+must require both files, `passed: true`, matching execution identity and the
+recorded result SHA-256; a directory name alone is not evidence.
+
+Failed exports clean only their own `.verification-pending` directory. A
+forced process kill can leave that pending directory, which is never a formal
+export and is not reused automatically. Use a fresh output directory to read
+the original execution again, without resubmission. Existing exports and
+pre-existing staging data are not overwritten. This is a single-writer local
+example, not a generic SDK filesystem policy, hostile-filesystem guarantee,
+multi-writer transaction or host-power-loss qualification. See the
+[publication-boundary regression](../../reports/headless-modal-export-publication-20261025.md).
+
+The example's input, intent, admission and raw receipt records are also staged:
+write a new same-directory `.NAME.pending` file, synchronize it, require exact
+readback, then publish the final name with a no-replace hard link. The pending
+alias is removed after publication; unsupported filesystems fail closed rather
+than falling back to an overwriting rename. The writer uses the same 8 MiB
+example-local record limit as the reader and only the four fixed filenames.
+
+Ordinary failures clean only newly owned staging files. A forced process kill
+can leave a partial or complete pending record, which is neither promoted nor
+reused automatically. An interrupted admission write therefore leaves no corrupt
+final admission; recovery can inspect the original task using its already saved
+input and intent. Missing/partial intent remains a blocked local record, and
+`not_found` is never permission to resubmit. Existing corrupt final admission
+still blocks recovery and is not downgraded to missing. This is local process-kill
+recovery, not directory/host-power-loss durability, a filesystem migration policy
+or a generic SDK persistence API. See the
+[record-publication interruption regression](../../reports/headless-modal-record-publication-20261025.md).
+
+If export stopped after a complete `receipt.json` was retained, recover the
+derived files without bringing the Agent back online:
+
+```sh
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example durable_modal_research -- recover-export tmp/modal-study-001 tmp/modal-export-001 tmp/modal-export-recovered
+```
+
+`recover-export` is an explicit example-local offline operation, not a solver
+resume/retry or generic SDK storage API. It binds the saved input/intent,
+optional admission and completed receipt, rechecks the physics, and publishes
+to a new directory using the same staged verification. It never reads/promotes
+pending result files, modifies source evidence or contacts an Agent. The new
+directory must be outside both source trees, including resolved parent aliases;
+its parent must already exist. The receipt copy is reserialized from the checked
+JSON; source bytes remain unchanged, and typed result identity is preserved.
+
+Missing/partial/failed/unknown/foreign receipts and corrupt or contradictory
+admission block recovery before output creation. Any existing `verified` entry
+in the source, even an empty directory, file or dangling link, also blocks it:
+use `verify` to diagnose published evidence instead of bypassing it. If the final
+receipt is missing, only a fresh online `inspect` can read the original task;
+pending receipts cannot authorize offline export or resubmission. This does not
+authenticate caller-owned records or prove the current remote state. See the
+[offline export recovery regression](../../reports/headless-modal-offline-export-recovery-20261025.md).
+
+Recheck an existing export without an Agent or endpoint configuration:
+
+```sh
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example durable_modal_research -- verify tmp/modal-study-001 tmp/modal-export-001
+```
+
+`verify` is an example-local, read-only consumer, not a generic headless CLI or
+SDK storage policy. It checks the saved input hash and typed intent, optional
+admission, original completed receipt, formal result hash/content and report
+identity/claims, then repeats the independent physical checks. It neither
+contacts the Agent nor creates, repairs, promotes or overwrites files. Missing
+admission can still reconcile through the saved intent; present corrupt
+admission cannot be ignored. Pending-only or incomplete exports fail.
+
+The fresh JSON verdict goes to standard output with
+`verification_source: "offline_recomputed"`. Historical root/residual arrays
+must have valid finite shapes but are recomputed, not used as numerical truth.
+`historical_diagnostics_match: false` explicitly flags differing diagnostics;
+it does not by itself invalidate a result that passes fresh physical checks.
+This avoids demanding bit-identical diagnostic arithmetic across toolchains.
+The check does not authenticate a set of mutually forged records, verify the
+current remote store, or qualify arbitrary modal models. See the
+[offline readback regression](../../reports/headless-modal-offline-readback-20261025.md).
+
+The independent reference also checks the full submitted input echo, each mode's
+angular frequency against its eigenvalue and Hz value, its declared
+`participation_norm` against the Euclidean norm of its shape, and the returned
+minimum/maximum frequency summaries. Here `participation_norm` is a shape norm,
+not an effective modal mass or participation factor. Missing, malformed or
+contradictory fields reject both publication and offline revalidation even if
+all saved copies and hashes agree. Elementary derived-value checks allow normal
+floating-point rounding; the separate original-result binding remains exact
+over typed values. This model-specific reference stays outside the generic SDK
+and Agent engine. See the [modal metadata regression](../../reports/headless-modal-metadata-validation-20261025.md).
+
+The modal example uses one bounded evidence reader for input, intent, admission,
+receipt, published result/report and staged readback. Each file is limited to
+8 MiB of encoded data and must be a regular non-symlink file in a non-symlink
+immediate container. Only a genuinely absent admission leaf is optional;
+broken links, directories and unreadable files cannot downgrade to missing.
+Duplicate JSON object keys (including nested or escape-equivalent keys),
+trailing documents, invalid UTF-8 and excessive parser depth are rejected.
+Read/parse failures identify the affected filename. The same read supplies
+both exact bytes for hashing and the parsed value.
+
+This is the four-mode example's file policy, not a model-size or general SDK
+RPC limit. It is not an exact JSON-heap budget, a complete ancestor-path check,
+or a defense against hostile concurrent filesystem changes. See the
+[bounded evidence regression](../../reports/headless-modal-evidence-boundaries-20261025.md).
+
+Embedding applications should persist `DurableExecutionIntent::new(...)` with
+input and endpoint before calling `submit_prepared_durable_agent_task` once.
+Use `inspect_durable_agent_task` and `intent.handle_from_report` after transport
+loss; `DurableExecutionHandle::completed_result` still requires completion.
+The convenience `submit_durable_agent_task` also checks the input digest, but
+does not persist anything for its caller. Raw inspection and retained-handle
+fetch remain available. These checks bind identity/content, not authenticity
+or scientific validity. Persistence, protected endpoint configuration and
+numerical validation remain the embedding application's responsibility.
+`outcome_unknown` and `not_found` never authorize automatic resubmission. An
+explicit new attempt must use a new ID and remains separate from the old one.
+
+Retain full observations when later reads must also preserve a known outcome.
+`fetch_durable_agent_execution(&handle)` validates identity but the handle does
+not contain previous terminal contents. Use
+`fetch_durable_agent_execution_after(&retained_receipt)` for one read-only fetch
+that also checks consistency with that observation, or call
+`handle.validate_followup(&retained_receipt, &observed_receipt)` on records you
+already have. A retained `completed`/`failed` outcome cannot change status,
+disappear into a nonterminal state, replace its result, or rewrite its failure
+code/message/details. Conflict is an error, not permission to resubmit.
+
+The comparison covers known v1 terminal fields with lossless typed values,
+including signed zero and low binary64 bits, without cloning a large result
+payload. Optional absent/null wire fields are equivalent; unrelated observation
+metadata is not a new outcome. This adds no wire digest or exchange format.
+History-aware fetch validates and bounds retained terminal content before
+connecting; a remote outage cannot hide that local content is unusable. The
+retained commitment is computed once per call and reused after the read, not
+stored in a global cache or persisted as a new wire field.
+Running and unknown observations have no committed terminal payload and may
+reconcile with a valid original terminal receipt. They still grant no replay
+authority. A consistent failed receipt remains inspectable, not a successful
+physical result; `completed_result` still returns the original solver error.
+
+This is explicit caller-owned history, not a global SDK cache, authentication
+or a complete chronological state machine. Save input/intent and the full
+receipt before relying on later history checks. The example applies the same
+SDK rule between a present saved admission and the observed/exported receipt
+for both `inspect` and offline `verify`. See the
+[terminal consistency regression](../../reports/headless-terminal-observation-consistency-20261025.md).
+
+The example preflights local admission shape/intent binding before online
+endpoint configuration or fetching, and before offline receipt consumption.
+Known corrupt evidence therefore produces its local filename error without
+contacting an Agent or creating an export. `submit` and `inspect` also reject
+occupied destinations (including dangling links) and absent/non-directory
+parents before network access. Parents must already exist. This read-only path
+check is not a reservation or permission guarantee; the final exclusive
+directory creation and publication checks still protect existing output.
+Valid local records can still conflict with a later remote observation, which
+is checked after fetching and may retain a raw diagnostic receipt, never a
+verified result. See the [local preflight regression](../../reports/headless-modal-local-preflight-20261025.md).
+
+For a separately decoded result, call
+`handle.validate_completed_result(&receipt, &result)` before using it. This
+requires the original identity-bound successful receipt and compares typed
+content without copying the full payload. Signed zero, binary64 bits, integer
+precision and integer-versus-float distinctions are preserved; object-key order
+and equivalent JSON spelling are not differences. Missing and null fields
+inside a result remain different, unlike optional wire-envelope fields.
+
+This is not a physics verdict or file-integrity check. Check retained file bytes
+against their recorded hash separately, then verify physical admissibility;
+none of these three gates replaces another. The modal offline reader now uses
+this SDK gate instead of ordinary JSON equality, which loses the sign of zero.
+A consistent failed receipt still returns the original solver error, not a
+matching result. No format, network request, automatic repair or replay is added.
+See the [result-content regression](../../reports/headless-result-content-binding-20261025.md).
+
+Terminal receipts validate their inner RPC version, original request ID,
+exclusive result/error state and non-empty failure code/message, not only the
+outer observation response. A valid failed receipt makes `completed_result`
+return the original `SdkError::Rpc` with code, message, `request_id` and optional
+`details`; it never becomes a result. Invalid or contradictory receipts remain
+rejected before their diagnostics can be treated as a trusted failure context.
+
+`make test-sdk-modal-recovery` builds disposable development binaries and runs
+real local Agent process-kill, lost-acknowledgement/request, ledger replacement,
+export/readback and numerical negative controls. Shared golden digest vectors
+are checked by both the standalone SDK and Agent protocol. Tests clean their
+own temporary directories. This is not a
+host power cut, installed runtime qualification or the unresolved long-bending
+multi-mode production campaign. See the [HTML tutorial](../../docs/tutorial-headless-rust.html#durable-modal-research).
+
+## Direct RPC Resource Policy
+
+`SolverRpcClient` validates protocol version, exact request identity, progress
+payloads and mutually exclusive success/failure states. Known duplicate
+envelope fields, foreign replies and invalid frames fail instead of becoming
+results. Each call uses a process-wide sequence in its ID; this is correlation,
+not authentication. It does not automatically retry or cancel a timed-out task.
+
+Remote `SdkError::Rpc` preserves the validated response identity and optional
+structured diagnostics. Locally generated configuration errors have neither.
+Match `SdkError::Rpc { code, message, .. }` when the additional context is not
+needed; exhaustive patterns and manually constructed variants must account for
+the new fields. Diagnostic content is untrusted data, never retry permission.
+`Display` emits only code/message, while `Debug` includes details. Neither is a
+general redaction policy: apply caller-owned access and logging rules before
+retaining or exposing remote messages, raw receipts or structured details.
+See the [failure-context recovery report](../../reports/headless-failure-context-recovery-20261025.md).
+
+Inspect `client.limits()` or configure `SolverRpcLimits` with `with_limits`:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `max_request_bytes` | 256 MiB | Encoded request payload; reject before connecting |
+| `max_response_bytes` | 256 MiB | Each incoming payload, checked before allocating its buffer |
+| `max_progress_bytes` | 4 MiB | Cumulative encoded progress/heartbeat payloads |
+| `max_progress_frames` | 4096 | Maximum retained progress/heartbeat messages |
+| `io_timeout` | 15 seconds | Idle I/O and per-address connection wait |
+| `call_timeout` | 30 minutes | Shared network deadline, not extended by heartbeats or partial reads |
+
+These are encoded-byte budgets, not exact parsed-JSON memory limits. Set larger
+budgets explicitly for a known large solve and align them with Agent limits;
+the SDK never silently expands them or resends an oversized request. Zero
+progress budgets reject progress rather than silently dropping diagnostics.
+OS hostname resolution is synchronous and cannot be forcibly interrupted by
+this client, though its elapsed time consumes the deadline. Request encoding
+precedes the deadline; numerical execution has its own server-side policy.
+A timeout or protocol error after dispatch does not prove that execution
+failed. For durable work, retain the intent and inspect the original execution.
+Closing the connection can still trigger the Agent's own disconnect policy;
+absence of an SDK cancellation RPC does not guarantee that work keeps running.
+The example does not add TLS or authentication to raw Agent RPC.
+
 ## Model collaboration
 
 Before projecting tools, `inspect_model_research_bootstrap(...)` checks the

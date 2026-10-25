@@ -479,6 +479,8 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
             let solver = method.strip_prefix("solve_").unwrap_or(method);
 
             let body = serde_json::json!({
+                "rpc_version": 1,
+                "id": request["id"],
                 "ok": true,
                 "result": {
                     "solver": solver,

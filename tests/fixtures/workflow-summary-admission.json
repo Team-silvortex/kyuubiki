@@ -1,0 +1,32 @@
+{
+  "schema_version": "kyuubiki.workflow-summary-admission-fixture/v1",
+  "cases": [
+    {"operator_id": "transform.merge_summary_pair", "kind": "transform", "shape": "pair", "payload": {"left": {"cost": 1}, "right": {"cost": 4}}, "config": {}, "expected": {"left_cost": 1, "right_cost": 4, "summary_source_count": 2}},
+    {"operator_id": "transform.compare_summary_pair", "kind": "transform", "shape": "pair", "payload": {"left": {"cost": 1}, "right": {"cost": 4}}, "config": {"fields": ["cost"]}, "expected": {"left_cost": 1, "right_cost": 4, "delta_cost": 3}},
+    {"operator_id": "transform.aggregate_summary_collection", "kind": "transform", "shape": "collection", "payload": {"left": {"cost": 1}, "right": {"cost": 4}}, "config": {"fields": ["cost"]}, "expected": {"aggregate_cost_mean": 2.5, "summary_input_count": 2}},
+    {"operator_id": "transform.select_best_summary", "kind": "transform", "shape": "collection", "payload": {"left": {"cost": 1}, "right": {"cost": 4}}, "config": {"criteria": [{"field": "cost", "goal": "min"}]}, "expected": {"selected_summary_source": "left", "cost": 1}},
+    {"operator_id": "transform.normalize_summary_fields", "kind": "transform", "shape": "single", "payload": {"cost": 1}, "config": {"rules": [{"source": "cost", "target": "metric"}]}, "expected": {"metric": 1}},
+    {"operator_id": "extract.result_summary", "kind": "extract", "shape": "single", "payload": {"cost": 1}, "config": {"fields": ["cost"]}, "expected": {"cost": 1}}
+  ],
+  "invalid_markers": [
+    {"converged": false, "achieved_load_factor": 0.25},
+    {"converged": null},
+    {"converged": 0},
+    {"converged": "false"},
+    {"converged": []},
+    {"converged": {}},
+    {"stability_result": null},
+    {"stability_result": false},
+    {"stability_result": []},
+    {"stability_result": {"converged": false}},
+    {"stability_result": {"converged": null}},
+    {"stability_result": {"converged": "true"}}
+  ],
+  "valid_markers": [
+    {},
+    {"converged": true},
+    {"stability_result": {}},
+    {"stability_result": {"converged": true, "cost": -100}},
+    {"converged": true, "achieved_load_factor": 0.25, "steps": [{"converged": false}], "metadata": {"converged": false}, "stability_result": {"converged": true, "steps": [{"converged": false}]}}
+  ]
+}

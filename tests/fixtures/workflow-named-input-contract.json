@@ -27,6 +27,26 @@
     "config": {"strict": true},
     "expected": {"case_count": 2, "joined_summary_count": 2, "missing_summary_count": 0, "missing_case_ids": []}
   },
+  "source_integrity": {
+    "ports": ["left", "right"],
+    "values": [
+      {"cost": 10, "payload": {"cost": 1}, "diagnostic_contract": "kyuubiki.workflow_diagnostics/v1", "diagnostic_node_count": 2},
+      {"cost": 4, "payload": {"cost": 99}, "diagnostic_contract": "kyuubiki.workflow_diagnostics/v1", "diagnostic_node_count": 3}
+    ],
+    "operators": [
+      {"operator_id": "transform.merge_summary_pair", "config": {}, "expected": {"left_cost": 10, "right_cost": 4, "left_payload": {"cost": 1}}},
+      {"operator_id": "transform.compare_summary_pair", "config": {"fields": ["cost"]}, "expected": {"left_cost": 10, "right_cost": 4, "delta_cost": -6}},
+      {"operator_id": "transform.aggregate_summary_collection", "config": {"fields": ["cost"]}, "expected": {"aggregate_cost_min": 4, "aggregate_cost_max": 10, "aggregate_cost_mean": 7}},
+      {"operator_id": "transform.select_best_summary", "config": {"criteria": [{"field": "cost", "goal": "min"}]}, "expected": {"selected_summary_source": "right", "cost": 4}},
+      {"operator_id": "transform.compose_diagnostics_bundle", "config": {"include_non_diagnostics": true}, "expected": {"bundle_source_count": 2, "bundle_total_node_count": 5}}
+    ],
+    "invalid_markers": [
+      {"converged": false},
+      {"converged": null},
+      {"stability_result": {"converged": false}},
+      {"diagnostic_node_count": -1}
+    ]
+  },
   "request": {
     "graph": {
       "schema_version": "kyuubiki.workflow-graph/v1",

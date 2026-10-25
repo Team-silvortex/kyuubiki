@@ -1,3 +1,4 @@
+use crate::workflow_guard_contract::{finite_value, optional_text};
 use crate::workflow_result_admission::require_converged_result;
 use serde_json::Value;
 
@@ -123,22 +124,32 @@ pub fn compare_summary_pair(payload: Value, config: Value) -> Result<Value, Stri
             );
         }
         if include_delta {
-            compared.insert(
+            insert_comparison_metric(
+                &mut compared,
                 format!("{}_{}", normalize_prefix(delta_prefix), field),
-                Value::from(right_value - left_value),
-            );
+                right_value - left_value,
+            )?;
         }
         if include_ratio && left_value != 0.0 {
-            compared.insert(
+            insert_comparison_metric(
+                &mut compared,
                 format!("{}_{}", normalize_prefix(ratio_prefix), field),
-                Value::from(right_value / left_value),
-            );
+                right_value / left_value,
+            )?;
         }
         if include_percent_change && left_value != 0.0 {
-            compared.insert(
+            let delta = right_value - left_value;
+            // Keep nearby-value subtraction; divide first only when the difference overflows.
+            let relative = if delta.is_finite() {
+                delta / left_value
+            } else {
+                right_value / left_value - 1.0
+            };
+            insert_comparison_metric(
+                &mut compared,
                 format!("{}_{}", normalize_prefix(percent_prefix), field),
-                Value::from(((right_value - left_value) / left_value) * 100.0),
-            );
+                relative * 100.0,
+            )?;
         }
     }
 
@@ -168,6 +179,7 @@ pub fn aggregate_summary_collection(payload: Value, config: Value) -> Result<Val
     let object = payload.as_object().ok_or_else(|| {
         "transform.aggregate_summary_collection expects an object payload".to_string()
     })?;
+    require_converged_result(object, "transform.aggregate_summary_collection", "payload")?;
     if object.is_empty() {
         return Err(
             "transform.aggregate_summary_collection requires at least one named summary input"
@@ -202,6 +214,7 @@ pub fn aggregate_summary_collection(payload: Value, config: Value) -> Result<Val
 
     let source_entries = object
         .iter()
+        .filter(|(id, _)| !["converged", "stability_result"].contains(&id.as_str()))
         .filter_map(|(source_id, summary)| summary.as_object().map(|entry| (source_id, entry)))
         .collect::<Vec<_>>();
     if source_entries.is_empty() {
@@ -249,16 +262,21 @@ pub fn aggregate_summary_collection(payload: Value, config: Value) -> Result<Val
 
         aggregated_field_count += 1;
         let count = values.len();
-        let sum = values.iter().sum::<f64>();
-        let mean = sum / count as f64;
+        let field_prefix = format!("{output_prefix}_{field}");
+        let mean = finite_value(
+            summary_mean(&values),
+            &format!("transform.aggregate_summary_collection {field_prefix}_mean"),
+        )?;
         let min = values
             .iter()
             .fold(f64::INFINITY, |current, value| current.min(*value));
         let max = values
             .iter()
             .fold(f64::NEG_INFINITY, |current, value| current.max(*value));
-        let span = max - min;
-        let field_prefix = format!("{output_prefix}_{field}");
+        let span = finite_value(
+            max - min,
+            &format!("transform.aggregate_summary_collection {field_prefix}_span"),
+        )?;
 
         aggregated.insert(format!("{field_prefix}_count"), Value::from(count));
         aggregated.insert(format!("{field_prefix}_min"), Value::from(min));
@@ -301,9 +319,18 @@ pub fn normalize_summary_fields(payload: Value, config: Value) -> Result<Value, 
         .get("rules")
         .and_then(Value::as_array)
         .ok_or_else(|| "transform.normalize_summary_fields requires config.rules".to_string())?;
+    if rules.is_empty() {
+        return Err("transform.normalize_summary_fields config.rules must not be empty".into());
+    }
     let copy_unmapped = config
         .get("copy_unmapped")
-        .and_then(Value::as_bool)
+        .map(|value| {
+            value.as_bool().ok_or_else(|| {
+                "transform.normalize_summary_fields config.copy_unmapped must be a boolean"
+                    .to_string()
+            })
+        })
+        .transpose()?
         .unwrap_or(false);
 
     let mut normalized = if copy_unmapped {
@@ -312,22 +339,31 @@ pub fn normalize_summary_fields(payload: Value, config: Value) -> Result<Value, 
         serde_json::Map::new()
     };
 
-    for rule in rules {
-        let source = rule
-            .get("source")
-            .and_then(Value::as_str)
-            .ok_or_else(|| "transform.normalize_summary_fields rule requires source".to_string())?;
-        let target = rule.get("target").and_then(Value::as_str).unwrap_or(source);
+    for (index, rule) in rules.iter().enumerate() {
+        let path = format!("transform.normalize_summary_fields config.rules[{index}]");
+        let rule = rule
+            .as_object()
+            .ok_or_else(|| format!("{path} must be an object"))?;
+        let source = optional_text(rule, "source", &path)?
+            .ok_or_else(|| format!("{path}.source is required"))?;
+        let target = optional_text(rule, "target", &path)?.unwrap_or(source);
+        let scale = summary_number_option(rule, "scale", &path)?.unwrap_or(1.0);
+        let offset = summary_number_option(rule, "offset", &path)?.unwrap_or(0.0);
+        let clamp_min = summary_number_option(rule, "clamp_min", &path)?;
+        let clamp_max = summary_number_option(rule, "clamp_max", &path)?;
+        if let (Some(min), Some(max)) = (clamp_min, clamp_max)
+            && min > max
+        {
+            return Err(format!("{path}.clamp_max must be at least clamp_min"));
+        }
         let Some(source_value) = object.get(source) else {
             continue;
         };
 
         let next_value = if let Some(numeric) = source_value.as_f64() {
-            let scale = rule.get("scale").and_then(Value::as_f64).unwrap_or(1.0);
-            let offset = rule.get("offset").and_then(Value::as_f64).unwrap_or(0.0);
-            let clamp_min = rule.get("clamp_min").and_then(Value::as_f64);
-            let clamp_max = rule.get("clamp_max").and_then(Value::as_f64);
-            let mut next_numeric = numeric * scale + offset;
+            let path = format!("transform.normalize_summary_fields normalized.{target}");
+            let product = finite_value(numeric * scale, &path)?;
+            let mut next_numeric = finite_value(product + offset, &path)?;
             if let Some(minimum) = clamp_min {
                 next_numeric = next_numeric.max(minimum);
             }
@@ -358,6 +394,7 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
     let object = payload
         .as_object()
         .ok_or_else(|| "transform.select_best_summary expects an object payload".to_string())?;
+    require_converged_result(object, "transform.select_best_summary", "payload")?;
     if object.is_empty() {
         return Err(
             "transform.select_best_summary requires at least one named summary input".to_string(),
@@ -383,6 +420,7 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
 
     let source_entries = object
         .iter()
+        .filter(|(id, _)| !["converged", "stability_result"].contains(&id.as_str()))
         .filter_map(|(source_id, summary)| summary.as_object().map(|entry| (source_id, entry)))
         .collect::<Vec<_>>();
     if source_entries.is_empty() {
@@ -397,7 +435,7 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
                 "transform.select_best_summary",
                 &format!("payload.{source_id}"),
             )?;
-            let (score, breakdown) = score_summary_entry(summary, criteria)?;
+            let (score, breakdown) = score_summary_entry(summary, criteria, source_id)?;
             Ok((
                 (*source_id).to_string(),
                 (*summary).clone(),
@@ -450,6 +488,16 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
     }
 
     Ok(Value::Object(selected))
+}
+
+fn insert_comparison_metric(
+    output: &mut serde_json::Map<String, Value>,
+    key: String,
+    value: f64,
+) -> Result<(), String> {
+    let value = finite_value(value, &format!("transform.compare_summary_pair {key}"))?;
+    output.insert(key, Value::from(value));
+    Ok(())
 }
 
 fn merge_summary_fields(
@@ -509,22 +557,19 @@ fn normalize_prefix(prefix: &str) -> String {
 fn score_summary_entry(
     summary: &serde_json::Map<String, Value>,
     criteria: &[Value],
+    source_id: &str,
 ) -> Result<(f64, Vec<Value>), String> {
     let mut total = 0.0;
     let mut breakdown = Vec::new();
-    for criterion in criteria {
-        let field = criterion
-            .get("field")
-            .and_then(Value::as_str)
-            .ok_or_else(|| "transform.select_best_summary criterion requires field".to_string())?;
-        let goal = criterion
-            .get("goal")
-            .and_then(Value::as_str)
-            .unwrap_or("max");
-        let weight = criterion
-            .get("weight")
-            .and_then(Value::as_f64)
-            .unwrap_or(1.0);
+    for (index, criterion) in criteria.iter().enumerate() {
+        let path = format!("transform.select_best_summary config.criteria[{index}]");
+        let criterion = criterion
+            .as_object()
+            .ok_or_else(|| format!("{path} must be an object"))?;
+        let field = optional_text(criterion, "field", &path)?
+            .ok_or_else(|| format!("{path}.field is required"))?;
+        let goal = optional_text(criterion, "goal", &path)?.unwrap_or("max");
+        let weight = summary_number_option(criterion, "weight", &path)?.unwrap_or(1.0);
         let value = summary.get(field).and_then(Value::as_f64).ok_or_else(|| {
             format!("transform.select_best_summary missing numeric field {field}")
         })?;
@@ -537,7 +582,14 @@ fn score_summary_entry(
                 ));
             }
         };
-        total += criterion_score;
+        finite_value(
+            criterion_score,
+            &format!("transform.select_best_summary payload.{source_id}.score[{index}]"),
+        )?;
+        total = finite_value(
+            total + criterion_score,
+            &format!("transform.select_best_summary payload.{source_id}.total[{index}]"),
+        )?;
         breakdown.push(serde_json::json!({
             "field": field,
             "goal": goal,
@@ -547,4 +599,45 @@ fn score_summary_entry(
         }));
     }
     Ok((total, breakdown))
+}
+
+fn summary_number_option(
+    object: &serde_json::Map<String, Value>,
+    key: &str,
+    path: &str,
+) -> Result<Option<f64>, String> {
+    object
+        .get(key)
+        .map(|value| {
+            value
+                .as_f64()
+                .filter(|number| number.is_finite())
+                .ok_or_else(|| format!("{path}.{key} must be a finite number"))
+        })
+        .transpose()
+}
+
+fn summary_mean(values: &[f64]) -> f64 {
+    let sum = compensated_total(values.iter().copied());
+    if sum.is_finite() {
+        return sum / values.len() as f64;
+    }
+    // Scale only on overflow, preserving ordinary/subnormal cancellation tails in their units.
+    let scale = values.iter().map(|value| value.abs()).fold(0.0, f64::max);
+    compensated_total(values.iter().map(|value| value / scale)) / values.len() as f64 * scale
+}
+
+fn compensated_total(values: impl Iterator<Item = f64>) -> f64 {
+    let (mut sum, mut correction) = (0.0_f64, 0.0_f64);
+    for value in values {
+        let next = sum + value;
+        let tail = if sum.abs() >= value.abs() {
+            (sum - next) + value
+        } else {
+            (value - next) + sum
+        };
+        correction += tail;
+        sum = next;
+    }
+    sum + correction
 }

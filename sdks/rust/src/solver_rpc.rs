@@ -1,8 +1,6 @@
 use crate::error::{SdkError, SdkResult};
+use crate::{SolverRpcLimits, solver_rpc_transport};
 use serde_json::{Value, json};
-use std::io::{Read, Write};
-use std::net::TcpStream;
-use std::time::Duration;
 
 const SOLVER_METHODS: &[(&str, &str)] = &[
     ("bar_1d", "solve_bar_1d"),
@@ -91,7 +89,7 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
 pub struct SolverRpcClient {
     host: String,
     port: u16,
-    timeout: Duration,
+    limits: SolverRpcLimits,
 }
 
 pub struct RpcCallOutcome {
@@ -104,8 +102,19 @@ impl SolverRpcClient {
         Self {
             host: host.into(),
             port,
-            timeout: Duration::from_secs(15),
+            limits: SolverRpcLimits::default(),
         }
+    }
+
+    /// Caller-owned resource policy; errors never imply task cancellation or retry.
+    pub fn with_limits(mut self, limits: SolverRpcLimits) -> SdkResult<Self> {
+        limits.validate()?;
+        self.limits = limits;
+        Ok(self)
+    }
+
+    pub fn limits(&self) -> &SolverRpcLimits {
+        &self.limits
     }
 
     pub fn ping(&self) -> SdkResult<RpcCallOutcome> {
@@ -191,6 +200,8 @@ impl SolverRpcClient {
             .ok_or_else(|| SdkError::Rpc {
                 message: format!("unsupported solve kind: {solve_kind}"),
                 code: None,
+                request_id: None,
+                details: None,
             })?;
         self.call(method, payload)
     }
@@ -204,59 +215,7 @@ impl SolverRpcClient {
     }
 
     pub fn call(&self, method: &str, params: Value) -> SdkResult<RpcCallOutcome> {
-        let mut stream = TcpStream::connect((self.host.as_str(), self.port))?;
-        stream.set_read_timeout(Some(self.timeout))?;
-        stream.set_write_timeout(Some(self.timeout))?;
-
-        let request_id = format!(
-            "rust-sdk-{}",
-            std::time::SystemTime::now()
-                .elapsed()
-                .map(|value| value.as_nanos())
-                .unwrap_or(0)
-        );
-        let payload = serde_json::to_vec(&json!({
-            "rpc_version": 1,
-            "id": request_id,
-            "method": method,
-            "params": params,
-        }))?;
-        let len = (payload.len() as u32).to_be_bytes();
-        stream.write_all(&len)?;
-        stream.write_all(&payload)?;
-
-        let mut progress_frames = Vec::new();
-        loop {
-            let mut header = [0_u8; 4];
-            stream.read_exact(&mut header)?;
-            let size = u32::from_be_bytes(header) as usize;
-            let mut frame = vec![0_u8; size];
-            stream.read_exact(&mut frame)?;
-            let decoded: Value = serde_json::from_slice(&frame)?;
-            if decoded.get("event").is_some() {
-                progress_frames.push(decoded);
-                continue;
-            }
-            if decoded.get("ok") == Some(&Value::Bool(true)) {
-                return Ok(RpcCallOutcome {
-                    result: decoded.get("result").cloned().unwrap_or(Value::Null),
-                    progress_frames,
-                });
-            }
-            let error = decoded.get("error");
-            let message = error
-                .and_then(|error| error.get("message"))
-                .and_then(Value::as_str)
-                .unwrap_or("rpc failed");
-            let code = error
-                .and_then(|error| error.get("code"))
-                .and_then(Value::as_str)
-                .map(str::to_string);
-            return Err(SdkError::Rpc {
-                message: message.to_string(),
-                code,
-            });
-        }
+        solver_rpc_transport::call(&self.host, self.port, &self.limits, method, params)
     }
 }
 

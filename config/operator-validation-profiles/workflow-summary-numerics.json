@@ -1,0 +1,81 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "daji 3.0.x",
+  "domain": "workflow",
+  "profiles": [
+    {
+      "profile_id": "workflow-summary-comparison-range",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-summary-comparison-range",
+      "trust_goal": "bounded_regression",
+      "operators": ["transform.compare_summary_pair"],
+      "validation_methods": [
+        "shared_rust_elixir_comparison_range_and_zero_baseline_fixture",
+        "all_zero_baseline_output_option_combinations",
+        "bounded_power_of_two_scaling_with_independent_expected_metrics",
+        "graph_fail_fast_and_skip_without_partial_metrics_or_lineage",
+        "local_api_jobs_sqlite_failure_readback_and_fresh_execution"
+      ],
+      "formal_invariants": [
+        "disabled_metrics_are_not_evaluated",
+        "zero_baseline_omits_undefined_relative_metrics_but_keeps_requested_absolute_metrics",
+        "enabled_unrepresentable_metrics_fail_before_any_comparison_publication",
+        "unrepresentable_difference_does_not_prevent_representable_relative_metrics_when_delta_is_disabled",
+        "nearby_values_retain_subtraction_accuracy_before_relative_scaling",
+        "raw_inputs_and_failure_receipts_survive_explicit_branch_isolation"
+      ],
+      "evidence_paths": [
+        "tests/fixtures/workflow-summary-comparison-range.json",
+        "apps/web/lib/kyuubiki_web/workflow_summary_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_reporting_checks.ex",
+        "apps/web/test/support/workflow_summary_admission.exs",
+        "apps/web/test/kyuubiki_web/workflow_summary_comparison_range_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_summary_comparison_api_test.exs",
+        "workers/rust/crates/engine/src/workflow_summary_transforms.rs",
+        "workers/rust/crates/engine/tests/shared_summary_comparison_range.rs",
+        "reports/workflow-summary-comparison-range-20261025.md"
+      ],
+      "commands": [
+        {"id": "summary-comparison-cross-runtime", "kind": "boundary_regression", "command": "make test-workflow-summary-comparison"}
+      ]
+    },
+    {
+      "profile_id": "workflow-summary-reduction-range",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-summary-reduction-range",
+      "trust_goal": "bounded_regression",
+      "operators": ["transform.aggregate_summary_collection", "transform.normalize_summary_fields", "transform.select_best_summary"],
+      "validation_methods": [
+        "shared_rust_elixir_finite_reduction_and_invalid_option_fixtures",
+        "aggregate_compensated_cancellation_and_overflow_rescaling_controls",
+        "finite_affine_intermediates_before_clamp_and_finite_scores_before_ranking",
+        "graph_fail_fast_skip_and_clean_rerun_without_partial_publication",
+        "local_api_full_compact_and_sqlite_failure_readback"
+      ],
+      "formal_invariants": [
+        "representable_mean_is_not_rejected_only_because_the_sum_overflows",
+        "tested_cancellation_tails_survive_bounded_permutation_and_binary_scaling",
+        "unrepresentable_span_is_an_error_not_successful_null",
+        "normalization_clamps_do_not_hide_nonfinite_intermediates",
+        "declared_numeric_options_cannot_silently_default_or_disappear_with_missing_sources",
+        "all_candidate_terms_and_running_totals_must_be_finite_before_selection",
+        "zero_and_negative_finite_weights_retain_their_declared_semantics",
+        "failed_reductions_publish_no_partial_assessment_or_lineage"
+      ],
+      "evidence_paths": [
+        "tests/fixtures/workflow-summary-reduction-range.json",
+        "apps/web/lib/kyuubiki_web/workflow_summary_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_reporting_checks.ex",
+        "apps/web/test/support/workflow_summary_admission.exs",
+        "apps/web/test/kyuubiki_web/workflow_summary_reduction_range_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_summary_reduction_api_test.exs",
+        "workers/rust/crates/engine/src/workflow_summary_transforms.rs",
+        "workers/rust/crates/engine/tests/shared_summary_reduction_range.rs",
+        "reports/workflow-summary-reduction-range-20261025.md"
+      ],
+      "commands": [
+        {"id": "summary-reduction-cross-runtime", "kind": "boundary_regression", "command": "make test-workflow-summary-reduction"}
+      ]
+    }
+  ]
+}

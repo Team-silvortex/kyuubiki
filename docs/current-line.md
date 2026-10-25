@@ -7,7 +7,7 @@ summary, or choose a task in the [documentation map](README.md).
 
 ## Version And Evidence Ledger
 
-Reviewed October 24, 2026. Distinguish these identities before reproducing a run:
+Reviewed October 25, 2026. Distinguish these identities before reproducing a run:
 
 | Identity | Recorded state | Authority |
 | --- | --- | --- |
@@ -16,7 +16,8 @@ Reviewed October 24, 2026. Distinguish these identities before reproducing a run
 | Last recorded local macOS installation | `3.7.1` | [Release snapshot](../releases/snapshots/3.7.1.json), [installation report](../reports/daji-3.7.1-local-rebuild-20261024.md) |
 | Latest version-named Git checkpoint | `305e3009`, subject `daji 3.7.3` | Git history; not an artifact version |
 | Earlier committed repair | `308eb93c`, isolated CI dependency/read repair | Git history; no new desktop build |
-| Latest workflow follow-up | Source-verified skipped-node execution evidence | Dated report below; not installed acceptance |
+| Latest committed workflow repair | `e347cf8c`, skipped-node execution evidence | Git history; no new desktop build |
+| Latest workflow follow-up | Summary admission, comparison and reduction range | Dated reports below; not installed acceptance |
 
 A commit subject does not update package metadata or installed files. The last
 recorded installation is not a live health check. Local builds do not publish
@@ -38,6 +39,23 @@ execution/publication in Engine and Agent; the GUI is not runtime authority.
 | Requested output retention | Keep requested published outputs despite optional ports, cache hints or later consumers | Local result retention, not a durable checkpoint |
 | Execution receipts | Align Orchestra branch/failed-fallback traces with Rust and actual publications | Shared fixture, local API routing and SQLite result readback |
 | Skipped-node receipts | Never claim consumption for nodes that did not execute; keep dependency retirement separate | Shared branch/failure fixture, retained raw outputs and local SQLite readback |
+| Named-source integrity | Preserve sibling metrics and failure markers instead of selecting a same-named nested field | Shared Rust/Orchestra fixtures, legacy wrapper controls and local SQLite readback |
+| Summary-result admission | Reject failed final status before reduction or scoring; never count collection status as a candidate | Six shared Rust/Orchestra operators, raw-result retention, local API jobs and SQLite readback |
+| Summary comparison range | Skip disabled operations, handle zero baselines and reject unrepresentable requested metrics | Shared range fixtures, bounded rescaling, graph isolation and local SQLite readback |
+| Summary reduction range | Preserve bounded aggregate tails and finite means; validate normalization before clamping and scores before ranking | Shared three-operator fixtures, malformed options, graph isolation and local SQLite readback |
+| Official SDK durable modal research | Direct native Agent, four independently checked heterogeneous modes, disk export and original-identity recovery after process kill | Small local macOS source-built example; not installed acceptance or general modal qualification |
+| SDK lost-admission recovery | Retain typed input intent before dispatch; reconcile the original receipt after a lost reply without resubmission | Real local Agent relay faults and process kills; failed/unknown/missing or mismatched records cannot publish results |
+| Direct SDK RPC boundaries | Unique per-process request sequence, strict reply identity/state checks and configurable byte/time budgets | Local protocol fault tests plus real Agent progress/results; not authentication or cancellation authority |
+| SDK failure-context recovery | Validate inner terminal receipts and retain original failure identity, code and diagnostics after lost replies or timeout | Real local Agent timeout and restart; diagnostics do not authorize replay or result publication |
+| Research export publication | Independently validate before staging and after disk readback; publish result and verification together | Local single-writer example with forced export-process termination; pending files are not results or power-loss evidence |
+| Retained research readback | Offline, read-only input/intent/receipt/result binding and independent physical revalidation | Agent stopped during checks; mixed, damaged and pending-only evidence rejected without repair or resubmission |
+| Research evidence read boundary | Bounded regular-file reads, unique JSON object keys and truly absent-only optional admission | Real-export negative controls plus exact-limit/parser tests; example-local policy, not a global model-size cap |
+| Retained terminal consistency | Compare original identity and known terminal payload across observations, not just matching handles | SDK history-aware fetch plus online/offline example conflicts; caller-retained history, not automatic replay or a global cache |
+| Retained result content | Bind separately decoded result values to the original completed receipt with typed numeric comparison | SDK gate plus stopped-Agent readback; file hashes, result consistency and physical checks remain separate |
+| Modal research result metadata | Recheck echoed input, angular frequencies, declared shape norms and frequency extrema | Shared research reference blocks inconsistent publication/readback; no new Solver qualification or generic SDK physics policy |
+| Recovery local preflight | Reject invalid retained content and unusable output destinations before remote observation | SDK depth gate and example admission/path checks; local connection probes, no automatic replay or filesystem reservation |
+| Research record publication | Stage and synchronize complete records before no-replace final-name publication | Forced writer termination before/after dispatch, original-task recovery and unchanged pending evidence; not host-power-loss durability |
+| Offline interrupted-export recovery | Revalidate a retained completed receipt and regenerate derived results into a new directory without an Agent | No replay, staging promotion or source changes; existing published evidence must be verified, not bypassed |
 
 Follow the evidence rather than treating this table as a new combined run:
 
@@ -51,9 +69,66 @@ Follow the evidence rather than treating this table as a new combined run:
   [output retention](../reports/workflow-output-retention-20261024.md) and
   [execution receipts](../reports/workflow-execution-evidence-20261024.md) and
   [skipped-node receipts](../reports/workflow-skipped-input-evidence-20261024.md).
+- [Named-source integrity](../reports/workflow-named-source-integrity-20261025.md) and
+  [summary-result admission](../reports/workflow-summary-admission-20261025.md).
+- [Summary comparison range](../reports/workflow-summary-comparison-range-20261025.md) and
+  [summary reduction range](../reports/workflow-summary-reduction-range-20261025.md).
+- [Official Rust SDK durable modal research](../reports/headless-durable-modal-research-20261025.md)
+  connects the public SDK, real Agent, independent physical readback and process-kill
+  recovery. Its bounded scope does not close the installed cross-language or
+  heterogeneous long-bending qualification requirements.
+- [Lost-admission recovery and input binding](../reports/headless-durable-admission-recovery-20261025.md)
+  adds real acknowledgement loss, pre-dispatch loss and changed-input negative
+  controls to that same bounded SDK journey, not a new numerical qualification.
+- [Direct SDK RPC boundaries](../reports/headless-rpc-transport-boundaries-20261025.md)
+  covers request-ID collisions, contradictory/foreign replies, bounded framing
+  and deadline enforcement without changing solver algorithms or tolerances.
+- [SDK failure-context recovery](../reports/headless-failure-context-recovery-20261025.md)
+  adds strict inner terminal receipts and original solver error readback after
+  timeout and process restart. The fresh SDK suite has 148 passes; its 11 opt-in
+  real-Agent tests also passed separately, without claiming installed acceptance.
+- [Research export publication](../reports/headless-modal-export-publication-20261025.md)
+  rejects invalid physical results and staged corruption, preserves old exports,
+  and recovers after an export-process kill without rerunning the solver. Its
+  fresh SDK run has 149 passes and separately executes all 14 opt-in live tests.
+- [Offline retained modal readback](../reports/headless-modal-offline-readback-20261025.md)
+  makes export consumption executable, not only a documentation requirement.
+  It checks saved identity and bytes, recomputes physical diagnostics and never
+  modifies the retained files. It also fixes and deterministically tests the
+  fault relay's accepted-socket blocking mode; no Solver algorithm is changed.
+- [Bounded modal evidence reader](../reports/headless-modal-evidence-boundaries-20261025.md)
+  fixes dangling admission links being mistaken for missing records and rejects
+  oversized or ambiguous evidence. This run has 156 SDK passes and separately
+  executes 18 opt-in live tests on macOS; earlier counts remain dated evidence.
+- [Retained terminal observation consistency](../reports/headless-terminal-observation-consistency-20261025.md)
+  rejects conflicting success/failure records and replaced terminal payloads,
+  including physically admissible but different mode shapes. Its SDK run has
+  162 passes and separately executes all 19 live tests on macOS.
+- [Retained result-content binding](../reports/headless-result-content-binding-20261025.md)
+  fixes signed-zero substitutions escaping ordinary JSON equality. Rehashed
+  sign, low-bit and numeric-type changes fail despite satisfying the physical
+  reference; equivalent formatting remains valid. This source run has 167 SDK
+  passes and separately executes all 20 opt-in live tests on macOS.
+- [Modal result metadata validation](../reports/headless-modal-metadata-validation-20261025.md)
+  closes unchecked reported fields rather than changing Solver numerics. Both
+  publication and stopped-Agent readback reject 38 inconsistent result copies,
+  including coherently rehashed records. Full-suite results are retained in
+  that report, not added to earlier overlapping counts.
+- [Recovery local preflight](../reports/headless-modal-local-preflight-20261025.md)
+  makes known local record/path failures precede network access and export
+  creation. Connection probes verify zero calls on local rejection; genuine
+  missing-admission recovery and later remote-conflict detection remain intact.
+- [Research record publication](../reports/headless-modal-record-publication-20261025.md)
+  closes the partial-admission write window. Forced process termination before
+  dispatch never creates/replays work; after dispatch, fresh inspection recovers
+  the original task without promoting partial or complete pending records.
+- [Offline interrupted-export recovery](../reports/headless-modal-offline-export-recovery-20261025.md)
+  continues after a killed exporter while the Agent remains stopped. It reads
+  only complete retained receipts, rechecks physics and publishes into a new
+  directory; negative controls prevent bypassing published or conflicting evidence.
 
-The latest skipped-node receipt report records 3,478 web tests with zero failures
-and 77 skips, plus 739 passed Rust Engine/selected integration tests and one
+The latest summary reduction report records 3,544 web tests with zero failures
+and 77 skips, plus 758 passed Rust Engine/selected integration tests and one
 ignored test. These are that report's source checks, not coverage percentages,
 a new Solver-wide campaign, remote CI results or installed acceptance. Overlapping
 earlier report counts must not be added.

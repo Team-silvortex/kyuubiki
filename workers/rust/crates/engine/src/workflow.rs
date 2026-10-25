@@ -639,11 +639,7 @@ fn resolve_named_input_payloads_for_execution(
             })?;
         // A single-field source-port envelope is a supported legacy shape.
         // A complete result with sibling data/status must remain intact.
-        if node
-            .operator_id
-            .as_deref()
-            .is_some_and(transform_operator_accepts_input_envelope)
-            && let Value::Object(object) = &mut artifact
+        if let Value::Object(object) = &mut artifact
             && object.len() == 1
             && let Some(value) = object.remove(&edge.from.port)
         {

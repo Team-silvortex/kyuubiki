@@ -1,0 +1,16 @@
+{
+  "schema_version": "kyuubiki.workflow-summary-comparison-range/v1",
+  "cases": [
+    {"id": "zero-baseline", "payload": {"left": {"metric": 0.0}, "right": {"metric": 4.0}}, "config": {}, "expected": {"left_metric": 0.0, "right_metric": 4.0, "delta_metric": 4.0, "summary_shared_numeric_field_count": 1}, "absent": ["ratio_metric", "percent_change_metric"]},
+    {"id": "negative-zero-baseline", "payload": {"left": {"metric": -0.0}, "right": {"metric": -4.0}}, "config": {}, "expected": {"delta_metric": -4.0}, "absent": ["ratio_metric", "percent_change_metric"]},
+    {"id": "disabled-relative-metrics", "payload": {"left": {"metric": 1e-308}, "right": {"metric": 1e308}}, "config": {"include_ratio": false, "include_percent_change": false}, "expected": {"delta_metric": 1e308}, "absent": ["ratio_metric", "percent_change_metric"]},
+    {"id": "percentage-with-unrepresentable-difference", "payload": {"left": {"metric": -1e308}, "right": {"metric": 1e308}}, "config": {"include_delta": false}, "expected": {"ratio_metric": -1.0, "percent_change_metric": -200.0}, "absent": ["delta_metric"]},
+    {"id": "ratio-with-disabled-difference", "payload": {"left": {"metric": 1e308}, "right": {"metric": -1e308}}, "config": {"include_delta": false, "include_percent_change": false}, "expected": {"ratio_metric": -1.0}, "absent": ["delta_metric", "percent_change_metric"]},
+    {"id": "originals-only", "payload": {"left": {"metric": -1e308}, "right": {"metric": 1e308}}, "config": {"include_delta": false, "include_ratio": false, "include_percent_change": false}, "expected": {"left_metric": -1e308, "right_metric": 1e308}, "absent": ["delta_metric", "ratio_metric", "percent_change_metric"]},
+    {"id": "adjacent-baseline-values", "payload": {"left": {"metric": 1.0}, "right": {"metric": 1.0000000000000002}}, "config": {}, "expected": {"delta_metric": 2.220446049250313e-16, "percent_change_metric": 2.220446049250313e-14}, "absent": []},
+    {"id": "unshared-fields-are-not-counted", "payload": {"left": {"metric": 2.0, "unshared": 9, "text": "sample"}, "right": {"metric": 4.0, "text": "sample"}}, "config": {"fields": ["metric", "unshared", "text"]}, "expected": {"delta_metric": 2.0, "ratio_metric": 2.0, "percent_change_metric": 100.0, "summary_shared_numeric_field_count": 1}, "absent": ["delta_unshared", "ratio_text"]},
+    {"id": "difference-overflow", "payload": {"left": {"metric": -1e308, "safe": 3.0}, "right": {"metric": 1e308, "safe": 4.0}}, "config": {"fields": ["safe", "metric"]}, "error": "delta_metric"},
+    {"id": "ratio-overflow", "payload": {"left": {"metric": 1e-308}, "right": {"metric": 1e308}}, "config": {"include_delta": false, "include_percent_change": false}, "error": "ratio_metric"},
+    {"id": "percentage-overflow", "payload": {"left": {"metric": 1e-308}, "right": {"metric": 1.0}}, "config": {"include_delta": false, "include_ratio": false}, "error": "percent_change_metric"}
+  ]
+}

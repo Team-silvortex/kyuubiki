@@ -311,3 +311,142 @@ fn single_field_source_port_envelopes_preserve_legacy_graphs_and_raw_artifacts()
         }
     }
 }
+
+fn source_integrity_cases(fixture: &Value) -> Vec<Value> {
+    let source = &fixture["source_integrity"];
+    source["operators"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|operator| {
+            let mut sample = operator.clone();
+            sample["ports"] = source["ports"].clone();
+            sample["values"] = source["values"].clone();
+            sample
+        })
+        .collect()
+}
+
+#[test]
+fn named_sources_preserve_siblings_in_real_operators_and_all_projections() {
+    let fixture = fixture();
+    let registry = built_in_operator_registry(BuiltInOperatorRegistryKind::Transform);
+    for sample in source_integrity_cases(&fixture) {
+        let direct = registry
+            .run(OperatorRunRequest {
+                operator_id: sample["operator_id"].as_str().unwrap().to_owned(),
+                input: json!({"payload":payload(&sample),"config":sample["config"]}),
+                context: Default::default(),
+            })
+            .unwrap()
+            .summary;
+        for (key, expected) in sample["expected"].as_object().unwrap() {
+            if expected.is_number() {
+                assert_eq!(direct[key].as_f64(), expected.as_f64());
+            } else {
+                assert_eq!(&direct[key], expected);
+            }
+        }
+        for reverse in [false, true] {
+            for projection in [
+                WorkflowArtifactProjection::All,
+                WorkflowArtifactProjection::Outputs,
+                WorkflowArtifactProjection::None,
+            ] {
+                let result = run(request(&fixture, &sample, None, reverse), projection).unwrap();
+                assert_eq!(result["failed_nodes"], json!([]));
+                if projection == WorkflowArtifactProjection::None {
+                    assert_eq!(result["artifacts"], json!({}));
+                } else {
+                    assert_eq!(result["artifacts"]["result.summary"], direct);
+                    assert_eq!(result["artifacts"]["raw.payload"], sample["values"][0]);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn legacy_source_wrappers_match_unwrapped_named_operator_results() {
+    let fixture = fixture();
+    for sample in source_integrity_cases(&fixture) {
+        for reverse in [false, true] {
+            let request = request(&fixture, &sample, None, reverse);
+            let expected = run(request.clone(), WorkflowArtifactProjection::Outputs).unwrap();
+            let mut wrapped = request;
+            for value in wrapped["input_artifacts"]
+                .as_object_mut()
+                .unwrap()
+                .values_mut()
+            {
+                *value = json!({"payload":value});
+            }
+            let raw = wrapped["input_artifacts"]["left"].clone();
+            let result = run(wrapped, WorkflowArtifactProjection::Outputs).unwrap();
+            assert_eq!(
+                result["artifacts"]["result.summary"],
+                expected["artifacts"]["result.summary"]
+            );
+            assert_eq!(result["artifacts"]["raw.payload"], raw);
+        }
+    }
+}
+
+#[test]
+fn named_diagnostic_sources_reject_hidden_failure_markers_without_publication() {
+    let fixture = fixture();
+    let sample = source_integrity_cases(&fixture).pop().unwrap();
+    for marker in fixture["source_integrity"]["invalid_markers"]
+        .as_array()
+        .unwrap()
+    {
+        for reverse in [false, true] {
+            let mut bad = request(&fixture, &sample, None, reverse);
+            bad["input_artifacts"]["left"]
+                .as_object_mut()
+                .unwrap()
+                .extend(marker.as_object().unwrap().clone());
+            let raw = bad["input_artifacts"]["left"].clone();
+            assert!(
+                run(bad.clone(), WorkflowArtifactProjection::All)
+                    .unwrap_err()
+                    .contains("combine")
+            );
+            bad["graph"]["nodes"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|node| node["id"] == "combine")
+                .unwrap()["config"]["on_error"] = json!("skip");
+            for projection in [
+                WorkflowArtifactProjection::All,
+                WorkflowArtifactProjection::Outputs,
+                WorkflowArtifactProjection::None,
+            ] {
+                let result = run(bad.clone(), projection).unwrap();
+                assert_eq!(result["failed_nodes"], json!(["combine"]));
+                assert_eq!(result["skipped_nodes"], json!(["result"]));
+                assert!(result["artifacts"].get("result.summary").is_none());
+                assert!(
+                    !result["artifact_lineage"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|entry| entry["node_id"] == "combine")
+                );
+                if projection != WorkflowArtifactProjection::None {
+                    assert_eq!(result["artifacts"]["raw.payload"], raw);
+                }
+            }
+            let clean = run(
+                request(&fixture, &sample, None, reverse),
+                WorkflowArtifactProjection::Outputs,
+            )
+            .unwrap();
+            assert_eq!(
+                clean["artifacts"]["result.summary"]["bundle_total_node_count"],
+                5
+            );
+        }
+    }
+}

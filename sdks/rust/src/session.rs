@@ -93,6 +93,8 @@ impl KyuubikiSession {
         let solver_rpc = self.solver_rpc.as_ref().ok_or_else(|| SdkError::Rpc {
             message: "solver rpc client is not configured".into(),
             code: None,
+            request_id: None,
+            details: None,
         })?;
         let outcome = solver_rpc.solve_study(solve_kind, payload)?;
         Ok(outcome.result)

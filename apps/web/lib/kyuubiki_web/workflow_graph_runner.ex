@@ -443,7 +443,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   defp input_envelope?(_node, _incoming), do: false
 
-  defp resolve_named_transform_payload(%{"id" => node_id} = node, incoming, artifacts) do
+  defp resolve_named_transform_payload(%{"id" => node_id}, incoming, artifacts) do
     payload =
       Enum.reduce_while(incoming, %{}, fn edge, acc ->
         key = edge_from_key(edge)
@@ -454,7 +454,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
              Map.put(
                acc,
                get_in(edge, ["to", "port"]),
-               named_transform_input(value, edge, node)
+               named_transform_input(value, edge)
              )}
 
           :error ->
@@ -474,22 +474,15 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     end
   end
 
-  # Keep single-field legacy port envelopes, but never discard sibling data or
-  # status fields merely because an artifact contains a same-named JSON key.
-  defp named_transform_input(value, edge, node) do
-    if WorkflowGraphInputs.input_envelope?(node) and not (is_map(value) and map_size(value) == 1),
-      do: value,
-      else: unwrap_named_transform_input(value, edge)
-  end
-
-  defp unwrap_named_transform_input(value, edge) when is_map(value) do
-    case get_in(edge, ["from", "port"]) do
-      port_id when is_binary(port_id) -> Map.get(value, port_id, value)
-      _ -> value
+  # A sole source-port field is a legacy wrapper, not an arbitrary field selector.
+  # Sibling data and failure markers must reach the operator unchanged.
+  defp named_transform_input(value, edge) do
+    if is_map(value) and map_size(value) == 1 do
+      Map.get(value, get_in(edge, ["from", "port"]), value)
+    else
+      value
     end
   end
-
-  defp unwrap_named_transform_input(value, _edge), do: value
 
   defp consumed_artifacts_for_node(node, incoming, artifacts) do
     if WorkflowGraphInputs.partial_inputs?(node) do

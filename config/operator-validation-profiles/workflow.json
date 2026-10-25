@@ -54,12 +54,17 @@
         "transform.benchmark_modal_pair", "transform.benchmark_dynamic_pair",
         "transform.benchmark_transport_pair", "transform.benchmark_coupled_heat_pair",
         "transform.benchmark_electrostatic_pair", "transform.benchmark_magnetostatic_pair",
-        "transform.benchmark_cfd_pair", "transform.join_parameter_sweep_results"
+        "transform.benchmark_cfd_pair", "transform.join_parameter_sweep_results",
+        "transform.merge_summary_pair", "transform.compare_summary_pair",
+        "transform.aggregate_summary_collection", "transform.select_best_summary",
+        "transform.compose_diagnostics_bundle"
       ],
       "validation_methods": [
         "shared_rust_elixir_graph_vs_direct_operator_regression",
         "named_port_reordering_and_envelope_compatibility",
         "fanout_transient_retention_and_failure_isolation",
+        "same_named_source_fields_cannot_replace_metrics_or_diagnostic_rejection_markers",
+        "legacy_source_wrapper_parity_for_named_summary_and_diagnostic_operators",
         "local_http_and_sqlite_receipt_regression"
       ],
       "formal_invariants": [
@@ -68,6 +73,8 @@
         "tested_input_envelopes_require_one_declared_input_or_payload_port",
         "tested_legacy_single_field_source_port_envelopes_remain_usable",
         "tested_rejected_second_inputs_publish_no_winner_or_lineage",
+        "tested_named_sources_preserve_sibling_data_and_failure_markers",
+        "tested_single_field_source_wrappers_unwrap_once_without_changing_retained_artifacts",
         "tested_shared_source_fanout_does_not_consume_artifacts_prematurely"
       ],
       "evidence_paths": [
@@ -75,11 +82,14 @@
         "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
         "apps/web/test/support/workflow_named_input_contract.exs",
         "apps/web/test/kyuubiki_web/workflow_named_input_contract_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_named_source_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_graph_input_binding_test.exs",
         "apps/web/test/kyuubiki_web/api/workflow_named_input_contract_api_test.exs",
         "workers/rust/crates/engine/src/workflow.rs",
         "workers/rust/crates/engine/src/workflow_executor.rs",
         "workers/rust/crates/engine/tests/shared_named_input_contract.rs",
-        "reports/workflow-named-input-contract-20260927.md"
+        "reports/workflow-named-input-contract-20260927.md",
+        "reports/workflow-named-source-integrity-20261025.md"
       ],
       "commands": [
         {"id": "named-input-cross-runtime", "kind": "boundary_regression", "command": "make test-workflow-named-input-contract"}
@@ -722,12 +732,14 @@
         "real_partial_solver_result_negative_controls",
         "nine_domain_registered_guard_quality_and_pair_admission",
         "summary_reduction_and_candidate_ranking_failure_propagation",
+        "shared_rust_elixir_summary_admission_and_local_api_result_readback",
         "malformed_marker_and_nested_stability_contract_checks",
         "workflow_fail_fast_opt_in_branch_recovery_and_clean_replay"
       ],
       "formal_invariants": [
         "tested_explicit_nonconvergence_cannot_become_pass_ready_or_winner",
         "tested_summary_reducers_cannot_erase_explicit_failure",
+        "collection_root_status_is_validated_but_never_scored_as_a_candidate",
         "trial_history_failure_does_not_override_final_success",
         "load_factor_scales_are_not_reinterpreted_by_generic_consumers",
         "tested_branch_recovery_preserves_raw_results_without_publishing_quality",
@@ -740,6 +752,16 @@
         "workers/rust/crates/engine/src/workflow_quality_terms.rs",
         "workers/rust/crates/engine/src/tests/workflow_result_admission.rs",
         "workers/rust/crates/engine/tests/result_admission_workflow.rs",
+        "workers/rust/crates/engine/src/workflow_summary_transforms.rs",
+        "workers/rust/crates/engine/tests/shared_summary_admission.rs",
+        "apps/web/lib/kyuubiki_web/workflow_reporting_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_summary_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_reporting_runtime.ex",
+        "apps/web/test/support/workflow_summary_admission.exs",
+        "apps/web/test/kyuubiki_web/workflow_summary_admission_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_summary_admission_api_test.exs",
+        "tests/fixtures/workflow-summary-admission.json",
+        "reports/workflow-summary-admission-20261025.md",
         "reports/workflow-result-admission-20260924.md"
       ],
       "commands": [
@@ -752,6 +774,11 @@
           "id": "workflow-result-admission-recovery",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-engine --test result_admission_workflow --test nonlinear_spring_recovery_workflow --test nonlinear_spring_workflow --test contact_gap_workflow -- --nocapture"
+        },
+        {
+          "id": "workflow-summary-admission-parity",
+          "kind": "contract",
+          "command": "make test-workflow-summary-admission"
         }
       ]
     }

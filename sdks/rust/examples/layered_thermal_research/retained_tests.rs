@@ -1,19 +1,29 @@
 use super::*;
 use std::{
     path::PathBuf,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
 
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
-            "kyuubiki-retained-{}-{}",
-            std::process::id(),
+        Self::at(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+        )
+    }
+
+    fn at(timestamp: u128) -> Self {
+        // Clock resolution does not guarantee unique names for parallel tests.
+        let path = std::env::temp_dir().join(format!(
+            "kyuubiki-retained-{}-{timestamp}-{}",
+            std::process::id(),
+            NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
         Self(path)
@@ -23,6 +33,20 @@ impl Drop for Fixture {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
     }
+}
+
+#[test]
+fn concurrent_evidence_fixtures_do_not_depend_on_clock_resolution() {
+    let fixtures = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..8).map(|_| scope.spawn(|| Fixture::at(0))).collect();
+        workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap())
+            .collect::<Vec<_>>()
+    });
+    let paths: std::collections::HashSet<_> = fixtures.iter().map(|fixture| &fixture.0).collect();
+    assert_eq!(paths.len(), 8);
+    assert!(paths.iter().all(|path| path.is_dir()));
 }
 
 #[test]

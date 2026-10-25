@@ -1,6 +1,9 @@
 mod agent_client;
 mod auth;
 mod control_plane;
+mod durable_execution;
+mod durable_execution_digest;
+mod durable_execution_intent;
 mod error;
 mod material_research_bundle;
 mod material_research_bundle_validation;
@@ -16,6 +19,8 @@ mod model_task_completion;
 mod operator_tasks;
 mod session;
 mod solver_rpc;
+mod solver_rpc_transport;
+mod solver_rpc_wire;
 mod workflow_builders;
 mod workflow_contract_validation;
 mod workflow_contracts;
@@ -27,6 +32,8 @@ pub use agent_client::{
 };
 pub use auth::KyuubikiAuth;
 pub use control_plane::ControlPlaneClient;
+pub use durable_execution::DurableExecutionHandle;
+pub use durable_execution_intent::DurableExecutionIntent;
 pub use error::{SdkError, SdkResult};
 pub use material_research_bundle::{
     MATERIAL_RESEARCH_BUNDLE_SCHEMA_VERSION, MaterialResearchBundle,
@@ -83,6 +90,7 @@ pub use operator_tasks::{
 };
 pub use session::{JobRequest, JobWaitOutcome, KyuubikiSession};
 pub use solver_rpc::{RpcCallOutcome, SolverRpcClient};
+pub use solver_rpc_transport::SolverRpcLimits;
 pub use workflow_builders::{
     workflow_axis, workflow_dataset_contract, workflow_dataset_value, workflow_defaults,
     workflow_edge, workflow_graph, workflow_node, workflow_operator_fetch_entry, workflow_port,
