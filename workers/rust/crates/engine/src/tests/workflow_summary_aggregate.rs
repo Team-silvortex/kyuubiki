@@ -6,6 +6,76 @@ use kyuubiki_protocol::{
 use std::collections::BTreeMap;
 
 #[test]
+fn summary_aggregate_canonicalizes_sources_and_keeps_values_aligned() {
+    use crate::workflow_summary_transforms::aggregate_summary_collection;
+    use serde_json::{Map, Value, json};
+
+    let entries = [
+        ("alpha", json!({"cost":10.0, "mass":3.0})),
+        ("middle", json!({"cost":4.0})),
+        ("zeta", json!({"cost":7.0, "mass":1.0})),
+    ];
+    for fields in [json!(["cost", "mass"]), json!([])] {
+        for include_sources in [false, true] {
+            for include_values in [false, true] {
+                let config = json!({
+                    "fields":fields,
+                    "include_sources":include_sources,
+                    "include_values":include_values
+                });
+                let mut expected = json!({
+                    "aggregate_cost_count":3, "aggregate_cost_min":4.0,
+                    "aggregate_cost_max":10.0, "aggregate_cost_mean":7.0,
+                    "aggregate_cost_span":6.0,
+                    "aggregate_mass_count":2, "aggregate_mass_min":1.0,
+                    "aggregate_mass_max":3.0, "aggregate_mass_mean":2.0,
+                    "aggregate_mass_span":2.0,
+                    "summary_input_count":3, "summary_aggregated_field_count":2
+                });
+                if include_sources {
+                    expected["aggregate_cost_sources"] = json!(["alpha", "middle", "zeta"]);
+                    expected["aggregate_mass_sources"] = json!(["alpha", "zeta"]);
+                }
+                if include_values {
+                    expected["aggregate_cost_values"] = json!([10.0, 4.0, 7.0]);
+                    expected["aggregate_mass_values"] = json!([3.0, 1.0]);
+                }
+                let mut first_serialized = None;
+                for order in [
+                    [0, 1, 2],
+                    [0, 2, 1],
+                    [1, 0, 2],
+                    [1, 2, 0],
+                    [2, 0, 1],
+                    [2, 1, 0],
+                ] {
+                    let mut payload = Map::new();
+                    payload.insert("converged".into(), json!(true));
+                    payload.insert("stability_result".into(), json!({"converged":true}));
+                    payload.insert("note".into(), json!("metadata is not a source"));
+                    for index in order {
+                        let (id, summary) = &entries[index];
+                        payload.insert((*id).into(), summary.clone());
+                    }
+                    let result =
+                        aggregate_summary_collection(Value::Object(payload), config.clone())
+                            .expect("named summaries should aggregate");
+                    assert_eq!(
+                        result, expected,
+                        "insertion order {order:?}, config {config}"
+                    );
+                    let serialized = serde_json::to_string(&result).unwrap();
+                    assert_eq!(
+                        first_serialized.get_or_insert(serialized.clone()),
+                        &serialized
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn runs_summary_aggregate_workflow_graph() {
     let graph = WorkflowGraph {
         schema_version: "kyuubiki.workflow-graph/v1".to_string(),

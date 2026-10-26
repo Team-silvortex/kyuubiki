@@ -212,11 +212,14 @@ pub fn aggregate_summary_collection(payload: Value, config: Value) -> Result<Val
         .map(normalize_prefix)
         .unwrap_or_else(|| "aggregate".to_string());
 
-    let source_entries = object
+    let mut source_entries = object
         .iter()
         .filter(|(id, _)| !["converged", "stability_result"].contains(&id.as_str()))
         .filter_map(|(source_id, summary)| summary.as_object().map(|entry| (source_id, entry)))
         .collect::<Vec<_>>();
+    // Named inputs are unordered: keep reduction and paired source/value arrays stable
+    // even when workspace feature unification enables serde_json/preserve_order.
+    source_entries.sort_unstable_by(|left, right| left.0.cmp(right.0));
     if source_entries.is_empty() {
         return Err(
             "transform.aggregate_summary_collection expects named object summaries".to_string(),

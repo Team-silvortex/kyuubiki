@@ -94,8 +94,10 @@ jobs:
       - run: cargo fmt --check
       - name: Test workspace services and SDKs (solver has dedicated jobs)
         run: cargo test --locked --workspace --exclude kyuubiki-solver --no-fail-fast
-      - name: Test engine without workspace feature unification
-        run: cargo test --locked -p kyuubiki-engine --lib
+      - name: Test engine with both JSON map ordering modes
+        run: |
+          cargo test --locked -p kyuubiki-engine --lib --test shared_named_input_contract
+          cargo test --locked -p kyuubiki-engine --features serde_json/preserve_order --lib --test shared_named_input_contract
       - name: Audit Rust source line counts
         working-directory: .
         run: ./scripts/kyuubiki rust-line-audit --max 800
