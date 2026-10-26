@@ -51,6 +51,7 @@ defmodule KyuubikiWeb.TestSupport.CancellableSolverAgent do
             else
               receive do
                 {:reply, frame} -> frame
+                :disconnect -> :disconnect
               after
                 5_000 ->
                   %{
@@ -60,10 +61,12 @@ defmodule KyuubikiWeb.TestSupport.CancellableSolverAgent do
               end
             end
 
-          :gen_tcp.send(
-            socket,
-            Jason.encode!(Map.merge(frame, Map.take(request, ["id", "rpc_version"])))
-          )
+          unless frame == :disconnect do
+            :gen_tcp.send(
+              socket,
+              Jason.encode!(Map.merge(frame, Map.take(request, ["id", "rpc_version"])))
+            )
+          end
         after
           :gen_tcp.close(socket)
         end

@@ -153,6 +153,31 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationIntentTest do
     assert :ok = Intent.verify(Map.put(original, @key, exhausted), @job)
   end
 
+  for reason <- ~w(endpoint_directory_unavailable delivery_budget_exhausted) do
+    test "#{reason} remains sealed, bounded and never becomes termination evidence" do
+      original = recovery()
+      id = Intent.identity(hd(original[@key]["entries"]))
+
+      exhausted =
+        Enum.reduce(1..3, original[@key], fn attempt, bucket ->
+          assert {:ok, reserved, entry} = Intent.reserve(bucket, id)
+          token = %{id: id, delivery_id: entry["delivery_id"]}
+          assert {:ok, next, result} = Intent.finish(reserved, token, unquote(reason))
+          assert result["attempts"] == attempt
+          assert result["reason"] == unquote(reason)
+          assert result["status"] == if(attempt == 3, do: "exhausted", else: "pending")
+          assert is_nil(result["execution_target"])
+          assert :ok = Intent.verify(Map.put(original, @key, next), @job)
+          next
+        end)
+
+      summary = Intent.summary(Map.put(original, @key, exhausted))
+      assert summary["status"] == "unresolved"
+      refute summary["execution_terminal_confirmed"]
+      refute Intent.pending?(exhausted)
+    end
+  end
+
   test "unbound requests and arbitrary errors cannot become successful receipts" do
     bucket = recovery()[@key]
     id = Intent.identity(hd(bucket["entries"]))

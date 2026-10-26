@@ -16,6 +16,8 @@ mod identity;
 mod inventory;
 #[path = "agent_execution_store_io.rs"]
 mod io;
+#[path = "agent_execution_store_response.rs"]
+mod response;
 
 pub(crate) const STORE_ENV: &str = "KYUUBIKI_AGENT_EXECUTION_STORE";
 const MAX_ENTRIES: usize = 1024;
@@ -34,10 +36,40 @@ pub(crate) struct Record {
     method: String,
 }
 
+impl Record {
+    fn validate(&self) -> Result<(), String> {
+        validate_durable_execution_id(&self.execution_id)?;
+        if self.schema_version != DURABLE_AGENT_EXECUTION_SCHEMA {
+            return Err("execution admission identity or schema mismatch".into());
+        }
+        let bounded_identity = |value: &str| {
+            !value.trim().is_empty() && value.len() <= 256 && !value.chars().any(char::is_control)
+        };
+        if self.request_digest.len() != 64
+            || !self
+                .request_digest
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            || !bounded_identity(&self.request_id)
+            || !bounded_identity(&self.process_instance_id)
+            || !bounded_identity(&self.method)
+            || !(self
+                .method
+                .strip_prefix("solve_")
+                .is_some_and(|name| !name.is_empty())
+                || self.method == "run_operator_task_ir")
+        {
+            return Err("invalid execution admission identity".into());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Receipt {
     record: Record,
+    #[serde(deserialize_with = "response::decode")]
     response: RpcResponse,
 }
 
@@ -98,11 +130,7 @@ pub(crate) struct Store {
 impl Store {
     pub fn open(root: &Path) -> Result<Self, String> {
         io::prepare_root(root)?;
-        let lock_path = root.join("owner.lock");
-        let mut lock = match io::open_private(&lock_path, true) {
-            Ok(file) => file,
-            Err(_) => io::open_private(&lock_path, false)?,
-        };
+        let mut lock = identity::open_lock(root)?;
         lock.try_lock_exclusive()
             .map_err(|e| format!("execution store is already owned: {e}"))?;
         let store_id = identity::load_or_create(&mut lock, root)?;
@@ -197,9 +225,14 @@ impl Store {
         reserve: impl FnOnce() -> Result<T, String>,
     ) -> Result<(Admission, Option<T>), AdmissionFailure> {
         let digest = task.request_digest()?;
+        let method = serde_json::to_value(&task.method)
+            .map_err(|e| e.to_string())?
+            .as_str()
+            .ok_or("invalid method")?
+            .to_owned();
         self.check_owner(task.expected_store_id.as_deref())?;
         if let Some(record) = self.record(&task.execution_id)? {
-            if record.request_digest != digest {
+            if record.request_digest != digest || record.method != method {
                 return Err("execution_id is already bound to different inputs or method".into());
             }
             return self
@@ -216,12 +249,9 @@ impl Store {
             request_digest: digest,
             request_id: request_id.into(),
             process_instance_id: process.into(),
-            method: serde_json::to_value(&task.method)
-                .map_err(|e| e.to_string())?
-                .as_str()
-                .ok_or("invalid method")?
-                .into(),
+            method,
         };
+        record.validate()?;
         let rejected = |reason: &str, message: String| {
             let mut report =
                 serde_json::to_value(&record).expect("serializable admission identity");
@@ -423,8 +453,8 @@ impl Store {
         let record: Option<Record> =
             io::read(&self.root.join(format!("{id}.admission")), MAX_RECORD_BYTES)?;
         if let Some(record) = &record {
-            if record.execution_id != id || record.schema_version != DURABLE_AGENT_EXECUTION_SCHEMA
-            {
+            record.validate()?;
+            if record.execution_id != id {
                 return Err("execution admission identity or schema mismatch".into());
             }
         } else {
@@ -527,6 +557,10 @@ pub(crate) fn policy(enabled: bool) -> Value {
         "owner_fence":{"request_field":"expected_store_id", "response_field":"store_id",
             "identity_file":"owner.lock", "survives_restart":true, "is_authentication":false,
             "legacy_unfenced_requests":true, "mismatch_policy":"reject_before_operation"},
+        "identity_initialization":{"allowed":"directory_empty_except_owner_lock",
+            "missing_or_empty_with_retained_entries":"startup_error_restore_original_owner",
+            "pending_entries_block_initialization":true, "automatic_legacy_adoption":false,
+            "failed_bootstrap_cleans_pending":false, "complete_store_loss_detected":false},
         "live_store_binding":{"check":"before_store_operations_and_receipt_commit",
             "owner_file_binding_checked":cfg!(unix),
             "identity_read_max_bytes":if cfg!(unix) { 161 } else { 0 }, "identity_reinitialized":false,
@@ -550,6 +584,17 @@ pub(crate) fn policy(enabled: bool) -> Value {
             "blocks_other_admissions_after_commit":false,
             "invalid_retained_receipt":"inspect_error_without_rewrite_or_replay",
             "commit_failure":"outcome_unknown_and_block_new_admissions"},
+        "terminal_record_shape":{"response_fields":["rpc_version", "id", "ok", "result", "error"],
+            "error_fields":["code", "message", "details"],
+            "unknown_envelope_fields":"reject_without_normalizing_or_rewriting",
+            "result_and_error_details":"open_json_payloads",
+            "generic_rpc_decoding_changed":false},
+        "admission_record_shape":{"validation":"before_new_reservation_and_on_record_read",
+            "request_digest":"64_lowercase_hex", "identity_max_bytes":256,
+            "identity_text":"nonblank_control_free_without_normalization",
+            "method_family":"solve_with_nonempty_suffix_or_run_operator_task_ir",
+            "duplicate_binding":"method_and_request_digest", "index_scope":"returned_page_records",
+            "payload_digest_recomputed_on_read":false, "operator_registry_consulted":false},
         "completion_boundary":if cfg!(unix) { "receipt_file_and_directory_sync_before_transport" }
             else { "receipt_file_sync_before_transport" },
         "recovery_policy":"retained_receipt_or_outcome_unknown_no_replay"})

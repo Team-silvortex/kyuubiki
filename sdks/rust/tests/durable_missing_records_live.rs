@@ -428,3 +428,156 @@ fn failed_receipt_loss_preserves_original_failure_after_explicit_restoration() -
     assert_idle(&agent)?;
     Ok(())
 }
+
+fn reject_owner_rebootstrap(agent: &mut Agent, retained: &Value, missing: bool) -> Result<Value> {
+    let handle = DurableExecutionHandle::from_report(retained)?;
+    agent.kill()?;
+    let store = agent.root.join("executions");
+    let owner = store.join("owner.lock");
+    let original_owner = fs::read(&owner)?;
+    let snapshot = fs::read_dir(&store)?
+        .map(|entry| {
+            let path = entry?.path();
+            let bytes = fs::read(&path)?;
+            Ok((path, bytes))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let displaced = agent.root.join("original-owner.lock");
+    if missing {
+        fs::rename(&owner, &displaced)?;
+    } else {
+        fs::write(&owner, b"")?;
+    }
+    for _ in 0..2 {
+        let error = agent
+            .restart()
+            .expect_err("damaged owner identity must block startup");
+        assert!(
+            error
+                .to_string()
+                .contains("refusing identity reinitialization"),
+            "{error}"
+        );
+        match agent.client().fetch_durable_agent_execution_after(retained) {
+            Err(SdkError::Io(error)) => {
+                assert_eq!(error.kind(), std::io::ErrorKind::ConnectionRefused);
+            }
+            other => panic!("failed startup must not expose a replacement observation: {other:?}"),
+        }
+        if missing {
+            assert!(!owner.exists(), "failed startup created a replacement lock");
+        } else {
+            assert!(
+                fs::read(&owner)?.is_empty(),
+                "failed startup generated an identity"
+            );
+        }
+        assert_eq!(
+            fs::read_dir(&store)?.count(),
+            snapshot.len() - usize::from(missing)
+        );
+        for (path, bytes) in &snapshot {
+            if *path != owner {
+                assert_eq!(fs::read(path)?, *bytes);
+            }
+        }
+    }
+    if missing {
+        fs::rename(displaced, &owner)?;
+    } else {
+        fs::write(&owner, &original_owner)?;
+    }
+    agent.restart()?;
+    assert_eq!(agent.store_id()?, handle.store_id);
+    let restored = agent
+        .client()
+        .fetch_durable_agent_execution_after(retained)?;
+    for (path, bytes) in snapshot {
+        assert_eq!(fs::read(path)?, bytes);
+    }
+    assert_idle(agent)?;
+    Ok(restored)
+}
+
+#[test]
+#[ignore = "requires built Agent and SDK example; run make test-sdk-modal-recovery"]
+fn lost_native_owner_blocks_restart_then_original_identity_recovers_verified_export() -> Result<()>
+{
+    for missing in [false, true] {
+        let mut agent = Agent::start()?;
+        let submission = agent.root.join("submission");
+        let started = invoke(&agent, "submit", &submission, Path::new(&"a".repeat(32)))?;
+        assert!(started.status.success(), "{started:?}");
+        let admission = read_json(&submission.join("admission.json"))?;
+        let handle = DurableExecutionHandle::from_report(&admission)?;
+        let completed = agent.wait(&handle, "completed")?;
+        let before = ["input.json", "submission-intent.json", "admission.json"]
+            .into_iter()
+            .map(|name| Ok((name, fs::read(submission.join(name))?)))
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(
+            reject_owner_rebootstrap(&mut agent, &completed, missing)?,
+            completed
+        );
+        let export = agent.root.join("restored-export");
+        let inspected = invoke(&agent, "inspect", &submission, &export)?;
+        assert!(inspected.status.success(), "{inspected:?}");
+        agent.kill()?;
+        let verified = invoke(&agent, "verify", &submission, &export)?;
+        assert!(verified.status.success(), "{verified:?}");
+        for (name, bytes) in before {
+            assert_eq!(fs::read(submission.join(name))?, bytes);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+#[ignore = "requires built native Agent; run make test-sdk-modal-recovery"]
+fn lost_native_owner_never_relabels_failed_or_interrupted_work() -> Result<()> {
+    for missing in [false, true] {
+        for failed in [false, true] {
+            let mut agent = Agent::start()?;
+            let mut input = model::model(false);
+            if failed {
+                input["elements"][0]["density"] = json!(-1.0);
+            } else {
+                input["job_id"] = json!("owner-interrupted");
+                fs::write(agent.root.join("solver.hold"), "owner-interrupted")?;
+            }
+            let admission = agent.client().submit_durable_agent_task(
+                &agent.store_id()?,
+                &"b".repeat(32),
+                "solve_modal_frame_2d",
+                input,
+            )?;
+            let handle = DurableExecutionHandle::from_report(&admission)?;
+            let retained = if failed {
+                agent.wait(&handle, "failed")?
+            } else {
+                agent.held()?;
+                agent.client().fetch_durable_agent_execution(&handle)?
+            };
+            let restored = reject_owner_rebootstrap(&mut agent, &retained, missing)?;
+            if failed {
+                assert_eq!(restored, retained);
+                assert!(matches!(
+                    handle.completed_result(&restored),
+                    Err(SdkError::Rpc { .. })
+                ));
+            } else {
+                assert_eq!(restored["status"], "outcome_unknown");
+                assert!(restored["response"].is_null());
+                assert_eq!(restored["automatic_replay_authorized"], false);
+                assert!(
+                    !agent
+                        .root
+                        .join("executions")
+                        .join(format!("{}.receipt", handle.execution_id))
+                        .exists()
+                );
+            }
+        }
+    }
+    Ok(())
+}

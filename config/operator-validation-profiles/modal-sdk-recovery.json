@@ -56,7 +56,13 @@
         "native_mixed_state_index_restart_orphan_cursor_receipt_corruption_and_store_replacement",
         "bounded_finalized_inventory_metadata_fence_before_new_execution_reservation",
         "real_agent_live_restoration_size_drift_inflight_completion_and_explicit_restart",
-        "mesh_inventory_fence_preserves_original_receipts_and_healthy_peer_execution"
+        "mesh_inventory_fence_preserves_original_receipts_and_healthy_peer_execution",
+        "closed_native_terminal_and_error_envelope_decode_with_open_payload_controls",
+        "real_modal_terminal_shape_faults_before_and_after_restart_and_export_recovery",
+        "native_admission_identity_validation_before_reservation_and_on_bounded_readback",
+        "paired_admission_receipt_identity_faults_with_native_index_error_and_original_restoration",
+        "missing_or_empty_owner_startup_rejection_before_identity_creation_or_pending_cleanup",
+        "real_agent_failed_restart_then_exact_owner_restoration_across_terminal_and_interrupted_tasks"
       ],
       "formal_invariants": [
         "outer_rpc_success_is_not_physical_result_success",
@@ -99,7 +105,13 @@
         "recovery_index_pages_keep_the_original_store_pin_and_strict_cursor_progress",
         "manual_filesystem_repair_capacity_accounting_is_rechecked_after_explicit_restart",
         "inventory_drift_blocks_new_admissions_without_rewriting_or_cascading_into_healthy_work",
-        "metadata_inventory_checks_do_not_certify_receipt_contents_or_concurrent_filesystem_safety"
+        "metadata_inventory_checks_do_not_certify_receipt_contents_or_concurrent_filesystem_safety",
+        "unknown_stored_terminal_fields_cannot_disappear_before_sdk_observation",
+        "closed_terminal_envelopes_preserve_open_results_and_error_details",
+        "matching_record_pairs_and_checksums_cannot_replace_valid_admission_identity",
+        "duplicate_admission_binds_method_separately_from_retained_request_digest",
+        "owner_loss_with_retained_entries_cannot_bootstrap_a_new_store_identity",
+        "unowned_pending_records_are_preserved_not_cleaned_during_failed_startup"
       ],
       "evidence_paths": [
         "sdks/rust/src/durable_execution.rs",
@@ -109,6 +121,8 @@
         "sdks/rust/src/durable_agent_store.rs",
         "sdks/rust/tests/durable_store_inventory_live.rs",
         "workers/rust/crates/cli/src/agent_execution_store.rs",
+        "workers/rust/crates/cli/src/agent_execution_store_identity.rs",
+        "workers/rust/crates/cli/src/tests/agent_execution_store_identity.rs",
         "workers/rust/crates/cli/src/agent_execution_store_inventory.rs",
         "workers/rust/crates/cli/src/tests/agent_execution_store_inventory.rs",
         "workers/rust/crates/cli/src/tests/agent_execution_store_missing.rs",
@@ -132,6 +146,9 @@
         "sdks/rust/tests/durable_record_json_live.rs",
         "workers/rust/crates/cli/src/agent_execution_store_io.rs",
         "workers/rust/crates/cli/src/agent_execution_store_json.rs",
+        "workers/rust/crates/cli/src/agent_execution_store_response.rs",
+        "workers/rust/crates/cli/src/tests/agent_execution_store_terminal_shape.rs",
+        "workers/rust/crates/cli/src/tests/agent_execution_store_record.rs",
         "workers/rust/crates/cli/src/tests/agent_execution_store_json.rs",
         "sdks/rust/tests/durable_execution_intent.rs",
         "sdks/rust/tests/durable_modal_live.rs",

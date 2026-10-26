@@ -185,6 +185,19 @@ fn malformed_cancellation_queries_fail_before_any_connection_attempt() {
 }
 
 fn server(bad_body: bool, expected_query: Value) -> (String, thread::JoinHandle<()>) {
+    let body = if bad_body {
+        "not json".into()
+    } else {
+        receipt(&expected_query, "requested").to_string()
+    };
+    server_reply(expected_query, "200 OK", body)
+}
+
+fn server_reply(
+    expected_query: Value,
+    status: &'static str,
+    body: String,
+) -> (String, thread::JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     listener.set_nonblocking(true).unwrap();
@@ -227,22 +240,18 @@ fn server(bad_body: bool, expected_query: Value) -> (String, thread::JoinHandle<
             .parse()
             .unwrap();
         assert!(length < 8192);
-        let mut body = vec![0; length];
-        stream.read_exact(&mut body).unwrap();
-        let payload: Value = serde_json::from_slice(&body).unwrap();
+        let mut request_body = vec![0; length];
+        stream.read_exact(&mut request_body).unwrap();
+        let payload: Value = serde_json::from_slice(&request_body).unwrap();
         assert_eq!(payload, expected_query);
-        let body = if bad_body {
-            "not json".into()
-        } else {
-            receipt(&payload, "requested").to_string()
-        };
         write!(
             stream,
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
             body.len()
         )
         .unwrap();
         stream.flush().unwrap();
+        thread::sleep(Duration::from_millis(50));
         assert!(
             matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
         );
@@ -278,6 +287,33 @@ fn malformed_http_reply_keeps_registration_unconfirmed_and_does_not_retry() {
             .message
             .contains("registration is unconfirmed and automatic retry is not authorized")
     );
+}
+
+#[test]
+fn journal_handoff_rejection_remains_unconfirmed_without_automatic_cancel_retry() {
+    for reason in [
+        "operator_task_dispatch_observation_changed",
+        "operator_task_dispatch_journal_invalid",
+        "operator_task_dispatch_journal_unavailable",
+    ] {
+        let (url, server) = server_reply(
+            query(),
+            "422 Unprocessable Entity",
+            json!({"error_code":reason, "error":reason}).to_string(),
+        );
+        let executor = ServiceHeadlessExecutor::try_with_token(&url, Some("test-token")).unwrap();
+        let target = serde_json::from_value(query()["execution_target"].clone()).unwrap();
+        let error = executor
+            .cancel_operator_task_dispatch("task", &"a".repeat(64), &"b".repeat(32), &target)
+            .unwrap_err();
+        server.join().unwrap();
+        assert!(error.message.contains(reason), "{error:?}");
+        assert!(
+            error
+                .message
+                .contains("registration is unconfirmed and automatic retry is not authorized")
+        );
+    }
 }
 
 #[test]

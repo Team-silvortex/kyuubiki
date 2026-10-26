@@ -113,14 +113,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResult do
     end
   end
 
+  defp verify(_, {:error, {:agent_transport_failure, :protocol, _}}),
+    do: unknown("agent_receipt_invalid")
+
   defp verify(_, _), do: unknown("original_endpoint_unreachable")
 
   defp completed(record, payload) do
     summary = Map.take(record, ~w(task_id task_digest operator_id program_id))
     response = payload["response"]
 
-    with %{"rpc_version" => 1, "id" => id} <- response,
-         true <- id == record["request_id"],
+    with :ok <- AgentRpcTransport.validate_terminal_response(response, record["request_id"]),
          {:ok, receipt} <- unwrap(summary, response),
          {:ok, completion} <- OperatorTaskCompletion.agent_receipt(summary, receipt) do
       %{

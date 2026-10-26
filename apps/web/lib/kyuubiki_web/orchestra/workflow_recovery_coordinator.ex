@@ -187,6 +187,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       lease_heartbeat_ms: min(lease_heartbeat_ms, max(div(lease_ttl_ms, 2), 1)),
       lease_retry_ms: Ownership.positive_interval(config, :lease_retry_ms, 1_000),
       lease: nil,
+      lease_session: nil,
       lease_status: :acquiring,
       lease_holder: nil,
       lease_timer_ref: nil,

@@ -318,6 +318,29 @@
       ]
     },
     {
+      "id": "local-taskir-cache-readability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_task_results.rs",
+        "workers/rust/crates/cli/src/tests/agent_task_results_readability.rs",
+        "schemas/agent-task-result-retention.schema.json",
+        "docs/headless-sdks.md",
+        "reports/original-receipt-boundaries-20261007.md"
+      ],
+      "required_text": [
+        "serializable_but_unreadable_results_are_not_retained",
+        "complete_fetch_reply_is_readable_at_both_success_and_failure_depth_boundaries",
+        "unexpected_cache_decode_failure_never_returns_a_retained_null_success",
+        "readable_payloads_preserve_float_bits_nulls_extensions_and_failure_details",
+        "shallow_receipts_keep_the_exact_encoded_byte_budget",
+        "TaskIR Cache Readability Follow-Up"
+      ]
+    },
+    {
       "id": "local-retained-taskir-dispatch-observation",
       "status": "proven",
       "grade": "verified",

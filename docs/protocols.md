@@ -80,7 +80,12 @@ foreign echoes. The guard does not alter the task's numerical request digest. Pe
 it with the original endpoint and execution ID before submission, not after reconnect.
 This prevents accidental address reuse from redirecting recovery to another ledger.
 The identity survives process restart in the synced, checksummed `owner.lock`; corrupt
-nonempty identity metadata fails startup. It is not a credential, peer authentication,
+nonempty identity metadata fails startup. Missing or empty identity metadata also
+blocks startup when any other directory entry remains, including pending files;
+only an otherwise empty store may initialize a new owner. Restore the original
+owner file, not a newly generated ID. `durable_execution.identity_initialization`
+exposes this policy; it neither detects whole-store loss nor migrates old ledgers.
+The identity is not a credential, peer authentication,
 global exactly-once guarantee or protection against copied ledgers. Legacy native
 requests without the guard remain accepted but do not have this ownership guarantee.
 
@@ -315,6 +320,127 @@ Progress and runtime liveness are streamed back as RPC frames:
 
 - `progress`
 - `heartbeat`
+
+Orchestra checks terminal RPC envelopes before exposing results or typed errors,
+including nested original-attempt receipts. Success requires a non-null result
+and no non-null error; failure requires no non-null result and a typed error with
+nonblank code/message. Omitted inactive fields and explicit null remain compatible;
+non-null scalar/array results, nested nulls and extension payloads remain supported.
+Terminal frames cannot carry `event` or `progress`; progress/heartbeat frames
+cannot carry `ok`, `result` or `error`, even as null. Mixed progress frames fail
+before callbacks. These are protocol failures, not valid capacity rejections or
+local callback faults. Managed TaskIR dispatch remains unknown without peer replay
+under idempotent/checkpointed routing, while valid pre-admission refusals still
+permit ordinary failover. These framing checks are not scientific result qualification.
+
+Before those checks, Orchestra decodes each Agent frame once while preserving
+object pairs, then rejects repeated decoded keys in every object. This includes
+arrays, failure details, nested cached receipts and opaque extensions; equal
+duplicate values and escaped spellings of the same key are still invalid.
+Keys in different objects remain independent. No Unicode normalization or numeric
+re-encoding occurs: native integer precision, float bits and array order are
+preserved. JSON syntax and duplicate-key errors expose only `invalid_json` or
+`duplicate_json_key`, never the raw frame or rejected key. Original-result reads
+classify these protocol failures as `agent_receipt_invalid`, not an unreachable
+endpoint, without updating the journal or authorizing replay/publication.
+The existing encoded frame cap still applies before decoding; temporary object
+pairs and normalized trees use additional memory. This adds no decoded-heap cap.
+
+Orchestra's `request_timeout_ms` is one network exchange budget, starting after
+local request encoding and before connecting. Connection and send waits use only
+the remaining budget; receiving a new frame does not reset it. Complete
+heartbeats and partial frame bytes cannot renew it. Expiry is checked before and
+after JSON decoding and before terminal output. The transport reuses its encoded
+request rather than encoding again after connection. One-shot RPC sockets close
+without waiting for abandoned output to drain, including receive timeouts when
+the socket driver has buffered unsent request bytes. Send timeout errors never
+expose a backend's unsent-data suffix. A timed-out send is not evidence of
+non-admission: managed TaskIR keeps an unknown attempt and never retries a peer.
+The execution lease is released so unrelated work can proceed. Encoding,
+decoding and local callbacks are synchronous, not forcibly preempted; this is
+not a CPU/memory limit, proof of remote termination or cancellation authority.
+
+Observed execution generations and echoed cancellation targets must be positive
+integers within the native `u64` range. Orchestra validates the closed target
+shape and compares all four identity fields without numeric coercion: `3.0` or
+`3e0` cannot acknowledge integer generation `3`. Invalid observation payloads and
+raw protocol failures report `agent_observation_invalid`; invalid cancellation
+acknowledgements report `agent_acknowledgement_invalid` with registration still
+unknown, not false. Actual connection/receive failures remain unreachable. Rejected
+evidence cannot rewrite dispatch history, retarget a newer execution, increment a
+successful registration count, or authorize replay. Even a valid acknowledgement
+does not establish remote termination. See the
+[cancellation identity follow-up](../reports/orchestra-task-completion-20261005.md#control-plane-cancellation-identity-follow-up).
+
+Dispatch inspection rereads its selected task/digest records after all bounded
+Agent probes, before exposing observations or cancellation targets. One extra
+batch lookup verifies inventory and the full selected set (up to 512 records),
+including entries beyond the 128-row display limit. Changed membership or a
+legitimate state transition returns `operator_task_dispatch_observation_changed`;
+damaged or unavailable storage keeps its existing storage error. The former
+rejects only the stale read, without poisoning healthy history. Unrelated task
+or digest updates do not invalidate it. No automatic probe retry, execution,
+cancellation or journal rewrite occurs. This is a point-in-time read check, not
+an atomic snapshot across Agents or a lock extending through later cancellation.
+See the [inspection snapshot follow-up](../reports/orchestra-task-completion-20261005.md#dispatch-inspection-snapshot-follow-up).
+
+Explicit retained-dispatch cancellation also revalidates the selected journal
+observation after endpoint discovery and before sending. Discovery can block;
+changed, missing or corrupt evidence must not authorize a stale cancellation.
+A legitimate transition rejects that request without poisoning healthy history;
+unrelated attempts do not replace the selected attempt or trigger retargeting.
+This is a pre-send check, not an atomic cancellation/commit operation. Storage
+loss after sending does not turn delivery into `not_sent`: an exact valid
+acknowledgement still reports its registration decision, while a lost reply
+stays unknown. Neither grants termination, replay or journal-repair authority.
+The Rust SDK keeps HTTP rejection unconfirmed and does not automatically retry.
+See the [cancellation handoff follow-up](../reports/orchestra-task-completion-20261005.md#cancellation-pre-send-handoff-follow-up).
+
+Immediate captured-request cleanup independently rechecks the original endpoint
+fingerprint (ID, address, port and session) before observation and each send.
+Descriptions may be shared within the bounded batch, but do not retain endpoint
+membership authority. Sends use current matching endpoint metadata, not the old
+capture. Removal or replacement reports `original_endpoint_not_configured`;
+directory failure reports `endpoint_directory_unavailable`, without falling back
+to captured addresses or static peers in registry mode. Earlier send receipts
+remain intact, including unknown registration after a lost acknowledgement.
+The 15-second delivery-start budget begins before discovery. Each directory wait
+is capped by the remaining budget and five seconds; expiry after lookup prevents
+another network action. Queued-only cleanup needs no directory read. These are
+point-in-time membership gates, not an atomic registry/network transaction,
+credential-rotation qualification or remote termination proof. Explicit public
+cancellation remains separate. See the [live-directory follow-up](../reports/workflow-scoped-cancellation-20261013.md#live-directory-follow-up).
+
+Durable workflow expiry sweeps now reuse this lookup after reserving each attempt
+and after binding/authorizing the exact target, instead of retaining one endpoint
+list per job. Because the final directory lookup can wait, the same delivery
+reservation is authorized again afterwards. Changed reservations or damaged
+intents cannot use the earlier authorization; failed authorization never rewrites
+that evidence. A target observed before membership loss stays bound, so later
+explicit recovery cannot select a newer process/request/generation.
+`endpoint_directory_unavailable` and `delivery_budget_exhausted` are additional
+private intent reason values. They are sealed, consume the existing three-attempt
+budget, and end unresolved rather than fabricating cancellation acknowledgement.
+No address, credential, raw error, field or new storage bucket is added. Older
+reason values remain valid; older binaries are not promised to read new reasons.
+Already-sent positive/negative acknowledgements and lost replies retain their
+distinct outcomes despite later directory failure. These are bounded checkpoint
+checks, not an atomic registry/storage/network transaction: state can change after
+its final check, and storage waits are not forcibly preempted. See the
+[durable handoff follow-up](../reports/workflow-durable-cancellation-20261013.md#durable-directory-handoff-follow-up).
+
+Durable cancellation authority also includes a private, in-memory lease-acquisition
+identity. Every successful coordinator acquisition replaces it, including return
+after storage loss with the same database fence; normal renewal preserves it.
+Bind, authorize and finish require both the coordinator session and that acquisition
+identity in addition to the current database lease, intent and delivery nonce.
+Old workers cannot adopt a reacquired lease or settle a late reply under it.
+Their retained records remain unresolved; fresh explicit recovery consumes the
+existing attempt budget and preserves any bound exact execution target. The marker
+is neither a persisted checkpoint nor a wire credential, and does not change the
+intent schema. It cannot retract a request already sent or make the last local
+authorization atomic with the network send. See the
+[lease-acquisition follow-up](../reports/workflow-durable-cancellation-20261013.md#lease-acquisition-authority-follow-up).
 
 The native direct gateway validates terminal and progress envelopes through the shared
 Rust protocol validators. Its discovery response publishes `transport_policy` with

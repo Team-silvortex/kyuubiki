@@ -85,6 +85,73 @@ defmodule KyuubikiWeb.Api.OperatorDispatchStorageApiTest do
     end
   end
 
+  for fault <- [:deleted, :corrupt, :replacement, :transition, :restart_empty, :restart_same] do
+    test "public inspection revalidates its snapshot after TCP reply across #{fault}", ctx do
+      query = Map.delete(ctx.query, "attempt_id")
+
+      reader =
+        Task.async(fn ->
+          conn(:post, "/api/v1/operator-tasks/inspect-dispatch", Jason.encode!(query))
+          |> put_req_header("content-type", "application/json")
+          |> Router.call(@opts)
+        end)
+
+      assert_receive {:agent_request, "owner", agent, request}, 2_000
+      assert request["method"] == "describe_agent"
+      assert request["params"] == %{}
+      change_during_fetch(ctx, unquote(fault))
+      after_fault = File.read(ctx.path)
+
+      descriptor = %{
+        "lifecycle" => %{"process_instance_id" => "original-agent-process"},
+        "solver_control" => %{
+          "schema_version" => "kyuubiki.agent-solver-control/v1",
+          "available" => true,
+          "active" => [
+            %{
+              "request_id" => ctx.record["request_id"],
+              "job_id" => ctx.record["job_id"],
+              "generation" => 1,
+              "cancel_requested" => false
+            }
+          ]
+        }
+      }
+
+      send(agent, {:reply, %{"ok" => true, "result" => descriptor}})
+      response = Task.await(reader)
+      body = Jason.decode!(response.resp_body)
+
+      if unquote(fault) == :restart_same do
+        assert response.status == 200
+        assert body["status"] == "dispatch_records_found"
+        assert [attempt] = body["attempts"]
+
+        assert attempt["observation"]["execution_target"] == %{
+                 "process_instance_id" => "original-agent-process",
+                 "request_id" => "original-rpc",
+                 "job_id" => "parent",
+                 "generation" => 1
+               }
+
+        refute body["automatic_replay_authorized"]
+        refute body["terminal_result_available"]
+      else
+        assert response.status == 422
+
+        assert body["error_code"] in ~w(operator_task_dispatch_journal_invalid operator_task_dispatch_journal_unavailable operator_task_dispatch_observation_changed)
+
+        refute Map.has_key?(body, "attempts")
+        refute response.resp_body =~ "SECRET"
+        refute response.resp_body =~ ctx.root
+      end
+
+      assert File.read(ctx.path) == after_fault
+      assert Store.list() == []
+      refute_receive {:agent_request, _, _, _}, 20
+    end
+  end
+
   for status <- ~w(not_retained result_not_retained) do
     test "public #{status} after an Agent incarnation change remains unknown without execution",
          ctx do

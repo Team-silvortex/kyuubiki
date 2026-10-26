@@ -119,7 +119,8 @@ Typed decoding consumes those original bytes, preserving its numeric semantics.
 This is an additional parse, not a claimed performance improvement. Existing
 file-size, parser-depth, checksum and file-ownership gates remain in force.
 Unknown fields also undergo uniqueness checking before a typed decoder can
-ignore them; unique unknown fields keep their previous schema behavior.
+ignore them; unique unknown fields kept their previous schema behavior in that
+change. The terminal-envelope follow-up below tightens that separate boundary.
 
 Record preparation uses the same gate, so future custom serializers cannot
 publish bytes that the restart reader would reject. There is no new dependency,
@@ -170,3 +171,220 @@ Follow-up validation:
   No evidence grade was promoted by this bounded local regression.
 
 No version bump, commit/push, application installation or deployment was made.
+
+## Native Terminal Shape Follow-Up
+
+Date: 2026-10-26. Local macOS source-built Agent and official Rust SDK; package
+baseline remains 3.7.1. The latest version-named Git checkpoint when work began
+was `5fa2f509` (`daji 3.7.5`), not a package/artifact version update.
+
+Two native negative controls reproduced silent normalization of correctly
+checksummed, uniquely keyed but invalid terminal records. The shared
+`RpcResponse` and `RpcError` decoders ignored unknown fields: adding a progress
+event to a completed/failed response, or a contradictory result to its error
+envelope, still returned an apparently normal original receipt. The SDK could
+not detect fields already discarded by the Agent. Missing RPC version was
+already rejected and is not a newly fixed defect.
+
+A private persisted-response decoder now requires closed v1 envelopes:
+
+- Response fields: `rpc_version`, `id`, `ok`, `result`, `error`.
+- Error fields: `code`, `message`, `details`.
+- Unknown fields are rejected even when null. Existing required-field,
+  identity, success/failure and byte/checksum/unique-key gates remain in force.
+- Actual result and error-detail values remain open JSON; reserved-looking
+  keys inside those payloads are legal and do not become envelope claims.
+
+The decoder constructs typed payloads directly, without cloning a full result
+tree. It does not alter shared RPC types, serialized record bytes, operator or
+engine contracts, solver arithmetic, SDK public APIs, or add a dependency.
+Record preparation reads back through the same decoder. Future disk-envelope
+extensions require an explicit contract update rather than silent field loss.
+
+Three native tests cover response/error envelope additions, unknown nulls,
+live/restarted rejection, unchanged stored bytes, duplicate lookup without an
+execution reservation, and open payload controls. Valid result/detail fields
+retain signed zero, subnormals, one-ULP binary64 values and integer extrema.
+
+Two added opt-in SDK tests exercise three real-Agent fault scenarios: successful
+and failed modal response envelopes containing progress fields, and a failure
+error envelope containing result/replay claims. Existing duplicate-key cases
+reuse the same bounded harness and remain separately tested.
+
+For each case, the test computes an actual original task, retains caller intent
+and admission, modifies only its disposable native receipt and recomputes the
+unkeyed checksum. Live and restarted readback, inspection and duplicate
+submission reject the malformed receipt. The example creates no export;
+admission-only discovery still finds one original task. No bad bytes or caller
+records are rewritten and no extra execution is admitted. Exact original-byte
+restoration recovers the original outcome without recomputation. Successful
+recovery also exports independently checked modes and verifies the export
+offline with the Agent stopped; failure recovery preserves original diagnostics.
+
+This is malformed-record fault coverage, not a claim that the production
+serializer emits such fields or a deployed adversary caused them. Checksums are
+not signatures, same-shaped hostile replacements remain outside this gate,
+and local process restart is not host-power-loss qualification. No automatic
+repair, retry, version bump, commit/push, installation or deployment is included.
+
+Terminal-shape validation:
+
+- Native store suite: 58 passed, including all three new regressions.
+- Selected CLI/Agent tests: 378 passed, covering the CLI unit tests and durable
+  synchronous/asynchronous execution, panic, recovery, response contracts/limits,
+  lifecycle, task IR and Mesh publication/cancellation/missing-admission chains.
+  This was not a rerun of every CLI integration target.
+- SDK all-target tests: 206 passed; 48 opt-in tests were ignored by that ordinary
+  invocation and executed through the formal profile below.
+- Formal `modal-sdk-durable-research`: `ok=true`, `executed=true`, including all
+  48 opt-in integration tests. The four focused native-record SDK tests also
+  passed independently. These overlapping runs are not additive coverage.
+- CLI and SDK all-target Clippy with warnings denied, targeted Rust formatting
+  and `git diff --check`: passed.
+- Documentation book/inventory and project organization: passed; source limit
+  800, documentation limit 2000, zero tracked debt.
+- Tensor structure/command checks: passed across 13 modules and 11 paradigms,
+  with zero structural gaps. The 2 maturity, 23 evidence-grade and 18 P0 gaps
+  remain; overall daji status is still `blocked`. No evidence grade was raised.
+
+Validation is local macOS development-binary evidence, not Linux/Windows,
+installed-application or host-power-loss qualification.
+
+## Native Admission Identity Follow-Up
+
+Date: 2026-10-26. Same local source-built scope and unchanged package version.
+
+Three failing native controls exposed a weaker admission boundary than the SDK:
+readback checked the execution filename/schema but not the remaining identity
+fields; an internal new admission could reach its reservation callback with an
+invalid request/process identity; and duplicate lookup compared the digest but
+not the independently retained method. Matching checksummed admission/receipt
+pairs therefore did not guarantee a well-formed recovery observation. Ordinary
+RPC request-envelope validation already rejects invalid transport request IDs;
+the new reservation guard is defense for the store's internal API, not a newly
+demonstrated bypass of the public RPC request gate.
+
+`Record::validate` now checks the native schema/execution ID, 64-character
+lowercase hexadecimal digest, nonblank control-free identity strings bounded to
+256 UTF-8 bytes, and the durable method family (`solve_` with a nonempty suffix,
+or `run_operator_task_ir`). New work validates before reserving execution or
+writing its admission. Existing lookup, duplicate submission, completion checks
+and returned index records share the record-read gate. Duplicates separately
+compare the retained method and request digest. No string is trimmed or repaired.
+
+Four native tests cover malformed identities in admission-only, completed and
+failed stores; coordinated invalid admission/receipt pairs; live and restarted
+lookup/index/duplicate rejection with unchanged bytes; a reservation callback
+that must never run for invalid new identities; method conflict despite matching
+digest; and exact restoration. Positive controls preserve 256-byte and Unicode
+identities and TaskIR. Unrelated missing-ID lookup remains available, and valid
+new work is admitted after explicit restoration and restart.
+
+A fifth real-Agent record test exercises empty process identity, malformed digest
+and a non-durable method across successful and failed modal executions. Native
+RPC errors, rather than only SDK-side validation failures, reach inspection,
+duplicate submission and listing before and after forced process termination.
+The example creates no export while the native identity is invalid. Restoring
+the exact original pair recovers the original outcome and index; successful
+results export and verify offline with the Agent stopped, while failures retain
+their original diagnostic details. Caller evidence is unchanged and only the
+original execution remains stored.
+
+This checks bounded metadata, not method availability in the operator registry,
+or the digest's relationship to original inputs absent from the native store.
+Well-shaped substituted records still require caller-retained commitments and
+independent physical validation. Index content validation covers only returned
+page entries; discovery is neither a full-store audit nor completion proof.
+There is no auto-repair, retry, new dependency, solver/engine coupling, version
+bump, commit/push, installed-service change or deployment.
+
+Admission-identity validation:
+
+- Before the fix: three native regressions failed and the positive identity
+  control passed. After the fix: all 62 native store tests passed.
+- Selected CLI/Agent regression: 382 passed, zero failures, covering CLI unit
+  tests and the durable/Mesh integration targets from the preceding follow-up.
+  This is not an all-target CLI or complete project test claim.
+- SDK all-target regression: 206 passed; the 49 opt-in tests ignored by this
+  normal invocation were run explicitly by the formal profile.
+- Formal `modal-sdk-durable-research`: `ok=true`, `executed=true`, including all
+  49 opt-in tests. All five focused native-record live tests also passed in a
+  separate run. Counts overlap and must not be added as unique coverage.
+- CLI/SDK all-target Clippy with warnings denied, targeted Rust formatting,
+  documentation book/inventory, project organization and `git diff --check`
+  passed. All modified sources remain below 800 lines; docs below 2000.
+- Tensor structure/command checks passed with the unchanged 2 maturity,
+  23 evidence-grade and 18 P0 gaps. Overall daji status remains `blocked`;
+  this bounded local evidence does not promote a production qualification.
+
+No Linux/Windows, installed-application or host-power-loss verification was run
+for this follow-up.
+
+## Native Store Identity Bootstrap Follow-Up
+
+Date: 2026-10-26. Local source-built Agent and official Rust SDK, unchanged package
+version. This intentionally retires the populated-store empty-lock compatibility
+behavior documented in the earlier Mesh owner-fence report.
+
+Two failing native controls reproduced automatic ownership replacement after an
+empty or missing `owner.lock`. Existing admissions and receipts did not prevent
+generation of a new random store ID, and startup could also remove unowned pending
+files. Pinned SDK callers already rejected the replacement ID, but the native
+store could expose original tasks under the new identity to newly discovering or
+unfenced callers. This was not recovery of original ownership.
+
+Identity initialization now requires a directory containing no entries except
+an optional empty `owner.lock`. The missing-file path checks before creating a
+lock, then initialization checks again under the exclusive owner lock before
+generating identity or running pending cleanup. Any retained entry blocks it;
+no record contents need to be loaded. Existing nonempty identity validation,
+file permissions and exclusive locking remain unchanged. Valid-owned stores keep
+their prior pending cleanup and recovery behavior. An empty legacy lock can still
+initialize in an otherwise empty directory, not over old work.
+
+Native controls cover absent/empty owner files with admission-only, completed and
+failed records; repeated rejected startup without record writes or owner creation;
+orphan/pending/foreign entries preserved; empty-store initialization and lock
+exclusion; and exact owner restoration followed by original-task lookup, duplicate
+suppression and fresh explicit work. Existing interrupted-publication alias tests
+continue to exercise cleanup under a valid retained identity.
+
+Two real-Agent tests cover six cases: absent/empty owners with completed, failed
+or solver-interrupted modal executions. The child process exits on each damaged
+startup attempt, lookup cannot return a replacement observation, and owner/task
+bytes remain as found. Restoring the original owner recovers the exact original
+store ID. Completed work exports and passes offline verification with the Agent
+stopped; failed diagnostics are unchanged; killed in-flight work stays unknown
+without a new receipt or replay. The test fixture now reaps an exited startup
+child before a later explicit restart, without changing production lifecycle.
+
+This is not authenticated storage, protection from concurrent hostile filesystem
+mutation, or host-power-loss qualification. A wholly deleted store remains
+indistinguishable from a fresh installation; caller pins and retained evidence
+remain necessary. No automatic migration, repair, retry, backups, version bump,
+commit/push, installed-service changes or deployment were performed.
+
+Owner-bootstrap validation:
+
+- Before the fix: two native negative controls failed; four existing/positive
+  identity tests passed. After the fix: all 64 native store tests passed.
+- The six focused SDK native-record-loss tests passed, including both new
+  owner-loss tests. Their first live run correctly observed startup rejection
+  but used the wrong SDK error variant for a refused connection; the assertion
+  now checks `SdkError::Io(ConnectionRefused)`. SDK transport behavior was not
+  changed to accommodate the test.
+- Selected CLI/Agent regression: 387 passed, zero failures (315 CLI unit tests
+  and 72 durable/Mesh integration tests, including live Mesh store binding).
+  This is not a complete project or all-target CLI runtime qualification.
+- SDK all-target regression: 206 passed; 51 opt-in tests ignored by that ordinary
+  invocation were executed by `modal-sdk-durable-research`, which passed with
+  `ok=true` and `executed=true`. Overlapping counts are not unique coverage.
+- CLI/SDK all-target Clippy with warnings denied, targeted Rust formatting,
+  documentation book/inventory, project organization and `git diff --check`
+  passed; source/document limits remain 800/2000 with zero tracked debt.
+- Tensor structure/command checks passed. The 2 maturity, 23 evidence-grade and
+  18 P0 gaps remain; overall daji status stays `blocked`. No grade promotion.
+
+This round did not run Linux/Windows, installed-application or physical-power-loss
+verification. Disposable failed-test directories were removed after diagnosis;
+no user data or application state was cleaned.

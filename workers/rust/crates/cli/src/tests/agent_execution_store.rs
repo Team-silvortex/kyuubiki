@@ -14,8 +14,12 @@ mod publication_tests;
 use kyuubiki_protocol::RpcMethod;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+#[path = "agent_execution_store_record.rs"]
+mod record_contract;
 #[path = "agent_execution_store_response.rs"]
 mod response_contract;
+#[path = "agent_execution_store_terminal_shape.rs"]
+mod terminal_shape;
 
 struct Scratch(PathBuf);
 impl Scratch {

@@ -816,3 +816,191 @@ qualification remain separate.
 No version bump, commit, push, release rebuild, installed-service restart, or deployment
 was performed. Product version remains daji 3.4.7; existing uncommitted Rust work
 was preserved.
+
+## Control Plane Cancellation Identity Follow-Up
+
+On 2026-10-26, five new test groups reproduced gaps in the shared Orchestra
+observation/cancellation validator. Loose map equality accepted an echoed
+floating generation such as `3.0` as the requested integer `3`. Observation
+accepted a generation above `u64::MAX` as active evidence even though it could
+not construct a usable execution target. Invalid raw protocol replies were
+classified as unreachable endpoints, as were non-object acknowledgements.
+
+The validator now bounds observed generations to positive native `u64` integers,
+validates the echoed closed target, and uses strict equality for all four
+identity fields. Invalid protocol/observation data is `agent_observation_invalid`;
+invalid acknowledgements are `agent_acknowledgement_invalid` with
+`cancel_registered: null`. Actual transport failures remain unreachable/unknown.
+No diagnostic copies the rejected payload. Valid integer boundary targets and
+both positive and negative acknowledgements retain their existing semantics.
+
+New regression coverage includes eight pure validator tests, two parent aggregate
+tests and sixteen raw TCP cases through the real dispatch inspection/cancellation
+entry points. Wire cases cover normal replies, float and exponent generations,
+overflow, duplicate keys, malformed JSON, scalar payloads and disconnected peers.
+They check exact request parameters, no extra dispatch, unchanged journal bytes,
+and no terminal/publication/replay claims. Aggregate checks prevent invalid
+acknowledgements from increasing the registered count and invalid observations
+from sending cancellation at all. Pure boundary controls include `2^53 + 1`
+and `u64::MAX`; these controls are not a claim to have run that many generations.
+
+Verification for this follow-up on macOS:
+
+- The five initial regression groups all failed before the repair.
+- New pure and raw TCP suites: 24 tests passed. The broader Playground,
+  dispatch inspection/cancellation/result, workflow dispatch/native dispatch,
+  operator executor and selected API suites passed 545 tests in 123.2 seconds
+  with warnings treated as errors. This includes both new aggregate tests;
+  overlapping focused counts must not be added to the broader total.
+- Complete `kyuubiki-cli --test headless_live` target: 80 passed, zero failed,
+  three ignored in 433.91 seconds, using two test threads. It reran real Agent
+  cancellation acknowledgement loss, owner/peer isolation, original-result
+  recovery and typed SQLite workflow/process restart chains. The three ignored
+  tests require an explicitly provisioned disposable PostgreSQL database and
+  are not executed coverage. No database was installed for this follow-up.
+- Elixir formatting, documentation book/inventory, organization and tensor
+  checks passed, as did `git diff --check`. The tensor still has 13 modules,
+  11 paradigms, zero structural gaps, two maturity gaps, 23 evidence-grade gaps,
+  18 P0 gaps and a blocked Daji release status. This evidence did not promote
+  any maturity or qualification grade.
+
+This is local verified control-plane validation, not new native execution or
+scientific qualification. Native Agent/SDK/schema contracts are unchanged. A
+valid cancellation registration still does not prove remote termination, and
+the repair adds no durable intent store, initial-process attestation, retargeting,
+automatic replay, cancellation/send atomicity or recovery journal mutation.
+Installed applications and services were not rebuilt or restarted; no version
+bump, commit or push was performed in this follow-up.
+
+## Dispatch Inspection Snapshot Follow-Up
+
+On 2026-10-26, inspection was still returning its original cached record set
+after potentially several seconds of Agent probes. The original-result fetch
+already revalidated its selected record, but inspection could expose an active
+execution target after the matching history disappeared, changed state or was
+replaced. New matching attempts also left the returned count and truncation
+information stale. Before this repair, 29 of 33 new tests failed; the four
+independence/no-op controls passed.
+
+Inspection now performs one additional existing `Journal.lookup` after all
+probes, comparing the entire selected task/digest snapshot exactly. The batch
+read checks inventory once and verifies selected file contents under the
+existing 512-record/4-KiB bounds. It does not scan the directory separately for
+each displayed row or add a store/API. All selected records participate, not
+only the first 128 displayed attempts. A later probe therefore cannot hide a
+change to an earlier observation, and hidden-row changes or new matching
+attempts invalidate the old retained count. Probe caching and the four-endpoint
+cap are unchanged; no automatic retry loop was added.
+
+Legitimate state/membership changes return
+`operator_task_dispatch_observation_changed` without poisoning healthy journal
+state. A fresh explicit read can observe the new state. Filesystem damage or
+process loss retains the existing journal error and never becomes an empty or
+successful report. An unchanged durable journal can restart during the probe;
+an empty replacement cannot stand in for the original snapshot. Other task or
+digest updates remain independent, and unrelated payloads are not decoded by
+this selected read. No observation, cancellation target or diagnostic payload
+escapes on an error, and no history is rewritten, execution replayed or
+cancellation sent by the inspection operation.
+
+Regression coverage includes 33 focused cases for deletion, malformed and
+valid-but-replaced files, interrupted writes, missing roots, journal process
+loss, five legitimate transitions, changed membership, earlier-probe and
+truncated-row changes, and independence controls. Six added public API cases
+exercise the real TCP description exchange during deletion, corruption,
+replacement, transition, empty restart and unchanged restart. They assert
+error routing without raw data/paths, unchanged file bytes and no extra RPC
+or job creation.
+
+Verification for this follow-up on macOS:
+
+- Selected inspection/storage/journal tests: 70 passed in 4.5 seconds.
+- Broader Playground, operator dispatch/executor, workflow dispatch/native
+  dispatch and selected API suites: 584 passed in 30.4 seconds with warnings
+  treated as errors. This includes the 39 new cases; overlapping focused counts
+  must not be added to the broader total.
+- Complete `kyuubiki-cli --test headless_live` target, with two test threads:
+  80 passed, zero failed and three ignored in 313.25 seconds. Real source-built
+  Agent/Orchestra chains covered original-result recovery, owner/peer isolation,
+  acknowledgement loss and typed SQLite workflow/process restart. The three
+  ignored cases require a disposable PostgreSQL database; they were not run and
+  are not executed coverage. No database was provisioned for this follow-up.
+- Elixir formatting, documentation book/inventory, organization, tensor and
+  `git diff --check` passed. The tensor remains at 13 modules, 11 paradigms,
+  zero structural gaps, two maturity gaps, 23 evidence-grade gaps and 18 P0
+  qualification gaps, with Daji status blocked. Only local verified evidence
+  was added; no maturity or qualification grade was promoted.
+
+This is local verified source evidence, not atomicity across the journal and
+Agent, an identity lease covering later cancellation, physical power-loss
+qualification or authenticated multi-host acceptance. Final revalidation cannot
+prevent changes after it returns. The repair adds one bounded disk read pass;
+it is not a claim of zero overhead or a new benchmark result. Native solver,
+Agent, SDK and wire schemas remain unchanged. No App rebuild, installation,
+installed-service restart, version bump, commit or push was performed.
+
+## Cancellation Pre-Send Handoff Follow-Up
+
+On 2026-10-26, public retained-dispatch cancellation still had a pre-send gap:
+it read the journal, then waited for endpoint discovery, and delivered using
+the earlier observation even when history changed during that wait. Twenty-one
+new public API/TCP tests initially produced 12 failures and nine passing controls.
+The failures covered deleted, corrupt, valid-but-replaced, partial and missing
+storage; five state transitions; and unavailable or empty-replacement journals.
+
+After resolving endpoints, cancellation now calls the existing journal
+`verify_observation` for the exact selected record before delivery. Valid
+transitions reject the stale request with
+`operator_task_dispatch_observation_changed` without poisoning healthy history;
+storage damage/process loss retains the existing journal error. No cancellation
+RPC is sent in those cases. A fresh explicit request can read the current state;
+terminal/not-dispatched observations stay undelivered, while unknown attempts
+still require the caller's exact observed execution target.
+
+The gate is deliberately scoped to one attempt. New attempts for the same task,
+unrelated payload damage and identical observation writes cannot replace or
+unnecessarily invalidate that selected identity. An unchanged durable journal
+restart remains compatible; an empty replacement cannot silently stand in for
+it. Removed or session-replaced endpoints never receive cancellation. The tests
+pause only the owned test endpoint directory, wait for the actual queued lookup,
+change the journal, then resume it; ordering does not depend on a guessed race.
+
+Post-send behavior stays distinct from pre-send rejection. Three TCP tests remove
+the journal file after observing the cancellation request. Exact positive and
+negative acknowledgements retain their registration decisions; disconnect keeps
+registration unknown. None is relabelled as unsent, terminal or replayable, and
+no journal file is recreated. An SDK HTTP test covers changed/invalid/unavailable
+journal rejection and requires the existing unconfirmed/no-automatic-retry error
+context rather than a fabricated cancellation receipt.
+
+The 21 new API cases also check unchanged damaged evidence, no extra RPC, no new
+job, no diagnostic payload/path echo and explicit fresh-read usability. The
+selected cancellation, storage and raw-identity suites passed 70 tests.
+
+Verification for this follow-up on macOS:
+
+- Before the fix, 12 of the 21 API/TCP cases failed; nine compatibility and
+  post-send controls passed. After the fix, the selected 70 tests passed in
+  6.5 seconds, and the broader dispatch/workflow/Playground/API target passed
+  605 tests in 62.9 seconds with warnings treated as errors. These totals overlap.
+- Rust SDK cancellation module: eight tests passed in 0.24 seconds, including
+  the new HTTP rejection test for all three journal error codes. An initial
+  helper-variable shadowing compile error was fixed; a zero-match test filter
+  was corrected and is not counted as coverage. The final filter was
+  `cargo test --locked --offline -p kyuubiki-headless-sdk --lib dispatch_cancellation`.
+- Complete `kyuubiki-cli --test headless_live` target: 80 passed, zero failed,
+  three ignored in 342.17 seconds with two test threads. It reran actual source
+  Agent/Orchestra cancellation, acknowledgement-loss, original-result and typed
+  SQLite workflow/process restart chains. The three ignored cases need an
+  explicitly provisioned disposable PostgreSQL database and were not executed.
+- Strict Headless SDK Clippy including tests, Rust/Elixir formatting,
+  documentation book/inventory, organization, tensor and `git diff --check`
+  passed. The tensor remains at 13 modules, 11 paradigms, zero structural gaps,
+  two maturity gaps, 23 evidence-grade gaps and 18 P0 gaps, with Daji status
+  blocked. No maturity or qualification grade was promoted.
+
+This is local verified source coverage, not an atomic lock across discovery, disk and
+the Agent. Changes after final verification remain possible; exact native target
+validation is still required. The repair does not change automatic workflow
+cancellation, solver algorithms, Agent/SDK production code or wire schemas.
+No installed services, App bundles, versions, commits or pushes were changed.

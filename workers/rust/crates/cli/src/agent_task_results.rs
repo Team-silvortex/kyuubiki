@@ -12,6 +12,9 @@ const MAX_ENTRIES: usize = 64;
 const MAX_ENTRY_BYTES: usize = 8 * 1024 * 1024;
 const MAX_TOTAL_BYTES: usize = 32 * 1024 * 1024;
 const TTL: Duration = Duration::from_secs(600);
+// serde_json permits 127 nested containers; reserve two for the fetch RPC
+// envelope and its result object, not just the stored response in isolation.
+const MAX_RESPONSE_DEPTH: usize = 125;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -228,14 +231,28 @@ pub(crate) fn policy() -> Value {
 }
 
 pub(crate) fn handle_fetch(request: RpcRequest) -> crate::transport::AgentReply {
+    crate::transport::AgentReply::Stream(Vec::new(), fetch_response(request, store()))
+}
+
+fn fetch_response(request: RpcRequest, cache: &Mutex<Store>) -> RpcResponse {
     let identity = serde_json::from_value::<Identity>(request.params);
-    let response = match identity {
-        Ok(identity) if identity.valid() => match store().lock() {
+    match identity {
+        Ok(identity) if identity.valid() => match cache.lock() {
             Ok(mut store) => {
                 let (status, generation, encoded) = store.lookup(&identity, Instant::now());
                 drop(store);
-                let response =
-                    encoded.and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
+                let response = match encoded.as_deref().map(decode_response).transpose() {
+                    Ok(response) if (status == "receipt_retained") == response.is_some() => {
+                        response
+                    }
+                    _ => {
+                        return RpcResponse::error(
+                            request.id,
+                            "task_result_retention_unavailable",
+                            "Retained task response could not be read; no completion is available",
+                        );
+                    }
+                };
                 RpcResponse::success(
                     request.id,
                     json!({"schema_version":SCHEMA,
@@ -258,8 +275,7 @@ pub(crate) fn handle_fetch(request: RpcRequest) -> crate::transport::AgentReply 
             "task_result_query_invalid",
             "require an exact attempt and task identity without extra fields",
         ),
-    };
-    crate::transport::AgentReply::Stream(Vec::new(), response)
+    }
 }
 
 fn hex(value: &str, length: usize) -> bool {
@@ -286,7 +302,37 @@ impl Write for BoundedWriter {
 fn encode_bounded<T: Serialize + ?Sized>(response: &T) -> serde_json::Result<Vec<u8>> {
     let mut writer = BoundedWriter(Vec::new());
     serde_json::to_writer(&mut writer, response)?;
+    // Serialization alone has no reader-depth guarantee. Validate outside the
+    // cache lock; failure only drops retention, never the original execution.
+    decode_response(&writer.0)?;
     Ok(writer.0)
+}
+
+fn decode_response(bytes: &[u8]) -> serde_json::Result<Value> {
+    if bytes.len() > MAX_ENTRY_BYTES {
+        return Err(serde_json::Error::io(io::Error::other(
+            "retained response exceeds byte limit",
+        )));
+    }
+    let response: Value = serde_json::from_slice(bytes)?;
+    if !response.is_object() || !fits_depth(&response, MAX_RESPONSE_DEPTH) {
+        return Err(serde_json::Error::io(io::Error::other(
+            "retained response must be an object within the fetch reply depth limit",
+        )));
+    }
+    Ok(response)
+}
+
+fn fits_depth(value: &Value, remaining: usize) -> bool {
+    match value {
+        Value::Array(items) => {
+            remaining > 0 && items.iter().all(|item| fits_depth(item, remaining - 1))
+        }
+        Value::Object(fields) => {
+            remaining > 0 && fields.values().all(|item| fits_depth(item, remaining - 1))
+        }
+        _ => true,
+    }
 }
 
 #[cfg(test)]

@@ -12,7 +12,7 @@ defmodule KyuubikiWeb.Playground.AgentTaskUncertainDispatchTest do
   alias KyuubikiWeb.Playground.{AgentClient, AgentExecutionGate, AgentPool}
   alias KyuubikiWeb.TestSupport.ControlledSolverAgent
 
-  setup do
+  setup ctx do
     root =
       Path.join(System.tmp_dir!(), "uncertain-dispatch-#{System.unique_integer([:positive])}")
 
@@ -27,7 +27,12 @@ defmodule KyuubikiWeb.Playground.AgentTaskUncertainDispatchTest do
       File.rm_rf!(root)
     end)
 
-    first = agent("uncertain-first")
+    first =
+      agent(
+        "uncertain-first",
+        if(ctx[:stall_before_read], do: :stall_before_read, else: %{"stage" => "agent-received"})
+      )
+
     peer = agent("unused-peer")
     Application.put_env(:kyuubiki_web, AgentPool, endpoints: [first, peer])
     AgentPool.reload()
@@ -39,12 +44,72 @@ defmodule KyuubikiWeb.Playground.AgentTaskUncertainDispatchTest do
     %{task: task, first: first, peer: peer}
   end
 
+  for policy <- [:idempotent, :checkpointed, :checkpoint_required] do
+    @tag stall_before_read: true
+    test "stalled send stays unknown under #{policy} and releases capacity for unrelated work",
+         ctx do
+      params = %{
+        "mode" => "execute",
+        "task_ir" => ctx.task,
+        "padding" => String.duplicate("x", 16 * 1024 * 1024)
+      }
+
+      dispatch =
+        Task.async(fn ->
+          AgentClient.request("run_operator_task_ir", params, fn _ -> :ok end,
+            request_timeout_ms: 150,
+            retry_safety: unquote(policy),
+            on_dispatch_reserved: fn _ -> :ok end,
+            replay_checkpoint: %{
+              "operator_task_batch_checkpoint_verification_contract" =>
+                "kyuubiki.operator_task_batch_checkpoint_verification/v1",
+              "status" => "verified",
+              "checkpoint_digest" => String.duplicate("a", 64)
+            }
+          )
+        end)
+
+      on_exit(fn -> Process.exit(dispatch.pid, :kill) end)
+      assert_receive {:stalled_agent, original}, 2_000
+
+      assert {:ok, {:error, :operator_task_dispatch_outcome_unknown}} =
+               Task.yield(dispatch, 1_000)
+
+      send(original, :disconnect)
+      refute_receive {:solver_request, _, _}, 30
+      assert {:ok, [%{"state" => "outcome_unknown"}]} = Journal.lookup_task(ctx.task["task_id"])
+      assert %{active_lease_count: 0, queued_request_count: 0} = AgentExecutionGate.snapshot()
+      [first, peer] = AgentPool.endpoints()
+      assert first.consecutive_failures == 1
+      assert peer.consecutive_failures == 0
+
+      {:ok, other} =
+        OperatorTaskIR.build("extract.thermal_result_diagnostics", %{}, %{},
+          task_id: "after-stalled-send"
+        )
+
+      next = Task.async(fn -> execute_managed(other) end)
+      assert_receive {:solver_request, healthy, request}, 2_000
+      assert request["params"]["task_ir"]["task_id"] == "after-stalled-send"
+      receipt = receipt(other, "executed")
+      send(healthy, {:reply, %{"ok" => true, "result" => receipt}})
+      assert Task.await(next) == {:ok, receipt}
+      assert {:ok, [%{"state" => "outcome_unknown"}]} = Journal.lookup_task(ctx.task["task_id"])
+    end
+  end
+
   for policy <- [:idempotent, :checkpointed, :checkpoint_required],
       outcome <- [
         :disconnect,
         :timeout,
         :invalid_receipt,
         :invalid_failure,
+        :contradictory_success,
+        :contradictory_capacity,
+        :mixed_terminal,
+        :duplicate_success,
+        :duplicate_capacity,
+        :duplicate_identity,
         :rpc_error,
         :returned_error,
         :raise,
@@ -72,7 +137,7 @@ defmodule KyuubikiWeb.Playground.AgentTaskUncertainDispatchTest do
         end)
 
       assert_receive {:solver_request, agent, request}, 2_000
-      respond(agent, ctx.outcome)
+      respond(agent, ctx.outcome, ctx.task, request)
       assert Task.await(dispatch) == {:error, :operator_task_dispatch_outcome_unknown}
       send(agent, :disconnect)
       refute_receive {:solver_request, _, _}, 30
@@ -83,7 +148,21 @@ defmodule KyuubikiWeb.Playground.AgentTaskUncertainDispatchTest do
       assert %{active_lease_count: 0, queued_request_count: 0} = AgentExecutionGate.snapshot()
 
       [first, peer] = AgentPool.endpoints()
-      health_failure = ctx.outcome in [:disconnect, :timeout, :invalid_receipt, :invalid_failure]
+
+      health_failure =
+        ctx.outcome in [
+          :disconnect,
+          :timeout,
+          :invalid_receipt,
+          :invalid_failure,
+          :contradictory_success,
+          :contradictory_capacity,
+          :mixed_terminal,
+          :duplicate_success,
+          :duplicate_capacity,
+          :duplicate_identity
+        ]
+
       assert first.consecutive_failures == if(health_failure, do: 1, else: 0)
       assert peer.consecutive_failures == 0
     end
@@ -174,9 +253,9 @@ defmodule KyuubikiWeb.Playground.AgentTaskUncertainDispatchTest do
     AgentClient.run_operator_task_ir(task, opts, progress)
   end
 
-  defp agent(id) do
+  defp agent(id, progress \\ %{"stage" => "agent-received"}) do
     start_supervised!(
-      Supervisor.child_spec({ControlledSolverAgent, {self(), %{"stage" => "agent-received"}}},
+      Supervisor.child_spec({ControlledSolverAgent, {self(), progress}},
         id: id
       )
     )
@@ -208,6 +287,66 @@ defmodule KyuubikiWeb.Playground.AgentTaskUncertainDispatchTest do
         :ok
     end
   end
+
+  defp respond(agent, outcome, task, request)
+       when outcome in [:duplicate_success, :duplicate_capacity, :duplicate_identity] do
+    id = Jason.encode!(request["id"])
+    result = Jason.encode!(receipt(task, "executed"))
+
+    body =
+      case outcome do
+        :duplicate_success ->
+          ~s("ok":true,"ok":true,"result":#{result})
+
+        :duplicate_identity ->
+          ~s("ok":true,"result":#{result},"id":#{id})
+
+        :duplicate_capacity ->
+          ~S("ok":false,"error":{"code":"agent_at_capacity","code":"failed","message":"PRIVATE"})
+      end
+
+    send(agent, {:raw_reply, ~s({"rpc_version":1,"id":#{id},#{body}})})
+  end
+
+  defp respond(agent, outcome, task, _request), do: respond(agent, outcome, task)
+
+  defp respond(agent, :contradictory_success, task) do
+    send(
+      agent,
+      {:reply,
+       %{
+         "ok" => true,
+         "result" => receipt(task, "executed"),
+         "error" => %{"code" => "failed", "message" => "PRIVATE contradiction"}
+       }}
+    )
+  end
+
+  defp respond(agent, :contradictory_capacity, task) do
+    send(
+      agent,
+      {:reply,
+       %{
+         "ok" => false,
+         "result" => receipt(task, "executed"),
+         "error" => %{"code" => "agent_at_capacity", "message" => "not admitted"}
+       }}
+    )
+  end
+
+  defp respond(agent, :mixed_terminal, task) do
+    send(
+      agent,
+      {:reply,
+       %{
+         "ok" => true,
+         "result" => receipt(task, "executed"),
+         "progress" => nil
+       }}
+    )
+  end
+
+  defp respond(agent, outcome, _task), do: respond(agent, outcome)
 
   defp respond(agent, :invalid_receipt),
     do: send(agent, {:reply, %{"ok" => true, "result" => %{}}})

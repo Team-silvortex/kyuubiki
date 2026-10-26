@@ -1546,19 +1546,17 @@ responses. Reusing a retained attempt ID marks it ambiguous and clears its resul
 Preflight and requests without this correlation do not populate the cache.
 Retrieval does not require the caller to upload the model again.
 
-The read-only `task_result_retention` descriptor exposes the policy: at most
-64 entries, 8 MiB per encoded response, 32 MiB of retained encoded response bytes,
-and 10 minutes from reservation creation. Metadata and transient JSON allocations
-are additional, not part of that encoded-byte budget. Count pressure evicts the
-oldest reservation, including pending entries; byte pressure evicts old retained
-responses. Late completion cannot recreate an evicted reservation. Oversized
-responses become `result_not_retained` without blocking or truncating the original
-execution. Reads do not renew retention. Expiry is reclaimed lazily on the next
-cache operation. No result files, backups or separate input copies are created; Agent
-restart clears this entire cache.
-The retained response itself can include operator-defined input echoes or other
-sensitive output; it is not a redacted journal. Protect the existing Agent
-transport boundary and configure read authorization for the control-plane API.
+The read-only `task_result_retention` descriptor exposes 64 entries, 8 MiB per encoded response,
+32 MiB total encoded responses, and 10 minutes from reservation creation; metadata and transient JSON allocations are additional.
+Count pressure evicts oldest reservations, including pending entries; byte pressure evicts oldest retained responses.
+Late completion cannot restore evicted entries. Oversized, unreadable or non-object responses become `result_not_retained`,
+without blocking or truncating original execution. Responses allow 125 nested containers, reserving two for the fetch reply.
+Admission decodes once outside the cache lock; its temporary JSON tree is outside the encoded-byte budget.
+Fetch rechecks readability: unexpected decode or presence/status mismatch returns `task_result_retention_unavailable`,
+never `receipt_retained` with null response. This neither repairs the cache nor replaces downstream completion/failure validation.
+Reads do not renew age; expiry is reclaimed on the next cache operation. Agent restart clears the cache.
+No result files, backups, input copies or automatic reruns are created. See [cache boundaries](data-lifecycle.html).
+Retained responses may contain input echoes or sensitive output, not redacted journals: protect Agent transport and API read authorization.
 
 `receipt_recovered` contains `completion` only after the existing task-bound
 completion/failure gates pass, checked again by the Rust SDK. Its `outcome` may

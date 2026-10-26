@@ -63,6 +63,18 @@ execution/publication in Engine and Agent; the GUI is not runtime authority.
 | Lost terminal receipts | Retained completed/failed history rejects a missing native receipt after live loss and Agent restart | Intact prior exports remain offline-verifiable; diagnostic unknown receipts are not verified results, and exact restoration is explicit |
 | Native store write failures | Real admission/receipt pending-file collisions block new durable work while retaining prior result reads | Explicit restart discards pending files without completing or replaying uncertain work; not disk-full or directory-sync fault qualification |
 | Native record ambiguity | Reject duplicate decoded JSON keys in checksummed Agent records before typed decoding or publication | Real result/error corruption and restart controls; checksums are integrity checks, not authentication, and exact original restoration remains explicit |
+| Stored terminal envelope | Reject unknown response/error envelope fields before typed decoding can erase contradictions | Result and error-detail payloads remain open; real completed/failed modal recovery, duplicate lookup, export rejection and exact restoration; shared RPC decoder unchanged |
+| Stored admission identity | Validate bounded identity text, digest shape and method family before reservation and when reading a record; bind duplicates to both method and digest | Invalid matching admission/receipt pairs fail native inspection and returned-page discovery; explicit original restoration only; no registry lookup, payload rehash or authentication claim |
+| Native store bootstrap | Refuse a new owner identity when an absent/empty owner lock coexists with any retained entries | No relabeling of old tasks or cleanup of unowned pending records; restore original owner bytes; an entirely empty store can still initialize and complete store loss remains outside this gate |
+| TaskIR cache readability | Decode bounded responses before retention, reserving depth for the complete fetch reply; fail explicit reads instead of returning retained null results | Local cache boundary and fault-injection tests; original execution, expiry, capacity and no-replay policy unchanged; not restart durability or new scientific qualification |
+| Control-plane RPC state | Reject repeated decoded keys before terminal/progress validation; share terminal-state checks between live replies and recovered receipts | Ambiguous replies leave managed TaskIR unknown without peer replay; fixed parser diagnostics do not echo frames, invalid recovery replies are distinct from unreachable endpoints; numeric values and valid failover remain supported, with no new decoded-heap cap |
+| Control-plane RPC waiting | Share a network budget across connect/send/receive after encoding; close one-shot sockets without draining abandoned output | Stalled readers release execution capacity while managed attempts remain unknown, never peer-replayed; both Erlang network backends tested locally, with synchronous callbacks/decoding and remote cancellation outside the guarantee |
+| Cancellation identity validation | Require bounded integer generations and exact typed acknowledgement targets; distinguish malformed replies from unreachable Agents | Raw TCP and aggregate-count checks retain unknown outcomes and unchanged history; no retargeting, job-wide fallback, terminal proof or replay authority |
+| Dispatch inspection snapshot | Recheck the entire selected task/digest record set after the last Agent probe, including truncated rows and retained counts | Stale observations fail without returning cancellation targets; healthy transitions allow a fresh read, unchanged journal restarts remain compatible; no probe retry, cross-store atomicity or new execution authority |
+| Cancellation send handoff | Revalidate the selected dispatch observation after endpoint discovery, before issuing cancellation | Queued discovery cannot bypass changed or damaged history; post-send registration/unknown outcomes remain truthful, without retargeting, automatic retry or terminal proof |
+| Cancellation directory | Immediate cleanup and durable sweeps share current original-endpoint lookup before observation and sending | Cached descriptions do not retain endpoint membership; outages preserve earlier receipts without fallback, while durable delivery retains its separate authority checks |
+| Durable cancellation handoff | Recheck membership after target binding/authorization, then reauthorize the same durable delivery token after lookup | Removed nodes, replaced reservations and corrupt intents cannot authorize the stale send; bounded retry retains the exact target, not termination proof or an atomic directory/storage transaction |
+| Cancellation lease reacquisition | Fence bind, authorization and receipt writes by a fresh in-memory acquisition identity; ordinary renewal preserves it | Same-process takeover and storage return cannot revive old delivery authority; exact-target retry remains bounded, without new persisted fields or atomic network authority. [Local evidence](../reports/workflow-durable-cancellation-20261013.md#lease-acquisition-authority-follow-up) |
 | SDK recovery index | Read one bounded, store-pinned admission page with ordered unique IDs and validated continuation | Mixed completed/failed/interrupted native work survives process restart; listings are not result validation, atomic snapshots or replay authority; restart after filesystem repair to rescan capacity |
 | Durable inventory admission fence | Check finalized record names, regular-file types and encoded lengths before reserving fresh execution; latch mismatches as admission-blocked | Bounded metadata only, not content verification or concurrent-writer protection; intact reads and healthy in-flight completion remain available; explicit inspection/restart rescans counts |
 
@@ -151,6 +163,26 @@ Follow the evidence rather than treating this table as a new combined run:
   prevents `not_found` from also claiming admitted execution or resumability.
   Real missing admissions, orphan receipts and checksum faults block export;
   restoring original evidence recovers only the state it actually supports.
+- [Cancellation identity validation](../reports/orchestra-task-completion-20261005.md#control-plane-cancellation-identity-follow-up)
+  rejects numerically equal but differently typed generations and malformed
+  replies without counting a cancellation registration or rewriting history.
+  Invalid protocol evidence stays distinct from an unreachable original endpoint.
+- [Dispatch inspection snapshot](../reports/orchestra-task-completion-20261005.md#dispatch-inspection-snapshot-follow-up)
+  rejects cached observations after storage loss or concurrent record changes.
+  The final batch check covers earlier replies and hidden rows without repeatedly
+  scanning inventory per attempt; unrelated task/digest updates remain independent.
+- [Cancellation send handoff](../reports/orchestra-task-completion-20261005.md#cancellation-pre-send-handoff-follow-up)
+  prevents an endpoint-discovery wait from authorizing cancellation using stale
+  history. After sending, exact acknowledgements and unknown delivery stay
+  distinct; neither becomes permission to replay or repair history.
+- [Immediate cancellation directory](../reports/workflow-scoped-cancellation-20261013.md#live-directory-follow-up)
+  revalidates static and registry membership before each send without reprobing
+  the same endpoint. Lookup time consumes the original delivery-start budget;
+  known registration and lost-acknowledgement uncertainty survive later outages.
+- [Durable cancellation directory](../reports/workflow-durable-cancellation-20261013.md#durable-directory-handoff-follow-up)
+  closes the independent expiry-sweep gap without changing the bound execution
+  target. New directory/budget reasons remain sealed and limited to three attempts;
+  a final durable authority check rejects changes during directory lookup.
 
 The latest summary reduction report records 3,544 web tests with zero failures
 and 77 skips, plus 758 passed Rust Engine/selected integration tests and one

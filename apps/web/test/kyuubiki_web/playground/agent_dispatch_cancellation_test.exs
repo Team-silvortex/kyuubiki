@@ -183,6 +183,34 @@ defmodule KyuubikiWeb.Playground.AgentDispatchCancellationTest do
     end
   end
 
+  test "inexact acknowledgement cannot increment the aggregate registered count" do
+    assert {:ok, receipt} =
+             cancel(snapshot(["one"]), descriptor([entry("one", 1)]), fn _, target, _ ->
+               {:ok, put_in(ack(target), ~w(execution_target generation), 1.0)}
+             end)
+
+    assert receipt["status"] == "cancellation_outcome_unknown"
+    assert receipt["registered_count"] == 0
+    assert [target] = receipt["targets"]
+    assert target["uncertainty_reason"] == "agent_acknowledgement_invalid"
+    assert target["delivery_attempted"]
+    assert is_nil(target["cancel_registered"])
+    refute receipt["execution_terminal_confirmed"]
+    refute receipt["automatic_replay_authorized"]
+  end
+
+  test "invalid protocol observation never sends or becomes an unreachable aggregate target" do
+    observation = {:error, {:agent_transport_failure, :protocol, "SECRET"}}
+    assert {:ok, receipt} = cancel(snapshot(["one"]), observation)
+    assert receipt["status"] == "not_requested"
+    assert receipt["registered_count"] == 0
+    assert [target] = receipt["targets"]
+    assert target["status"] == "agent_observation_invalid"
+    refute target["delivery_attempted"]
+    refute receipt["execution_terminal_confirmed"]
+    refute Jason.encode!(receipt) =~ "SECRET"
+  end
+
   test "empty, queued and reserved snapshots do not send requests" do
     for {queued, reserved, status} <- [
           {0, 0, "no_active_dispatch"},

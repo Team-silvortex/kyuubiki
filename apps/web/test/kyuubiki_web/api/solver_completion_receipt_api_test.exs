@@ -59,12 +59,12 @@ defmodule KyuubikiWeb.Api.SolverCompletionReceiptApiTest do
     assert :error = AnalysisResultStore.get(job_id)
   end
 
-  for {label, result} <- [
-        {"null", nil},
-        {"array", []},
-        {"scalar", 7},
-        {"text", "invalid"},
-        {"boolean", false}
+  for {label, result, boundary} <- [
+        {"null", nil, :protocol},
+        {"array", [], :solver},
+        {"scalar", 7, :solver},
+        {"text", "invalid", :solver},
+        {"boolean", false, :solver}
       ] do
     test "a #{label} success result fails promptly rather than stranding the job" do
       job_id =
@@ -72,7 +72,7 @@ defmodule KyuubikiWeb.Api.SolverCompletionReceiptApiTest do
 
       payload = await_terminal(job_id)
       assert payload["job"]["status"] == "failed"
-      assert payload["job"]["message"] =~ "invalid solver result"
+      assert_result_rejection(payload, unquote(boundary))
       refute payload["job"]["has_result"]
       assert :error = AnalysisResultStore.get(job_id)
     end
@@ -98,7 +98,8 @@ defmodule KyuubikiWeb.Api.SolverCompletionReceiptApiTest do
     job_id = submit_frames([progress("completed"), %{"ok" => true}])
     payload = await_terminal(job_id)
     assert payload["job"]["status"] == "failed"
-    assert payload["job"]["message"] =~ "invalid solver result"
+    assert_result_rejection(payload, :protocol)
+    refute payload["job"]["has_result"]
     assert :error = AnalysisResultStore.get(job_id)
 
     next_id = submit_frames([progress("completed"), %{"ok" => true, "result" => @result}])
@@ -159,6 +160,19 @@ defmodule KyuubikiWeb.Api.SolverCompletionReceiptApiTest do
     next = await_terminal(next_id)
     assert next["job"]["status"] == "completed"
     assert next["result"] == @result
+  end
+
+  defp assert_result_rejection(payload, :protocol) do
+    message = payload["job"]["message"]
+    assert message =~ "agent_protocol_failure"
+    assert message =~ "malformed_rpc_response"
+    refute message =~ "invalid solver result"
+  end
+
+  defp assert_result_rejection(payload, :solver) do
+    message = payload["job"]["message"]
+    assert message =~ "invalid solver result"
+    refute message =~ "agent_protocol_failure"
   end
 
   defp progress(stage) do

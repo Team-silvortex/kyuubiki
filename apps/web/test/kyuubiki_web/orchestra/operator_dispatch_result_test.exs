@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResultTest do
   alias KyuubikiWeb.Orchestra.OperatorDispatchJournal, as: Journal
   alias KyuubikiWeb.Orchestra.OperatorDispatchFiles, as: Files
   alias KyuubikiWeb.Orchestra.OperatorDispatchResult, as: Result
+  alias KyuubikiWeb.TestSupport.ControlledSolverAgent
 
   @schema_path Path.expand(
                  "../../../../../schemas/agent-task-result-retention.schema.json",
@@ -353,6 +354,171 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResultTest do
 
     assert {:ok, %{"status" => "not_retained", "outcome" => "unknown"}} =
              fetch(ctx, fn _, _ -> {:ok, payload} end)
+  end
+
+  test "retained terminal receipts reject progress and terminal frame mixtures", ctx do
+    before = File.read!(Path.join(ctx.root, ctx.record["attempt_id"] <> ".json"))
+
+    for {key, value} <- [
+          {"event", "progress"},
+          {"event", nil},
+          {"progress", %{}},
+          {"progress", nil}
+        ] do
+      payload = update_in(retained(ctx.record), ["response"], &Map.put(&1, key, value))
+      assert {:ok, result} = fetch(ctx, fn _, _ -> {:ok, payload} end)
+      assert result["status"] == "agent_receipt_invalid"
+      assert result["outcome"] == "unknown"
+      assert is_nil(result["completion"])
+      refute result["automatic_replay_authorized"]
+      refute result["publication_performed"]
+      assert File.read!(Path.join(ctx.root, ctx.record["attempt_id"] <> ".json")) == before
+    end
+  end
+
+  test "valid success and typed failure receipts preserve optional fields and payload extensions",
+       ctx do
+    for original <- [retained(ctx.record), failed_retained(ctx.record)],
+        absent <- [false, true] do
+      {counterpart, outcome} =
+        if original["response"]["ok"], do: {"error", "executed"}, else: {"result", "failed"}
+
+      payload =
+        update_in(original, ["response"], fn response ->
+          response = Map.put(response, "trace_extension", %{"opaque" => true})
+
+          if absent,
+            do: Map.delete(response, counterpart),
+            else: Map.put(response, counterpart, nil)
+        end)
+
+      assert {:ok, result} = fetch(ctx, fn _, _ -> {:ok, payload} end)
+      assert result["status"] == "receipt_recovered"
+      assert result["outcome"] == outcome
+
+      if outcome == "executed",
+        do: assert(result["completion"]["result"]["result"]["value"] == 42)
+
+      refute result["automatic_replay_authorized"]
+      refute result["publication_performed"]
+    end
+  end
+
+  test "retained typed failures reject mixed frames and malformed error text", ctx do
+    original = failed_retained(ctx.record)
+    before = File.read!(Path.join(ctx.root, ctx.record["attempt_id"] <> ".json"))
+
+    for payload <- [
+          put_in(original, ~w(response event), "heartbeat"),
+          put_in(original, ~w(response progress), nil),
+          put_in(original, ~w(response result), %{}),
+          put_in(original, ~w(response error code), false),
+          original
+          |> put_in(~w(response error message), " ")
+          |> put_in(~w(response error details operator_task_failure_receipt message), " ")
+        ] do
+      assert {:ok, result} = fetch(ctx, fn _, _ -> {:ok, payload} end)
+      assert result["status"] == "agent_receipt_invalid"
+      assert result["outcome"] == "unknown"
+      assert is_nil(result["completion"])
+      refute result["automatic_replay_authorized"]
+      refute result["publication_performed"]
+      assert File.read!(Path.join(ctx.root, ctx.record["attempt_id"] <> ".json")) == before
+    end
+  end
+
+  for fault <- [:none, :nested_status, :outer_result, :malformed] do
+    test "raw #{fault} original-result response is gated without rewriting history", ctx do
+      start_supervised!({ControlledSolverAgent, {self(), %{"stage" => "lookup"}}})
+      assert_receive {:fake_agent_ready, port}
+      endpoint = %{ctx.endpoint | port: port}
+      {:ok, attempt} = Journal.begin_dispatch(ctx.request, endpoint, ctx.journal)
+      assert :ok = Journal.finish_dispatch(attempt, "outcome_unknown", ctx.journal)
+      {:ok, records} = Journal.lookup_task("task", ctx.journal)
+      record = Enum.find(records, &(&1["attempt_id"] == attempt))
+      query = Map.take(record, ~w(attempt_id task_id task_digest))
+      path = Path.join(ctx.root, attempt <> ".json")
+      before = File.read!(path)
+
+      lookup =
+        Task.async(fn -> Result.fetch(query, journal: ctx.journal, endpoints: [endpoint]) end)
+
+      assert_receive {:solver_request, agent, request}, 2_000
+      assert request["method"] == "fetch_operator_task_result"
+      assert request["params"]["attempt_id"] == attempt
+      id = Jason.encode!(request["id"])
+      payload = Jason.encode!(retained(record))
+
+      raw =
+        case unquote(fault) do
+          :none ->
+            ~s({"rpc_version":1,"id":#{id},"ok":true,"result":#{payload}})
+
+          :nested_status ->
+            payload =
+              String.replace(
+                payload,
+                ~S("operator_task_ir_status":"executed"),
+                ~S("operator_task_ir_status":"executed","operator_task_ir_status":"blocked")
+              )
+
+            ~s({"rpc_version":1,"id":#{id},"ok":true,"result":#{payload}})
+
+          :outer_result ->
+            ~s({"rpc_version":1,"id":#{id},"ok":true,"result":#{payload},"result":{}})
+
+          :malformed ->
+            ~s({"rpc_version":1,"id":#{id},"ok":true,"SECRET":"PRIVATE",)
+        end
+
+      send(agent, {:raw_reply, raw})
+      assert {:ok, result} = Task.await(lookup)
+
+      if unquote(fault) == :none do
+        assert result["status"] == "receipt_recovered"
+        assert result["outcome"] == "executed"
+        assert result["completion"]["result"]["result"]["value"] == 42
+      else
+        assert result["status"] == "agent_receipt_invalid"
+        assert result["outcome"] == "unknown"
+        assert is_nil(result["completion"])
+      end
+
+      refute result["automatic_replay_authorized"]
+      refute result["publication_performed"]
+      refute inspect(result) =~ "PRIVATE"
+      assert File.read!(path) == before
+      assert {:ok, ^records} = Journal.lookup_task("task", ctx.journal)
+      refute_receive {:solver_request, _, _}, 20
+    end
+  end
+
+  defp failed_retained(record) do
+    failure =
+      Map.merge(Map.take(record, ~w(task_id task_digest operator_id program_id)), %{
+        "schema_version" => "kyuubiki.agent-operator-task-failure/v1",
+        "failure_owner" => "agent_runtime",
+        "failure_stage" => "solving",
+        "reason_code" => "worker_failed",
+        "message" => "worker failed",
+        "recovery" => %{
+          "retryable" => false,
+          "safe_to_continue_other_tasks" => true,
+          "required_action" => "inspect_input"
+        }
+      })
+
+    put_in(retained(record), ["response"], %{
+      "rpc_version" => 1,
+      "id" => record["request_id"],
+      "ok" => false,
+      "result" => nil,
+      "error" => %{
+        "code" => "worker_failed",
+        "message" => "worker failed",
+        "details" => %{"operator_task_failure_receipt" => failure}
+      }
+    })
   end
 
   defp fetch(ctx, probe),

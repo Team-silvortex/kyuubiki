@@ -112,7 +112,11 @@ impl Agent {
             if self.client().ping().is_ok() {
                 return Ok(());
             }
-            if self.child.as_mut().unwrap().try_wait()?.is_some() || Instant::now() > deadline {
+            let exited = self.child.as_mut().unwrap().try_wait()?.is_some();
+            if exited {
+                self.child.take();
+            }
+            if exited || Instant::now() > deadline {
                 return Err(format!(
                     "Agent failed startup: {}",
                     fs::read_to_string(self.root.join("agent.log"))?

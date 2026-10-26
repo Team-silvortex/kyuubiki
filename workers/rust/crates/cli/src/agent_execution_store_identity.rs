@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
@@ -7,12 +7,41 @@ use sha2::{Digest, Sha256};
 const PREFIX: &str = "kyuubiki.agent-execution-store/v1\n";
 const LIMIT: u64 = 160;
 
+pub(super) fn open_lock(root: &Path) -> Result<File, String> {
+    let path = root.join("owner.lock");
+    match fs::symlink_metadata(&path) {
+        Ok(_) => super::io::open_private(&path, false),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            // Do not leave a new empty lock in a damaged, populated store.
+            ensure_initializable(root)?;
+            match super::io::open_private(&path, true) {
+                Ok(file) => Ok(file),
+                Err(_) => super::io::open_private(&path, false),
+            }
+        }
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+fn ensure_initializable(root: &Path) -> Result<(), String> {
+    for entry in fs::read_dir(root).map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        if entry.file_name() != "owner.lock" {
+            return Err("execution store identity missing or empty with retained entries; restore original owner.lock; refusing identity reinitialization or replay".into());
+        }
+    }
+    Ok(())
+}
+
 // The caller holds the exclusive owner.lock lock. An incomplete nonempty identity
 // is an error, never permission to replace an already published owner identity.
 pub(super) fn load_or_create(lock: &mut File, root: &Path) -> Result<String, String> {
     if let Some(id) = read_identity(lock)? {
         Ok(id)
     } else {
+        // Check again under the owner lock, before generating identity or cleaning
+        // pending records. Empty legacy locks cannot prove ownership of old work.
+        ensure_initializable(root)?;
         let mut nonce = [0_u8; 16];
         getrandom::fill(&mut nonce).map_err(|e| e.to_string())?;
         let id = nonce

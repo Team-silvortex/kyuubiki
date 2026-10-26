@@ -124,3 +124,184 @@ Bounded sweeps do not guarantee automatic progress through an arbitrary backlog.
 These local control-plane checks do not close the broader distributed recovery
 or release-readiness gaps and do not resolve previously noted lease-admission
 intermittency.
+
+## Durable Directory Handoff Follow-Up
+
+Date: 2026-10-26. Package metadata remains 3.7.1. This follow-up concerns the
+durable expiry delivery worker, complementing the earlier
+[immediate cleanup directory check](workflow-scoped-cancellation-20261013.md#live-directory-follow-up).
+Earlier report results and scope remain historical; their counts are not added.
+
+The worker previously read configured endpoints once per job, before reserving
+individual attempts. A node could disappear or change address/session while an
+observation, reservation, target binding or authorization was waiting. Later
+requests, including cached targets in the same batch, could still be sent using
+that stale list. A slow reservation could also start a probe after the sweep's
+15-second delivery-start budget had expired.
+
+The initial isolated regression contained 19 tests: 18 failed against the old
+implementation and the unchanged membership control passed. After repairing the
+test probe cleanup, the failures were reproduced with seed 271026 without the
+cleanup-induced coordinator failures from the first test-development attempt.
+The tests deliberately pause actual coordinator and pool calls, rather than
+depending on sleep-based race timing. One budget control intentionally waits
+15.1 seconds to exceed the production sweep budget without a test-only clock.
+
+### Delivery Changes
+
+- Immediate and durable cancellation reuse `AgentCancellationDirectory` to resolve
+  the original fingerprint against current static or registry membership. Lookups
+  use the original deadline, cap directory waits by the remaining budget and five
+  seconds, and do not use stale addresses or static fallback in registry mode.
+- Durable delivery resolves membership after each successful reservation and again
+  after target binding and the existing authorization. A cached description does
+  not retain membership authority. Each distinct endpoint is still described at
+  most once within the job's sweep; bound retry targets are never reobserved.
+- Since the final directory lookup may wait, the worker then authorizes the same
+  persisted delivery token again. Reservation replacement or intent corruption
+  during lookup prevents sending and does not overwrite the replacement/corrupt
+  evidence. Membership and storage are separate point-in-time checks, not one
+  atomic distributed transaction; either can change after its last check.
+- Observed targets are bound before final membership validation. If membership is
+  lost, subsequent explicit recovery keeps the original process/request/job and
+  generation rather than discovering a new execution. Restoring membership and
+  restarting the coordinator retries only that already bound target.
+- New private reason values `endpoint_directory_unavailable` and
+  `delivery_budget_exhausted` are sealed into the existing intent lifecycle.
+  Reservations consume the existing three-attempt limit; exhaustion is unresolved,
+  not acknowledged. This includes directory failure before observation. Existing
+  record fields, identifiers, limits and old reason values are unchanged; older
+  binaries are not promised to accept new reason values on downgrade.
+- After a send, an exact positive acknowledgement, a negative acknowledgement and
+  a disconnected reply retain requested, target-not-observed and unknown outcomes
+  respectively. Failure of the next directory check cannot rewrite them as not
+  sent. No new retry daemon, peer fallback, job-wide cancellation or execution
+  replay is introduced. Acknowledgement still does not prove termination.
+
+### Tests And Scope
+
+There are 27 new tests: 25 durable directory/authority integration cases and two
+intent reason lifecycle cases. They cover removed/replaced endpoint identity,
+address and session; reservation/bind/authorization waits; already bound retries;
+cached batches; independent peers; registry removal and re-registration; directory
+process loss; genuine socket disconnect after cancellation; restored membership
+after coordinator restart; replaced reservations/corrupt intent during final lookup;
+budget expiry; and healthy exact-send controls with same-job bystanders excluded.
+
+The fixture writes valid failed-workflow intents directly and uses a controlled
+loopback TCP Agent. It does not execute a numerical model or prove initial
+dispatch attestation. Existing gated watchdog and live-request recovery tests are
+retained in the regression selections to exercise the normal capture path.
+The new test-only pause helper releases when its owning test exits and is removed
+after each test. The existing TCP fixture can now disconnect without replying,
+allowing acknowledgement loss to be tested without killing its whole listener.
+
+Completed selections with warnings denied:
+
+| Scope | Result | Seed |
+| --- | --- | --- |
+| Initial focused immediate/durable cancellation selection | 85 passed, zero failures | 271027 |
+| Final expanded workflow/API/storage/dispatch selection | 3,528 passed, 73 conditional skips, zero failures (3,601 total) | 271028 |
+| Isolated memory cancellation/watchdog/deadline selection | 127 passed, zero failures | 271029 |
+| Solver completion API and RPC envelope classification | 21 passed, zero failures | 271030 |
+
+The expanded first run found two stale API assertions among 3,601 tests, with 73
+conditional skips. Missing/null success results are already rejected by the
+strict RPC envelope validator as protocol failures, before solver object checking.
+The API tests now require that exact earlier failure classification; non-null
+array/scalar/text/boolean results still require solver-result rejection. Assertions
+for no stored result and successful subsequent requests remain. No production
+validator was relaxed and no failed case was removed.
+
+The complete expanded selection was rerun with the same seed after that test
+alignment: zero failures in 137.3 seconds. Formatting, diff whitespace, the
+26-file HTML book, documentation inventory, organization audit and tensor
+validation/self-tests pass. Source/config and document limits remain 800 and
+2,000 lines with zero tracked debt. Tensor status remains 13 modules and 11
+paradigms, zero structural gaps, two maturity gaps, 23 evidence-grade gaps and
+18 P0 gaps; the release gate is still blocked. The isolated memory run's temporary
+data directory is removed after verification.
+
+These selections overlap and are not coverage percentages. This work does not
+qualify live PostgreSQL, remote Linux, installed desktop operation, native solver
+accuracy, credential rotation or physical power-loss durability. Storage calls,
+DNS and scheduling are not forcibly preempted by the delivery-start budget.
+No new cancellation storage bucket, backup, runtime dependency or engine/operator
+coupling is added. Explicit public cancellation remains a separate path. No
+commit, push, version bump, package rebuild or installation is performed.
+
+## Lease Acquisition Authority Follow-Up
+
+Reviewed October 26, 2026. The previous directory checks still had a distinct
+ownership boundary: a delivery token bound the coordinator process session and
+persisted intent/delivery nonce, but not the lease acquisition that issued it.
+The same coordinator could lose ownership and acquire again while its separate
+cancellation worker waited on observation, directory lookup or a TCP reply.
+The worker could then use the new valid database lease with its old token.
+
+The isolated pre-fix selection reproduced 18 failing cases out of 20 tests
+(seed 281001): old bind/authorize/finish operations after release, foreign takeover
+or storage outage, and missing/null/foreign acquisition identities. Ordinary
+renewal and fresh exact-target reservation controls passed. These are multiple
+observations of one authority-lifetime defect, not 18 independent vulnerabilities.
+
+### Lifetime Boundary
+
+- Each successful acquisition creates an ephemeral `lease_session` reference;
+  loss or failed acquisition clears it. Ordinary lease renewal preserves it.
+  It is separate from the existing coordinator session and workflow claim, so
+  those identities and normal heartbeat behavior are not rotated unnecessarily.
+- Reservation returns that reference with the existing coordinator session and
+  delivery nonce. Bind, authorize and finish compare both local identities while
+  retaining the database lease guard and sealed intent checks. An old or missing
+  identity returns `stale_cancellation_delivery` without rewriting the intent.
+- This also fences reacquisition when storage returns with the same numeric fence.
+  The reference is never persisted or sent over RPC, and no schema, storage bucket,
+  backup, credential or runtime dependency is added. It is a local lifetime fence,
+  not a replacement for the database ownership guard or a restart checkpoint.
+- After network submission, late positive, negative or disconnected replies from
+  an old worker cannot settle the record under the new lease. The dispatching
+  record remains unresolved; a fresh explicit sweep must reserve a new attempt
+  and can only use its previously bound process/request/job/generation target.
+  The existing three-attempt limit and non-terminal acknowledgement semantics stay.
+
+### Regression Scope
+
+The new 29-case suite covers all three store operations across release, foreign
+takeover and storage return in the same coordinator process; malformed authority;
+coordinator restart; ordinary renewal; fresh reservation and immutable targets;
+absence of the private marker from persisted/public data; and numeric-fence reuse.
+Controlled loopback TCP cases hold observation, the final directory lookup, or
+cancellation replies across actual lease-store transitions. Old authority cannot
+send after the checked transition or settle a late reply; renewal still sends only
+the selected execution and a fresh retry neither re-describes nor targets a same-job
+bystander. Failed workflow intents are seeded directly, not captured from a new
+numerical solve. The test registry guard only suppresses competing startup sweeps.
+
+Completed with warnings denied:
+
+| Scope | Result | Seed |
+| --- | --- | --- |
+| Initial fixed cancellation selection | 68 passed, zero failures | 281002 |
+| Complete new lease/TCP suite | 29 passed, zero failures | 281003 |
+| Expanded workflow/API/lease/storage/dispatch selection | 3,566 passed, 73 conditional skips, zero failures (3,639 total) | 281004 |
+| Isolated memory cancellation/watchdog/deadline/lease selection | 165 passed, zero failures | 281005 |
+
+The expanded run completed in 140.0 seconds; isolated memory in 26.4 seconds.
+These selections overlap and are not coverage percentages. Formatting and diff
+whitespace checks, the 26-file HTML book, document inventory, organization audit
+and tensor validation/self-tests pass. Source/config and document limits remain
+800 and 2,000 lines with zero tracked debt. The new lease suite is 376 lines.
+The isolated memory data directory is removed after verification.
+
+The tensor gains the narrowly scoped
+`local-durable-cancellation-lease-acquisition-authority` evidence claim, without
+upgrading deployment qualification. It remains 13 modules, 11 paradigms, zero
+structural gaps, two maturity gaps, 23 evidence-grade gaps and 18 P0 gaps; the
+release gate stays blocked.
+
+The lease-acquisition check is still point-in-time: it does not make final local
+authorization atomic with sending, retract a sent request, prove Agent termination,
+or qualify cross-host PostgreSQL, native numerical accuracy, installed applications
+or physical power-loss durability. Explicit public cancellation is a separate path.
+No commit, push, version bump, rebuild or installation is performed in this follow-up.

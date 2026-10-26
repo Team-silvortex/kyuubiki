@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Native and public Orchestra/Rust SDK execution cancellation requires exact observed process/request/generation/job identity through a retained original endpoint, rejects malformed or inconsistent acknowledgements, and retains unknown delivery without fallback or replay. Native tests isolate siblings, peers and restarted Agents. macOS and remote Linux source-container acknowledgement-loss tests recover original cancelled or executed receipts without replay, journal mutation or downstream publication. This is verified source evidence, not initial-process attestation, durable cancellation, authenticated deployment, installed qualification or Python/Elixir parity.",
+  "summary": "Native and public Orchestra/Rust SDK execution cancellation requires exact observed process/request/generation/job identity through a retained original endpoint, rejects malformed or inconsistent acknowledgements, and retains unknown delivery without fallback or replay. Native tests isolate siblings, peers and restarted Agents. macOS and remote Linux source-container acknowledgement-loss tests recover original cancelled or executed receipts without replay, journal mutation or downstream publication. Local durable-sweep tests additionally fence endpoint membership and persisted delivery authority. This is verified source evidence, not initial-process attestation, end-to-end durable cancellation qualification, authenticated deployment, installed qualification or Python/Elixir parity.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -45,6 +45,234 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "local-durable-cancellation-lease-acquisition-authority",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_store.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_lease_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Lease Acquisition Authority Follow-Up",
+        "lease_session: make_ref()",
+        "when is_reference(lease_session)",
+        "returning storage cannot revive a token even when the database fence is reused",
+        "lease takeover during final directory lookup rejects earlier authorization",
+        "cannot settle a delivery under a newly acquired lease",
+        "normal renewal during TCP observation still delivers only the exact target",
+        "acquisition identity is not persisted or included in the public summary"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-directory-authority-handoff",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_cancellation_directory.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_intent.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_directory_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_intent_test.exs",
+        "apps/web/test/support/workflow_cancellation_probe.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Durable Directory Handoff Follow-Up",
+        "Directory.lookup",
+        "delivery_budget_exhausted",
+        "endpoint_directory_unavailable",
+        "during final directory lookup cannot reuse earlier authorization",
+        "restoring membership after restart retries only the already bound execution",
+        "before the next cached target",
+        "slow reservation cannot start a probe after the original sweep budget"
+      ]
+    },
+    {
+      "id": "local-immediate-cancellation-live-endpoint-directory",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_dispatch_cancellation.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_cancellation_directory.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_pool.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_dispatch_cancellation_directory_test.exs",
+        "docs/protocols.md",
+        "reports/workflow-scoped-cancellation-20261013.md"
+      ],
+      "required_text": [
+        "Live Directory Follow-Up",
+        "current_endpoint",
+        "endpoint_directory_unavailable",
+        "after first send blocks later cached targets but retains its receipt",
+        "directory loss cannot erase a sent request whose acknowledgement was lost",
+        "uses live membership, never the static fallback",
+        "directory wait is bounded by the remaining delivery budget",
+        "real TCP observation cannot authorize a cancel after"
+      ]
+    },
+    {
+      "id": "local-orchestra-cancellation-pre-send-journal-handoff",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_cancellation.ex",
+        "apps/web/test/kyuubiki_web/api/operator_dispatch_cancel_handoff_test.exs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_cancellation_tests.rs",
+        "docs/protocols.md",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "Cancellation Pre-Send Handoff Follow-Up",
+        "revalidate_before_send",
+        "during endpoint lookup blocks cancellation before any TCP send",
+        "prevents the stale cancel and leaves a fresh explicit request usable",
+        "acknowledgement semantics without retry",
+        "journal_handoff_rejection_remains_unconfirmed_without_automatic_cancel_retry"
+      ]
+    },
+    {
+      "id": "local-orchestra-dispatch-inspection-post-probe-snapshot-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_inspection.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_inspection_snapshot_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_dispatch_storage_api_test.exs",
+        "docs/protocols.md",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "Dispatch Inspection Snapshot Follow-Up",
+        "revalidate_snapshot",
+        "operator_task_dispatch_observation_changed",
+        "later probe cannot return an earlier observation whose record has changed",
+        "truncated inspection still revalidates all records behind its retained count",
+        "journal process loss cannot return a cached execution target",
+        "public inspection revalidates its snapshot after TCP reply"
+      ]
+    },
+    {
+      "id": "local-orchestra-cancellation-exact-integer-and-invalid-reply-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_execution_cancellation.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_execution_cancellation_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_dispatch_cancellation_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_identity_wire_test.exs",
+        "docs/protocols.md",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "Control Plane Cancellation Identity Follow-Up",
+        "cancellation acknowledgement cannot coerce floating generations into an exact target",
+        "out of range observed generations cannot become active cancellation evidence",
+        "invalid raw protocol acknowledgements remain unconfirmed with no diagnostic echo",
+        "inexact acknowledgement cannot increment the aggregate registered count",
+        "reply preserves unknown history and cancellation scope",
+        "agent_observation_invalid",
+        "agent_acknowledgement_invalid"
+      ]
+    },
+    {
+      "id": "local-orchestra-rpc-budget-and-stalled-reader-cleanup",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_rpc_transport.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_rpc_deadline_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_task_uncertain_dispatch_test.exs",
+        "apps/web/test/support/controlled_solver_agent.exs",
+        "docs/protocols.md",
+        "reports/original-receipt-boundaries-20261007.md"
+      ],
+      "required_text": [
+        "send_timeout_close",
+        "linger: {true, 0}",
+        "a peer that stops reading cannot hold a large send past the request budget",
+        "partial frame bytes cannot keep a request alive",
+        "releases capacity for unrelated work",
+        "Control Plane Stalled Reader Follow-Up"
+      ]
+    },
+    {
+      "id": "local-orchestra-raw-rpc-json-ambiguity-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_rpc_json.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_rpc_transport.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_result.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_rpc_json_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_task_uncertain_dispatch_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_result_test.exs",
+        "reports/original-receipt-boundaries-20261007.md"
+      ],
+      "required_text": [
+        "duplicate_json_key",
+        "invalid JSON diagnostics do not retain or echo the original frame",
+        "numeric payloads preserve native integer precision and exact float bits",
+        "duplicate_capacity",
+        "without rewriting history",
+        "Control Plane Raw JSON Follow-Up"
+      ]
+    },
+    {
+      "id": "local-orchestra-rpc-terminal-envelope-consistency",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_rpc_transport.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_result.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_rpc_envelope_test.exs",
+        "apps/web/test/kyuubiki_web/playground/agent_task_uncertain_dispatch_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_result_test.exs",
+        "docs/protocols.md",
+        "reports/original-receipt-boundaries-20261007.md"
+      ],
+      "required_text": [
+        "validate_terminal_response",
+        "success cannot discard an error or invent an absent result",
+        "mixed progress frames fail before any callback",
+        "contradictory_capacity",
+        "retained typed failures reject mixed frames and malformed error text",
+        "Control Plane RPC Envelope Follow-Up"
+      ]
+    },
     {
       "id": "local-agent-exact-cancellation-identity-contract",
       "status": "proven",

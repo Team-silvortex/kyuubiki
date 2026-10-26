@@ -87,8 +87,12 @@ The Agent now keeps a random, non-secret `store_id` in the existing exclusive
 `owner.lock`, with a version header and checksum. It syncs this identity before
 publication; restart preserves it. The reader is bounded to 160 bytes, and malformed,
 truncated or checksum-invalid nonempty metadata fails startup without rewriting it.
-An empty legacy lock initializes once without modifying admissions or receipts.
-Deleting/emptying the lock creates a new identity, not recovery of the old one.
+At the time of this report, an empty legacy lock initialized once without modifying
+admissions or receipts; deleting/emptying it created a new identity, not recovery
+of the old one. **Superseded on 2026-10-26:** identity bootstrap now refuses every
+populated store when its owner is absent or empty, before pending cleanup. Restore
+the original identity instead; see the
+[bootstrap follow-up](headless-rpc-json-ambiguity-20261025.md#native-store-identity-bootstrap-follow-up).
 
 All durable RPC operations accept `expected_store_id`. A foreign guard is rejected
 before admission, duplicate lookup, enumeration or cancellation. Reports, index and

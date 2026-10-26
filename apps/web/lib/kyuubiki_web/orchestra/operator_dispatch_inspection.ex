@@ -30,30 +30,45 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchInspection do
            |> Map.put("observation", observation), cache}
         end)
 
-      {:ok,
-       %{
-         "schema_version" => @schema,
-         "task_id" => payload["task_id"],
-         "task_digest" => payload["task_digest"],
-         "status" =>
-           if(records == [], do: "no_retained_dispatch", else: "dispatch_records_found"),
-         "retained_attempt_count" => length(records),
-         "truncated" => length(records) > @max_attempts,
-         "attempts" => observations,
-         "automatic_replay_authorized" => false,
-         "terminal_result_available" => false,
-         "journal_policy" => Journal.policy(),
-         "inspection_policy" => %{
-           max_probes: @max_probes,
-           max_attempts: @max_attempts,
-           request_timeout_ms: 2_000,
-           connect_timeout_ms: 1_500,
-           max_rpc_frame_bytes: 1_048_576
-         }
-       }}
+      with :ok <- revalidate_snapshot(payload, records, opts) do
+        {:ok,
+         %{
+           "schema_version" => @schema,
+           "task_id" => payload["task_id"],
+           "task_digest" => payload["task_digest"],
+           "status" =>
+             if(records == [], do: "no_retained_dispatch", else: "dispatch_records_found"),
+           "retained_attempt_count" => length(records),
+           "truncated" => length(records) > @max_attempts,
+           "attempts" => observations,
+           "automatic_replay_authorized" => false,
+           "terminal_result_available" => false,
+           "journal_policy" => Journal.policy(),
+           "inspection_policy" => %{
+             max_probes: @max_probes,
+             max_attempts: @max_attempts,
+             request_timeout_ms: 2_000,
+             connect_timeout_ms: 1_500,
+             max_rpc_frame_bytes: 1_048_576
+           }
+         }}
+      end
     end
   catch
     :exit, _reason -> {:error, :operator_task_dispatch_inspection_unavailable}
+  end
+
+  defp revalidate_snapshot(payload, records, opts) do
+    # One bounded reread covers the full count and earlier replies after the last probe.
+    case Journal.lookup(
+           payload["task_id"],
+           payload["task_digest"],
+           Keyword.get(opts, :journal, Journal)
+         ) do
+      {:ok, ^records} -> :ok
+      {:ok, _changed} -> {:error, :operator_task_dispatch_observation_changed}
+      error -> error
+    end
   end
 
   defp validate_query(%{"task_id" => id, "task_digest" => digest} = payload)

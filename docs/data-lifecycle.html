@@ -114,6 +114,15 @@
             No stale completion is returned, no execution is retried and no retention
             deadline is renewed. This is a point-in-time integrity check, not a lease
             over the Agent cache and journal or cross-store atomicity.
+            Dispatch inspection now rereads the full selected task/digest record set
+            after all probes, not just the 128 displayed rows. A changed retained count,
+            hidden-row transition or earlier observation changed during a later probe
+            rejects the stale read before returning cancellation targets. One additional
+            batch lookup checks inventory and selected contents without per-row inventory
+            scans. Healthy concurrent transitions permit a fresh explicit read; the API
+            does not retry probes, execute, cancel or rewrite records. Other tasks/digests
+            remain independent. See the
+            <a href="../reports/orchestra-task-completion-20261005.md#dispatch-inspection-snapshot-follow-up">inspection snapshot follow-up</a>.
             Live history reads and workflow replay fences check the directory inventory
             against cached membership and verify only the selected records' contents.
             Parent fences include terminal and legacy/unbound relevant observations.
@@ -213,6 +222,33 @@
             periodic watchdog retirement use the bounded durable intent below.
             Neither path proves remote termination. See the
             <a href="../reports/workflow-scoped-cancellation-20261013.md">scoped cancellation report</a>.</li>
+          <li><strong>Immediate cancellation directory:</strong> captured-request cleanup
+            rechecks original endpoint membership before observation and each send,
+            even when reusing a description. Removed or replaced sessions are not
+            contacted; directory outages fail closed without using captured addresses
+            or falling back to static peers. Earlier registration or unknown delivery
+            receipts are preserved. Directory waits consume the original delivery-start
+            budget, and queued-only cleanup needs no directory. This is a point-in-time
+            check, not a registry/network lock or remote termination proof. The durable
+            sweep below now shares the lookup with its own authority fences. See the
+            <a href="../reports/workflow-scoped-cancellation-20261013.md#live-directory-follow-up">live-directory report</a>.</li>
+          <li><strong>Cancellation identity validation:</strong> observations and acknowledgements
+            require integer generations in the native unsigned 64-bit range. A float or
+            exponent-form value cannot stand in for the requested integer generation.
+            Malformed replies are invalid evidence, not an unreachable endpoint; rejected
+            acknowledgements keep registration unknown and do not increase the registered
+            count. Valid registration still does not prove remote termination. Raw TCP
+            checks preserve the original journal bytes without retargeting or replay. See the
+            <a href="../reports/orchestra-task-completion-20261005.md#control-plane-cancellation-identity-follow-up">cancellation identity follow-up</a>.</li>
+          <li><strong>Explicit cancellation send handoff:</strong> after endpoint discovery,
+            the selected retained dispatch observation is verified again before any
+            cancellation send. Changes during discovery reject the stale request; other
+            attempts cannot substitute for the selected one. This does not lock storage
+            through network delivery. Once sent, later storage loss does not fabricate a
+            not-sent receipt: valid acknowledgements retain their registration decision,
+            while a lost acknowledgement stays unknown. No automatic retry, retargeting,
+            terminal proof or journal repair is authorized. See the
+            <a href="../reports/orchestra-task-completion-20261005.md#cancellation-pre-send-handoff-follow-up">cancellation handoff follow-up</a>.</li>
           <li><strong>Durable expiry cancellation:</strong> periodic watchdog and runner deadline retirement
             now commits a sealed, parent-bound intent with job/recovery failure. The
             read-only gate snapshot retains original RPC IDs and endpoint fingerprints,
@@ -234,6 +270,28 @@
             and historical failures are not upgraded by this change. See the
             <a href="../reports/workflow-deadline-retirement-20261013.md">runner deadline report</a> and
             <a href="../reports/workflow-durable-cancellation-20261013.md">durable watchdog report</a>.</li>
+          <li><strong>Durable cancellation directory handoff:</strong> each reserved attempt
+            resolves current original membership before observation and again after
+            binding and authorization. A final durable authorization follows directory
+            lookup, rejecting replacement reservations or damaged intents during that
+            wait. Removed nodes do not cause retargeting; already bound execution
+            identity survives explicit recovery. Directory-unavailable and budget-expired
+            reasons are sealed into the existing three-attempt lifecycle without raw
+            diagnostics or credentials. Earlier positive, negative and unknown delivery
+            outcomes remain distinct. These checks are not an atomic storage/directory/
+            network operation and do not prove remote termination. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#durable-directory-handoff-follow-up">durable directory follow-up</a>.</li>
+          <li><strong>Cancellation lease reacquisition:</strong> each successful coordinator
+            acquisition creates a new in-memory authority identity; ordinary renewal
+            retains it. Old delivery tokens cannot bind, authorize or settle under a
+            newly acquired lease, even in the same coordinator process or after a
+            storage outage reuses the database fence. Already-sent replies cannot be
+            committed by the old worker after reacquisition. Records remain unresolved
+            until fresh bounded recovery, which preserves any bound exact target.
+            This identity is not persisted, exported or sent to the Agent and does
+            not add a storage bucket. The last local check is still not atomic with
+            the network send and cannot retract a sent request. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#lease-acquisition-authority-follow-up">lease-acquisition follow-up</a>.</li>
           <li><strong>Failed-runner persistence:</strong> ordinary failure and native,
             solve and branch checkpoint blocks retain the registered runner and
             original reason while selected write/snapshot failures retry after 250 ms.
@@ -292,10 +350,13 @@
           <li><strong>Persistent direct execution ownership:</strong> the existing
             <code>owner.lock</code> contains one fixed-size, non-secret random identity
             and checksum, synced before publication. It is preserved across restart,
-            not rotated with each process. Empty legacy locks initialize once; nonempty
-            corrupt/truncated identities fail startup without rewriting them. Deleting
-            or emptying the identity does not recover old ownership: new guarded callers
-            will reject the replacement identity. Copies of the entire ledger share
+            not rotated with each process. Missing or empty locks initialize only in a
+            directory containing no other entries. Retained tasks or pending/foreign
+            entries block initialization and cleanup until the original identity is
+            restored; nonempty corrupt/truncated identities also fail without rewriting.
+            Deleting or emptying the identity is not a migration or reset procedure.
+            Loss of the entire store cannot be distinguished from fresh installation;
+            callers must retain and pin the original identity. Copies of the entire ledger share
             an identity and must not be used as independent nodes. Workbench records
             only this extra <code>store_id</code> in its existing bounded pending journal,
             with no input copies or backup generation. Old unfenced entries stay pending
@@ -619,9 +680,34 @@
             and 10 minutes from reservation creation are retained; metadata and temporary
             JSON allocations are additional. Reads do not renew age. Count pressure can
             evict pending reservations; late completion cannot recreate them. Oversized
-            results are not cached, without truncating the original execution. Expiry is
+            results are not cached, without truncating the original execution. Cache
+            admission also requires a readable JSON object with at most 125 nested
+            containers, reserving two additional levels for the retrieval reply.
+            The admission decode adds a temporary JSON tree, outside the encoded-byte
+            budget. Unexpected fetch decode or response/status mismatch returns
+            <code>task_result_retention_unavailable</code>, not a retained null receipt;
+            no cache repair, task replay or disk copy is introduced. Expiry is
             reclaimed on the next cache operation and Agent restart discards all entries.
             Missing cache data is unknown, never permission to rerun or publish results.</li>
+          <li><strong>Control-plane receipt framing:</strong> live Agent replies and recovered
+            original receipts share terminal-envelope checks. Contradictory result/error
+            fields and mixed progress/terminal frames cannot become confirmed completion
+            or a valid capacity rejection. Managed dispatch retains unknown history without
+            peer replay; malformed recovery reads neither rewrite the journal nor publish
+            results. Repeated decoded JSON keys are rejected throughout raw replies before
+            validation, including cached receipts and failure details. Parser diagnostics
+            expose fixed reason codes rather than the original frame; malformed recovery
+            replies are distinct from unreachable endpoints. Numeric values are preserved
+            without re-encoding. Temporary decoded trees remain additional memory beyond
+            encoded frame limits. Valid progress, task failures and pre-admission failover
+            remain supported.</li>
+          <li><strong>Control-plane connection cleanup:</strong> one RPC network budget spans
+            connect, send and receive after local encoding. Heartbeats and fragments do not
+            reset it; single-use sockets close without waiting for abandoned output to drain.
+            Send timeouts do not expose unsent request bytes. A stalled reader releases the
+            execution lease but leaves managed work unknown, without peer replay or an inferred
+            remote cancellation. Synchronous encoding, decoding and local callbacks are not
+            forcibly interrupted; no CPU, heap or whole-process lifetime bound is claimed.</li>
           <li><strong>Agent watchdog failure state:</strong> the recent-failure diagnostic
             view retains at most 16 entries. It is not the authority for a live execution's
             terminal cause: each execution generation shares one immutable failed-cause

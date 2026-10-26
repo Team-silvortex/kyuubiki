@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.Playground.AgentDispatchCancellation do
   @moduledoc "Bounded cancellation of captured RPC requests, not every execution sharing a job ID."
-  alias KyuubikiWeb.Playground.{AgentExecutionCancellation, AgentExecutionGate, AgentPool}
+  alias KyuubikiWeb.Playground.{AgentExecutionCancellation, AgentExecutionGate}
+  alias KyuubikiWeb.Playground.AgentCancellationDirectory, as: Directory
 
   @max_requests 128
   @max_endpoints 32
@@ -20,36 +21,28 @@ defmodule KyuubikiWeb.Playground.AgentDispatchCancellation do
 
   def cancel(job_id, targets, opts \\ []) do
     with :ok <- validate_snapshot(job_id, targets) do
-      configured = Keyword.get_lazy(opts, :endpoints, &AgentPool.inspection_endpoints/0)
       clock = Keyword.get(opts, :clock, fn -> System.monotonic_time(:millisecond) end)
       deadline = clock.() + @budget_ms
       probe = Keyword.get(opts, :probe, &AgentExecutionCancellation.describe/2)
       sender = Keyword.get(opts, :send_cancel, &AgentExecutionCancellation.send_endpoint/3)
-      configured = MapSet.new(configured, &fingerprint/1)
 
       {results, _} =
         Enum.map_reduce(targets.requests, %{}, fn request, cache ->
           endpoint = request.endpoint
           key = fingerprint(endpoint)
-          remaining = deadline - clock.()
 
           {delivery, cache} =
-            cond do
-              remaining <= 0 ->
-                {AgentExecutionCancellation.not_sent("delivery_budget_exhausted"), cache}
+            with {:ok, current, remaining} <- current_endpoint(key, opts, deadline, clock) do
+              description =
+                Map.get_lazy(cache, key, fn -> probe_safely(probe, current, remaining) end)
 
-              not MapSet.member?(configured, key) ->
-                {AgentExecutionCancellation.not_sent("original_endpoint_not_configured"), cache}
+              observed =
+                AgentExecutionCancellation.observe(job_id, request.request_id, description)
 
-              true ->
-                description =
-                  Map.get_lazy(cache, key, fn -> probe_safely(probe, endpoint, remaining) end)
-
-                observed =
-                  AgentExecutionCancellation.observe(job_id, request.request_id, description)
-
-                delivery = deliver(endpoint, observed, sender, deadline - clock.())
-                {delivery, Map.put(cache, key, description)}
+              delivery = deliver_current(key, observed, sender, opts, deadline, clock)
+              {delivery, Map.put(cache, key, description)}
+            else
+              {:error, status} -> {AgentExecutionCancellation.not_sent(status), cache}
             end
 
           {Map.merge(delivery, %{"agent_id" => endpoint.id, "request_id" => request.request_id}),
@@ -61,6 +54,28 @@ defmodule KyuubikiWeb.Playground.AgentDispatchCancellation do
   catch
     :exit, _ -> {:error, :execution_cancellation_unavailable}
   end
+
+  defp current_endpoint(key, opts, deadline, clock),
+    do: Directory.lookup(key, deadline, Keyword.put(opts, :clock, clock))
+
+  defp deliver_current(
+         key,
+         %{"execution_target" => %{}} = observed,
+         sender,
+         opts,
+         deadline,
+         clock
+       ) do
+    # Cached observations bind execution identity, not continued endpoint membership.
+    with {:ok, endpoint, remaining} <- current_endpoint(key, opts, deadline, clock) do
+      deliver(endpoint, observed, sender, remaining)
+    else
+      {:error, status} -> AgentExecutionCancellation.not_sent(status)
+    end
+  end
+
+  defp deliver_current(_, observed, sender, _, deadline, clock),
+    do: deliver(nil, observed, sender, deadline - clock.())
 
   defp deliver(_, _, _, remaining) when remaining <= 0,
     do: AgentExecutionCancellation.not_sent("delivery_budget_exhausted")

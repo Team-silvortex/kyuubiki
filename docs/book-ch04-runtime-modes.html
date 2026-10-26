@@ -319,8 +319,12 @@
             must be owner-only. One Agent process holds its exclusive directory lock.
             No implicit home-directory store or memory fallback is created.</li>
           <li>The existing <code>owner.lock</code> stores a synced, checksummed random
-            32-hex-character identity. An empty legacy lock is initialized once; a
-            nonempty invalid identity fails startup rather than being silently replaced.
+            32-hex-character identity. A missing or empty lock initializes only when
+            the directory has no other entries. If admissions, receipts, pending files
+            or foreign entries remain, startup fails before generating an identity or
+            cleaning pending evidence; restore the original <code>owner.lock</code>.
+            A nonempty invalid identity also fails without replacement. Legacy populated
+            stores are no longer silently adopted under a new identity.
             The descriptor, receipts, index, cancellation and live admission rejection
             expose <code>store_id</code>. This is non-secret routing identity, not
             authentication; copying a complete ledger copies its identity. Old native

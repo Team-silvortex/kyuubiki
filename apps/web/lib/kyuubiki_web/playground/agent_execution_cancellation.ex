@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Playground.AgentExecutionCancellation do
   alias KyuubikiWeb.Storage.DurableJson
 
   @schema "kyuubiki.agent-execution-cancellation/v1"
+  @max_generation 18_446_744_073_709_551_615
   @target_fields ~w(generation job_id process_instance_id request_id)
   @ack_fields ~w(automatic_replay_authorized cancel_registered execution_target execution_terminal_confirmed operator_package_cleanup_performed pending_cancellation_created schema_version status)
 
@@ -23,7 +24,7 @@ defmodule KyuubikiWeb.Playground.AgentExecutionCancellation do
     Enum.sort(Map.keys(target)) == @target_fields and
       Enum.all?(~w(job_id process_instance_id request_id), &valid_identity?(target[&1])) and
       target["process_instance_id"] != "unavailable" and is_integer(target["generation"]) and
-      target["generation"] in 1..18_446_744_073_709_551_615
+      target["generation"] in 1..@max_generation
   end
 
   def valid_target?(_), do: false
@@ -45,7 +46,7 @@ defmodule KyuubikiWeb.Playground.AgentExecutionCancellation do
          valid_identity?(process_id) and process_id != "unavailable" do
       case Enum.filter(active, &(is_map(&1) and &1["request_id"] == request_id)) do
         [%{"generation" => generation, "cancel_requested" => cancelled} = entry]
-        when is_integer(generation) and generation > 0 and is_boolean(cancelled) ->
+        when is_integer(generation) and generation in 1..@max_generation and is_boolean(cancelled) ->
           target = %{
             "process_instance_id" => process_id,
             "request_id" => request_id,
@@ -75,6 +76,10 @@ defmodule KyuubikiWeb.Playground.AgentExecutionCancellation do
   end
 
   def observe(_, _, {:ok, _}), do: observation("agent_observation_invalid")
+
+  def observe(_, _, {:error, {:agent_transport_failure, :protocol, _}}),
+    do: observation("agent_observation_invalid")
+
   def observe(_, _, _), do: observation("original_endpoint_unreachable")
   defp observation(status), do: %{"status" => status, "outcome" => "unknown"}
 
@@ -90,7 +95,8 @@ defmodule KyuubikiWeb.Playground.AgentExecutionCancellation do
     status = ack["status"]
 
     if Enum.sort(Map.keys(ack)) == @ack_fields and ack["schema_version"] == @schema and
-         ack["execution_target"] == target and status in ~w(requested target_not_observed) and
+         valid_target?(ack["execution_target"]) and ack["execution_target"] === target and
+         status in ~w(requested target_not_observed) and
          ack["cancel_registered"] == (status == "requested") and
          Enum.all?(
            ~w(execution_terminal_confirmed pending_cancellation_created operator_package_cleanup_performed automatic_replay_authorized),
@@ -107,6 +113,11 @@ defmodule KyuubikiWeb.Playground.AgentExecutionCancellation do
       unknown("agent_acknowledgement_invalid")
     end
   end
+
+  defp verify(_, {:ok, _}), do: unknown("agent_acknowledgement_invalid")
+
+  defp verify(_, {:error, {:agent_transport_failure, :protocol, _}}),
+    do: unknown("agent_acknowledgement_invalid")
 
   defp verify(_, _), do: unknown("original_endpoint_unreachable")
 

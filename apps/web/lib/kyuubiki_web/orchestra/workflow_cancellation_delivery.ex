@@ -3,7 +3,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationDelivery do
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.Orchestra.WorkflowCancellationIntent, as: Intent
   alias KyuubikiWeb.Orchestra.WorkflowCancellationStore, as: Store
-  alias KyuubikiWeb.Playground.{AgentExecutionCancellation, AgentPool}
+  alias KyuubikiWeb.Playground.AgentExecutionCancellation
+  alias KyuubikiWeb.Playground.AgentCancellationDirectory, as: Directory
   alias KyuubikiWeb.Storage.FailureBoundary
   @registry KyuubikiWeb.Orchestra.WorkflowRunnerRegistry
   @budget_ms 15_000
@@ -52,13 +53,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationDelivery do
 
   defp deliver_job(job_id, deadline) do
     with {:ok, bucket} <- Store.access(job_id, :load) do
-      endpoints = AgentPool.inspection_endpoints()
-
       Enum.reduce_while(bucket["entries"], %{}, fn entry, cache ->
         if now() >= deadline do
           {:halt, cache}
         else
-          {:cont, deliver_entry(job_id, bucket, entry, endpoints, cache, deadline)}
+          {:cont, deliver_entry(job_id, bucket, entry, cache, deadline)}
         end
       end)
     end
@@ -66,25 +65,21 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationDelivery do
     :exit, _ -> :ok
   end
 
-  defp deliver_entry(job, bucket, entry, endpoints, cache, deadline) do
+  defp deliver_entry(job, bucket, entry, cache, deadline) do
     case Store.access(job, {:reserve, bucket["intent_id"], Intent.identity(entry)}) do
       {:ok, token} ->
-        endpoint =
-          Enum.find(
-            endpoints,
-            &(AgentExecutionCancellation.endpoint_fingerprint(&1) == entry["endpoint_fingerprint"])
-          )
+        case Directory.lookup(entry["endpoint_fingerprint"], deadline) do
+          {:ok, endpoint, _} ->
+            prepare_and_send(job, token, endpoint, cache, deadline)
 
-        prepare_and_send(job, token, endpoint, cache, deadline)
+          {:error, reason} ->
+            Store.access(job, {:finish, token, reason})
+            cache
+        end
 
       _ ->
         cache
     end
-  end
-
-  defp prepare_and_send(job, token, nil, cache, _deadline) do
-    Store.access(job, {:finish, token, "original_endpoint_not_configured"})
-    cache
   end
 
   defp prepare_and_send(job, token, endpoint, cache, deadline) do
@@ -93,13 +88,20 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationDelivery do
     if is_map(target) do
       with :ok <- Store.access(job, {:bind, token, target}),
            {:ok, ^target} <- Store.access(job, {:authorize, token}),
+           {:ok, current, _} <- Directory.lookup(token.entry["endpoint_fingerprint"], deadline),
+           # Directory lookup can wait; it must not outlive the durable delivery authority.
+           {:ok, ^target} <- Store.access(job, {:authorize, token}),
            true <- now() < deadline do
         receipt =
-          AgentExecutionCancellation.deliver(endpoint, target, fn ep, exact ->
+          AgentExecutionCancellation.deliver(current, target, fn ep, exact ->
             AgentExecutionCancellation.send_endpoint(ep, exact, max(deadline - now(), 1))
           end)
 
         Store.access(job, {:finish, token, receipt["status"]})
+      else
+        {:error, reason} when is_binary(reason) -> Store.access(job, {:finish, token, reason})
+        false -> Store.access(job, {:finish, token, "delivery_budget_exhausted"})
+        _ -> :ok
       end
     else
       Store.access(job, {:finish, token, reason})
@@ -111,6 +113,14 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationDelivery do
   defp target(_, %{"execution_target" => %{} = target}, _, cache, _), do: {target, nil, cache}
 
   defp target(job, entry, endpoint, cache, deadline) do
+    if now() >= deadline do
+      {nil, "delivery_budget_exhausted", cache}
+    else
+      observe_target(job, entry, endpoint, cache, deadline)
+    end
+  end
+
+  defp observe_target(job, entry, endpoint, cache, deadline) do
     key = entry["endpoint_fingerprint"]
 
     description =

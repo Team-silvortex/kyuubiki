@@ -23,7 +23,9 @@ the task alone cannot establish that the destination is still the owned store.
 - Unix store operations validate the private, non-symlink root and owner file,
   compare the current file's device/inode with the still-held lock, and reread
   at most 161 bytes to validate the checksummed identity. Empty or malformed live
-  identity files fail; only startup retains the existing legacy initialization.
+  identity files fail. Startup still retained legacy initialization at this report's
+  date; the [2026-10-26 bootstrap follow-up](headless-rpc-json-ambiguity-20261025.md#native-store-identity-bootstrap-follow-up)
+  now rejects populated stores with missing or empty owner identity as well.
 - Admission, explicit lookup, list and cancellation owner checks reject a detached
   store. Admission persistence and terminal receipt commit recheck their boundary.
   Lookup failures are not converted into `not_found`; no replacement is adopted.

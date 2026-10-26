@@ -8,7 +8,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationIntent do
   @fields ~w(schema_version intent_id job_id job_created_at envelope_sha256 generation owner_session_id entries sha256)
   @entry ~w(request_id endpoint_fingerprint execution_target delivery_id attempts status reason)
   @states ~w(pending dispatching requested target_not_observed exhausted)
-  @reasons ~w(original_endpoint_not_configured original_endpoint_unreachable request_not_observed_active agent_observation_invalid execution_target_invalid cancellation_outcome_unknown agent_acknowledgement_invalid retry_budget_exhausted)
+  @reasons ~w(original_endpoint_not_configured endpoint_directory_unavailable delivery_budget_exhausted original_endpoint_unreachable request_not_observed_active agent_observation_invalid execution_target_invalid cancellation_outcome_unknown agent_acknowledgement_invalid retry_budget_exhausted)
   @max_bytes 262_144
   @max_attempts 3
 

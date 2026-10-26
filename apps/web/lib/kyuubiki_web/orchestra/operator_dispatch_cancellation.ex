@@ -16,8 +16,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellation do
              Keyword.get(opts, :journal, Journal)
            ),
          record <- Enum.find(records, &(&1["attempt_id"] == payload["attempt_id"])),
-         :ok <- match_record(record, payload["execution_target"]) do
-      endpoints = Keyword.get_lazy(opts, :endpoints, &AgentPool.inspection_endpoints/0)
+         :ok <- match_record(record, payload["execution_target"]),
+         endpoints <- Keyword.get_lazy(opts, :endpoints, &AgentPool.inspection_endpoints/0),
+         :ok <- revalidate_before_send(record, opts) do
       send_cancel = Keyword.get(opts, :send_cancel, &AgentExecutionCancellation.send_endpoint/2)
       delivery = deliver(record, payload["execution_target"], endpoints, send_cancel)
 
@@ -37,6 +38,13 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchCancellation do
     end
   catch
     :exit, _ -> {:error, :operator_task_dispatch_cancellation_unavailable}
+  end
+
+  defp revalidate_before_send(nil, _opts), do: :ok
+
+  defp revalidate_before_send(record, opts) do
+    # Endpoint discovery can block after the first journal read.
+    Journal.verify_observation(record, Keyword.get(opts, :journal, Journal))
   end
 
   defp validate_query(%{"execution_target" => target} = payload) when is_map(target) do

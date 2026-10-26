@@ -434,6 +434,44 @@ arithmetic or wire schema changes. A checksum is not authentication, and neither
 inspection nor restart repairs rejected records. See the
 [native-record follow-up](../../reports/headless-rpc-json-ambiguity-20261025.md#native-record-follow-up).
 
+Native persisted terminal envelopes are also closed: `response` accepts only
+`rpc_version`, `id`, `ok`, `result`, `error`; its error envelope accepts only
+`code`, `message`, `details`. Unknown fields, including null-valued extensions,
+are rejected before generic RPC decoding can discard them. This prevents a
+progress/terminal mixture or an extra result in the error envelope from being
+silently normalized into an apparently valid observation. Required version,
+identity and success fields stay required; no version is inferred.
+The actual `result` and error `details` remain open JSON payloads, preserving
+their arbitrary field names, numerical types and bit patterns. Shared RPC
+decoding and serialized record bytes are unchanged. Admission-only discovery
+can remain readable, but result inspection, duplicate lookup and export fail
+without repairing or replaying the task. See the
+[terminal-shape follow-up](../../reports/headless-rpc-json-ambiguity-20261025.md#native-terminal-shape-follow-up).
+
+Native admissions also validate their identities before execution reservation
+and on readback: a 64-character lowercase hexadecimal request digest, nonblank
+control-free request/process/method text of at most 256 UTF-8 bytes, and a solver
+method with a nonempty `solve_` suffix or `run_operator_task_ir`. Text is not
+trimmed or normalized. A duplicate must match both the retained digest and method.
+Mutually matching admission/receipt files do not excuse invalid identity fields;
+native inspection and affected index pages fail without changing those files.
+Index validation covers returned records, not every page or large result payload.
+This does not consult the operator registry, recompute inputs absent from native
+records, or authenticate valid-shaped replacements. Retain caller input/intent
+and receipts for the independent binding checks. See the
+[admission-identity follow-up](../../reports/headless-rpc-json-ambiguity-20261025.md#native-admission-identity-follow-up).
+
+Native startup no longer adopts a populated store under a new identity when
+`owner.lock` is missing or empty. Only a directory with no other entries can
+initialize an owner; admissions, receipts, pending files and foreign entries all
+block bootstrap before pending cleanup. Restore the original owner file with
+the Agent stopped, rather than regenerating an ID or substituting a fresh store
+for the caller's pinned one. Whole-store loss still looks like a fresh directory,
+so caller-retained identity remains necessary. This intentionally removes the
+old populated-store empty-lock compatibility path; it adds no migration or
+backup generation. See the
+[bootstrap follow-up](../../reports/headless-rpc-json-ambiguity-20261025.md#native-store-identity-bootstrap-follow-up).
+
 Remote `SdkError::Rpc` preserves the validated response identity and optional
 structured diagnostics. Locally generated configuration errors have neither.
 Match `SdkError::Rpc { code, message, .. }` when the additional context is not

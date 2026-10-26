@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "agent_task_results_readability.rs"]
+mod readability;
+
 fn identity(n: usize) -> Identity {
     Identity {
         attempt_id: format!("{n:032x}"),

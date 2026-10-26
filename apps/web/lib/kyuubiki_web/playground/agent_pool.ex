@@ -37,8 +37,8 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     GenServer.call(__MODULE__, :endpoints)
   end
 
-  def inspection_endpoints do
-    GenServer.call(__MODULE__, :inspection_endpoints)
+  def inspection_endpoints(timeout \\ 5_000) do
+    GenServer.call(__MODULE__, :inspection_endpoints, timeout)
   end
 
   @spec deployment_info() :: map()

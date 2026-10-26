@@ -12,6 +12,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
         state
         |> Map.merge(%{
           lease: lease,
+          # Reacquisition must not revive in-flight authority, even if the store reuses a fence.
+          lease_session: make_ref(),
           lease_status: :owner,
           lease_holder: nil,
           last_lease_error: nil
@@ -22,6 +24,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
         state
         |> Map.merge(%{
           lease: nil,
+          lease_session: nil,
           lease_status: :standby,
           lease_holder: holder,
           last_lease_error: nil
@@ -32,6 +35,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
         state
         |> Map.merge(%{
           lease: nil,
+          lease_session: nil,
           lease_status: :standby,
           lease_holder: nil,
           last_lease_error: reason
@@ -104,6 +108,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
     |> KyuubikiWeb.Orchestra.WorkflowRecoveryScan.clear_registry_retry()
     |> Map.merge(%{
       lease: nil,
+      lease_session: nil,
       lease_status: :standby,
       lease_holder: nil,
       last_lease_error: reason,
