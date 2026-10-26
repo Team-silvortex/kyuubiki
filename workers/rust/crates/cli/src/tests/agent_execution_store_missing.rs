@@ -116,8 +116,22 @@ fn missing_admissions_cannot_silently_shorten_a_paginated_recovery_index() {
         .unwrap();
     assert_eq!(completed["status"], "completed");
     assert!(!store.write_failed);
-    assert!(store.admit(&task('c'), "p", "fresh").is_ok());
+    assert!(store.admit(&task('c'), "p", "fresh").is_err());
     restore(&path, &original);
+    assert_eq!(
+        store.policy()["admission_blocked_after_inventory_change"],
+        true
+    );
+    assert_eq!(
+        store.list(&query(None)).unwrap()["executions"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    drop(store);
+    let mut store = Store::open(&scratch.0).unwrap();
+    assert!(store.admit(&task('c'), "p", "explicit-fresh").is_ok());
     assert_eq!(
         store.list(&query(None)).unwrap()["executions"]
             .as_array()

@@ -3,6 +3,10 @@ use super::*;
 mod binding_tests;
 #[path = "agent_execution_store_identity.rs"]
 mod identity_tests;
+#[path = "agent_execution_store_inventory.rs"]
+mod inventory_tests;
+#[path = "agent_execution_store_json.rs"]
+mod json_tests;
 #[path = "agent_execution_store_missing.rs"]
 mod missing_tests;
 #[path = "agent_execution_store_publication.rs"]

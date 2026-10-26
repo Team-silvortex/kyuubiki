@@ -12,6 +12,8 @@ use serde_json::{Value, json};
 
 #[path = "agent_execution_store_identity.rs"]
 mod identity;
+#[path = "agent_execution_store_inventory.rs"]
+mod inventory;
 #[path = "agent_execution_store_io.rs"]
 mod io;
 
@@ -86,6 +88,7 @@ pub(crate) struct Store {
     lock: File,
     active: HashSet<String>,
     known_admissions: HashSet<String>,
+    inventory: inventory::Inventory,
     bytes: u64,
     entries: usize,
     write_failed: bool,
@@ -109,6 +112,7 @@ impl Store {
             lock,
             active: HashSet::new(),
             known_admissions: HashSet::new(),
+            inventory: inventory::Inventory::default(),
             bytes: 0,
             entries: 0,
             write_failed: false,
@@ -160,6 +164,7 @@ impl Store {
                 self.entries += 1;
                 self.known_admissions.insert(id.to_string());
             }
+            self.inventory.remember(name, metadata.len());
         }
         if self.bytes > MAX_TOTAL_BYTES || self.entries > MAX_ENTRIES {
             return Err("execution store exceeds configured hard limits".into());
@@ -238,6 +243,9 @@ impl Store {
                 "execution store admission blocked by capacity".into(),
             ));
         }
+        // Cached capacity is safe only while finalized disk membership and sizes
+        // still match. Do not scan payloads or reconcile external repairs live.
+        self.inventory.check(&self.root)?;
         // Reserve before persisting admission, but never reserve on a duplicate lookup.
         let reservation = match reserve() {
             Ok(reservation) => reservation,
@@ -272,7 +280,11 @@ impl Store {
             record,
             MAX_RECORD_BYTES,
         ) {
-            Ok(bytes) => self.bytes += bytes,
+            Ok(bytes) => {
+                self.bytes += bytes;
+                self.inventory
+                    .remember(format!("{}.admission", record.execution_id), bytes);
+            }
             Err(error) => {
                 self.write_failed = true;
                 return Err(error);
@@ -323,7 +335,11 @@ impl Store {
         })();
         self.active.remove(&record.execution_id);
         match outcome {
-            Ok(bytes) => self.bytes += bytes,
+            Ok(bytes) => {
+                self.bytes += bytes;
+                self.inventory
+                    .remember(format!("{}.receipt", record.execution_id), bytes);
+            }
             Err(error) => {
                 self.write_failed = true;
                 self.uncertain_receipts.insert(record.execution_id.clone());
@@ -478,6 +494,7 @@ impl Store {
         policy["stored_bytes"] = json!(self.bytes);
         policy["active_reservations"] = json!(self.active.len());
         policy["admission_blocked_after_write_failure"] = json!(self.write_failed);
+        policy["admission_blocked_after_inventory_change"] = json!(self.inventory.blocked);
         policy
     }
 
@@ -498,6 +515,14 @@ pub(crate) fn policy(enabled: bool) -> Value {
         "configuration_env":STORE_ENV, "storage":"immutable_checksummed_files",
         "max_entries":MAX_ENTRIES, "max_receipt_bytes":MAX_RECEIPT_BYTES, "max_total_bytes":MAX_TOTAL_BYTES,
         "automatic_eviction":false, "capacity_policy":"reject_new_admission",
+        "inventory_fence":{"check":"before_new_admission_reservation",
+            "scope":"finalized_record_names_regular_file_types_and_encoded_lengths",
+            "max_directory_entries":4 * MAX_ENTRIES + 1, "reads_receipt_payloads":false,
+            "pending_files_in_byte_accounting":false, "content_integrity_verified":false,
+            "failure_policy":"block_new_admissions_until_explicit_restart_after_inspection",
+            "existing_reads_and_active_completion_preserved":true,
+            "descriptor_is_live_scan":false, "automatic_reconciliation":false,
+            "concurrent_filesystem_mutation_safe":false},
         "survives_agent_restart":enabled, "automatic_replay_authorized":false,
         "owner_fence":{"request_field":"expected_store_id", "response_field":"store_id",
             "identity_file":"owner.lock", "survives_restart":true, "is_authentication":false,

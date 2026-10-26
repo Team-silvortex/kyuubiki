@@ -108,6 +108,8 @@ impl DurableExecutionHandle {
 impl SolverRpcClient {
     /// Submit once using a caller-retained ID and a previously observed store identity.
     /// On transport loss inspect that ID; do not create a new ID automatically.
+    /// A validated capacity refusal returns `SdkError::DurableAdmissionRejected`,
+    /// never an execution handle or automatic retry authorization.
     pub fn submit_durable_agent_task(
         &self,
         store_id: &str,
@@ -134,15 +136,15 @@ impl SolverRpcClient {
         intent: &DurableExecutionIntent,
         params: Value,
     ) -> SdkResult<Value> {
-        let report = self
-            .call(
-                "submit_durable_agent_task",
-                json!({
-                    "expected_store_id":intent.store_id, "execution_id":intent.execution_id,
-                    "method":intent.method, "params":params
-                }),
-            )?
-            .result;
+        let (request_id, outcome) = self.call_identified(
+            "submit_durable_agent_task",
+            json!({
+                "expected_store_id":intent.store_id, "execution_id":intent.execution_id,
+                "method":intent.method, "params":params
+            }),
+        )?;
+        let report = outcome.result;
+        crate::durable_admission_rejection::check(intent, &request_id, &report)?;
         intent.handle_from_report(&report)?;
         Ok(report)
     }
@@ -161,6 +163,7 @@ impl SolverRpcClient {
 
     /// Read-only lookup also works after a lost admission response. `not_found` is not
     /// permission to submit again; retained-ledger loss requires operator inspection.
+    /// Missing observations cannot also claim admission identity, payloads or execution.
     pub fn inspect_durable_agent_execution(
         &self,
         store_id: &str,
@@ -186,9 +189,7 @@ impl SolverRpcClient {
             ));
         }
         if report["status"] == "not_found" {
-            if !report["response"].is_null() {
-                return Err(invalid("missing execution cannot publish a result"));
-            }
+            validate_missing_observation(&report)?;
         } else {
             DurableExecutionHandle::from_report(&report)?;
         }
@@ -217,6 +218,36 @@ impl SolverRpcClient {
         validate_terminal_commitment(commitment, &observed)?;
         Ok(observed)
     }
+}
+
+fn validate_missing_observation(report: &Value) -> SdkResult<()> {
+    // Native v1 absence has only lookup identity and replay denial, not an
+    // admission's identity or execution payload. Null optional fields are neutral.
+    for field in [
+        "response",
+        "result",
+        "error",
+        "event",
+        "progress",
+        "request_digest",
+        "request_id",
+        "process_instance_id",
+        "method",
+    ] {
+        if !report[field].is_null() {
+            return Err(invalid(
+                "missing execution contains contradictory admission identity or payload; no replay authorized",
+            ));
+        }
+    }
+    for flag in ["resumable", "execution_started"] {
+        if !report[flag].is_null() && report[flag] != false {
+            return Err(invalid(
+                "missing execution contains invalid execution or resume claims; no replay authorized",
+            ));
+        }
+    }
+    Ok(())
 }
 
 // Callers have already validated receipt shape and execution identity.

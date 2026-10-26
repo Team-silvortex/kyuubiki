@@ -98,10 +98,8 @@ fn main() -> Result<()> {
         require_new_directory(root)?;
         let endpoint: SocketAddr = env::var("KYUUBIKI_RESEARCH_AGENT_ENDPOINT")?.parse()?;
         let client = SolverRpcClient::new(endpoint.ip().to_string(), endpoint.port());
-        let descriptor = client.describe_agent()?.result;
-        let store = descriptor["durable_execution"]["store_id"]
-            .as_str()
-            .ok_or("durable store is required")?;
+        let store_status = client.describe_durable_agent_store()?;
+        let store = store_status.ready_store_id()?;
         let input = model::model(false);
         let intent = DurableExecutionIntent::new(store, &args[2], "solve_modal_frame_2d", &input)?;
         fs::create_dir(root)?;

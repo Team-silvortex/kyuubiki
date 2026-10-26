@@ -215,7 +215,16 @@ impl SolverRpcClient {
     }
 
     pub fn call(&self, method: &str, params: Value) -> SdkResult<RpcCallOutcome> {
-        solver_rpc_transport::call(&self.host, self.port, &self.limits, method, params)
+        self.call_identified(method, params)
+            .map(|(_, outcome)| outcome)
+    }
+
+    pub(crate) fn call_identified(
+        &self,
+        method: &str,
+        params: Value,
+    ) -> SdkResult<(String, RpcCallOutcome)> {
+        solver_rpc_transport::call_identified(&self.host, self.port, &self.limits, method, params)
     }
 }
 

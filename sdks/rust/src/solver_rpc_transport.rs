@@ -69,13 +69,13 @@ fn next_id() -> SdkResult<String> {
     ))
 }
 
-pub(crate) fn call(
+pub(crate) fn call_identified(
     host: &str,
     port: u16,
     limits: &SolverRpcLimits,
     method: &str,
     params: Value,
-) -> SdkResult<RpcCallOutcome> {
+) -> SdkResult<(String, RpcCallOutcome)> {
     limits.validate()?;
     let id = next_id()?;
     let payload = encode(
@@ -142,10 +142,13 @@ pub(crate) fn call(
                 progress_frames.push(value);
             }
             Reply::Complete(result) => {
-                return Ok(RpcCallOutcome {
-                    result,
-                    progress_frames,
-                });
+                return Ok((
+                    id,
+                    RpcCallOutcome {
+                        result,
+                        progress_frames,
+                    },
+                ));
             }
         }
     }

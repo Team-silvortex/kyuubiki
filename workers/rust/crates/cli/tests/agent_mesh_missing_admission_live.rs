@@ -88,6 +88,8 @@ fn missing_mesh_admission_never_reexecutes_with_spare_capacity_or_hides_from_rec
         1000,
     )?;
     let store = owner(&a)?;
+    let sibling = complete(&a, &store, 'b')?;
+    wait_for_lifecycle(&a, "accepting", 0)?;
     fs::write(&a.hold_path, "held-original")?;
     let submitted = a.request(
         "original",
@@ -114,8 +116,21 @@ fn missing_mesh_admission_never_reexecutes_with_spare_capacity_or_hides_from_rec
     assert_eq!(lifecycle(&a, "only-original")?["active_execution_count"], 1);
     assert!(!admission.exists());
 
-    // Real spare capacity remains usable; the missing task is not hidden by a full Agent.
-    let sibling = complete(&a, &store, 'b')?;
+    // Spare solver capacity cannot override stale ledger accounting. Only new
+    // admissions on this Agent are fenced; prior reads and the healthy peer survive.
+    for method in ["submit_durable_agent_task", "run_durable_agent_task"] {
+        unavailable(&a, method, owned_task(&store, 'e', "fresh-blocked"))?;
+    }
+    let descriptor = a.request("inventory-fence", "describe_agent", json!({}))?;
+    assert_eq!(
+        successful_result(&descriptor, "inventory-fence")["durable_execution"]["admission_blocked_after_inventory_change"],
+        true
+    );
+    assert_eq!(fetch(&a, 'e')?["status"], "not_found");
+    assert_eq!(
+        lifecycle(&a, "no-new-reservation")?["active_execution_count"],
+        1
+    );
     complete(&b, &owner(&b)?, 'c')?;
     assert_eq!(fetch(&a, 'b')?, sibling);
     fs::remove_file(&a.hold_path)?;
@@ -145,6 +160,7 @@ fn missing_mesh_admission_never_reexecutes_with_spare_capacity_or_hides_from_rec
     assert_eq!(successful_result(&duplicate, "retry"), &unknown);
     assert_eq!(lifecycle(&a, "no-replay")?["active_execution_count"], 0);
     assert_eq!(fetch(&a, 'b')?, sibling);
+    assert_eq!(fetch(&a, 'e')?["status"], "not_found");
     complete(&a, &store, 'd')?;
     Ok(())
 }

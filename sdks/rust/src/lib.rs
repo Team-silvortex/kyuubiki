@@ -1,8 +1,11 @@
 mod agent_client;
 mod auth;
 mod control_plane;
+mod durable_admission_rejection;
+mod durable_agent_store;
 mod durable_execution;
 mod durable_execution_digest;
+mod durable_execution_index;
 mod durable_execution_intent;
 mod error;
 mod material_research_bundle;
@@ -19,6 +22,7 @@ mod model_task_completion;
 mod operator_tasks;
 mod session;
 mod solver_rpc;
+mod solver_rpc_json;
 mod solver_rpc_transport;
 mod solver_rpc_wire;
 mod workflow_builders;
@@ -32,7 +36,9 @@ pub use agent_client::{
 };
 pub use auth::KyuubikiAuth;
 pub use control_plane::ControlPlaneClient;
+pub use durable_agent_store::DurableAgentStoreStatus;
 pub use durable_execution::DurableExecutionHandle;
+pub use durable_execution_index::{DurableExecutionIndexEntry, DurableExecutionIndexPage};
 pub use durable_execution_intent::DurableExecutionIntent;
 pub use error::{SdkError, SdkResult};
 pub use material_research_bundle::{

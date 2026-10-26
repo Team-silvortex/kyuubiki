@@ -1,5 +1,5 @@
 //! Standalone implementation of the Agent v1 envelope, not a solver dependency.
-use crate::{SdkError, SdkResult};
+use crate::{SdkError, SdkResult, solver_rpc_json::UniqueValue};
 use serde::Deserialize;
 use serde_json::{Value, value::RawValue};
 
@@ -20,7 +20,7 @@ struct Frame<'a> {
 struct Failure {
     code: String,
     message: String,
-    details: Option<Value>,
+    details: Option<UniqueValue>,
 }
 
 #[derive(Deserialize)]
@@ -62,15 +62,17 @@ pub(crate) fn decode(bytes: &[u8], request_id: &str, progress_budget: usize) -> 
         let progress: Progress = serde_json::from_str(progress.get())?;
         validate_progress(&progress)?;
         // Retain the original diagnostic document, including future optional fields.
-        return Ok(Reply::Progress(serde_json::from_slice(bytes)?));
+        return Ok(Reply::Progress(
+            serde_json::from_slice::<UniqueValue>(bytes)?.0,
+        ));
     }
     if frame.progress.is_some() {
         return Err(invalid("terminal RPC response contains a progress payload"));
     }
     match (frame.ok, frame.result, frame.error) {
-        (Some(true), Some(result), None) => {
-            Ok(Reply::Complete(serde_json::from_str(result.get())?))
-        }
+        (Some(true), Some(result), None) => Ok(Reply::Complete(
+            serde_json::from_str::<UniqueValue>(result.get())?.0,
+        )),
         (Some(false), None, Some(error))
             if !error.code.trim().is_empty() && !error.message.trim().is_empty() =>
         {
@@ -78,7 +80,7 @@ pub(crate) fn decode(bytes: &[u8], request_id: &str, progress_budget: usize) -> 
                 code: Some(error.code),
                 message: error.message,
                 request_id: Some(frame.id),
-                details: error.details,
+                details: error.details.map(|details| details.0),
             })
         }
         _ => Err(invalid(

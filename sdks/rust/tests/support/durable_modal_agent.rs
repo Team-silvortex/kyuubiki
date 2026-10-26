@@ -99,6 +99,10 @@ impl Agent {
                     "KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE",
                     "modal_shape_norm",
                 )
+                .env(
+                    "KYUUBIKI_AGENT_FAULT_INJECTION_STORE_READ_HOLD_FILE",
+                    self.root.join("store-read.hold"),
+                )
                 .stdout(Stdio::from(log.try_clone()?))
                 .stderr(Stdio::from(log))
                 .spawn()?,

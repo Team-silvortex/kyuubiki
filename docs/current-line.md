@@ -56,6 +56,15 @@ execution/publication in Engine and Agent; the GUI is not runtime authority.
 | Recovery local preflight | Reject invalid retained content and unusable output destinations before remote observation | SDK depth gate and example admission/path checks; local connection probes, no automatic replay or filesystem reservation |
 | Research record publication | Stage and synchronize complete records before no-replace final-name publication | Forced writer termination before/after dispatch, original-task recovery and unchanged pending evidence; not host-power-loss durability |
 | Offline interrupted-export recovery | Revalidate a retained completed receipt and regenerate derived results into a new directory without an Agent | No replay, staging promotion or source changes; existing published evidence must be verified, not bypassed |
+| Durable store readiness | Typed SDK descriptor states gate new research submission before local records or dispatch | Busy/unavailable is not missing-task evidence; readiness is a snapshot, not a reservation or recovery prerequisite |
+| Durable admission refusal | Preserve capacity reason and bind explicit non-admission to the actual submission attempt | Real full-store refusal, lost reply and process restart; no execution handle, historical absence proof or automatic replay |
+| RPC payload ambiguity | Reject nested duplicate keys before constructing retained result, failure-detail or progress values | Raw-message fixtures and real modal receipt recovery; exact numeric representation retained, no new execution/retry authority |
+| Missing-execution boundaries | Reject contradictory absence reports; preserve native missing/corrupt-record errors before export | Real orphan restart and exact-record restoration; interrupted admission remains unknown, no automatic repair or historical absence guarantee |
+| Lost terminal receipts | Retained completed/failed history rejects a missing native receipt after live loss and Agent restart | Intact prior exports remain offline-verifiable; diagnostic unknown receipts are not verified results, and exact restoration is explicit |
+| Native store write failures | Real admission/receipt pending-file collisions block new durable work while retaining prior result reads | Explicit restart discards pending files without completing or replaying uncertain work; not disk-full or directory-sync fault qualification |
+| Native record ambiguity | Reject duplicate decoded JSON keys in checksummed Agent records before typed decoding or publication | Real result/error corruption and restart controls; checksums are integrity checks, not authentication, and exact original restoration remains explicit |
+| SDK recovery index | Read one bounded, store-pinned admission page with ordered unique IDs and validated continuation | Mixed completed/failed/interrupted native work survives process restart; listings are not result validation, atomic snapshots or replay authority; restart after filesystem repair to rescan capacity |
+| Durable inventory admission fence | Check finalized record names, regular-file types and encoded lengths before reserving fresh execution; latch mismatches as admission-blocked | Bounded metadata only, not content verification or concurrent-writer protection; intact reads and healthy in-flight completion remain available; explicit inspection/restart rescans counts |
 
 Follow the evidence rather than treating this table as a new combined run:
 
@@ -126,6 +135,22 @@ Follow the evidence rather than treating this table as a new combined run:
   continues after a killed exporter while the Agent remains stopped. It reads
   only complete retained receipts, rechecks physics and publishes into a new
   directory; negative controls prevent bypassing published or conflicting evidence.
+- [Durable store readiness](../reports/headless-durable-store-readiness-20261025.md)
+  distinguishes descriptor busy/unavailable/disabled/admission-blocked states
+  before new submission. Real lock contention preserves the original task and
+  recovery error context; a known ID cannot override a broken store binding.
+- [Durable admission refusal](../reports/headless-durable-admission-rejection-20261025.md)
+  preserves the native capacity decision instead of misreporting a receipt schema
+  error. Lost refusal replies stay uncertain; old receipts remain readable and
+  explicit duplicate observation does not allocate new execution records.
+- [RPC payload ambiguity](../reports/headless-rpc-json-ambiguity-20261025.md)
+  rejects repeated nested keys before they can erase contradictory execution
+  flags or result values. Numerical representation controls and an original
+  real-Agent receipt read after process restart preserve the existing contract.
+- [Missing-execution boundaries](../reports/headless-missing-execution-boundaries-20261025.md)
+  prevents `not_found` from also claiming admitted execution or resumability.
+  Real missing admissions, orphan receipts and checksum faults block export;
+  restoring original evidence recovers only the state it actually supports.
 
 The latest summary reduction report records 3,544 web tests with zero failures
 and 77 skips, plus 758 passed Rust Engine/selected integration tests and one

@@ -71,6 +71,32 @@ cargo run --locked --manifest-path sdks/rust/Cargo.toml \
 
 The parent `tmp` directory must exist. `submit` saves input and a typed-digest
 `DurableExecutionIntent` before sending, then retains admission separately.
+Before creating those files, it calls `describe_durable_agent_store()` and
+requires `DurableAgentStoreStatus::ready_store_id()`. This official SDK helper
+distinguishes `Ready`, `Disabled`, `Busy`, `Unavailable` and `AdmissionBlocked`
+instead of treating a retained `store_id` as proof of availability. Missing or
+contradictory descriptor fields fail closed; write-failure or inventory admission blocking
+is checked even when the store remains readable.
+
+This is one read-only snapshot, not a reservation, authentication, a capacity
+check or guaranteed future admission. The Agent still makes the final decision.
+There is no automatic polling, retry or replay. Existing pinned executions do
+not require a new-admission readiness gate: a busy recovery read remains a
+`SdkError::Rpc` with `durable_execution_busy` and its original details, never a
+`not_found` or failed-task receipt. After an explicit later read, the original
+execution can still be reconciled. See the
+[durable store readiness regression](../../reports/headless-durable-store-readiness-20261025.md).
+
+Native write-failure tests now exercise actual pending-file collisions at both
+admission and receipt publication. After the write fails, the descriptor reports
+`AdmissionBlocked`: the example rejects fresh work before creating local records,
+and direct SDK submission is also refused by the Agent. Previously committed
+results remain readable and independently exportable. Explicit Agent restart
+discards pending names, never promotes their contents, and may restore readiness
+for a new study; the original missing/unknown execution remains unresolved.
+Readiness is not proof of task completion or permission to repeat its submission.
+See the [native write-failure follow-up](../../reports/headless-durable-store-readiness-20261025.md#native-write-failure-follow-up).
+
 `inspect` only reads the original store/ID and exports to a new directory.
 If acknowledgement was lost, a completed receipt can be reconciled against
 that saved intent and exact input, then independently checked before publication.
@@ -205,6 +231,93 @@ numerical validation remain the embedding application's responsibility.
 `outcome_unknown` and `not_found` never authorize automatic resubmission. An
 explicit new attempt must use a new ID and remains separate from the old one.
 
+For recovery discovery, `list_durable_agent_executions(&store_id, after, limit)`
+reads exactly one page from the caller-pinned store. The bound is 1 through 64;
+invalid query arguments fail before any connection. The returned
+`DurableExecutionIndexPage` contains admission metadata, not task outcomes or
+result payloads. The SDK validates the exact v1 shape, store/schema/replay policy,
+bounded identities, strictly increasing unique IDs after the supplied cursor,
+and an explicit next cursor matching the final entry of a full page. It never
+follows cursors, submits, cancels or retries work automatically.
+
+```rust
+let page = client.list_durable_agent_executions(&original_store_id, None, 32)?;
+for entry in &page.executions {
+    println!("{} {}", entry.execution_id, entry.method);
+}
+// Fetch another page only when explicitly needed, retaining the original store pin.
+let next_cursor = page.next_cursor.as_deref();
+```
+
+Use a selected ID with retained input/intent and `inspect_durable_agent_task`,
+then verify the original receipt and physics. An index entry cannot construct
+a completed execution handle. A readable list does not validate result receipts;
+corrupt receipt reads still fail. A missing known admission or orphan receipt
+blocks the native index even when its ID lies before the requested cursor.
+Pages are not an atomic snapshot across calls: concurrent admissions can require
+a later explicitly requested scan from the beginning. Empty pages are not proof
+of historical non-execution or permission to replay. Store IDs are not credentials.
+After explicit filesystem repair, restart the Agent to rescan capacity accounting;
+live index readback alone does not reconcile cached entry/byte counts. There is no
+automatic record repair. Local source-built mixed-state restart, cursor and store
+replacement tests are in `tests/durable_execution_index_live.rs`; this is not
+installed, authenticated remote, cross-language or host-power-loss qualification.
+
+Before reserving fresh work, the native Agent now compares finalized record names,
+regular-file types and encoded lengths against startup/successful-commit accounting.
+Unexpected additions, losses, size changes or scan errors block new admission until
+explicit restart after inspection. The descriptor exposes the latched
+`admission_blocked_after_inventory_change` flag; the SDK maps true to
+`AdmissionBlocked`. Older descriptors may omit this flag; a present non-boolean
+is invalid. Descriptors themselves do not scan the directory or reserve capacity.
+Intact existing receipts and healthy in-flight completion remain available.
+
+This performs one metadata scan with keyed lookups, capped at 4,097 directory entries;
+it does not read result payloads, verify unchanged-length content or defend against
+concurrent filesystem writers. Pending `.next` files count toward the directory
+bound but not committed-byte accounting; their exclusive publication/write-failure
+and restart-discard rules are unchanged. No live cleanup or automatic counter repair
+occurs. A refusal remains `durable_execution_unavailable`, not a certified capacity
+rejection or permission to retry. See the [live inventory regression](../../reports/headless-durable-store-readiness-20261025.md#live-inventory-follow-up).
+
+Both original-ID inspection APIs validate `not_found` as an absence observation,
+not a partial execution receipt. Besides the pinned lookup identity and explicit
+replay denial, it cannot carry a non-null admission request/process/method/digest,
+response, result, error or progress/event payload. Optional `resumable` and
+`execution_started` must be absent, null or boolean false. Neutral optional nulls
+and unrelated diagnostic metadata are retained; neither creates an execution
+handle, proves historical non-execution or permits resubmission.
+
+Known missing native admissions, orphan receipts and checksum failures remain
+`durable_execution_unavailable` errors with the original RPC diagnostics, not
+`not_found`. The research example does not create an export on those errors.
+Explicit restoration of the exact original records can restore readback;
+restoring an interrupted admission alone still yields `outcome_unknown`, not
+completion. No automatic repair is added. Complete deletion of all evidence
+before restart is not detectable by the ledger's process-local known-ID set;
+retain caller history and never treat later absence as retry permission. See
+the [missing-record recovery regression](../../reports/headless-missing-execution-boundaries-20261025.md).
+
+Both durable submission APIs distinguish a validated native capacity refusal as
+`SdkError::DurableAdmissionRejected { report }`. The report preserves the reason,
+message and identity of this attempt. The SDK checks its exact v1 shape, original
+store/execution/input/method, current RPC request ID, bounded text and explicit
+`execution_started: false` / `automatic_replay_authorized: false` flags. Currently
+only the native `store_capacity` reason is accepted; unknown reasons or fields,
+foreign IDs and contradictory reports remain uncertain protocol errors.
+
+This is not an execution receipt, historical absence proof or permission to
+retry. A lost refusal reply still leaves the caller uncertain: retain the input
+and intent, inspect the original ID and do not automatically resubmit. A normal
+duplicate observation may carry its original admission request ID and remains
+readable at capacity. Generic RPC error details cannot manufacture a validated
+refusal. Error classification is `FailureClass::Rpc`, not a retryable transport
+classification; exhaustive `SdkError` matches must handle the new variant.
+Callers own retention of this diagnostic. The research example surfaces the
+error and preserves input/intent but does not save it as `admission.json` or add
+a rejection file automatically. See the
+[real capacity and lost-refusal regression](../../reports/headless-durable-admission-rejection-20261025.md).
+
 Retain full observations when later reads must also preserve a known outcome.
 `fetch_durable_agent_execution(&handle)` validates identity but the handle does
 not contain previous terminal contents. Use
@@ -234,6 +347,16 @@ receipt before relying on later history checks. The example applies the same
 SDK rule between a present saved admission and the observed/exported receipt
 for both `inspect` and offline `verify`. See the
 [terminal consistency regression](../../reports/headless-terminal-observation-consistency-20261025.md).
+
+Real-Agent tests also remove a completed or failed native receipt while retaining
+its admission, then force-terminate and restart the Agent. Identity-only reads
+report `outcome_unknown`; history-aware reads reject that regression. The example
+can retain the unknown observation as diagnostic `receipt.json`, but never
+publishes it under `verified/` or replaces old evidence. An intact prior export
+still passes offline verification with the Agent stopped; that does not certify
+the live store's health. Explicit restoration of the exact native receipt recovers
+the original result or original failure details, without recomputation. See the
+[terminal-loss follow-up](../../reports/headless-missing-execution-boundaries-20261025.md#terminal-receipt-loss-follow-up).
 
 The example preflights local admission shape/intent binding before online
 endpoint configuration or fetching, and before offline receipt consumption.
@@ -285,6 +408,31 @@ payloads and mutually exclusive success/failure states. Known duplicate
 envelope fields, foreign replies and invalid frames fail instead of becoming
 results. Each call uses a process-wide sequence in its ID; this is correlation,
 not authentication. It does not automatically retry or cancel a timed-out task.
+
+Retained RPC JSON also rejects duplicate object keys at every nesting level in
+results, error details and retained progress frames, including escaped spellings
+of the same key and repeated identical values. Ambiguous bytes produce a JSON
+error, not a solver result, definite failure or known non-admission decision.
+After dispatch this error does not establish whether execution occurred: keep
+the original intent/receipts and inspect that task explicitly without replay.
+
+Parsing preserves integer/float distinctions, binary64 bits and signed zero;
+the same key in different objects is valid. It uses the destination object map
+instead of a second duplicate-key set, retaining existing byte/depth budgets.
+This is the Rust direct-RPC byte boundary, not a cross-language JSON policy or
+authentication. It cannot discover duplicate keys already lost in an externally
+decoded `Value`; caller file readers still own their byte-level checks. Ignored
+unknown terminal-envelope fields are not retained payload. See the
+[raw-message ambiguity regression](../../reports/headless-rpc-json-ambiguity-20261025.md).
+
+The native Agent now also rejects duplicate decoded keys in its checksummed
+execution records before typed decoding can hide them from the SDK. Ambiguous
+stored results or error details return `durable_execution_unavailable`, never
+normalized completed/failed reports. The same gate checks prepared bytes before
+publication. Valid bytes retain ordinary typed numeric decoding; no solver
+arithmetic or wire schema changes. A checksum is not authentication, and neither
+inspection nor restart repairs rejected records. See the
+[native-record follow-up](../../reports/headless-rpc-json-ambiguity-20261025.md#native-record-follow-up).
 
 Remote `SdkError::Rpc` preserves the validated response identity and optional
 structured diagnostics. Locally generated configuration errors have neither.

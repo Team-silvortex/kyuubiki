@@ -5,6 +5,9 @@ use std::path::Path;
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 
+#[path = "agent_execution_store_json.rs"]
+mod json;
+
 pub(super) fn open_private(path: &Path, create_new: bool) -> Result<File, String> {
     let mut options = OpenOptions::new();
     options.read(true).write(true);
@@ -93,7 +96,7 @@ pub(super) fn read<T: DeserializeOwned>(path: &Path, limit: usize) -> Result<Opt
     if bytes[..64] != *digest.as_bytes() {
         return Err("execution record checksum mismatch".into());
     }
-    serde_json::from_slice(&bytes[65..])
+    json::decode(&bytes[65..])
         .map(Some)
         .map_err(|e| e.to_string())
 }
@@ -154,7 +157,7 @@ pub(super) fn prepare<T: Serialize + DeserializeOwned>(
     }
     // Do not acknowledge a payload which the restart reader cannot decode (for
     // example a deeply nested external-operator result beyond the parser limit).
-    serde_json::from_slice::<T>(&bytes.bytes)
+    json::decode::<T>(&bytes.bytes)
         .map_err(|error| PreparationError::RestartDecode(error.to_string()))?;
     Ok(PreparedRecord(bytes.bytes))
 }

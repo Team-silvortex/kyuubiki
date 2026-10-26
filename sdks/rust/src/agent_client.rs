@@ -270,7 +270,7 @@ impl KyuubikiAgentClient {
         match error {
             SdkError::Timeout(_) => FailureClass::Timeout,
             SdkError::Transport(_) | SdkError::Io(_) => FailureClass::Transport,
-            SdkError::Rpc { .. } => FailureClass::Rpc,
+            SdkError::Rpc { .. } | SdkError::DurableAdmissionRejected { .. } => FailureClass::Rpc,
             SdkError::HttpStatus {
                 status_code: 401 | 403,
                 ..

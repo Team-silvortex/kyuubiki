@@ -21,6 +21,12 @@ pub enum SdkError {
         /// Untrusted diagnostics, never execution/retry authority; omitted from Display.
         details: Option<serde_json::Value>,
     },
+    /// This submission attempt was explicitly not admitted. This is not a durable
+    /// execution receipt, authentication, task-absence proof or permission to retry.
+    DurableAdmissionRejected {
+        /// Identity-checked native rejection; callers may retain this diagnostic.
+        report: serde_json::Value,
+    },
     Timeout(String),
 }
 
@@ -40,6 +46,12 @@ impl fmt::Display for SdkError {
                 Some(code) => write!(f, "{code}: {message}"),
                 None => write!(f, "{message}"),
             },
+            Self::DurableAdmissionRejected { report } => write!(
+                f,
+                "durable admission rejected ({}): {}",
+                report["reason"].as_str().unwrap_or("unknown"),
+                report["message"].as_str().unwrap_or("not admitted")
+            ),
             Self::Io(error) => write!(f, "{error}"),
             Self::Json(error) => write!(f, "{error}"),
         }
