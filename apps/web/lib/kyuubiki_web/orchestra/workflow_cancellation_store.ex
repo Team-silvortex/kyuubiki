@@ -7,6 +7,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationStore do
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Storage.FailureBoundary
 
+  def authority(state), do: {state.session_id, state.lease_session}
+
+  def access(job_id, action, authority), do: access(job_id, {:sweep, authority, action})
+
   def access(job_id, action) do
     GenServer.call(Coordinator, {:cancellation_intent, job_id, action}, 30_000)
   catch
@@ -16,12 +20,20 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationStore do
   def handle(job_id, action, state) do
     result =
       Ownership.guarded_write(state, fn ->
-        authority = {state.session_id, state.lease_session}
+        authority = authority(state)
         FailureBoundary.run(fn -> read_and_apply(job_id, action, authority) end)
       end)
 
     {:reply, result, Ownership.after_write(state, result)}
   end
+
+  defp read_and_apply(nil, :sweep_authority, authority), do: {:ok, authority}
+
+  defp read_and_apply(job_id, {:sweep, authority, action}, authority),
+    do: read_and_apply(job_id, action, authority)
+
+  defp read_and_apply(_job_id, {:sweep, _stale, _action}, _authority),
+    do: {:error, :stale_cancellation_sweep}
 
   defp read_and_apply(job_id, action, authority) do
     with {:ok, %{status: :failed} = job} <- Store.get(job_id),

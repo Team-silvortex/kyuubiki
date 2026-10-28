@@ -46,6 +46,304 @@
   },
   "evidence_claims": [
     {
+      "id": "local-durable-cancellation-process-crash",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_crash_test.exs",
+        "apps/web/test/support/workflow_cancellation_crash_child.exs",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_store.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_intent.ex",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Cancellation Process-Crash Follow-Up",
+        "SIGKILL #{phase} retains exact authority",
+        "repeated SIGKILL cannot reset or exceed the durable attempt budget",
+        "CANCELLATION_CRASH_READY",
+        "CANCELLATION_CRASH_RECOVERED",
+        "Port.info(child, :os_pid)",
+        "retry_budget_exhausted"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-record-mutation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_store.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_mutation_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Cancellation Record Mutation Follow-Up",
+        "survives delivery without replay or lost updates",
+        "fences the old delivery but not a healthy sibling",
+        "persistence rejects a stale",
+        "Store.apply_progress_with_result",
+        "stale_cancellation_intent"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-state-consistency",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_intent.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_state_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_recovery_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Cancellation State Consistency Follow-Up",
+        "valid_phase?(entry)",
+        "outcome in @delivery_reasons",
+        "valid_entry?(entry, bucket[\"job_id\"])",
+        "projections agree with states produced by legitimate transitions",
+        "cannot use reservation exhaustion as a delivery outcome",
+        "recovery leaves a resealed",
+        "sibling does not block a healthy cancellation"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-valid-id-selection",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_handoff.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_selection_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Cancellation Valid-ID Selection Follow-Up",
+        "incoming = continuation_jobs(ids, MapSet.new())",
+        "length(valid) > @max_jobs",
+        "prefix hide valid work",
+        "selection stops at the valid overflow sentinel and bounds invalid metadata",
+        "invalid members do not consume valid capacity with overflow",
+        "idle continuation skips an invalid prefix after",
+        "large invalid-only hints retain the live queue without claiming capacity overflow",
+        "selection cannot turn stale authority into a valid handoff"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-capacity-admission",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_handoff.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_input_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Cancellation Capacity Admission Follow-Up",
+        "retained_ids = MapSet.new(retained)",
+        "if Enum.any?(valid, &MapSet.member?(retained_ids, &1))",
+        "rejected overflow cannot rearm retained",
+        "full queue still accepts an overlapping trigger",
+        "partially admitted overflow keeps accepted work and leaves the rest unattempted",
+        "expired full queue does not consume capacity of a fresh explicit trigger"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-admission-expiry",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_handoff.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_input_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Cancellation Admission Expiry Follow-Up",
+        "if Enum.any?(valid, &MapSet.member?(retained_ids, &1))",
+        "if expiry <= now()",
+        "invalid-only trigger cannot rearm an existing handoff",
+        "empty internal handoff is a no-op for an existing queue",
+        "trigger does not inherit an expired handoff",
+        "trigger cannot revive expired waiting work",
+        "wait_expiry_message"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-input-isolation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_handoff.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_input_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Cancellation Input Isolation Follow-Up",
+        "not Handoff.valid_job_id?(id)",
+        "invalid middle identifier cannot abandon the rest of an idle sweep",
+        "invalid-only idle input exits normally without reserving unrelated work",
+        "invalid input does not authorize retry of an earlier unknown delivery",
+        "skipping invalid input cannot revive stale sweep authority",
+        "storage outage is not treated as an invalid identifier to skip"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-busy-prefix-coalescing",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_handoff.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_handoff_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Busy Duplicate Prefix Follow-Up",
+        "Handoff.continuation_jobs(MapSet.new())",
+        "duplicate prefix preserves later work with existing queue",
+        "duplicate-only busy trigger does not claim overflow or retry an unknown outcome",
+        "distinct-job capacity with repeated IDs and overflow",
+        "duplicate-heavy handoff still rejects invalid identifiers without losing later work"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-partial-intent-fairness",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_store.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_fairness_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_sweep_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Partial Intent Fairness Follow-Up",
+        "lower nonzero attempts precede older retries and ties remain stable",
+        "explicit recovery after worker kill visits untouched entries before unknown deliveries",
+        "recovery derives fair order from durable attempts without a cursor",
+        "exhausted crash reservation cannot block untouched work or authorize another send",
+        "corrupt attempt metadata is rejected before ordering or delivery",
+        "fresh work completes before slow retries exhaust the real sweep budget"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-idle-batch-continuation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_handoff.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_handoff_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_sweep_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Idle Sweep Continuation Follow-Up",
+        "continuation selection is bounded and excludes already visited duplicate IDs",
+        "idle sweep hands off jobs beyond its first batch without another trigger",
+        "duplicate IDs in one trigger do not retry an unknown delivery",
+        "delivery budget yields untouched jobs but does not retry the partially visited job",
+        "idle continuation cannot renew an expired original handoff deadline",
+        "idle continuation uses the same bounded queue and leaves overflow unattempted"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-bounded-handoff",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_handoff.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_handoff_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_lease_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_sweep_test.exs",
+        "apps/web/test/support/workflow_cancellation_probe.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Bounded Cancellation Handoff Follow-Up",
+        "cancellation_handoff_full",
+        "duplicate triggers coalesce without renewing the wait budget",
+        "more than one delivery batch drains without dropping remaining jobs",
+        "expired waiting handoff preserves intent for a new explicit trigger",
+        "coordinator restart rebuilds waiting work from intent rather than reviving the queue",
+        "killed active delivery hands off another job without inventing its own receipt",
+        "unknown delivery does not start another sweep without a retained trigger"
+      ]
+    },
+    {
+      "id": "local-durable-cancellation-whole-sweep-authority",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_store.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_delivery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_failure.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_scan.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_sweep_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_cancellation_directory_test.exs",
+        "reports/workflow-durable-cancellation-20261013.md",
+        "docs/protocols.md"
+      ],
+      "required_text": [
+        "Whole Sweep Authority Follow-Up",
+        "stale_cancellation_sweep",
+        "Store.access(nil, :sweep_authority, authority)",
+        "cannot consume any attempt",
+        "rejects the old sweep before persistence",
+        "retains bound targets but discards the old observation cache",
+        "malformed sweep authority cannot reserve or contact an Agent"
+      ]
+    },
+    {
       "id": "local-durable-cancellation-lease-acquisition-authority",
       "status": "proven",
       "grade": "verified",

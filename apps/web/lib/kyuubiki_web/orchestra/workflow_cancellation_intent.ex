@@ -8,7 +8,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationIntent do
   @fields ~w(schema_version intent_id job_id job_created_at envelope_sha256 generation owner_session_id entries sha256)
   @entry ~w(request_id endpoint_fingerprint execution_target delivery_id attempts status reason)
   @states ~w(pending dispatching requested target_not_observed exhausted)
-  @reasons ~w(original_endpoint_not_configured endpoint_directory_unavailable delivery_budget_exhausted original_endpoint_unreachable request_not_observed_active agent_observation_invalid execution_target_invalid cancellation_outcome_unknown agent_acknowledgement_invalid retry_budget_exhausted)
+  @delivery_reasons ~w(original_endpoint_not_configured endpoint_directory_unavailable delivery_budget_exhausted original_endpoint_unreachable request_not_observed_active agent_observation_invalid execution_target_invalid cancellation_outcome_unknown agent_acknowledgement_invalid)
+  @reasons @delivery_reasons ++ ~w(retry_budget_exhausted)
   @max_bytes 262_144
   @max_attempts 3
 
@@ -143,7 +144,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationIntent do
         outcome in ~w(requested target_not_observed) and is_map(entry["execution_target"]) ->
           {:ok, Map.merge(entry, %{"status" => outcome, "reason" => nil})}
 
-        outcome in @reasons ->
+        outcome in @delivery_reasons ->
           status = if entry["attempts"] >= @max_attempts, do: "exhausted", else: "pending"
           {:ok, Map.merge(entry, %{"status" => status, "reason" => outcome})}
 
@@ -190,7 +191,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationIntent do
       %{"entries" => entries} = bucket when is_list(entries) and length(entries) <= 128 ->
         counts =
           Enum.frequencies_by(entries, fn entry ->
-            if is_map(entry) and entry["status"] in @states, do: entry["status"], else: "invalid"
+            if valid_entry?(entry, bucket["job_id"]), do: entry["status"], else: "invalid"
           end)
 
         status =
@@ -221,10 +222,25 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationIntent do
       hex?(entry["endpoint_fingerprint"], 64) and entry["status"] in @states and
       is_integer(entry["attempts"]) and entry["attempts"] in 0..@max_attempts and
       (is_nil(entry["reason"]) or entry["reason"] in @reasons) and
-      valid_delivery?(entry) and valid_target?(entry, job_id)
+      valid_delivery?(entry) and valid_target?(entry, job_id) and valid_phase?(entry)
   end
 
   defp valid_entry?(_, _), do: false
+
+  # A valid digest cannot make contradictory lifecycle fields safe to resume.
+  defp valid_phase?(%{"status" => "pending", "attempts" => 0, "reason" => nil}), do: true
+
+  defp valid_phase?(%{"status" => "pending", "attempts" => attempts, "reason" => reason}),
+    do: attempts in 1..(@max_attempts - 1) and reason in @delivery_reasons
+
+  defp valid_phase?(%{"status" => status, "attempts" => attempts, "reason" => nil})
+       when status in ~w(dispatching requested target_not_observed),
+       do: attempts in 1..@max_attempts
+
+  defp valid_phase?(%{"status" => "exhausted", "attempts" => @max_attempts, "reason" => reason}),
+    do: reason in @reasons
+
+  defp valid_phase?(_), do: false
 
   defp valid_delivery?(%{"attempts" => 0} = entry),
     do:

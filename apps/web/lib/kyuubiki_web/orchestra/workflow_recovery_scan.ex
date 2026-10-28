@@ -1,7 +1,7 @@
 defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryScan do
   @moduledoc false
 
-  alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Jobs.{ProgressEvent, Store}
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Storage.FailureBoundary
@@ -122,12 +122,29 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryScan do
   end
 
   defp terminal_message(terminal, recovery) do
-    case List.last(Map.get(recovery, "history", [])) do
-      %{"message" => value} when is_binary(value) -> value
-      %{"reason" => value} when is_binary(value) -> "workflow recovery blocked: #{value}"
-      _ -> "workflow execution ended in #{terminal} state"
-    end
+    event =
+      case Map.get(recovery, "history") do
+        history when is_list(history) -> List.last(history)
+        _ -> nil
+      end
+
+    message =
+      if is_map(event) do
+        diagnostic_message(event["message"], "") ||
+          diagnostic_message(event["reason"], "workflow recovery blocked: ")
+      end
+
+    message || "workflow execution ended in #{terminal} state"
   end
+
+  # Diagnostics must not prevent terminal reconciliation; retain the raw history unchanged.
+  defp diagnostic_message(value, prefix) when is_binary(value) do
+    if byte_size(value) + byte_size(prefix) <= ProgressEvent.message_max_bytes() and
+         String.valid?(value) and String.trim(value) != "",
+       do: prefix <> value
+  end
+
+  defp diagnostic_message(_, _), do: nil
 
   def run(state, recover_job) do
     case WorkflowJobRunner.registry_status() do
@@ -147,7 +164,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryScan do
           jobs
           |> Enum.filter(&(&1.status == :failed))
           |> Enum.map(& &1.job_id)
-          |> KyuubikiWeb.Orchestra.WorkflowCancellationDelivery.kick()
+          |> KyuubikiWeb.Orchestra.WorkflowCancellationDelivery.kick(
+            KyuubikiWeb.Orchestra.WorkflowCancellationStore.authority(state)
+          )
         end
 
         recover(Enum.filter(jobs, &(&1.status in @active)), state, recover_job)

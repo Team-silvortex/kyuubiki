@@ -10,7 +10,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryRunners, as: Runners
   alias KyuubikiWeb.Orchestra.{WorkflowJobRunner, WorkflowRecoveryCoordinator}
-  alias KyuubikiWeb.Orchestra.{WorkflowCancellationDelivery, WorkflowCancellationIntent}
+
+  alias KyuubikiWeb.Orchestra.{
+    WorkflowCancellationDelivery,
+    WorkflowCancellationIntent,
+    WorkflowCancellationStore
+  }
+
   alias KyuubikiWeb.Playground.AgentExecutionGate
 
   @active ~w(queued preprocessing partitioning solving postprocessing)a
@@ -32,7 +38,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
 
     next =
       if reply == :ok do
-        WorkflowCancellationDelivery.kick([job_id])
+        WorkflowCancellationDelivery.kick([job_id], WorkflowCancellationStore.authority(state))
 
         Runners.retire(state, job_id)
       else
@@ -64,7 +70,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryFailure do
       if match?({:ok, _}, reply) do
         # Stop only after both snapshots committed; a rejected scan must not cancel work.
         WorkflowJobRunner.stop_failed(job.job_id, not durable?)
-        if durable?, do: WorkflowCancellationDelivery.kick([job.job_id])
+
+        if durable?,
+          do:
+            WorkflowCancellationDelivery.kick(
+              [job.job_id],
+              WorkflowCancellationStore.authority(state)
+            )
 
         Runners.retire(state, job.job_id)
       else

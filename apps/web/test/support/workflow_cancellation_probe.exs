@@ -22,6 +22,18 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCancellationProbe do
 
   def resume({pid, token}), do: send(pid, {token, :continue})
 
+  # Isolate the retired worker in authority tests; handoff tests exercise the new worker.
+  def discard_startup_handoff do
+    coordinator = KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator
+
+    KyuubikiWeb.TestSupport.StorageOutageFixture.eventually(fn ->
+      not is_nil(:sys.get_state(coordinator).cancellation_handoff)
+    end)
+
+    :sys.replace_state(coordinator, &KyuubikiWeb.Orchestra.WorkflowCancellationHandoff.clear/1)
+    :ok
+  end
+
   def observe(%{remaining: count} = state, {:in, {:"$gen_call", _, message}}, _)
       when count > 0 do
     if state.match.(message) do

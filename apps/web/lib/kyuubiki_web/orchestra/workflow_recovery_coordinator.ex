@@ -24,6 +24,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryFailure
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryRunners, as: Runners
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryScan
+  alias KyuubikiWeb.Orchestra.WorkflowCancellationHandoff, as: CancellationHandoff
 
   alias KyuubikiWeb.Orchestra.{
     WorkflowCheckpointStore,
@@ -198,6 +199,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       activity: %{},
       completion_retries: %{},
       registry_retry: nil,
+      cancellation_handoff: nil,
+      cancellation_handoff_error: nil,
       recovery_runs: 0,
       recovered_jobs: 0,
       blocked_jobs: 0
@@ -369,6 +372,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
        "session_id" => state.session_id,
        "max_attempts" => state.max_attempts,
        "lease" => Ownership.snapshot(state),
+       "cancellation_handoff" => CancellationHandoff.summary(state),
        "tracked_jobs" => state.jobs |> Map.keys() |> Enum.sort(),
        "pending_completion_retries" => state.completion_retries |> Map.keys() |> Enum.sort(),
        "runner_registry_retry_pending" => not is_nil(state.registry_retry),
@@ -379,6 +383,16 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   @impl true
+  def handle_cast({:cancellation_handoff, holder, ids, authority, deadline}, state),
+    do: {:noreply, CancellationHandoff.defer(state, holder, ids, authority, deadline)}
+
+  @impl true
+  def handle_info({:cancellation_handoff_ready, token}, state),
+    do: {:noreply, CancellationHandoff.ready(state, token)}
+
+  def handle_info({:cancellation_handoff_expired, token}, state),
+    do: {:noreply, CancellationHandoff.expire(state, token)}
+
   def handle_info(:recover, state) do
     if Ownership.owner?(state) do
       {_summary, next_state} = recover_active_jobs(state)
@@ -415,7 +429,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
-    {:noreply, Runners.down(ref, state)}
+    case CancellationHandoff.down(state, ref) do
+      {:handled, next} -> {:noreply, next}
+      :unhandled -> {:noreply, Runners.down(ref, state)}
+    end
   end
 
   @impl true

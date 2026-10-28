@@ -28,6 +28,27 @@
   },
   "evidence_claims": [
     {
+      "id": "orchestra-terminal-diagnostic-isolation-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/jobs/progress_event.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_scan.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_terminal_reconciliation_test.exs",
+        "reports/workflow-terminal-diagnostics-20261028.md"
+      ],
+      "required_text": [
+        "diagnostics without rewriting evidence",
+        "diagnostics and reaches a later healthy job",
+        "reconciliation does not depend on diagnostic history",
+        "message_max_bytes",
+        "This is local terminal-diagnostic isolation evidence, not PostgreSQL, distributed"
+      ]
+    },
+    {
       "id": "orchestra-result-administration-local-contract",
       "status": "proven",
       "grade": "verified",

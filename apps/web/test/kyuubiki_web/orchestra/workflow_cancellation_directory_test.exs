@@ -399,8 +399,14 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationDirectoryTest do
 
   defp pause_store(id, phase) do
     Probe.install(Coordinator, fn
-      {:cancellation_intent, ^id, action} when is_tuple(action) -> elem(action, 0) == phase
-      _ -> false
+      {:cancellation_intent, ^id, {:sweep, _, action}} when is_tuple(action) ->
+        elem(action, 0) == phase
+
+      {:cancellation_intent, ^id, action} when is_tuple(action) ->
+        elem(action, 0) == phase
+
+      _ ->
+        false
     end)
   end
 

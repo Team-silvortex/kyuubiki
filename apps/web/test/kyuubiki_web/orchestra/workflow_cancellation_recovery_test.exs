@@ -4,7 +4,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationRecoveryTest do
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.{Persistence, Storage}
   alias KyuubikiWeb.Orchestra.WorkflowCancellationStore, as: CancellationStore
+  alias KyuubikiWeb.Orchestra.WorkflowCancellationDelivery, as: Delivery
+  alias KyuubikiWeb.Orchestra.WorkflowCancellationIntent, as: Intent
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator, as: Coordinator
+  alias KyuubikiWeb.Storage.DurableJson
 
   alias KyuubikiWeb.Playground.{
     AgentClient,
@@ -208,6 +211,89 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationRecoveryTest do
     assert {:ok, ^runtime} = AnalysisResultStore.get(f.id)
     refute_receive {:agent_request, _, _, _}, 50
     release(f)
+  end
+
+  for trigger <- [:explicit, :restart],
+      phase <- [:fresh_failure, :spent_pending, :dispatch_with_reason] do
+    @tag :state_consistency
+    test "#{trigger} recovery leaves a resealed #{phase} record untouched" do
+      f = active_request()
+
+      changed =
+        Outage.without(KyuubikiWeb.TaskSupervisor, fn ->
+          retire(f)
+          corrupt_phase(f, unquote(phase))
+        end)
+
+      case unquote(trigger) do
+        :explicit -> Coordinator.recover_now()
+        :restart -> WorkflowCommitFixture.restart_coordinator()
+      end
+
+      assert {:error, :invalid_workflow_cancellation_intent} =
+               CancellationStore.access(f.id, :load)
+
+      wait_worker()
+      assert {:ok, ^changed} = AnalysisResultStore.get(f.id)
+      assert Intent.summary(changed[@key])["status"] == "invalid"
+      refute_receive {:agent_request, _, _, _}, 50
+      release(f)
+    end
+  end
+
+  for phase <- [:fresh_failure, :spent_pending] do
+    @tag :state_consistency
+    test "invalid #{phase} sibling does not block a healthy cancellation" do
+      bad = active_request()
+      good = active_request()
+
+      changed =
+        Outage.without(KyuubikiWeb.TaskSupervisor, fn ->
+          retire(bad)
+          retire(good)
+          corrupt_phase(bad, unquote(phase))
+        end)
+
+      {:ok, worker} = Delivery.kick([bad.id, good.id])
+      ref = Process.monitor(worker)
+      assert_receive {:agent_request, "durable-cancel", _, cancel}, 2_000
+      assert cancel["method"] == "cancel_execution"
+      assert cancel["params"] == target(good, 2)
+      runtime = settled(good.id)
+      assert hd(runtime[@key][@intent]["entries"])["attempts"] == 1
+      assert_receive {:DOWN, ^ref, :process, ^worker, reason}, 2_000
+      assert reason in [:normal, :noproc]
+      assert {:ok, ^changed} = AnalysisResultStore.get(bad.id)
+      refute_receive {:agent_request, _, _, _}, 50
+      release(bad)
+      release(good)
+    end
+  end
+
+  defp corrupt_phase(f, phase) do
+    attempts =
+      case phase do
+        :fresh_failure -> 0
+        :spent_pending -> 3
+        :dispatch_with_reason -> 1
+      end
+
+    for _ <- List.duplicate(:reserve, attempts), do: reserve(f.id)
+    {:ok, runtime} = AnalysisResultStore.get(f.id)
+    bucket = runtime[@key][@intent]
+    [entry] = bucket["entries"]
+
+    entry =
+      entry
+      |> Map.put("status", if(phase == :dispatch_with_reason, do: "dispatching", else: "pending"))
+      |> Map.put("reason", "cancellation_outcome_unknown")
+
+    bucket = Map.put(bucket, "entries", [entry])
+    digest = :crypto.hash(:sha256, DurableJson.encode!(Map.delete(bucket, "sha256")))
+    bucket = Map.put(bucket, "sha256", Base.encode16(digest, case: :lower))
+    changed = put_in(runtime, [@key, @intent], bucket)
+    assert :ok = AnalysisResultStore.compare_and_swap(f.id, runtime, changed)
+    changed
   end
 
   defp active_request do

@@ -190,6 +190,13 @@
             can conservatively block active workflows whose required history ages out.
             Checks are not authenticated provenance, rollback detection across both
             stores, physical power-loss qualification or an exactly-once guarantee.</li>
+          <li><strong>Terminal diagnostic isolation:</strong> recovery scans tolerate
+            malformed history fields and messages exceeding the existing 4096-byte
+            progress limit. A usable final-entry message or reason is retained in the
+            job summary; otherwise a state-specific fallback is used. Raw runtime
+            history remains unchanged for inspection, without truncation, migration,
+            replay or additional backups. Later healthy records remain recoverable.
+            See the <a href="../reports/workflow-terminal-diagnostics-20261028.md">terminal-diagnostic report</a>.</li>
           <li><strong>Native failure finalization:</strong> ordinary coordinator failure
             now checks the envelope and dispatch fence before pruning private evidence.
             Unconfirmed attempts, missing/corrupt history or invalid evidence retain the
@@ -260,8 +267,9 @@
             attempts. Lost replies remain uncertain; exhaustion is unresolved rather
             than successful termination. Startup or explicit recovery can run one
             bounded sweep of at most 16 pending jobs with a 15-second delivery-start
-            budget. Concurrent kicks are not queued; remaining work requires another
-            sweep, not an automatic retry daemon. Runner deadlines additionally check
+            budget. Busy triggers and unvisited batch tails use the bounded in-memory
+            handoff described below; unresolved work still needs later recovery,
+            not an automatic retry daemon. Runner deadlines additionally check
             the original execution claim. Selected transient commit/snapshot/gate/control
             failures retry after 250 ms while retaining the waiter and discarding late
             parent success; every retry rechecks authority. Lost claims stop only the
@@ -270,6 +278,37 @@
             and historical failures are not upgraded by this change. See the
             <a href="../reports/workflow-deadline-retirement-20261013.md">runner deadline report</a> and
             <a href="../reports/workflow-durable-cancellation-20261013.md">durable watchdog report</a>.</li>
+          <li><strong>Cancellation state consistency:</strong> verification couples
+            entry state, attempt count, reason, delivery nonce and target. Fresh
+            entries cannot claim a failure; retriable entries need a delivery-failure
+            reason and remaining attempts. Dispatching and acknowledged entries
+            cannot retain a failure reason, and exhausted entries require all three
+            attempts plus a reason. A crashed third reservation remains valid until
+            the next reservation records exhaustion. That reservation-only reason
+            cannot be submitted as a delivery outcome. Contradictory records are
+            left untouched, without sending, automatic repair or blocking separate
+            valid jobs. Summaries mark bad entry shapes/phases invalid, not acknowledged;
+            this is not parent/digest authentication or termination evidence. No
+            migration, schema change or backup is added. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#cancellation-state-consistency-follow-up">state-consistency follow-up</a>.</li>
+          <li><strong>Concurrent cancellation record changes:</strong> local tests pause
+            reservation, binding, authorization and receipt completion while another
+            writer changes storage. Unrelated annotations survive; deleted job/result
+            records stay deleted, and replacement intents cannot inherit old receipts.
+            Healthy separate jobs still progress. Paired-commit tests additionally
+            reject stale snapshots without overwriting newer data. This verifies existing
+            boundaries, not atomic network sending or hard-power-loss recovery. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#cancellation-record-mutation-follow-up">record-mutation follow-up</a>.</li>
+          <li><strong>Cancellation process loss:</strong> independent child-VM SIGKILL
+            tests reopen SQLite and JSON stores after acknowledgement but before or
+            after receipt persistence. Uncommitted replies remain uncertain and retry
+            only the persisted exact target; committed receipts are not resent.
+            Untouched entries progress, including after a changed peer observation.
+            Three consecutive interrupted attempts cannot reset the cap or authorize
+            a fourth send. A further fresh VM preserves settled state without RPCs.
+            These local POSIX tests use a protocol fixture and do not qualify physical
+            power loss, native Agents, live PostgreSQL or Windows. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#cancellation-process-crash-follow-up">process-crash follow-up</a>.</li>
           <li><strong>Durable cancellation directory handoff:</strong> each reserved attempt
             resolves current original membership before observation and again after
             binding and authorization. A final durable authorization follows directory
@@ -292,6 +331,86 @@
             not add a storage bucket. The last local check is still not atomic with
             the network send and cannot retract a sent request. See the
             <a href="../reports/workflow-durable-cancellation-20261013.md#lease-acquisition-authority-follow-up">lease-acquisition follow-up</a>.</li>
+          <li><strong>Whole-sweep authority:</strong> cancellation workers retain the
+            authority captured at launch across all entries and jobs. Scoped loads
+            and reservations cannot silently acquire the replacement owner's authority.
+            Initial directory lookup is followed by an authority check before probing.
+            Authority loss halts the batch without consuming untouched entries' attempts;
+            fresh recovery reads records anew, keeps bound targets and discards cached
+            observations. Ordinary renewal remains valid. No persistent
+            field, retry daemon, new external RPC or atomic network guarantee is added.
+            See the <a href="../reports/workflow-durable-cancellation-20261013.md#whole-sweep-authority-follow-up">whole-sweep follow-up</a>.</li>
+          <li><strong>Busy cancellation handoff:</strong> the existing coordinator now
+            coalesces valid triggers waiting behind an active sweep: at most 128 job
+            IDs, 16 per follow-up batch, with a shared 30-second waiting deadline
+            that duplicates and later chunks cannot renew. Busy trigger workers
+            validate and deduplicate before taking 128 valid candidates plus one
+            valid overflow sentinel. Invalid members collapse to one diagnostic
+            marker and do not consume capacity or hide later valid work. The
+            coordinator reapplies the same selection before merging. This bounds
+            retained metadata, not arbitrary input traversal time. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#busy-duplicate-prefix-follow-up">duplicate-prefix follow-up</a>
+            and <a href="../reports/workflow-durable-cancellation-20261013.md#cancellation-valid-id-selection-follow-up">valid-ID selection follow-up</a>.
+            Exit monitoring and fresh
+            authority checks permit handoff even if the incumbent exits before the
+            queued message arrives. Snapshot <code>cancellation_handoff</code> exposes
+            read-only limits, counts, remaining wait and the last queue error, not
+            queued IDs or private authority. Overflow, expiry and worker/Registry
+            unavailability leave omitted intents untouched for later recovery.
+            Ownership loss clears this in-memory hint; restart reads durable intents
+            under new authority. Unknown delivery alone does not auto-retry, successful
+            trigger startup is not a delivery receipt, and a waiting deadline cannot
+            preempt an already started sweep. Exact-target and three-attempt limits
+            remain; no new storage bucket, runtime service or solver replay is added.
+            See the <a href="../reports/workflow-durable-cancellation-20261013.md#bounded-cancellation-handoff-follow-up">bounded-handoff follow-up</a>.</li>
+          <li><strong>Cancellation batch continuation:</strong> a sweep that started
+            with a free slot now hands off unvisited later jobs when its 16-job or
+            15-second delivery-start limit is reached. It uses the same bounded
+            queue, authority and original waiting deadline, without extending the
+            deadline or retrying duplicate IDs from one trigger. The same valid-ID
+            selection prevents malformed prefixes from stranding later batches;
+            invalid-only input reports an input error, not capacity overflow.
+            Overflow and expiry remain visible. Authority/storage failures stop
+            traversal; a partially visited job's unresolved entries still need a
+            later recovery trigger.
+            Abrupt worker loss before handoff likewise requires durable recovery
+            of its private remaining work. No persisted cursor, automatic solver
+            replay or exactly-once guarantee is introduced. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#idle-sweep-continuation-follow-up">batch-continuation follow-up</a>.</li>
+          <li><strong>Cancellation input isolation:</strong> idle sweeps and deferred
+            queues use the same internal job-ID shape check before result lookup.
+            Invalid list members do not crash a worker or abandon later valid jobs.
+            This does not authorize cancellation: sealed intents and exact execution
+            identities still require verification. Missing/legacy records and corrupt
+            intents stay non-actionable, storage/authority loss still stops traversal,
+            and duplicate IDs cannot retry an unknown outcome. No stored schema or
+            backup is added. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#cancellation-input-isolation-follow-up">input-isolation follow-up</a>.</li>
+          <li><strong>Cancellation queue admission:</strong> empty/all-invalid hints
+            and wholly capacity-rejected overflow do not rearm an existing waiting
+            queue or shorten accepted work's deadline. Overflow still records its
+            diagnostic; partial and overlapping admission retain existing order and
+            the earliest deadline without reserving omitted intents. A still-valid
+            current-authority trigger retires elapsed waiting state before merging,
+            even when the old expiry message has not been processed. Only newly triggered IDs enter
+            the next queue; omitted old intents remain untouched for later recovery.
+            Late timer/monitor messages cannot erase that new queue. Unexpired
+            queues retain the earliest deadline, stale/expired triggers cannot renew
+            work, and no attempt counter, exact target or stored schema changes.
+            See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#cancellation-admission-expiry-follow-up">admission-expiry follow-up</a>
+            and <a href="../reports/workflow-durable-cancellation-20261013.md#cancellation-capacity-admission-follow-up">capacity-admission follow-up</a>.</li>
+          <li><strong>Partial cancellation recovery order:</strong> after validating
+            the stored intent, each sweep orders pending/dispatching entries by
+            persisted attempt count, with original capture order breaking ties.
+            Untouched entries can progress before repeated slow requests on the
+            next recovery trigger. The read-only selection is bounded to 128 entries;
+            it does not reorder the stored list, change bound execution identities,
+            rewrite settled receipts or reset the three-attempt cap. Restart and
+            lease reacquisition derive priority from durable counts without a new
+            cursor. This is local to one intent, not global fairness, automatic
+            partial-job continuation or proof of remote termination. See the
+            <a href="../reports/workflow-durable-cancellation-20261013.md#partial-intent-fairness-follow-up">partial-intent fairness follow-up</a>.</li>
           <li><strong>Failed-runner persistence:</strong> ordinary failure and native,
             solve and branch checkpoint blocks retain the registered runner and
             original reason while selected write/snapshot failures retry after 250 ms.

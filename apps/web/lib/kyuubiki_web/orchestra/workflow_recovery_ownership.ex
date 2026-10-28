@@ -104,6 +104,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
     end)
 
     state
+    |> KyuubikiWeb.Orchestra.WorkflowCancellationHandoff.clear()
     |> KyuubikiWeb.Orchestra.WorkflowRecoveryScan.clear_completion_retries()
     |> KyuubikiWeb.Orchestra.WorkflowRecoveryScan.clear_registry_retry()
     |> Map.merge(%{

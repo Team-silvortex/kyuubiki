@@ -31,6 +31,9 @@ defmodule KyuubikiWeb.Jobs.ProgressEvent do
           emitted_at: DateTime.t() | nil
         }
 
+  @doc false
+  def message_max_bytes, do: @message_max_bytes
+
   @spec new(map()) :: {:ok, t()} | {:error, term()}
   def new(attrs) when is_map(attrs) do
     with {:ok, job_id} <- fetch_required_string(attrs, :job_id),

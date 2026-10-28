@@ -129,6 +129,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationLeaseTest do
     assert :ok = Store.access(f.id, {:bind, token, target(f)})
     retained = runtime(f)
     Fixture.restart_coordinator()
+    Probe.discard_startup_handoff()
     assert {:error, :stale_cancellation_delivery} = Store.access(f.id, {:authorize, token})
     assert runtime(f) == retained
   end
@@ -358,6 +359,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCancellationLeaseTest do
     Outage.eventually(fn -> :sys.get_state(Coordinator).lease_status == :owner end)
     # Drain the recovery scan while the test or TCP sweep owns the cancellation registry key.
     Outage.eventually(fn -> :sys.get_state(Coordinator).recovery_runs > before.recovery_runs end)
+    Probe.discard_startup_handoff()
     after_acquisition = :sys.get_state(Coordinator)
     assert Process.whereis(Coordinator) == pid
     assert after_acquisition.session_id == before.session_id

@@ -82,7 +82,7 @@ defmodule KyuubikiWeb.Api.SolverCompletionReceiptApiTest do
     pid = start_supervised!({ControlledSolverAgent, {self(), progress("completed")["progress"]}})
     configure_fake_agent_pool(await_fake_agent_port())
     job_id = submit_job()
-    assert_receive {:solver_request, ^pid, _request}
+    assert_receive {:solver_request, ^pid, _request}, 2_000
     payload = await_payload(job_id, &(&1["job"]["message"] == "agent attempt ended"))
     assert payload["job"]["status"] == "postprocessing"
     assert payload["job"]["progress"] < 1.0
@@ -114,7 +114,7 @@ defmodule KyuubikiWeb.Api.SolverCompletionReceiptApiTest do
     pid = start_supervised!({ControlledSolverAgent, {self(), progress("solving")["progress"]}})
     configure_fake_agent_pool(await_fake_agent_port())
     job_id = submit_job()
-    assert_receive {:solver_request, ^pid, _request}
+    assert_receive {:solver_request, ^pid, _request}, 2_000
     await_payload(job_id, &(&1["job"]["message"] == "agent attempt ended"))
     runners = Task.Supervisor.children(KyuubikiWeb.TaskSupervisor) -- existing_runners
     assert runners != []
@@ -141,7 +141,7 @@ defmodule KyuubikiWeb.Api.SolverCompletionReceiptApiTest do
     pid = start_supervised!({ControlledSolverAgent, {self(), progress("completed")["progress"]}})
     configure_fake_agent_pool(await_fake_agent_port())
     job_id = submit_job()
-    assert_receive {:solver_request, ^pid, _request}
+    assert_receive {:solver_request, ^pid, _request}, 2_000
     await_payload(job_id, &(&1["job"]["message"] == "agent attempt ended"))
     assert {:ok, before} = Store.get(job_id)
     drop = AnalysisCommitFault.reject_result(job_id)
