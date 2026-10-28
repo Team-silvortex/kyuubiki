@@ -451,6 +451,123 @@ fn validate_coverage_out_dir(out_dir: &str) -> RunnerResult<()> {
 mod tests {
     use super::*;
 
+    const CI: &str = include_str!("../../../../../.github/workflows/ci.yml");
+
+    fn ci_job(name: &str) -> String {
+        CI.replace("\r\n", "\n")
+            .split_once(&format!("\n  {name}:\n"))
+            .expect("CI job must exist")
+            .1
+            .split("\n\n  ")
+            .next()
+            .unwrap()
+            .to_owned()
+    }
+
+    fn ci_minutes(block: &str, key: &str) -> u32 {
+        block
+            .lines()
+            .find_map(|line| line.trim().strip_prefix(&format!("{key}: ")))
+            .expect("explicit CI budget must exist")
+            .parse()
+            .expect("CI budget must be a positive integer")
+    }
+
+    fn ci_browser_preparation(job: &str) -> u32 {
+        assert!(job.contains("runs-on: ubuntu-24.04"));
+        let deps = job
+            .split_once("- name: Install browser system dependencies\n")
+            .expect("system dependency installation must have its own step")
+            .1
+            .split("\n      - ")
+            .next()
+            .unwrap();
+        let browser = job
+            .split_once("- name: Install Chromium\n")
+            .expect("browser download must have its own step")
+            .1
+            .split("\n      - ")
+            .next()
+            .unwrap();
+        assert!(deps.contains("run: npx playwright install-deps chromium"));
+        assert!(browser.contains("run: npx playwright install chromium"));
+        assert!(!job.contains("--with-deps"));
+        let deps_budget = ci_minutes(deps, "timeout-minutes");
+        let browser_budget = ci_minutes(browser, "timeout-minutes");
+        assert!((1..=15).contains(&deps_budget));
+        assert!((1..=3).contains(&browser_budget));
+        deps_budget + browser_budget
+    }
+
+    #[test]
+    fn ci_desktop_preserves_suites_and_separates_preparation_from_test_budgets() {
+        let job = ci_job("desktop-gui-regression-suite");
+        let preparation = ci_browser_preparation(&job);
+        let matrix = job.split_once("      matrix:\n").unwrap().1;
+        let matrix = matrix.split_once("    steps:\n").unwrap().0;
+        let entries: Vec<_> = matrix.split("          - suite: ").skip(1).collect();
+        assert_eq!(entries.len(), 6);
+        for (entry, (name, target, test_budget, shard)) in entries.iter().zip([
+            ("desktop", "test-integration-desktop-gui", 20, None),
+            (
+                "workflow-1",
+                "test-integration-ui-workflow",
+                30,
+                Some("1/3"),
+            ),
+            (
+                "workflow-2",
+                "test-integration-ui-workflow",
+                30,
+                Some("2/3"),
+            ),
+            (
+                "workflow-3",
+                "test-integration-ui-workflow",
+                30,
+                Some("3/3"),
+            ),
+            ("mechanical", "test-integration-ui-mechanical", 20, None),
+            ("thermal", "test-integration-ui-thermal", 20, None),
+        ]) {
+            assert_eq!(entry.lines().next(), Some(name));
+            assert!(entry.contains(&format!("target: {target}\n")));
+            assert_eq!(ci_minutes(entry, "test_timeout"), test_budget);
+            assert!(ci_minutes(entry, "timeout") >= test_budget + preparation + 2);
+            if let Some(shard) = shard {
+                assert!(entry.contains(&format!("shard: {shard}\n")));
+            }
+        }
+        assert!(job.contains("timeout-minutes: ${{ matrix.timeout }}"));
+        assert!(job.contains(concat!(
+            "- name: Run the complete regression suite\n",
+            "        timeout-minutes: ${{ matrix.test_timeout }}\n"
+        )));
+        assert!(job.contains("KYUUBIKI_UI_TEST_SHARD: ${{ matrix.shard }}"));
+        assert!(job.contains("run: make \"$REGRESSION_TARGET\""));
+        assert!(job.contains("fail-fast: false"));
+        assert!(!job.contains("continue-on-error:"));
+        let gate = ci_job("desktop-gui-regression");
+        assert!(gate.contains("if: ${{ always() }}"));
+        assert!(gate.contains("needs: [desktop-gui-regression-suite]"));
+        assert!(gate.contains("run: test \"$SUITE_RESULT\" = success"));
+    }
+
+    #[test]
+    fn ci_preflight_separates_browser_preparation_and_test_deadlines() {
+        let job = ci_job("workflow-preflight");
+        let preparation = ci_browser_preparation(&job);
+        let test_step = job
+            .split_once("- name: Run workflow preflight\n")
+            .unwrap()
+            .1;
+        let test_budget = ci_minutes(test_step, "timeout-minutes");
+        assert_eq!(test_budget, 15);
+        assert!(ci_minutes(&job, "timeout-minutes") >= preparation + test_budget + 2);
+        assert!(test_step.contains("run: npm run check:workflow-preflight"));
+        assert!(!job.contains("continue-on-error:"));
+    }
+
     #[test]
     fn workflow_shards_cover_every_file_exactly_once() {
         let paths = ["a", "b", "c", "d", "e", "f", "g"];
