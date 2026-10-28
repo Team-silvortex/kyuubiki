@@ -89,11 +89,8 @@ pub(crate) fn evaluate_regressions(
     }
 
     for case in &comparison.cases {
-        if case.baseline_median_ms < config.min_baseline_median_ms {
-            continue;
-        }
-
         if let Some(threshold) = config.fail_on_median_regression_pct
+            && case.baseline_median_ms >= config.min_baseline_median_ms
             && case.median_delta_pct > threshold
         {
             failures.push(format!(
@@ -439,6 +436,52 @@ mod tests {
 
         assert_eq!(failures.len(), 1);
         assert!(failures[0].contains("RSS scopes differ"));
+    }
+
+    #[test]
+    fn timing_floor_does_not_disable_rss_regression_gate() {
+        let baseline = report(vec![result("short-case", "frame_2d")]);
+        let mut current = baseline.clone();
+        current.cases[0].median_ms = 2.0;
+        current.cases[0].peak_rss_kib = 2048;
+        let config = BenchmarkConfig {
+            fail_on_median_regression_pct: Some(25.0),
+            fail_on_rss_regression_pct: Some(20.0),
+            min_baseline_median_ms: 5.0,
+            ..BenchmarkConfig::default()
+        };
+
+        let comparison = compare_against_baseline(&current, &baseline);
+        let failures = evaluate_regressions(&config, &current, &comparison);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("short-case peak RSS regression +100.00%"));
+    }
+
+    #[test]
+    fn timing_floor_keeps_timing_and_memory_thresholds_independent() {
+        let baseline = report(vec![result("case", "frame_2d")]);
+        let mut current = baseline.clone();
+        current.cases[0].median_ms = 2.0;
+        let mut config = BenchmarkConfig {
+            fail_on_median_regression_pct: Some(25.0),
+            fail_on_rss_regression_pct: Some(20.0),
+            min_baseline_median_ms: 5.0,
+            ..BenchmarkConfig::default()
+        };
+        let comparison = compare_against_baseline(&current, &baseline);
+        assert!(evaluate_regressions(&config, &current, &comparison).is_empty());
+
+        config.min_baseline_median_ms = 1.0;
+        let failures = evaluate_regressions(&config, &current, &comparison);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("case median regression +100.00%"));
+
+        current.cases[0].peak_rss_kib = 2048;
+        let comparison = compare_against_baseline(&current, &baseline);
+        assert_eq!(
+            evaluate_regressions(&config, &current, &comparison).len(),
+            2
+        );
     }
 
     fn unique_temp_path(label: &str) -> PathBuf {

@@ -101,13 +101,21 @@ fn run() -> Result<(), String> {
         CaseIsolation::InProcess => build_in_process_report(&selected_ids, &config),
     };
 
-    let comparison = match &config.baseline_compare {
-        Some(path) => {
-            let baseline = load_baseline_report(path)?;
-            Some(compare_against_baseline(&report, &baseline))
-        }
-        None => None,
-    };
+    // Snapshot the input first: callers may reuse its path for the current report.
+    let baseline = config
+        .baseline_compare
+        .as_deref()
+        .map(load_baseline_report)
+        .transpose();
+
+    // Retain completed measurements even when comparison or regression gates fail.
+    if let Some(path) = &config.baseline_out {
+        let payload = serde_json::to_string_pretty(&report)
+            .map_err(|error| format!("failed to serialize benchmark report: {error}"))?;
+        write_report(path, "baseline report", &payload)?;
+    }
+
+    let comparison = baseline?.map(|baseline| compare_against_baseline(&report, &baseline));
 
     if let (Some(path), Some(comparison)) = (&config.compare_report_out, &comparison) {
         let payload = render_comparison_report(&report, comparison);
@@ -150,12 +158,6 @@ fn run() -> Result<(), String> {
             }
             process::exit(1);
         }
-    }
-
-    if let Some(path) = &config.baseline_out {
-        let payload = serde_json::to_string_pretty(&report)
-            .map_err(|error| format!("failed to serialize benchmark report: {error}"))?;
-        write_report(path, "baseline report", &payload)?;
     }
 
     Ok(())

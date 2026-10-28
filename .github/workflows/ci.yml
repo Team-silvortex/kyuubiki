@@ -72,7 +72,7 @@ jobs:
   rust:
     name: rust-test
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: workers/rust
@@ -117,15 +117,17 @@ jobs:
         working-directory: .
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/workers/rust/target
+        # Longer cases and sampling reduce millisecond-scale shared-runner jitter.
+        # Keep both revisions identical in workload, isolation and thresholds.
         run: >-
           cargo run --locked -q --manifest-path tmp/ci-benchmark-base/workers/rust/Cargo.toml
-          -p kyuubiki-benchmark -- --matrix core --profile medium --repeat 7
+          -p kyuubiki-benchmark -- --matrix core --profile large --repeat 31
           --case-isolation process --baseline-out tmp/ci-benchmark-baseline.json
       - name: Gate current performance against the paired baseline
         working-directory: .
         run: >-
           cargo run --locked -q --manifest-path workers/rust/Cargo.toml
-          -p kyuubiki-benchmark -- --matrix core --profile medium --repeat 7
+          -p kyuubiki-benchmark -- --matrix core --profile large --repeat 31
           --case-isolation process --baseline-out tmp/ci-benchmark-current.json
           --baseline-compare tmp/ci-benchmark-baseline.json
           --compare-report-out tmp/ci-benchmark-comparison.md

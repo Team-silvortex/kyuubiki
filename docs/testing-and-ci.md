@@ -458,20 +458,28 @@ agree with each other. Upgrading the product line does not relabel old evidence.
 
 The CI performance gate measures the PR base (or the previous push revision) and
 the current revision sequentially on the same runner, with the same pinned
-toolchain, `core/medium` cases, seven repeats, and per-case process isolation.
-It retains both reports, the comparison, and commit IDs. The existing 25% median
-time and 20% peak-RSS thresholds remain unchanged. New branches use the default
+toolchain, `core/large` cases, 31 repeats, and per-case process isolation. Larger
+workloads and more samples reduce the influence of brief shared-runner stalls;
+the Rust job has a 35-minute budget for tests plus both measurements. It retains
+both reports, the comparison, and commit IDs. Completed current measurements are
+written even when comparison loading or a regression gate fails; this does not
+turn a failed gate into success. If input and output paths coincide, the original
+baseline is loaded before writing the current report. The existing 25% median
+time and 20% peak-RSS thresholds remain unchanged. The 1-ms CI timing floor does
+not exempt short cases from the memory gate. New branches use the default
 branch as the base; comparing a revision against itself is rejected. This is an
 incremental regression gate, not a replacement for retained release benchmarks
 on qualified hardware. Historical measurements are not rewritten to match the
 current report schema or memory accounting mode.
+See the [sampling and gate follow-up](../reports/ci-benchmark-gate-20261028.md)
+for the observed CI failure, local controls and shared-runner limitations.
 
 Current GitHub Actions jobs are intentionally separated:
 
 - `web-test`
 - `rust-test`
   Runs Rust formatting, workspace tests, the `800` line-count audit, and the
-  medium benchmark regression gate.
+  large benchmark regression gate.
 - `dependency-audit`
   Should run `make audit-dependencies` when dependency or lockfile surfaces
   change, and before release branches are cut.
@@ -757,8 +765,8 @@ Current behavior notes:
 - `200k`, `300k`, `400k`, and `500k` are remote-first: CI checks the catalog
   shape, while timing evidence should be collected from `kyuubiki-lab` before
   adding checked baselines
-- cases under `5.0 ms` baseline median remain visible in reports but are not
-  treated as hard failures by default
+- cases under the default `5.0 ms` baseline median remain visible in reports but
+  are exempt only from the timing threshold; configured RSS gates still apply
 - the remote wrapper syncs the Rust workspace without `target/` and does not
   rely on checked-in server-specific runtime configuration files
 - `REPORT_ONLY=1` regenerates a local profile summary without SSH when it is
