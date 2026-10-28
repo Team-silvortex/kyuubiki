@@ -89,7 +89,7 @@ It runs a self-test first, then checks:
 
 - npm production lockfiles with `npm audit --omit=dev --package-lock-only`
 - Rust workspace and desktop-shell lockfiles with RustSec `cargo audit`
-- Hex retired-package checks with `mix hex.audit`
+- Hex package retirement and vulnerability checks with `mix hex.audit`
 - Hex locked-version vulnerability checks against the OSV `Hex` ecosystem
 
 The checked `package-lock.json` and `Cargo.lock` files for shipped frontend,
@@ -119,6 +119,14 @@ frames. The dependency audit contract requires an empty Hex mitigation list so
 future advisory exceptions cannot become an unnoticed baseline, and rejects
 the legacy Cowboy, Cowlib, Ranch, and Plug.Cowboy packages if they reappear in
 the lockfile.
+
+The Bandit dependency floor is 1.14.0, which includes the October 26, 2026
+upstream HTTP/1, HTTP/2 and WebSocket security fixes. Tests check the declared
+constraint, locked version and loaded application version together. Bounded
+loopback HTTP probes also reject bare CR/LF in chunk extensions and accept
+valid chunk formats through the real adapter with the production protocol
+limits. These probes are regression checks, not a complete resource-exhaustion
+qualification; live dependency audits remain required.
 
 The installed Orchestra takeover qualification still binds both release
 instances to loopback. It proves packaging, activation, lease fencing, process

@@ -50,4 +50,14 @@ defmodule KyuubikiWeb.HttpTransportSecurityTest do
 
     assert HttpTransportSecurity.descriptor()["legacy_adapter_dependencies"] == "removed"
   end
+
+  test "Bandit constraint and loaded lock retain the October 2026 security fixes" do
+    {:hex, :bandit, version, _, _, _, _, _} = Mix.Dep.Lock.read()[:bandit]
+    requirement = Keyword.fetch!(Mix.Project.config()[:deps], :bandit)
+
+    assert Version.match?(version, ">= 1.14.0")
+    assert Version.match?("1.14.0", requirement)
+    refute Version.match?("1.13.1", requirement)
+    assert to_string(Application.spec(:bandit, :vsn)) == version
+  end
 end

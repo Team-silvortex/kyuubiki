@@ -51,7 +51,7 @@ defmodule KyuubikiWeb.MixProject do
       {:exqlite, "~> 0.42.0"},
       {:postgrex, "~> 0.20"},
       {:plug, "~> 1.19"},
-      {:bandit, "~> 1.13.0"}
+      {:bandit, "~> 1.14.0"}
     ]
   end
 end
