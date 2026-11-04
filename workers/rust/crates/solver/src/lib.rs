@@ -294,6 +294,9 @@ impl MockSolver {
 mod tests;
 
 #[cfg(test)]
+mod ci_test_partition_tests;
+
+#[cfg(test)]
 mod scalar_plane_benchmark;
 
 #[cfg(test)]
