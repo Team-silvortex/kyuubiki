@@ -55,8 +55,9 @@ defmodule KyuubikiWeb.HttpTransportSecurityTest do
     {:hex, :bandit, version, _, _, _, _, _} = Mix.Dep.Lock.read()[:bandit]
     requirement = Keyword.fetch!(Mix.Project.config()[:deps], :bandit)
 
-    assert Version.match?(version, ">= 1.14.0")
-    assert Version.match?("1.14.0", requirement)
+    assert Version.match?(version, ">= 1.14.1")
+    assert Version.match?("1.14.1", requirement)
+    refute Version.match?("1.14.0", requirement)
     refute Version.match?("1.13.1", requirement)
     assert to_string(Application.spec(:bandit, :vsn)) == version
   end

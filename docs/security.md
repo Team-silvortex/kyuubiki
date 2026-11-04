@@ -120,8 +120,12 @@ future advisory exceptions cannot become an unnoticed baseline, and rejects
 the legacy Cowboy, Cowlib, Ranch, and Plug.Cowboy packages if they reappear in
 the lockfile.
 
-The Bandit dependency floor is 1.14.0, which includes the October 26, 2026
-upstream HTTP/1, HTTP/2 and WebSocket security fixes. Tests check the declared
+The Bandit dependency floor is 1.14.1, which includes the October 26, 2026
+upstream HTTP/1, HTTP/2 and WebSocket security fixes and the October 28 HTTP/2
+request-body memory amplification fix
+([GHSA-pxjf-g536-7r93 / CVE-2026-116078](https://github.com/mtrudel/bandit/security/advisories/GHSA-pxjf-g536-7r93)).
+Version 1.14.0 is explicitly excluded rather than added to an advisory ignore
+list. Tests check the declared
 constraint, locked version and loaded application version together. Bounded
 loopback HTTP probes also reject bare CR/LF in chunk extensions and accept
 valid chunk formats through the real adapter with the production protocol
