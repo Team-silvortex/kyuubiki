@@ -75,6 +75,15 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryScan do
     %{state | completion_retries: %{}}
   end
 
+  def missing_completion_runtime(state, job_id, :completion_retry) do
+    case Store.get(job_id) do
+      {:ok, %{status: status}} when status in @active -> schedule_completion_retry(state, job_id)
+      _ -> state
+    end
+  end
+
+  def missing_completion_runtime(state, _job_id, _reason), do: state
+
   def after_completion_block(state, job_id, reply) do
     case reply do
       {:error, {:workflow_recovery_blocked, :workflow_completion_checkpoint_invalid}} ->
@@ -92,34 +101,63 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryScan do
       {:error, :stale_analysis_result} ->
         schedule_completion_retry(state, job_id)
 
+      {:error, {:result_not_found, ^job_id}} ->
+        schedule_completion_retry(state, job_id)
+
       _ ->
         Ownership.after_write(state, reply)
     end
   end
 
-  def reconcile_terminal(job_id, terminal, recovery) do
-    update =
-      case terminal do
-        "completed" ->
-          %{job_id: job_id, stage: "completed", progress: 1.0}
+  def reconcile_terminal(
+        job_id,
+        %{"_workflow_recovery" => %{"state" => terminal} = recovery} = runtime
+      )
+      when terminal in ["completed", "failed", "cancelled", "recovery_blocked"] do
+    update = terminal_update(job_id, terminal, recovery)
 
-        "cancelled" ->
-          %{job_id: job_id, stage: "cancelled", progress: 1.0}
-
-        _ ->
-          %{
-            job_id: job_id,
-            stage: "failed",
-            progress: 1.0,
-            message: terminal_message(terminal, recovery)
-          }
-      end
-
-    case Store.apply_progress(update) do
+    case commit_runtime_state(job_id, runtime, update) do
       {:ok, _job} -> :ok
+      :already_terminal -> :ok
       error -> error
     end
   end
+
+  def block_legacy(job_id, runtime) do
+    update = %{
+      job_id: job_id,
+      stage: "failed",
+      progress: 1.0,
+      message: "workflow recovery blocked: legacy active job has no durable execution envelope"
+    }
+
+    commit_runtime_state(job_id, runtime, update)
+  end
+
+  defp commit_runtime_state(job_id, runtime, update) do
+    case Store.get(job_id) do
+      {:ok, %{status: status} = job} when status in @active ->
+        # The decision and the job must still describe the same stored pair at commit.
+        Store.apply_progress_with_result(update, job, runtime, runtime)
+
+      {:ok, _terminal_job} ->
+        :already_terminal
+
+      :error ->
+        {:error, {:job_not_found, job_id}}
+    end
+  end
+
+  defp terminal_update(job_id, terminal, _recovery) when terminal in ["completed", "cancelled"],
+    do: %{job_id: job_id, stage: terminal, progress: 1.0}
+
+  defp terminal_update(job_id, terminal, recovery),
+    do: %{
+      job_id: job_id,
+      stage: "failed",
+      progress: 1.0,
+      message: terminal_message(terminal, recovery)
+    }
 
   defp terminal_message(terminal, recovery) do
     event =
@@ -174,18 +212,32 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryScan do
   end
 
   defp recover(jobs, state, recover_job) do
-    {counts, next} =
-      Enum.reduce(jobs, {%{recovered: 0, blocked: 0, skipped: 0}, state}, fn job, {counts, acc} ->
-        {outcome, updated} = recover_job.(job.job_id, :process_restart, acc)
-        {Map.update!(counts, outcome, &(&1 + 1)), updated}
-      end)
+    {counts, next, incomplete_reason} =
+      Enum.reduce(
+        jobs,
+        {%{recovered: 0, blocked: 0, skipped: 0}, state, nil},
+        fn job, {counts, acc, incomplete_reason} ->
+          {outcome, updated} = recover_job.(job.job_id, :process_restart, acc)
 
-    complete? = Ownership.owner?(next) and is_nil(next.registry_retry)
+          {key, reason} =
+            case outcome do
+              {:unreconciled, reason} -> {:skipped, incomplete_reason || reason}
+              key -> {key, incomplete_reason}
+            end
+
+          {Map.update!(counts, key, &(&1 + 1)), updated, reason}
+        end
+      )
+
+    complete? =
+      Ownership.owner?(next) and is_nil(next.registry_retry) and is_nil(incomplete_reason)
 
     reason =
-      if next.registry_retry,
-        do: "workflow_runner_registry_unavailable",
-        else: Ownership.snapshot(next)["last_error"]
+      cond do
+        next.registry_retry -> "workflow_runner_registry_unavailable"
+        not Ownership.owner?(next) -> Ownership.snapshot(next)["last_error"]
+        true -> incomplete_reason
+      end
 
     next = %{
       next

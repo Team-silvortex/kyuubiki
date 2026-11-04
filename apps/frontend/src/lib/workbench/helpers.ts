@@ -1,6 +1,7 @@
 import { buildStudyModelPayload } from "@/lib/models/modeler";
 import { KYUUBIKI_PRODUCT_VERSION } from "@/lib/product-version";
 import { trackWorkbenchApiConfigurationChange } from "@/lib/api/auth-context";
+import { validateAssistantEndpoint } from "@/lib/assistant/model-connection";
 import {
   buildWorkbenchGovernanceConfig,
   normalizeWorkbenchGovernanceRuntime,
@@ -195,7 +196,7 @@ function sanitizeStoredSettings(input: StoredWorkbenchSettings): PersistedWorkbe
     directMeshEndpointsText: input.directMeshEndpointsText,
     directMeshSelectionMode: input.directMeshSelectionMode,
     assistantMode: input.assistantMode,
-    assistantApiBaseUrl: input.assistantApiBaseUrl,
+    assistantApiBaseUrl: input.assistantApiBaseUrl === undefined ? undefined : validateAssistantEndpoint(input.assistantApiBaseUrl).normalized ?? "",
     assistantModel: input.assistantModel,
     governanceConfig: input.governanceConfig,
   };
@@ -260,8 +261,15 @@ export function safeStorageGetResult(): WorkbenchSettingsReadResult {
 
     if (Object.keys(legacySecrets).length > 0) {
       writeInMemoryWorkbenchSecrets(legacySecrets);
+    }
+    const sanitizedSettings = sanitizeStoredSettings(parsedSettings);
+    if (parsedSettings.assistantApiBaseUrl !== undefined && !sanitizedSettings.assistantApiBaseUrl) {
+      // Never restore a legacy model key against a fallback/default endpoint.
+      writeInMemoryWorkbenchSecrets({ ...readInMemoryWorkbenchSecrets(), assistantApiKey: undefined });
+    }
+    if (Object.keys(legacySecrets).length > 0 || sanitizedSettings.assistantApiBaseUrl !== parsedSettings.assistantApiBaseUrl) {
       trackWorkbenchApiConfigurationChange(() => {
-        window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizeStoredSettings(parsedSettings)));
+        window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizedSettings));
       });
     }
   } catch {
@@ -309,7 +317,7 @@ export function sanitizeWorkbenchSettings(input: WorkbenchSettingsInput): Persis
     directMeshEndpointsText: normalized.directMeshEndpointsText,
     directMeshSelectionMode: input.directMeshSelectionMode,
     assistantMode: input.assistantMode,
-    assistantApiBaseUrl: input.assistantApiBaseUrl.trim(),
+    assistantApiBaseUrl: validateAssistantEndpoint(input.assistantApiBaseUrl).normalized ?? "",
     assistantModel: input.assistantModel.trim(),
     governanceConfig: buildWorkbenchGovernanceConfig({
       frontendRuntimeMode: normalized.frontendRuntimeMode,

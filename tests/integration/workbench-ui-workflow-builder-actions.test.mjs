@@ -40,6 +40,11 @@ async function openQualificationBuilder(page) {
   await catalogCard.locator('[data-workflow-catalog-action="open-builder"]').click();
   const builder = page.locator('[data-workflow-builder-shell="builder"]');
   await builder.waitFor({ state: "visible" });
+  // The shell mounts before its effect initializes the selected graph draft.
+  await page.waitForFunction(() =>
+    document.querySelector('[data-workflow-topology-view-target="nodes"]')
+      ?.getAttribute("data-workflow-topology-view-count") === "1",
+  );
   return builder;
 }
 
@@ -143,6 +148,8 @@ test("Workbench workflow builder mutates topology and inserts a control-flow pla
     const edgesView = builder.locator('[data-workflow-topology-view-target="edges"]');
     const nodesBefore = Number(await nodesView.getAttribute("data-workflow-topology-view-count"));
     const edgesBefore = Number(await edgesView.getAttribute("data-workflow-topology-view-count"));
+    assert.equal(nodesBefore, 1, "the fixture graph must be initialized before mutations");
+    assert.equal(edgesBefore, 0);
 
     await builder.locator('[data-workflow-topology-view-target="add"]').click();
     await builder.locator('[data-workflow-topology-kind="select"]').selectOption("transform");

@@ -96,6 +96,10 @@ fn busy_or_draining_owner_still_allows_pinned_durable_recovery() {
             "schema_version":"kyuubiki.agent-execution-admission/v1", "configured":true,
             "max_active_executions":1, "active_execution_count":if draining {0} else {1}
         });
+        descriptor["connection_access"] = serde_json::to_value(
+            kyuubiki_protocol::AgentNetworkAccessPolicy::default().connection_access(true),
+        )
+        .unwrap();
         if draining {
             descriptor["lifecycle"]["state"] = json!("quiescent");
             descriptor["lifecycle"]["accepting_new_work"] = json!(false);

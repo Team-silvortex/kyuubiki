@@ -1,4 +1,5 @@
 import type { AssetStoreEntry, AssetStoreEntryKind } from "@/lib/api";
+import { storeProjectEntryState } from "./store-catalog";
 import {
   addManifestEntry,
   manifestEntryKey,
@@ -13,6 +14,7 @@ export type WorkspaceStoreCommandErrorCode =
   | "manifest_unreadable"
   | "manifest_write_failed"
   | "invalid_asset"
+  | "entry_conflict"
   | "entry_missing";
 
 export class WorkspaceStoreCommandError extends Error {
@@ -30,6 +32,9 @@ export function stageWorkspaceStoreEntry(
   entry: AssetStoreEntry,
 ): WorkspaceStoreManifest {
   const current = readWritableManifest(projectId);
+  if (storeProjectEntryState(entry, current.entries) === "conflict") {
+    throw new WorkspaceStoreCommandError("entry_conflict", "Another source or version is already staged. Remove it explicitly before replacement.");
+  }
   const nextManifest = addManifestEntry(current, entry);
   if (!nextManifest) {
     throw new WorkspaceStoreCommandError("invalid_asset", "Store asset entry is invalid.");

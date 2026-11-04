@@ -14,7 +14,7 @@ pub const ALPHA: [f64; 2] = [10e-6, 20e-6];
 impl Case {
     pub fn id(self) -> String {
         format!(
-            "{}-r{}-ref{:.2}-rise{:.0}",
+            "{}-r{}-ref{:.2}-rise{}",
             self.material, self.refinement, self.reference, self.rise
         )
     }

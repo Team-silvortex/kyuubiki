@@ -1,6 +1,6 @@
 use kyuubiki_protocol::{
-    AgentLifecycleDescriptor, RPC_VERSION, RpcMethod, RpcProtocolDescriptor, SOLVER_RPC_PROTOCOL,
-    validate_agent_lifecycle_descriptor,
+    AgentConnectionAccess, AgentLifecycleDescriptor, RPC_VERSION, RpcMethod, RpcProtocolDescriptor,
+    SOLVER_RPC_PROTOCOL, validate_agent_lifecycle_descriptor,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -17,9 +17,11 @@ pub(super) fn policy() -> Value {
     json!({
         "schema_version":"kyuubiki.direct-mesh-selection/v1",
         "scope":"new_legacy_solver_dispatch_only",
-        "required_metadata":["protocol", "lifecycle", "execution_admission", "runtime.health_score"],
+        "required_metadata":["protocol", "connection_access", "lifecycle", "execution_admission", "runtime.health_score"],
         "missing_metadata":"ineligible_not_implicitly_ready",
-        "eligibility":"supported_method_accepting_lifecycle_available_execution_capacity",
+        "eligibility":"supported_method_connection_control_accepting_lifecycle_available_execution_capacity",
+        "connection_access":"current_discovery_connection_observation_not_authority_or_lease",
+        "connection_policy_change_after_discovery":"agent_enforces_again_no_cross_agent_replay",
         "health_score":"ranking_after_eligibility_not_admission_or_recovery_proof",
         "active_count":"maximum_of_lifecycle_and_admission_snapshots",
         "fresh_discovery_per_dispatch":true,
@@ -48,6 +50,13 @@ pub(super) fn eligible_score(descriptor: &Value, method: &str) -> Result<u8, &'s
         serde_json::from_value(json!(method)).map_err(|_| "unsupported_method")?;
     if !method.starts_with("solve_") || !protocol.methods.contains(&requested) {
         return Err("unsupported_method");
+    }
+    let access: AgentConnectionAccess =
+        serde_json::from_value(descriptor["connection_access"].clone())
+            .map_err(|_| "invalid_connection_access")?;
+    access.validate()?;
+    if !access.control_allowed {
+        return Err("connection_control_not_permitted");
     }
     // Parse the explicit field: AgentDescriptor's compatibility default is not readiness proof.
     let lifecycle: AgentLifecycleDescriptor =

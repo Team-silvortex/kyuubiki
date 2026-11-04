@@ -485,9 +485,11 @@ check-contracts-validation-qualification:
 	@$(ENTRYPOINT) check-contracts-validation-qualification --self-test
 	@$(ENTRYPOINT) check-contracts-validation-qualification --verify-report releases/usability-evidence/2.13.9/contracts-validation-qualification.json
 
+DESKTOP_UI_VALIDATION_REPORT ?= releases/usability-evidence/current/desktop-ui-validation.json
+
 check-desktop-ui-validation:
 	@$(ENTRYPOINT) check-desktop-ui-validation --self-test
-	@$(ENTRYPOINT) check-desktop-ui-validation --verify-report releases/usability-evidence/3.2.0/desktop-ui-validation-recovery.json
+	@$(ENTRYPOINT) check-desktop-ui-validation --verify-report "$(DESKTOP_UI_VALIDATION_REPORT)"
 
 check-workbench-validation-qualification:
 	@$(ENTRYPOINT) check-workbench-validation-qualification --self-test

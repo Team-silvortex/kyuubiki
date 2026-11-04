@@ -1,4 +1,6 @@
-use kyuubiki_protocol::{AGENT_ALLOWED_PEER_IPS_ENV, AgentNetworkAccessPolicy};
+use kyuubiki_protocol::{
+    AGENT_ALLOWED_PEER_IPS_ENV, AGENT_TRUSTED_LAN_CONTROL_ENV, AgentNetworkAccessPolicy,
+};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -6,15 +8,17 @@ use std::path::{Path, PathBuf};
 pub(crate) fn network_policy(
     env: &HashMap<String, String>,
 ) -> Result<AgentNetworkAccessPolicy, String> {
-    AgentNetworkAccessPolicy::parse(env.get(AGENT_ALLOWED_PEER_IPS_ENV).map(String::as_str))
+    AgentNetworkAccessPolicy::parse(env.get(AGENT_ALLOWED_PEER_IPS_ENV).map(String::as_str))?
+        .with_trusted_lan_control(env.get(AGENT_TRUSTED_LAN_CONTROL_ENV).map(String::as_str))
 }
 
 pub(crate) fn network_config_line(env: &HashMap<String, String>) -> String {
     match network_policy(env) {
         Ok(policy) => format!(
-            "agent-network-config: {} (explicit-peers={}; apply=process_restart; running-policy=not-observed; authentication=false)",
+            "agent-network-config: {} (explicit-peers={}; lan-control={}; apply=process_restart; running-policy=not-observed; authentication=false)",
             policy.mode(),
-            policy.allowed_peer_ips().len()
+            policy.allowed_peer_ips().len(),
+            policy.control_mode()
         ),
         Err(error) => format!(
             "agent-network-config: invalid ({error}; existing services unchanged; local Agent start/restart blocked)"
@@ -111,6 +115,25 @@ mod tests {
         assert!(summary.contains("explicit-peers=1"));
         assert!(summary.contains("running-policy=not-observed"));
         assert!(summary.contains("authentication=false"));
+        assert!(summary.contains("lan-control=discovery_only"));
+        let mut trusted = env.clone();
+        trusted.insert(AGENT_TRUSTED_LAN_CONTROL_ENV.into(), "true".into());
+        assert!(network_config_line(&trusted).contains("lan-control=trusted_lan_control"));
+        assert!(network_config_line(&trusted).contains("authentication=false"));
+    }
+
+    #[test]
+    fn invalid_lan_control_rejects_before_creating_managed_storage() {
+        let root = std::env::temp_dir().canonicalize().unwrap().join(format!(
+            "kyuubiki-lan-control-storage-{}",
+            std::process::id()
+        ));
+        assert!(!root.exists());
+        let env = HashMap::from([(AGENT_TRUSTED_LAN_CONTROL_ENV.into(), "secret-value".into())]);
+        let error = agent_environment(&root, 5001, &env).unwrap_err();
+        assert!(error.contains(AGENT_TRUSTED_LAN_CONTROL_ENV));
+        assert!(!error.contains("secret-value"));
+        assert!(!root.exists());
     }
 
     #[test]

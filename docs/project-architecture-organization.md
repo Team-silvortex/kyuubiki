@@ -180,6 +180,50 @@ For a new constrained operator or a new solve path:
    responsibility. Dated reports retain measured scope, exclusions and costs;
    the overview stays a navigation map, not an accumulating experiment log.
 
+## Workflow Recovery Source And Test Placement
+
+The [recovery ownership map](current-architecture-map.md#workflow-recovery-ownership)
+names existing Orchestra components. Do not add another service, generic retry
+framework or per-feature facade when the current boundary already owns the work.
+
+1. Keep coordinator calls/messages and state routing in the coordinator. Move
+   new policy into its existing scan, ownership, dispatch, completion or failure
+   owner rather than extending the coordinator toward the line limit.
+2. Keep envelope/checkpoint validators focused on contract checks. Store helpers
+   compose those checks with the owning lease and exact job/result snapshot;
+   they must not publish progress and runtime evidence as independent writes.
+3. Split tests by failure boundary: admission, dispatch, node progress,
+   completion, cancellation, terminal reconciliation and legacy recovery.
+   Shared fixtures belong in `apps/web/test/support`, not production modules.
+4. Exercise stale reads, independent terminal winners, deleted records, failed
+   commits and a healthy sibling. A completed scan and a completed job are
+   different assertions. Test ordinary jobs without workflow records explicitly.
+5. Run SQLite transaction/race cases and isolated memory/JSON persistence cases
+   on their applicable backends. Do not report skips as passes or treat local
+   process/transaction tests as physical power-loss or multi-host qualification.
+6. Extend the existing Orchestra operational evidence shard and dated report.
+   Keep source ownership in the map, protocol semantics in `docs/protocols.md`,
+   retention rules in the HTML lifecycle chapter, and run totals in reports.
+
+## Store Source And Test Placement
+
+Keep the Store in Workbench. The [ownership map](current-architecture-map.md#workspace-store-ownership)
+names its existing presentation, catalog, command, manifest and backend owners.
+
+1. Keep filtering and reference normalization in the current pure helpers.
+   GUI and PWDT must share commands and conflict rules, not duplicate writes.
+2. Keep source/API adaptation behind `store-backend-service`; components render
+   observed capabilities and failures, not invented login/install success.
+3. Keep identity and commerce policy with the configured service. Package
+   verification, installation and Agent execution remain distinct native gates.
+   Do not implement a second account system or require vendor login for self-hosting.
+4. Put pure command/catalog tests in the frontend workflow tests and browser
+   journeys in `tests/integration`. Extend the existing GUI manifest and tensor
+   evidence. Real identity/download/install journeys require separate evidence.
+
+The [HTML handoff](operator-store-integration.html) owns proposed backend fields
+and pending integrations; this placement guide should not repeat that API spec.
+
 ## Line-Count Rule
 
 Source files should stay below 800 lines and documentation files should stay
@@ -264,6 +308,13 @@ frontend build/dev servers are idle too. Tracked output and symlinked roots
 reject cleanup. Top-level tools, dependency libraries, release products and
 runtime data are retained. Subsequent tests may need to relink.
 
+Check process ownership separately from Cargo locks. A finished or interrupted
+test may leave an Agent or BEAM child alive after its parent exits. Confirm the
+test command, parent, working directory and owned log before stopping exact PIDs;
+age or a process name alone is not authorization. Recheck released test ports and
+the installed service listeners. Do not delete the test's data until its owner
+and retention needs are known. Stopping leftovers does not fix the harness leak.
+
 Preview bytes are logical file sizes, not promised physical recovery: hard links,
 APFS accounting and unrelated activity can change the observed `du`/`df` delta.
 Never back up caches into the same repository before deleting them.
@@ -289,10 +340,14 @@ Repository cleanup does not uninstall desktop apps or manage installed runtime
 data. Use Installer lifecycle/storage operations for those separate locations.
 Container build contexts exclude temporary research outputs and local env files.
 
-The [October 23 organization record](../reports/architecture-disk-organization-20261023.md)
-records this pass's measured cleanup and preserved work. The
+The [November 4 organization record](../reports/architecture-disk-organization-20261104.md)
+records the latest measured cleanup and preserved work. The
+[October 28 record](../reports/architecture-disk-organization-20261028.md),
+[October 23 record](../reports/architecture-disk-organization-20261023.md) and
 [October 18 record](../reports/architecture-disk-organization-20261018.md)
-remains historical evidence, not the current disk inventory.
+remain historical evidence, not the current disk inventory. Cleanup totals are
+observations, not a standing storage budget: retained dependencies and release
+caches explain most remaining build output, and test linking grows it again.
 
 ## Refactor Priority
 

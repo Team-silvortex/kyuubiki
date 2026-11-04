@@ -2,9 +2,10 @@ use crate::{
     RpcCallOutcome, SdkError, SdkResult,
     solver_rpc_wire::{self, Reply, invalid},
 };
+use kyuubiki_agent_transport::SocketIo;
 use serde_json::{Value, json};
 use std::{
-    io::{self, Read, Write},
+    io::{self, Write},
     net::{TcpStream, ToSocketAddrs},
     sync::atomic::{AtomicU64, Ordering},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
@@ -75,6 +76,7 @@ pub(crate) fn call_identified(
     limits: &SolverRpcLimits,
     method: &str,
     params: Value,
+    security: Option<&crate::AgentApiSecurity>,
 ) -> SdkResult<(String, RpcCallOutcome)> {
     limits.validate()?;
     let id = next_id()?;
@@ -99,10 +101,14 @@ pub(crate) fn call_identified(
             Err(error) => last = Some(error),
         }
     }
-    let mut stream = connected.ok_or_else(|| {
+    let stream = connected.ok_or_else(|| {
         last.map(SdkError::from)
             .unwrap_or_else(|| invalid("RPC host has no addresses"))
     })?;
+    let mut stream = match security {
+        Some(security) => security.connect(stream, remaining(deadline, limits.io_timeout)?)?,
+        None => stream.into(),
+    };
     let length =
         u32::try_from(payload.len()).map_err(|_| invalid("RPC request exceeds wire length"))?;
     write_until(
@@ -176,7 +182,7 @@ fn io_error(error: io::Error) -> SdkError {
 }
 
 fn read_until(
-    stream: &mut TcpStream,
+    stream: &mut impl SocketIo,
     mut bytes: &mut [u8],
     deadline: Instant,
     idle: Duration,
@@ -194,7 +200,7 @@ fn read_until(
 }
 
 fn write_until(
-    stream: &mut TcpStream,
+    stream: &mut impl SocketIo,
     mut bytes: &[u8],
     deadline: Instant,
     idle: Duration,

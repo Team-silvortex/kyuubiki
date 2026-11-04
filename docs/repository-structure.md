@@ -28,14 +28,31 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
   desktop shells.
 - `scripts/`
   Host-native launch and workflow entry points.
+- `make/`
+  Grouped build, verification and maintenance targets; the root Makefile only
+  includes these modules.
+- `config/`
+  Shared manifests and machine-readable topology, matrix, tensor and validation
+  contracts. Host-local secrets/configuration do not belong in tracked manifests.
+- `language-packs/`
+  Packaged locale data, separate from runtime code and downloaded local caches.
 - `docs/`
   Architecture, development, and project-shape documentation.
+- `reports/`
+  Deliberately retained, scoped experiment and investigation records, not every
+  temporary test log.
+- `evidence/` and `releases/`
+  Reference evidence, qualification records, snapshots and release indexes.
+  Historical evidence is not obsolete merely because its version is older.
 - `tests/`
   Cross-process and repository-level smoke coverage that spans multiple apps.
 - `tmp/`
   Local runtime state, SQLite files, and logs. Never treat this as source.
 - `dist/`
   Generated portable release scaffolds.
+- `target/`
+  Shared desktop build cache and generated artifacts. Runtime crates also use
+  `workers/rust/target`; neither location is source.
 
 See also:
 
@@ -53,6 +70,7 @@ See also:
 - result browsing
 - immersive 3D editing
 - workflow-focused browser client
+- project-scoped Store, with GUI/PWDT commands shared behind the backend adapter
 - `src/components/workbench` for domain surfaces
 - `src/components/ui` for reusable UI primitives
 
@@ -70,6 +88,8 @@ See also:
 - result chunk APIs
 - watchdog and health surfaces
 - distributed agent routing and registration
+- self-hosted catalog and package-distribution service surfaces, not the GUI or
+  a second Team Silvortex account system
 - `results/` for result persistence backends
 - `storage/` for repo modules and persisted record structs
 - `playground/` as the runtime/agent integration boundary
@@ -148,6 +168,9 @@ for the crate-by-crate map.
 
 Rust tests remain colocated with crates or under crate-local `tests/`
 directories.
+For the complete current crate ownership table, use the
+[runtime data-plane map](current-architecture-map.md#runtime-data-plane) and
+Cargo manifests rather than extending this directory summary into a second map.
 
 ## Repository-Level Tests
 

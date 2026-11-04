@@ -5,9 +5,19 @@ use std::fs;
 use support::RuntimeFixture;
 
 const KEY: &str = "KYUUBIKI_AGENT_ALLOWED_PEER_IPS";
+const CONTROL_KEY: &str = "KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL";
 
 #[test]
 fn invalid_network_restart_preserves_existing_service_incarnations_and_records() {
+    rejects_restart_without_stopping_services(KEY, "*");
+}
+
+#[test]
+fn invalid_lan_control_restart_preserves_existing_service_incarnations_and_records() {
+    rejects_restart_without_stopping_services(CONTROL_KEY, "not-a-boolean");
+}
+
+fn rejects_restart_without_stopping_services(key: &str, value: &str) {
     let runtime = RuntimeFixture::new();
     runtime.success("start-local");
     let pids: Vec<_> = (0..4).map(|index| runtime.pid(index)).collect();
@@ -20,7 +30,7 @@ fn invalid_network_restart_preserves_existing_service_incarnations_and_records()
     runtime.set_service_args("agent", &["--exit"]);
     let result = runtime
         .command("restart-local")
-        .env(KEY, "*")
+        .env(key, value)
         .output()
         .unwrap();
     assert!(
@@ -44,7 +54,7 @@ fn invalid_network_restart_preserves_existing_service_incarnations_and_records()
             fs::read(runtime.pid_path(index).with_extension("process.json")).unwrap()
         );
     }
-    assert!(RuntimeFixture::render(&result).contains(KEY));
+    assert!(RuntimeFixture::render(&result).contains(key));
     assert_eq!(
         fs::read_to_string(retained).unwrap(),
         "must survive rejected configuration"
@@ -81,6 +91,7 @@ fn invalid_network_settings_do_not_hide_status_or_prevent_explicit_stop() {
     let status = runtime
         .command("status")
         .env(KEY, "secret.example.invalid")
+        .env(CONTROL_KEY, "secret-control-value")
         .output()
         .unwrap();
     let rendered = RuntimeFixture::render(&status);
@@ -89,7 +100,12 @@ fn invalid_network_settings_do_not_hide_status_or_prevent_explicit_stop() {
     assert!(rendered.contains("orchestrator: running"));
     assert!(rendered.contains("frontend: running"));
     assert!(!rendered.contains("secret.example.invalid"));
-    let stop = runtime.command("stop").env(KEY, "*").output().unwrap();
+    assert!(!rendered.contains("secret-control-value"));
+    let stop = runtime
+        .command("stop")
+        .env(CONTROL_KEY, "*")
+        .output()
+        .unwrap();
     assert!(stop.status.success(), "{}", RuntimeFixture::render(&stop));
     runtime.assert_stopped();
 }
@@ -102,6 +118,7 @@ fn explicit_network_config_is_reported_without_claiming_it_is_running_policy() {
     let start = runtime
         .command("start-local")
         .env(KEY, "192.0.2.1,::ffff:192.0.2.1")
+        .env(CONTROL_KEY, "true")
         .output()
         .unwrap();
     let rendered = RuntimeFixture::render(&start);
@@ -109,6 +126,7 @@ fn explicit_network_config_is_reported_without_claiming_it_is_running_policy() {
     assert!(rendered.contains("explicit-peers=1"));
     assert!(rendered.contains("running-policy=not-observed"));
     assert!(rendered.contains("authentication=false"));
+    assert!(rendered.contains("lan-control=trusted_lan_control"));
     for (index, pid) in pids.iter().enumerate() {
         assert_eq!(*pid, runtime.pid(index));
     }
@@ -123,6 +141,7 @@ fn orchestrator_only_start_does_not_validate_an_unlaunched_agent_policy() {
         .command("start-local")
         .env("KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY", "true")
         .env(KEY, "*")
+        .env(CONTROL_KEY, "invalid")
         .output()
         .unwrap();
     assert!(

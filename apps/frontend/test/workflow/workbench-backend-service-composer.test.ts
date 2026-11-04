@@ -24,7 +24,10 @@ function createFakeRuntimeClient(calls: string[]): RuntimeApiClient {
     },
     fetchAssetStore: async (query) => {
       calls.push(`store:${query?.kind ?? "all"}`);
-      return { entries: [], sources: [], summary: { entry_count: 0, kinds: {}, sources: {} } } as never;
+      return { entries: [{
+        id: "solve.bar_1d", kind: "operator", title: "Store entry", source_id: "test",
+        source_kind: "builtin", tags: [], install: { mode: "stage", requires_download: false },
+      }], sources: [], summary: { entry_count: 1, kinds: {}, sources: {} } } as never;
     },
     fetchAssetStoreEntry: async (kind, entryId) => {
       calls.push(`store-entry:${kind}:${entryId}`);
@@ -95,7 +98,7 @@ test("runtime-backed service composer routes services through one runtime client
     "history",
     "catalog",
     "store:operator",
-    "store-entry:operator:solve.bar_1d",
+    "store:operator",
     "workflow:wf-a",
     "job:job-a",
     "job:job-b",

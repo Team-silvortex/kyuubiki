@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+kyuubiki-agent-transport = { path = "../agent-transport" }
+zeroize = "1.8"
 ctrlc = { version = "3.5.2", features = ["termination"] }
 fs2 = "0.4"
 getrandom = "0.4"
@@ -18,6 +20,7 @@ serde_json = "1.0"
 sha2 = "0.10"
 
 [dev-dependencies]
+rcgen = "0.14"
 kyuubiki-operator-sdk = { path = "../operator-sdk" }
 
 [target.'cfg(unix)'.dependencies]

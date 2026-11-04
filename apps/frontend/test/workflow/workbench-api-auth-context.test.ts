@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { buildWorkbenchApiAuthHeaders, captureWorkbenchApiAuthority } from "@/lib/api/auth-context";
 import { writeInMemoryWorkbenchSecrets } from "@/lib/workbench/workbench-secrets";
+import { configureAgentApiAccess, clearAgentApiAccess } from "@/lib/api/agent-api-access";
 
 function installWindow(settings: Record<string, unknown> | null) {
   const previousWindow = globalThis.window;
@@ -18,6 +19,19 @@ function installWindow(settings: Record<string, unknown> | null) {
     globalThis.window = previousWindow;
   };
 }
+
+test("native Agent credential replacement invalidates pending direct requests", () => {
+  const restore = installWindow({ frontendRuntimeMode:"direct_mesh_gui", backendApiBaseUrl:"https://gateway.example" });
+  try {
+    const pending = captureWorkbenchApiAuthority("/api/direct-mesh/tasks/inspect");
+    configureAgentApiAccess({ endpoint:"localhost:5001", serverName:"localhost", caPem:"-----BEGIN CERTIFICATE-----\nZmFrZQ==\n-----END CERTIFICATE-----", token:"test-only-token-01234567890123456789" }, "https://gateway.example");
+    assert.equal(pending(), false);
+    const secured = captureWorkbenchApiAuthority("/api/direct-mesh/tasks/inspect");
+    assert.equal(secured(), true);
+    clearAgentApiAccess();
+    assert.equal(secured(), false);
+  } finally { clearAgentApiAccess(); restore(); }
+});
 
 test("API auth context stays empty outside browser GUI state", () => {
   const previousWindow = globalThis.window;

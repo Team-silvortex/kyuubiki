@@ -246,6 +246,7 @@
       "workers/rust/crates/script-runner/src/desktop_ui_validation.rs",
       "releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json",
       "releases/usability-evidence/3.2.0/desktop-ui-validation-recovery.json",
+      "releases/usability-evidence/current/desktop-ui-validation.json",
       "releases/usability-evidence/3.2.0/macos-installed-recovery-startup.json",
       "releases/usability-evidence/3.2.0/macos-pwdt-service-recovery.json",
       "tests/manual/pwdt-macos-service-recovery.py",

@@ -119,6 +119,19 @@ one-second sleep to each short job. A blocked heartbeat write is also bounded.
 
 ## Native Execution Capacity And Orphaned Work
 
+Native LAN source-IP permission grants discovery, not task control, by default.
+Only ping and the two Agent description methods pass without the separate
+`KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL=true` host setting. All execution, durable
+admission, result retrieval, list/cancel and package cleanup calls otherwise fail
+before dispatch with `agent_lan_control_requires_explicit_trust`; this also applies
+inside recovery capacity. Existing LAN deployments must explicitly opt in after
+reviewing their network boundary. Loopback behavior is unchanged and drain/resume
+remain loopback-only even with explicit trust. The opt-in is not caller identity,
+TLS or one-Orchestra authentication. A restart applies/revokes policy and closes
+old sockets without deleting saved receipts or authorizing task replay. Installer
+and managed-runtime preflight reject malformed settings before stopping services.
+See the [runtime guide](book-ch04-runtime-modes.html#native-agent-ingress).
+
 Native TCP ingress is bounded separately from execution admission. The
 `request_ingress` policy (`kyuubiki.agent-request-ingress/v1`) publishes the active
 connection/raw-request-byte counts and effective limits in describe and heartbeat
@@ -161,14 +174,62 @@ response lease is dropped, including failure and cancellation. Ping, inspection
 and lifecycle controls do not consume execution slots. This is not a limit on
 TCP connections, request bytes, or every background thread.
 
-The native direct-Mesh gateway checks explicit protocol/method support, accepting
-lifecycle and available capacity before ranking new legacy dispatch candidates.
+The native direct-Mesh gateway checks explicit protocol/method support, current
+connection control permission, accepting lifecycle and available capacity before
+ranking new legacy dispatch candidates. Native `describe_agent` replies include
+`connection_access` (`kyuubiki.agent-connection-access/v1`), computed from the
+socket's peer scope and host-owned policy, never request claims. The three modes
+are `host_loopback`, `discovery_only` and `trusted_lan_control`; all explicitly
+report `authenticated=false` and `encrypted=false`. This observation is not
+published in shared descriptors, registration or heartbeat metadata. Missing or
+inconsistent access metadata is ineligible (`invalid_connection_access`); valid
+discovery-only access is `connection_control_not_permitted`. Upgrade the native
+Agent and gateway together: older Agents without this field are not implicitly
+ready for automatic new-work selection.
+
 Its `kyuubiki.direct-mesh-selection/v1` policy describes a fresh read-only snapshot,
 not a reserved execution lease or authentication. Separately observed lifecycle and
 admission counts use their maximum. Final admission stays Agent-local; a dispatch
-failure never triggers cross-peer retry. Pinned durable inspection/list/cancel bypass
+failure, including permission revocation after discovery, never triggers cross-peer
+retry. The actual request connection must independently pass the Agent gate.
+Pinned durable inspection/list/cancel bypass
 new-work selection, so draining or saturated execution slots do not themselves block
-recovery queries. Ingress capacity and transport availability remain separate limits.
+recovery queries. They do not bypass source-IP, LAN-control or owner fences.
+Ingress capacity and transport availability remain separate limits. See the
+[connection-selection regression](../reports/agent-connection-selection-20261028.md)
+for local native-process evidence, not authenticated multi-host qualification.
+
+The generic Elixir TaskIR client canonicalizes only the outer parameter keys and
+atom mode values to their JSON representation before capability routing, permission
+probing and journal admission. Atom/string key collisions are rejected locally as
+`request_encoding_failed`, even when their values match. Custom parameter structs
+and non-string/non-atom envelope keys are rejected rather than allowing a custom
+encoder to redefine the control envelope. Embedded task/model payloads are not
+recursively copied or rewritten. See the
+[parameter-boundary regression](../reports/agent-taskir-parameter-boundary-20261104.md).
+
+Orchestra also probes connection access before dispatching new solver or
+execute-mode TaskIR requests to non-literal-loopback targets. This includes
+hostnames such as `localhost`; only strict loopback IP literals retain the direct
+path. Each probe is a fresh `describe_agent` with empty parameters and a separate
+correlation ID, without task inputs or job metadata. The reply budget is at most
+1 MiB and the deadline at most 1500 ms, further bounded by the configured request
+timeout and any remaining capacity-retry budget. Registration metadata cannot
+substitute for this connection observation. Missing, inconsistent, unknown or
+denied access is ineligible; older remote Agents require a matching upgrade.
+
+The probe precedes dispatch progress, registry ownership claim and dispatch-journal
+reservation. An ineligible candidate can be skipped because no computation was
+sent, and is excluded from capacity retries in that call. A discovery-only Agent
+is reachable, not unhealthy. Capacity-budget expiry remains a local
+`agent_capacity_timeout`, not a peer outage. Cancellation observed during probing
+stops selection even when the probe fails; controller authorization is checked
+again before dispatch. A later task performs its own probe rather than trusting
+cached access. This does not authorize retry after an actual execution request,
+replace final Agent-side admission, or change pinned recovery/cleanup routing.
+See the [Orchestra preflight regression](../reports/orchestra-connection-preflight-20261028.md)
+for local simulated-TCP and real-journal evidence, not authenticated identity or
+multi-host acceptance.
 
 A full Agent rejects new work with `agent_at_capacity` before execution, rather
 than relying exclusively on Orchestra's in-memory scheduling ledger. Descriptor
@@ -178,14 +239,34 @@ count and admission/release boundaries. Configure Orchestra's declared endpoint
 capacity no higher than this native limit. The control plane does not yet adopt
 the native limit automatically; a lower declared limit can underutilize an Agent.
 
-Orchestra treats this specific rejection as non-admission, not a failed accepted
-computation. It tries another eligible endpoint or waits in bounded 50 ms retry
+Orchestra treats this specific rejection as non-admission only when no progress
+or heartbeat preceded it and no task failure receipt accompanies it. It is not a
+failed accepted computation. It tries another eligible endpoint or waits in bounded 50 ms retry
 intervals, without marking a full Agent unhealthy. One admission-wait deadline
 starts at the first native capacity rejection and uses the existing queue timeout;
 expiry returns `agent_capacity_timeout`. Existing transport deadlines still bound
 individual RPCs. Every dispatch rechecks current authorization. A capacity retry
 does not waive checkpoint-required policy for uncertain transport failure or
 accepted execution, and does not reset the workflow execution deadline.
+
+A contradictory `agent_at_capacity` or `agent_lan_control_requires_explicit_trust`
+reply after progress/heartbeat (or carrying an operator-task failure receipt) is
+a protocol conflict, not proof of non-admission. Transport records
+`contradictory_non_admission`; legacy recovery reports
+`agent_non_admission_conflict` and forbids automatic cross-Agent retry even with
+idempotent or verified-checkpoint hints. Managed TaskIR keeps `outcome_unknown`
+in the existing dispatch journal and retains its replay fence after journal reopen.
+This needs only one per-request boolean, not retained progress history.
+
+A well-formed LAN denial without those contradictions records `not_dispatched`
+and preserves the original permission error. Unlike capacity rejection, it does
+not select another Agent or wait/retry automatically; deployment policy requires
+explicit correction. Arbitrary errors, text, or `dispatched=false` details cannot
+claim this status. A sealed unknown observation or failed journal acknowledgement
+cannot be downgraded by a late denial. These are response-consistency rules within
+the existing trusted transport boundary, not authentication or a receipt proving
+the original task completed. See the
+[non-admission regression](../reports/agent-non-admission-sequence-20261028.md).
 
 A failed heartbeat write marks cancellation on that specific execution guard,
 not on a reusable request/job id. Cooperative boundaries check it before TaskIR

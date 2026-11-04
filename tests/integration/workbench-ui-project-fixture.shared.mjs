@@ -30,14 +30,22 @@ export async function usingWorkbench(run) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
   const page = await context.newPage();
   const errors = [];
+  const navigations = [];
+  const reloadWarnings = [];
   page.on("pageerror", (error) => errors.push(error.stack ?? error.message));
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) navigations.push(frame.url());
+  });
+  page.on("console", (message) => {
+    if (/full reload|Fast Refresh.*reload/u.test(message.text())) reloadWarnings.push(message.text());
+  });
   try {
     const library = await mockModelLibrary(page);
     await run(page, library);
     assert.deepEqual(errors, []);
   } catch (error) {
     const snapshot = await page.evaluate(() => window.__kyuubikiPwdt?.state()).catch(() => null);
-    throw new Error(`${error.message}\nstate=${JSON.stringify(snapshot)}\nerrors=${JSON.stringify(errors)}`, { cause: error });
+    throw new Error(`${error.stack ?? error.message}\nstate=${JSON.stringify(snapshot)}\nerrors=${JSON.stringify(errors)}\nnavigations=${JSON.stringify(navigations)}\nreloadWarnings=${JSON.stringify(reloadWarnings)}`, { cause: error });
   } finally {
     await context.close();
   }

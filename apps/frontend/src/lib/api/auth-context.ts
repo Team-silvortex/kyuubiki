@@ -5,6 +5,7 @@ import { resolveWorkbenchApiUrl, trackWorkbenchBackendTargetChange } from "./bac
 import { advanceWorkbenchAuthorityRevision, readWorkbenchAuthorityRevision, type WorkbenchAuthorityDimension } from "./authority-revisions";
 import { ensureWorkbenchAuthorityStorageTracking } from "./authority-storage-events";
 import { captureWorkbenchDocumentAuthority } from "./authority-document-lifecycle";
+import { agentApiHeaders } from "./agent-api-access";
 
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
@@ -55,13 +56,13 @@ export function buildWorkbenchApiAuthHeaders(url: string) {
   if (typeof window === "undefined") return {};
 
   const secrets = readWorkbenchApiAuthSecrets();
-  if (Object.values(secrets).every((value) => !value)) return {};
-
-  return buildWorkbenchGovernedAuthHeaders({
+  const mode = readFrontendRuntimeModeFromWindow();
+  const agentHeaders = mode === "direct_mesh_gui" ? agentApiHeaders(url, resolveWorkbenchApiUrl("/") === "/" ? window.location?.origin ?? "" : resolveWorkbenchApiUrl("/")) : {};
+  return { ...buildWorkbenchGovernedAuthHeaders({
     url,
-    frontendRuntimeMode: readFrontendRuntimeModeFromWindow(),
+    frontendRuntimeMode: mode,
     secrets,
-  });
+  }), ...agentHeaders };
 }
 
 export function captureWorkbenchApiAuthority(...urls: string[]) {
@@ -71,6 +72,7 @@ export function captureWorkbenchApiAuthority(...urls: string[]) {
     const mode = readFrontendRuntimeModeFromWindow(), secrets = readWorkbenchApiAuthSecrets();
     const dimensions = new Set<WorkbenchAuthorityDimension>(["mode"]);
     for (const url of urls) {
+      if (mode === "direct_mesh_gui" && url.startsWith("/api/direct-mesh/")) dimensions.add("agentApiToken");
       if (url.startsWith("/")) dimensions.add("backend");
       for (const key of workbenchGovernedAuthSecretKeys(url, mode)) {
         dimensions.add(key);

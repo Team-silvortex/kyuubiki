@@ -17,6 +17,7 @@ mod frontend_http;
 mod frontend_launch;
 mod frontend_proxy;
 mod frontend_server;
+mod model_gateway;
 mod panel_preferences;
 pub use checkpoint_journal::{
     CheckpointIntent, CheckpointReservation, list_checkpoint_intents, remove_checkpoint_intent,

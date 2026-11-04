@@ -557,6 +557,7 @@
       "summary": "Agent process, CLI entrypoints, direct mesh execution, native runners, and script service bridge.",
       "owned_paths": [
         "workers/rust/crates/cli",
+        "workers/rust/crates/agent-transport",
         "workers/rust/crates/script-runner",
         "workers/rust/crates/deploy-server",
         "workers/rust/crates/platform",

@@ -1,4 +1,5 @@
-use std::io::{self, Read, Write};
+use kyuubiki_agent_transport::SocketIo;
+use std::io;
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock, mpsc};
@@ -103,7 +104,7 @@ pub(super) fn connect(endpoint: &str, deadline: Instant) -> Result<TcpStream, St
 }
 
 pub(super) fn write_before(
-    stream: &mut TcpStream,
+    stream: &mut impl SocketIo,
     mut bytes: &[u8],
     deadline: Instant,
 ) -> io::Result<()> {
@@ -119,7 +120,11 @@ pub(super) fn write_before(
     remaining(deadline).map(|_| ())
 }
 
-fn read_before(stream: &mut TcpStream, mut bytes: &mut [u8], deadline: Instant) -> io::Result<()> {
+fn read_before(
+    stream: &mut impl SocketIo,
+    mut bytes: &mut [u8],
+    deadline: Instant,
+) -> io::Result<()> {
     while !bytes.is_empty() {
         stream.set_read_timeout(Some(remaining(deadline)?))?;
         match stream.read(bytes) {
@@ -133,7 +138,7 @@ fn read_before(stream: &mut TcpStream, mut bytes: &mut [u8], deadline: Instant) 
 }
 
 pub(super) fn read_frame(
-    stream: &mut TcpStream,
+    stream: &mut impl SocketIo,
     deadline: Instant,
     max_bytes: usize,
 ) -> Result<(serde_json::Value, usize), String> {

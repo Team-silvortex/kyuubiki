@@ -6,6 +6,7 @@ use std::time::Duration;
 use kyuubiki_protocol::{RpcRequest, RpcResponse};
 use serde::Deserialize;
 
+mod agent_api_security;
 mod agent_artifact;
 mod agent_control_link;
 mod agent_deployment;
@@ -91,6 +92,7 @@ fn main() {
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
     agent_mesh::validate_mesh_config(config)?;
     agent_network_access::configure()?;
+    agent_api_security::configure()?;
     agent_ingress::configure()?;
     agent_durable_execution::configure()?;
     agent_lifecycle::configure_execution_capacity()?;
@@ -170,10 +172,11 @@ fn accept_connections(listener: TcpListener, reply_timeout: Duration) -> Result<
 }
 
 fn handle_connection(
-    mut stream: TcpStream,
+    stream: TcpStream,
     reply_timeout: Duration,
     permit: &agent_ingress::ConnectionPermit,
 ) -> Result<(), String> {
+    let mut stream = agent_api_security::accept(stream)?;
     let peer_is_loopback = stream
         .peer_addr()
         .map(|address| address.ip().to_canonical().is_loopback())
@@ -198,7 +201,7 @@ fn handle_connection(
 
         let mut close_after_reply = false;
         // Reserved capacity never grants execution, including on persistent sockets.
-        let response = match decode_rpc_request(&frame.payload) {
+        let mut response = match decode_rpc_request(&frame.payload) {
             Ok(request)
                 if frame.recovery_only
                     && kyuubiki_protocol::validate_rpc_request_envelope(&request).is_ok()
@@ -222,6 +225,10 @@ fn handle_connection(
                 RpcResponse::error("unknown", "invalid_json", error.to_string()),
             ),
         };
+
+        if stream.authenticated() {
+            agent_api_security::mark_connection_access(&mut response);
+        }
 
         write_agent_reply(&writer, response)?;
         drop(frame);

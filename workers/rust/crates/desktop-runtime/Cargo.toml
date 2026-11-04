@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+kyuubiki-agent-transport = { path = "../agent-transport" }
+base64 = "0.22"
 chrono = "0.4"
 fs2 = "0.4"
 kyuubiki-platform = { path = "../platform" }
@@ -13,3 +15,7 @@ libc = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.10"
+ureq = { version = "3.4", default-features = false, features = ["json", "rustls"] }
+
+[dev-dependencies]
+rcgen = "0.14"

@@ -1,4 +1,4 @@
-use std::net::TcpStream;
+use kyuubiki_agent_transport::Connection;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -10,15 +10,15 @@ static CONFIGURED_TIMEOUT_MS: AtomicU64 = AtomicU64::new(10_000);
 pub(crate) type SharedReplyWriter = Arc<ReplyWriter>;
 
 pub(crate) struct ReplyWriter {
-    pub(crate) stream: Mutex<TcpStream>,
+    pub(crate) stream: Mutex<Connection>,
     pub(crate) timeout: Duration,
     pending: Mutex<Option<ExecutionGuard>>,
 }
 
 impl ReplyWriter {
-    pub(crate) fn new(stream: TcpStream, timeout: Duration) -> Self {
+    pub(crate) fn new(stream: impl Into<Connection>, timeout: Duration) -> Self {
         Self {
-            stream: Mutex::new(stream),
+            stream: Mutex::new(stream.into()),
             timeout,
             pending: Mutex::new(None),
         }

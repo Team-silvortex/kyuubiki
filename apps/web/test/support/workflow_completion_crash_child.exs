@@ -57,7 +57,11 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCompletionCrashChild do
     phase = if mode == "before_stage", do: :stage_result, else: :commit_result
     :persistent_term.put({__MODULE__, :pause_phase}, phase)
     :ok = :sys.install(Coordinator, {&__MODULE__.observe/3, self()})
-    {:ok, submitted} = Workflow.submit("checkpoint_required")
+    damaged? = mode in ["after_stage_missing", "after_stage_corrupt"]
+
+    {:ok, submitted} =
+      Workflow.submit(if(damaged?, do: "idempotent", else: "checkpoint_required"))
+
     id = submitted["job"]["job_id"]
 
     receive do
@@ -68,13 +72,23 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCompletionCrashChild do
         {:ok, job} = Store.get(id)
         false = job.status == :completed
 
+        if damaged? do
+          damaged =
+            if mode == "after_stage_missing",
+              do: Map.update!(runtime, @key, &Map.delete(&1, "pending_completion")),
+              else: put_in(runtime, [@key, "pending_completion", "sha256"], "corrupt")
+
+          :ok = AnalysisResultStore.put(id, damaged)
+        end
+
         File.write!(
           Path.join(root, "expected.json"),
           Jason.encode!(%{
             "job_id" => id,
             "claim" => claim,
             "result" => result,
-            "pending" => pending?
+            "publish" => pending? and not damaged?,
+            "damaged" => damaged?
           }),
           [:sync]
         )
@@ -89,18 +103,31 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCompletionCrashChild do
   defp recover(root) do
     expected = root |> Path.join("expected.json") |> File.read!() |> Jason.decode!()
     id = expected["job_id"]
-    status = if expected["pending"], do: :completed, else: :failed
-    wait(fn -> match?({:ok, %{status: ^status}}, Store.get(id)) end)
+    status = if expected["publish"], do: :completed, else: :failed
+
+    wait(fn ->
+      "solve\n" = File.read!(Path.join(root, "solver-invocations"))
+      {:ok, retained} = AnalysisResultStore.get(id)
+      true = retained[@key]["generation"] == expected["claim"]["generation"]
+      true = retained[@key]["attempt"] == expected["claim"]["attempt"]
+      match?({:ok, %{status: ^status}}, Store.get(id))
+    end)
+
     {:ok, final} = AnalysisResultStore.get(id)
     true = final[@key]["generation"] == expected["claim"]["generation"]
     true = final[@key]["attempt"] == expected["claim"]["attempt"]
 
-    if expected["pending"] do
+    if expected["publish"] do
       true = Map.take(final, Map.keys(expected["result"])) === expected["result"]
       false = Map.has_key?(final[@key], "pending_completion")
       false = Map.has_key?(final[@key], "envelope")
     else
       "recovery_blocked" = final[@key]["state"]
+
+      if expected["damaged"] do
+        {:ok, job} = Store.get(id)
+        true = String.contains?(job.message, "workflow_completion_checkpoint_invalid")
+      end
     end
 
     "solve\n" = File.read!(Path.join(root, "solver-invocations"))

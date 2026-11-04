@@ -112,6 +112,13 @@ test("Pwdt browser bridge exposes Store manifest commands without DOM clicks", a
   );
 });
 
+test("Pwdt browser Store helper preserves source and version selectors", async () => {
+  const bridge = makeBridge();
+  const selection = { sourceId: "lab", version: "1.0.0", packageRef: "operator://bar/1", target: "mac" };
+  const result = await bridge.stageStoreEntry("operator", "bar", selection);
+  assert.deepEqual(result.payload, { kind: "operator", entryId: "bar", ...selection });
+});
+
 test("Pwdt browser bridge resolves UI contract selectors for stable automation", () => {
   const previousDocument = (globalThis as any).document;
   (globalThis as any).document = {

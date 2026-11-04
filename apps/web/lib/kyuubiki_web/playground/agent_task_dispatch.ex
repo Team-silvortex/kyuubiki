@@ -87,8 +87,12 @@ defmodule KyuubikiWeb.Playground.AgentTaskDispatch do
   defp observed_state(_task, {:error, {:agent_transport_failure, :connect, _}}),
     do: "not_dispatched"
 
-  defp observed_state(_task, {:error, {:rpc_error, "agent_at_capacity", _}}),
-    do: "not_dispatched"
+  defp observed_state(_task, {:error, {:rpc_error, code, _}}) do
+    # The transport has already ruled out progress/receipt contradictions.
+    if AgentRpcTransport.non_admission_code?(code),
+      do: "not_dispatched",
+      else: "outcome_unknown"
+  end
 
   defp observed_state(task, result) do
     with {:ok, summary} <- OperatorTaskExecutionSummary.build(task),

@@ -30,11 +30,15 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The active profile is `daji-3-7-hardening`; package/book metadata is `3.7.1`.
+The active profile is `daji-3-7-hardening`; package/book metadata is `3.7.7`.
 The [version ledger](current-line.md#version-and-evidence-ledger) distinguishes
-later Git/source work from the recorded installation. The October 24 local
+later Git/source work from the recorded installation. The November 4 local
 readback has zero structural gaps, two maturity gaps, 23 evidence-grade gaps
 and 18 P0 gaps; Daji remains blocked. These are tensor counts, not code coverage.
+Native Agent TLS/token support and Workbench model/store flows add scoped
+evidence, not automatic promotion of those gaps. Multi-host authenticated recovery,
+cross-language parity, production store integration and full assistant/translation
+parity remain open. A successful model API request is not solver qualification.
 The last retained recalibration below is October 16, 2026 for the earlier
 `daji-3-6-hardening` profile. At that review source metadata was `daji 3.6.0`
 and commit `301ba02c` was titled 3.6.4. Later scoped evidence is tracked by the
@@ -239,7 +243,7 @@ test files to two, rather than starting one Next/WebView fixture per available
 CPU; this bounds local resource pressure without dropping test cases.
 
 Current retention is
-`releases/usability-evidence/3.2.0/desktop-ui-validation-recovery.json`; the Make
+`releases/usability-evidence/current/desktop-ui-validation.json`; the Make
 and usability probes verify that report, while historical claims keep their
 original reports. `installer-declarative-mock-ipc-recovery` is deliberately
 `partial` product evidence. It does not promote the full product coordinate:
@@ -247,6 +251,9 @@ startup/delegated remote actions, cross-window ownership, native post-commit
 response loss and installed platform journeys still need separate proof.
 The usability gate baseline and target now follow the current minor line;
 `release_claim_allowed` remains false and no open release subtier was removed.
+After inventory changes, regenerate with `make qualify-desktop-ui-validation
+OUTPUT=releases/usability-evidence/current/desktop-ui-validation.json`.
+An older report cannot qualify a larger test manifest just by changing its summary.
 See the [book follow-up](book-ch03-architecture-boundaries.html#product-recovery-follow-up).
 
 ### macOS-First Native Follow-Up
@@ -806,8 +813,8 @@ intentional fail-closed guards. Deployment/update handoff, capability routing,
 workspace priority, reversible navigation, and regression-critical panels are
 all asserted. The report is retained at
 `releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json`
-and is now rechecked by `make check-desktop-ui-validation` as part of
-`architecture-check`.
+as historical evidence; `make check-desktop-ui-validation` rechecks the current
+full-suite report as part of `architecture-check`.
 
 The former top two coordinates, `runtime-agent-cli/solver_execution` and
 `runtime-protocol/solver_execution`, now meet the `qualified` target. Their

@@ -188,8 +188,12 @@ class _KyuubikiBridge:
     async def refresh_all(self):
         return await self.invoke("runtime/refreshAll")
 
-    async def stage_store_entry(self, kind, entry_id):
-        return await self.invoke("store/stageEntry", {"kind": kind, "entryId": entry_id})
+    async def stage_store_entry(self, kind, entry_id, *, source_id=None, version=None, package_ref=None, target=None):
+        payload = {"kind": kind, "entryId": entry_id}
+        for key, value in (("sourceId", source_id), ("version", version), ("packageRef", package_ref), ("target", target)):
+            if value is not None:
+                payload[key] = value
+        return await self.invoke("store/stageEntry", payload)
 
     async def remove_store_entry(self, kind, entry_id):
         return await self.invoke("store/removeEntry", {"kind": kind, "entryId": entry_id})

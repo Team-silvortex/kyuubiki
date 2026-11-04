@@ -197,6 +197,50 @@
             history remains unchanged for inspection, without truncation, migration,
             replay or additional backups. Later healthy records remain recoverable.
             See the <a href="../reports/workflow-terminal-diagnostics-20261028.md">terminal-diagnostic report</a>.</li>
+          <li><strong>Terminal reconciliation commit:</strong> the owning coordinator
+            compares both the observed runtime and current job before committing a
+            recovered terminal state. Changed or deleted records reject the old
+            decision; existing terminal jobs win. Raw payloads stay unchanged and
+            no missing record is recreated. Rejected terminal writes mark that scan
+            interrupted without counting a completed pass; a later scan re-reads
+            current records instead of looping on the old decision. See the
+            <a href="../reports/workflow-terminal-diagnostics-20261028.md#atomic-terminal-reconciliation-follow-up">local commit follow-up</a>.</li>
+          <li><strong>Legacy workflow blocking:</strong> a recognized old workflow without
+            a recovery envelope uses the same paired commit, retaining its raw runtime.
+            Changed or deleted evidence cannot trigger a stale failure decision.
+            Only an actual blocking write increments the blocked count; independent
+            terminal jobs are left alone. Rejected writes interrupt the scan with
+            <code>workflow_legacy_reconciliation_incomplete</code>. Ordinary jobs
+            without workflow records remain skipped, not automatically failed or
+            declared recovered. No envelope, missing record or backup is fabricated.
+            See the <a href="../reports/workflow-terminal-diagnostics-20261028.md#legacy-recovery-commit-follow-up">legacy commit follow-up</a>.</li>
+          <li><strong>Dispatch refusal evidence:</strong> a claim/replay refusal is
+            committed only against the runtime that produced that decision, not a
+            replacement fetched afterwards. Corrected or completed runtime evidence
+            cannot be overwritten with an old refusal; deleted records remain absent.
+            Unresolved dispatch recovery marks the scan interrupted, without a
+            completed-pass count. This is not new replay authority; finalizer
+            decisions have separate checks below. See the
+            <a href="../reports/workflow-terminal-diagnostics-20261028.md#dispatch-refusal-snapshot-follow-up">refusal snapshot follow-up</a>.</li>
+          <li><strong>Pending completion refusal:</strong> invalid or required-but-missing
+            checkpoints are blocked only against the exact job and runtime inspected.
+            Repairs, progress changes, replacement identities and deleted records reject
+            the stale decision without partial writes. Existing publication-only retries
+            survive snapshot conflicts and missing runtime while the job stays active;
+            they neither recreate missing data nor grant graph replay. Manual dispatch of
+            a known finalizer revalidates its retained result. In-process retries alone
+            are not durable tombstones; newly staged work has the durable phase below. See the
+            <a href="../reports/workflow-terminal-diagnostics-20261028.md#pending-completion-refusal-follow-up">completion refusal follow-up</a>.</li>
+          <li><strong>Durable finalization phase:</strong> staging commits
+            <code>finalizing</code> and the pending result together in the existing runtime.
+            That phase preserves the original claim for publication but disallows graph
+            replay and late execution writes. If its checkpoint payload is removed or
+            corrupted, coordinator and tested OS-process restarts block rather than
+            recompute; restaging cannot silently reconstruct the missing payload from
+            memory. Legacy valid running checkpoints remain readable. No parallel store,
+            backup or SQL migration is added. This does not cover deletion/rollback of the
+            entire runtime record or physical power loss. See the
+            <a href="../reports/workflow-terminal-diagnostics-20261028.md#durable-finalization-phase-follow-up">durable phase follow-up</a>.</li>
           <li><strong>Native failure finalization:</strong> ordinary coordinator failure
             now checks the envelope and dispatch fence before pruning private evidence.
             Unconfirmed attempts, missing/corrupt history or invalid evidence retain the

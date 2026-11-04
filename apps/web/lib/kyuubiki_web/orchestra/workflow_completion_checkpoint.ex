@@ -14,18 +14,25 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint do
 
   def key, do: @key
 
+  # Publication keeps the original claim, but must not reopen execution-side writes.
+  def fenced?(%{"state" => "finalizing"} = recovery, claim),
+    do: Envelope.fenced?(%{recovery | "state" => "running"}, claim)
+
+  def fenced?(recovery, claim), do: Envelope.fenced?(recovery, claim)
+
   def policy do
     %{
       "schema_version" => @schema,
       "max_result_bytes" => @max_bytes,
       "max_json_nodes" => @max_nodes,
       "oversize_action" => "reject_without_claiming_durable_completion",
+      "durable_phase" => "finalizing",
       "recovery_action" => "publish_only_no_execution"
     }
   end
 
   def prepare(job, recovery, claim, result) do
-    with true <- valid_claim?(claim) and Envelope.fenced?(recovery, claim),
+    with true <- valid_claim?(claim) and fenced?(recovery, claim),
          :ok <- valid_parent(job, recovery),
          true <- is_map(result) and is_list(Map.get(result, "failed_nodes", [])),
          true <- WorkflowJsonBudget.within_encoded_budget?(result, @max_bytes, @max_nodes) do
@@ -40,9 +47,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint do
 
       record = Map.put(record, "sha256", digest(record))
 
-      case Map.fetch(recovery, @key) do
-        :error -> {:ok, Map.put(recovery, @key, record), :retained}
-        {:ok, ^record} -> {:ok, recovery, :unchanged}
+      case {recovery["state"], Map.fetch(recovery, @key)} do
+        {"finalizing", :error} -> {:error, :workflow_completion_checkpoint_invalid}
+        {"finalizing", {:ok, ^record}} -> {:ok, recovery, :unchanged}
+        {_, :error} -> retain(recovery, record)
+        {_, {:ok, ^record}} -> retain(recovery, record)
         _ -> {:error, :workflow_completion_checkpoint_conflict}
       end
     else
@@ -54,9 +63,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint do
   end
 
   def read(job, recovery) do
-    case Map.fetch(recovery, @key) do
-      :error -> :none
-      {:ok, record} -> verify(job, recovery, record)
+    case {recovery["state"], Map.fetch(recovery, @key)} do
+      {"finalizing", :error} -> {:error, :workflow_completion_checkpoint_invalid}
+      {_, :error} -> :none
+      {_, {:ok, record}} -> verify(job, recovery, record)
     end
   end
 
@@ -76,7 +86,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint do
          true <- record["job_created_at_us"] == DateTime.to_unix(job.created_at, :microsecond),
          true <- record["envelope_sha256"] == recovery["envelope_sha256"],
          claim <- record["producer_claim"],
-         true <- valid_claim?(claim) and Envelope.fenced?(recovery, claim),
+         true <- valid_claim?(claim) and fenced?(recovery, claim),
          :ok <- valid_parent(job, recovery),
          json when is_binary(json) and byte_size(json) <= @max_bytes <- record["result_json"],
          true <- digest(Map.delete(record, "sha256")) == record["sha256"],
@@ -93,6 +103,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint do
   end
 
   defp verify(_job, _recovery, _record), do: {:error, :workflow_completion_checkpoint_invalid}
+
+  defp retain(recovery, record) do
+    updated = recovery |> Map.put(@key, record) |> Envelope.transition("finalizing")
+    {:ok, updated, :retained}
+  end
 
   defp valid_parent(job, recovery) do
     with :ok <- Envelope.verify(recovery),

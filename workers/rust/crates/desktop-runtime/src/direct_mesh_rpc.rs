@@ -10,8 +10,10 @@ use kyuubiki_protocol::{
     RpcProgress, RpcResponse, validate_rpc_progress_envelope, validate_rpc_response_envelope,
 };
 
+use kyuubiki_agent_transport::ClientSecurity;
 use serde::Serialize;
 use serde_json::{Value, json};
+use std::sync::Arc;
 
 const RPC_VERSION: u64 = 1;
 const RPC_TIMEOUT: Duration = Duration::from_secs(15);
@@ -135,11 +137,17 @@ pub(crate) fn parse_endpoint(value: &str) -> Result<DirectMeshEndpoint, String> 
     })
 }
 
-pub(crate) fn describe_agents(endpoints: &[String]) -> Vec<AgentSummary> {
+pub(crate) fn describe_agents_secured(
+    endpoints: &[String],
+    security: Option<Arc<ClientSecurity>>,
+) -> Vec<AgentSummary> {
     let handles = endpoints
         .iter()
         .cloned()
-        .map(|endpoint| std::thread::spawn(move || describe_agent(&endpoint)))
+        .map(|endpoint| {
+            let security = security.clone();
+            std::thread::spawn(move || describe_agent(&endpoint, security.as_deref()))
+        })
         .collect::<Vec<_>>();
     handles
         .into_iter()
@@ -156,18 +164,29 @@ pub(crate) fn describe_agents(endpoints: &[String]) -> Vec<AgentSummary> {
         .collect()
 }
 
+#[cfg(test)]
 pub(crate) fn solve(
     method: &str,
     params: Value,
     endpoints: &[String],
     selection_mode: &str,
 ) -> Result<SolveResult, String> {
+    solve_secured(method, params, endpoints, selection_mode, None)
+}
+
+pub(crate) fn solve_secured(
+    method: &str,
+    params: Value,
+    endpoints: &[String],
+    selection_mode: &str,
+    security: Option<Arc<ClientSecurity>>,
+) -> Result<SolveResult, String> {
     if !matches!(selection_mode, "first_reachable" | "healthiest") {
         return Err("invalid direct mesh selection mode; no task dispatched".into());
     }
     let mut agents = Vec::new();
     let mut rejected = Vec::new();
-    for agent in describe_agents(endpoints) {
+    for agent in describe_agents_secured(endpoints, security.clone()) {
         let eligibility = if agent.descriptor_error.is_some() {
             Err("descriptor_unavailable")
         } else {
@@ -193,7 +212,8 @@ pub(crate) fn solve(
     })?;
     let endpoint = format!("{}:{}", selected.host, selected.port);
     // Selection is read-only. Once dispatch begins, a lost reply cannot authorize migration.
-    let (result, progress_frames) = request(&endpoint, method, params).map_err(|error| {
+    let (result, progress_frames) = request_secured(&endpoint, method, params, security.as_deref()).map_err(|error| {
+        let error = error.message;
         format!("direct mesh dispatch at {endpoint} failed: {error}; execution outcome may be unknown; automatic cross-agent replay disabled")
     })?;
     Ok(SolveResult {
@@ -204,7 +224,7 @@ pub(crate) fn solve(
     })
 }
 
-fn describe_agent(endpoint: &str) -> AgentSummary {
+fn describe_agent(endpoint: &str, security: Option<&ClientSecurity>) -> AgentSummary {
     let parsed = match parse_endpoint(endpoint) {
         Ok(parsed) => parsed,
         Err(error) => {
@@ -218,7 +238,9 @@ fn describe_agent(endpoint: &str) -> AgentSummary {
             };
         }
     };
-    match request(&parsed.endpoint, "describe_agent", json!({})) {
+    match request_secured(&parsed.endpoint, "describe_agent", json!({}), security)
+        .map_err(|error| error.message)
+    {
         Ok((descriptor, _)) => {
             let program = descriptor
                 .get("program")
@@ -244,6 +266,7 @@ fn describe_agent(endpoint: &str) -> AgentSummary {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn request(
     endpoint: &str,
     method: &str,
@@ -252,12 +275,22 @@ pub(crate) fn request(
     request_detailed(endpoint, method, params).map_err(|error| error.message)
 }
 
+#[cfg(test)]
 pub(crate) fn request_detailed(
     endpoint: &str,
     method: &str,
     params: Value,
 ) -> Result<(Value, Vec<Value>), RequestError> {
-    exchange_with_timeout(endpoint, method, params, RPC_TIMEOUT)
+    request_secured(endpoint, method, params, None)
+}
+
+pub(crate) fn request_secured(
+    endpoint: &str,
+    method: &str,
+    params: Value,
+    security: Option<&ClientSecurity>,
+) -> Result<(Value, Vec<Value>), RequestError> {
+    exchange_secured(endpoint, method, params, RPC_TIMEOUT, security)
 }
 
 #[cfg(test)]
@@ -270,11 +303,22 @@ fn request_with_timeout(
     exchange_with_timeout(endpoint, method, params, timeout).map_err(|error| error.message)
 }
 
+#[cfg(test)]
 fn exchange_with_timeout(
     endpoint: &str,
     method: &str,
     params: Value,
     timeout: Duration,
+) -> Result<(Value, Vec<Value>), RequestError> {
+    exchange_secured(endpoint, method, params, timeout, None)
+}
+
+fn exchange_secured(
+    endpoint: &str,
+    method: &str,
+    params: Value,
+    timeout: Duration,
+    security: Option<&ClientSecurity>,
 ) -> Result<(Value, Vec<Value>), RequestError> {
     let deadline = Instant::now() + timeout;
     let parsed = parse_endpoint(endpoint)?;
@@ -302,7 +346,16 @@ fn exchange_with_timeout(
     } else {
         None
     };
-    let mut stream = transport::connect(&parsed.endpoint, deadline)?;
+    let socket = transport::connect(&parsed.endpoint, deadline)?;
+    let mut stream = match security {
+        Some(security) => security
+            .connect(
+                socket,
+                transport::remaining(deadline).map_err(|error| error.to_string())?,
+            )
+            .map_err(|_| "Agent TLS/authentication failed; no task dispatched")?,
+        None => socket.into(),
+    };
     transport::write_before(&mut stream, &(payload.len() as u32).to_be_bytes(), deadline)
         .and_then(|_| transport::write_before(&mut stream, &payload, deadline))
         .map_err(|error| format!("failed to write direct mesh request to {endpoint}: {error}"))?;
@@ -354,6 +407,16 @@ fn exchange_with_timeout(
         validate_rpc_response_envelope(&response).map_err(|e| e.message)?;
         if response.ok {
             let result = response.result.ok_or("missing direct mesh result")?;
+            if method == "describe_agent" {
+                let access = &result["connection_access"];
+                let claimed_secure = access["encrypted"] == true || access["authenticated"] == true;
+                if claimed_secure != security.is_some()
+                    || (security.is_some()
+                        && (access["encrypted"] != true || access["authenticated"] != true))
+                {
+                    return Err("Agent connection security does not match this transport".into());
+                }
+            }
             if let Some(submission) = &submission {
                 submission.validate(&result)?;
             }
@@ -440,6 +503,10 @@ mod dispatch_tests;
 #[cfg(test)]
 #[path = "direct_mesh_transport_tests.rs"]
 mod transport_tests;
+
+#[cfg(test)]
+#[path = "direct_mesh_native_selection_tests.rs"]
+mod native_selection_tests;
 
 #[cfg(test)]
 mod tests {

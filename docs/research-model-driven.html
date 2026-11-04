@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Model-Driven Research | Kyuubiki</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Daji | Official Rust Headless SDK</div>
+        <h1>A model proposes; measured evidence decides</h1>
+        <p class="docs-copy">Run a bounded synthetic material-selection experiment against
+          installed Orchestra and Rust Agent services. A model chooses candidate designs and
+          observes real computations. Deterministic checks, not model confidence, determine
+          numerical acceptance. A second model reviews the retained evidence and limitations.</p>
+        <div class="docs-links">
+          <a class="docs-link" href="./research-layered-thermal.html">Physical reference and assumptions</a>
+          <a class="docs-link" href="../sdks/rust/examples/model_driven_thermal_research.rs">Runnable Rust example</a>
+          <a class="docs-link" href="../reports/model-driven-thermal-research-20261104.md">First live findings</a>
+          <a class="docs-link" href="../reports/model-research-boundary-and-connection-20261104.md">Boundary and GUI follow-up</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Problem and execution boundary</h2>
+        <p class="docs-copy">Select each layer's conductivity from 2, 10, 100 or 200 W/(m K).
+          Maximize axial heat flux subject to tip expansion not exceeding 110 micrometres at a
+          20 K boundary temperature difference. Geometry, expansion coefficients, elasticity,
+          restraints and perfect contact are fixed by the layered thermal reference.</p>
+        <pre class="docs-code">Sol proposes typed parameter batches
+  -&gt; caller validates the whole batch and resource limits
+  -&gt; Rust Headless SDK -&gt; Orchestra -&gt; Rust Agent
+  -&gt; heat Q4 -&gt; temperature bridge -&gt; thermoelastic Q4
+  -&gt; manifest checks + result readback + analytical numerical gates
+  -&gt; Sol observes evidence and selects an evaluated feasible design
+  -&gt; caller verifies discrete optimality and additional cases
+  -&gt; Astra independently critiques the evidence</pre>
+        <p class="docs-copy">The only model tool is <code>evaluate_designs</code>. It accepts
+          batches of 1 to 4 approved conductivity pairs and refinement levels 1, 2, 4 or 8.
+          Unknown fields, out-of-grid values and malformed batches fail before dispatch.
+          There is no arbitrary code execution, filesystem tool, shell, configurable provider
+          origin or model-issued approval. This study-specific example is not a required
+          universal CLI and does not extend the GUI's model gateway.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Run deliberately</h2>
+        <p class="docs-copy">Start a reviewed local deployment with Orchestra listening at
+          <code>http://127.0.0.1:4000</code> and available Agents. This example deliberately
+          uses host-local access; it is not a remote authentication configuration tutorial.
+          Set <code>KYUUBIKI_MODEL_API_KEY_FILE</code> to an external regular file containing
+          only the raw API key. On Unix, group/world access is rejected. Do not place the key
+          in the repository, command-line arguments, a report or a tracked environment file.</p>
+        <pre class="docs-code">cargo test --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_research
+
+# After configuring the external credential-file environment variable:
+KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_research -- tmp/model-research-round-001</pre>
+        <p class="docs-copy">The parent directory must already exist. Every run requires a
+          new output directory and never overwrites previous evidence. Without explicit
+          opt-in, the program exits before sending paid requests. Ordinary test execution
+          does not contact OpenAI or require installed services.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Cost, credentials and failure handling</h2>
+        <ul class="docs-list">
+          <li>Models: <code>gpt-6.1-sol</code> for planning/tool calls and
+            <code>gpt-6-astra</code> for independent review, both using Responses API,
+            high reasoning effort and the default service tier. No silent model fallback.</li>
+          <li>Per run: at most 16 API requests, 10 planning turns, 24 exploration evaluations,
+            40 actual workflow submissions, 128 KiB serialized input per API call and
+            8,192 output tokens per call. A cached successful evaluation does not resubmit work.</li>
+          <li>An estimated USD 8 ceiling is enforced by reserving an upper estimate before
+            each request. Pricing is pinned to the verified 2026-11-04 standard rates:
+            Sol USD 2/10 and Astra USD 10/50 per million input/output tokens. Cached-input
+            discounts are not subtracted. Recheck rates before future runs.</li>
+          <li>This is not an account-wide billing limit. Separate runs and other clients
+            consume additional credits. Usage is recorded from API responses; the estimate
+            is not a provider invoice or a query of remaining credit.</li>
+          <li>The key is read into process memory and sent only in the authorization header
+            to <code>https://api.openai.com/v1/responses</code>. Redirects and proxies are
+            disabled. Requests set <code>store: false</code>; provider-side policies still
+            apply. Only this synthetic problem and evidence are sent.</li>
+          <li>Transport errors, ambiguous workflow outcomes, incomplete model responses and
+            failed gates stop the run without automatic retry. An API timeout retains its
+            reservation as unknown cost. A workflow timeout does not guarantee cancellation.</li>
+        </ul>
+        <p class="docs-copy">Reservations, requests, terminal records, results, checks and usage
+          are immutable create-new files, flushed before proceeding. This is not a transactional
+          research database or a power-loss recovery guarantee. There is no automatic resume;
+          reconcile uncertain work and costs before authorizing a new run. Do not delete pending
+          evidence merely to bypass a failed run. Raw reasoning envelopes are kept in memory
+          for stateless continuation, not written into reports.</p>
+        <p class="docs-copy">Verified model pricing and capabilities:
+          <a href="https://developers.openai.com/api/docs/models/gpt-6.1-sol">Sol model documentation</a>
+          and <a href="https://developers.openai.com/api/docs/models/gpt-6-astra">Astra model documentation</a>.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>What passing means</h2>
+        <p class="docs-copy">Each real workflow must complete, satisfy the output manifest,
+          and return an identical result on a second fetch. Nodal temperatures, reference
+          subtraction, axial displacements and fluxes are checked against the analytical
+          layered solution. Corrupted temperature, displacement, reference and geometry
+          evidence must fail validation.</p>
+        <p class="docs-copy">The selected pair is checked against an exhaustive 16-pair
+          analytical oracle, then at four mesh levels and with temperature-origin shift,
+          zero rise, doubled rise and negative rise. Additional cases at 21.999, 22 and
+          22.001 K bracket the selected pair's tip-displacement limit. Fractional load values
+          remain distinct in case and workflow identities; display rounding must not merge
+          evidence or trigger cache reuse. The oracle is not presented as 16 actual SDK solves.
+          Doubling the load is a verification case and can violate the original design limit
+          without indicating a solver failure.</p>
+        <p class="docs-copy">The feasibility classifier uses the largest tip displacement
+          and a predeclared 1e-9 m numerical band. Values within that band of the 110 micrometre
+          limit are <code>boundary</code>, not approved feasible. The band reflects the
+          existing displacement-check tolerance, not uncertainty in real material properties.
+          Negative displacement is judged against the stated one-sided expansion constraint;
+          passing it does not qualify contraction, stress or bond strength.</p>
+        <p class="docs-copy">Additional checks report interpolated element-centre displacement
+          error separately from nodal error, compare it with the expected quadratic-reference
+          interpolation error, validate element-mean axial strain and restraint stresses, and
+          integrate boundary flux into heat rates. These are not general pointwise stress,
+          stiffness, reaction-force or arbitrary-geometry qualifications.</p>
+        <p class="docs-copy">Inspect <code>numerical-report.json</code>,
+          <code>independent-model-review.json</code> and <code>report.json</code> separately.
+          A model review cannot override a failed numerical gate. Review issues yield a nonzero
+          exit even when the numerical report passed. Missing final reports mean incomplete
+          evidence, not success. The result remains a synthetic verification example, not
+          material certification, uncertainty qualification or an industrial safety assessment.</p>
+      </section>
+    </main>
+  </body>
+</html>

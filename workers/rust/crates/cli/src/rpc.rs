@@ -583,8 +583,49 @@ pub(crate) fn handle_request_from_peer(
     writer: Option<SharedReplyWriter>,
     peer_is_loopback: bool,
 ) -> AgentReply {
-    if !peer_is_loopback && crate::agent_lifecycle_rpc::is_mutation(&request.method) {
-        return crate::agent_lifecycle_rpc::reject_non_loopback_mutation(request.id);
-    }
-    handle_request(request, writer)
+    handle_request_from_peer_with_policy(
+        request,
+        writer,
+        peer_is_loopback,
+        crate::agent_network_access::current(),
+    )
 }
+
+fn handle_request_from_peer_with_policy(
+    request: RpcRequest,
+    writer: Option<SharedReplyWriter>,
+    peer_is_loopback: bool,
+    policy: &crate::agent_network_access::NetworkAccess,
+) -> AgentReply {
+    // Validate before any denial can reflect an unchecked correlation ID.
+    if validate_rpc_request_envelope(&request).is_err() {
+        return handle_request(request, writer);
+    }
+    if !peer_is_loopback {
+        if crate::agent_lifecycle_rpc::is_mutation(&request.method) {
+            return crate::agent_lifecycle_rpc::reject_non_loopback_mutation(request.id);
+        }
+        if let Some(response) = policy.reject_remote_request(&request.id, &request.method) {
+            return AgentReply::Stream(Vec::new(), response);
+        }
+    }
+    let describe = request.method == RpcMethod::DescribeAgent;
+    let mut reply = handle_request(request, writer);
+    if describe {
+        let AgentReply::Stream(_, response) = &mut reply;
+        if response.ok
+            && let Some(serde_json::Value::Object(result)) = response.result.as_mut()
+        {
+            // Socket-scoped: never store this in shared descriptors or registration metadata.
+            result.insert(
+                "connection_access".into(),
+                policy.connection_access(peer_is_loopback),
+            );
+        }
+    }
+    reply
+}
+
+#[cfg(test)]
+#[path = "tests/agent_lan_control.rs"]
+mod lan_control_tests;

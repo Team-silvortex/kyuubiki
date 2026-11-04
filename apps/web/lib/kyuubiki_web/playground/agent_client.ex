@@ -8,8 +8,10 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
   alias KyuubikiWeb.Orchestra.DistributedRecovery
   alias KyuubikiWeb.Playground.AgentExecutionGate
+  alias KyuubikiWeb.Playground.AgentConnectionPreflight
   alias KyuubikiWeb.Playground.AgentJobCancellation
   alias KyuubikiWeb.Playground.AgentPool
+  alias KyuubikiWeb.Playground.AgentRpcParams
   alias KyuubikiWeb.Playground.AgentRpcTransport
   alias KyuubikiWeb.Playground.AgentRegistry
   alias KyuubikiWeb.Playground.AgentTaskDispatch
@@ -261,6 +263,12 @@ defmodule KyuubikiWeb.Playground.AgentClient do
           {:ok, map(), AgentPool.endpoint()} | {:error, term()}
   def request_with_agent(method, params, on_progress \\ fn _progress -> :ok end, opts \\ [])
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) and is_list(opts) do
+    with {:ok, params} <- AgentRpcParams.normalize(method, params) do
+      request_with_normalized_params(method, params, on_progress, opts)
+    end
+  end
+
+  defp request_with_normalized_params(method, params, on_progress, opts) do
     request_id = request_id()
     opts = OperatorTaskIR.enforce_digest_routing(method, params, opts)
     opts = put_execution_lease(opts, request_id, method)
@@ -332,7 +340,9 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
           endpoint_result =
             try do
-              with :ok <- emit_dispatch_progress(on_progress, opts, endpoint, queue_metadata),
+              with :ok <- AgentConnectionPreflight.check(endpoint, request_id, request, opts),
+                   {:ok, _wait_ms} <- capacity_wait_timeout(opts),
+                   :ok <- emit_dispatch_progress(on_progress, opts, endpoint, queue_metadata),
                    :ok <- authorize_dispatch(opts) do
                 result =
                   with_claimed_endpoint(endpoint, opts, fn ->
@@ -374,6 +384,22 @@ defmodule KyuubikiWeb.Playground.AgentClient do
        ) do
     :ok = AgentPool.report_success(endpoint)
     {:ok, result, endpoint}
+  end
+
+  defp handle_endpoint_result(
+         {:error, {:agent_connection_preflight_failed, reason}},
+         endpoint,
+         remaining,
+         request_id,
+         request,
+         on_progress,
+         opts,
+         failures
+       ) do
+    with {:ok, _wait_ms} <- capacity_wait_timeout(opts) do
+      {opts, receipt} = AgentConnectionPreflight.reject_candidate(endpoint, reason, opts)
+      attempt_request(remaining, request_id, request, on_progress, opts, [receipt | failures])
+    end
   end
 
   defp handle_endpoint_result(
@@ -468,7 +494,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
          opts,
          failures
        ) do
-    if AgentRpcTransport.local_failure?(reason) do
+    if match?({:agent_capacity_timeout, _}, reason) or AgentRpcTransport.local_failure?(reason) do
       {:error, reason}
     else
       handle_recoverable_endpoint_failure(

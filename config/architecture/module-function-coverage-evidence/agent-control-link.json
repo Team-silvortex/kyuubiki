@@ -31,6 +31,100 @@
   },
   "evidence_claims": [
     {
+      "id": "native-agent-tls-api-local-client-pilot",
+      "status": "partial",
+      "grade": "exercised",
+      "modules": ["runtime-agent-cli", "workbench-shell", "sdk-headless"],
+      "paradigms": ["runtime_api", "security"],
+      "dimensions": ["contract", "execution", "security", "recovery"],
+      "files": [
+        "schemas/agent-api-auth.schema.json",
+        "workers/rust/crates/agent-transport/src/security.rs",
+        "workers/rust/crates/agent-transport/src/tests.rs",
+        "workers/rust/crates/cli/tests/agent_api_security_live.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_mesh_api_security.rs",
+        "sdks/rust/tests/agent_api_security.rs",
+        "apps/frontend/test/workflow/workbench-agent-api-access.test.ts",
+        "tests/integration/workbench-ui-agent-api-security.test.mjs",
+        "docs/book-ch04-runtime-modes.html"
+      ],
+      "required_text": [
+        "kyuubiki.agent-auth/v1",
+        "wrong_token_untrusted_certificate_and_wrong_name_fail_closed",
+        "tls_agent_enforces_auth_and_preserves_real_execution_and_recovery",
+        "gui_gateway_verifies_native_tls_and_keeps_token_out_of_task_and_response",
+        "rust_headless_uses_tls_auth_without_putting_credentials_into_rpc",
+        "Python/Elixir clients, Orchestra outbound RPC and automatic peer Mesh probes have not yet"
+      ]
+    },
+    {
+      "id": "native-agent-connection-scoped-mesh-selection",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "workbench-shell"],
+      "paradigms": ["runtime_api"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/protocol/src/agent_connection_access.rs",
+        "workers/rust/crates/protocol/src/agent_network_access.rs",
+        "workers/rust/crates/cli/src/agent_network_access.rs",
+        "workers/rust/crates/cli/src/rpc.rs",
+        "workers/rust/crates/cli/src/tests/agent_lan_control.rs",
+        "workers/rust/crates/cli/tests/agent_network_access_live.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_mesh_selection.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_mesh_selection_tests.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_mesh_dispatch_tests.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_mesh_native_selection_tests.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_mesh_durable_tests.rs",
+        "docs/book-ch04-runtime-modes.html",
+        "reports/agent-connection-selection-20261028.md"
+      ],
+      "required_text": [
+        "kyuubiki.agent-connection-access/v1",
+        "connection_access_uses_socket_scope_not_request_claims_or_global_descriptors",
+        "access_observations_reject_missing_fields_versions_and_authority_escalation",
+        "discovery_only_connection_is_not_eligible_even_when_the_agent_is_healthy",
+        "discovery_only_or_unreported_connection_never_receives_a_solver_dispatch",
+        "new_tasks_observe_control_revocation_without_caching_the_old_permission",
+        "native_selection_skips_discovery_only_lan_and_observes_restart_policy_changes",
+        "legacy_mesh_solve_never_replays_after_lost_reply_or_solver_failure",
+        "busy_or_draining_owner_still_allows_pinned_durable_recovery",
+        "Explicit LAN trust is not authentication"
+      ]
+    },
+    {
+      "id": "native-agent-lan-control-explicit-trust-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["runtime_api", "security"],
+      "dimensions": ["contract", "security", "recovery"],
+      "files": [
+        "workers/rust/crates/protocol/src/agent_network_access.rs",
+        "workers/rust/crates/cli/src/agent_network_access.rs",
+        "workers/rust/crates/cli/src/rpc.rs",
+        "workers/rust/crates/cli/src/tests/agent_lan_control.rs",
+        "workers/rust/crates/cli/src/tests/agent_network_access.rs",
+        "workers/rust/crates/cli/tests/agent_network_access_live.rs",
+        "workers/rust/crates/installer/src/tests/agent_network_preflight.rs",
+        "workers/rust/crates/desktop-runtime/src/runtime_agent_storage.rs",
+        "workers/rust/crates/desktop-runtime/tests/runtime_network_preflight.rs",
+        "docs/book-ch04-runtime-modes.html",
+        "reports/agent-lan-control-gate-20261028.md"
+      ],
+      "required_text": [
+        "KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL",
+        "agent_lan_control_requires_explicit_trust",
+        "default_lan_gate_covers_every_advertised_non_discovery_method_before_dispatch",
+        "denied_lan_cancellation_cannot_touch_current_or_future_job_executions",
+        "lan_control_configuration_is_strict_and_keeps_original_local_receipts",
+        "real_non_loopback_socket_is_denied_then_explicitly_admitted_and_revoked",
+        "invalid_lan_control_restart_preserves_existing_service_incarnations_and_records",
+        "agent_network_preflight_validates_explicit_lan_control_without_authentication_claims",
+        "Explicit LAN trust is not authentication"
+      ]
+    },
+    {
       "id": "native-agent-explicit-source-ip-containment",
       "status": "proven",
       "grade": "verified",

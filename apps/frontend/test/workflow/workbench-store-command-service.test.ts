@@ -54,6 +54,31 @@ function storeEntry(id = "solve.bar_1d"): AssetStoreEntry {
   };
 }
 
+test("shared Store commands reject source/version replacement without changing stored evidence", () => {
+  stageWorkspaceStoreEntry("project-a", storeEntry());
+  const before = storage.getItem(STORE_MANIFEST_STORAGE_KEY);
+  for (const change of [{ source_id: "other" }, { version: "99.0.0" }, { package_ref: "another-package" },
+    { id: " solve.bar_1d ", source_id: "other" }, { install: { mode: "stage", requires_download: false, target: "another-target" } }]) {
+    assert.throws(() => stageWorkspaceStoreEntry("project-a", { ...storeEntry(), ...change }),
+      (error: unknown) => error instanceof WorkspaceStoreCommandError && error.code === "entry_conflict");
+    assert.equal(storage.getItem(STORE_MANIFEST_STORAGE_KEY), before);
+  }
+  removeWorkspaceStoreEntry("project-a", "operator", storeEntry().id);
+  assert.equal(stageWorkspaceStoreEntry("project-a", { ...storeEntry(), version: "99.0.0" }).entries[0].version, "99.0.0");
+});
+
+test("shared Store commands compare normalized references and reject invalid assets", () => {
+  stageWorkspaceStoreEntry("project-a", storeEntry());
+  const equivalent = { ...storeEntry(), id: " solve.bar_1d ", source_id: " builtin ", version: " 2.17.0 " };
+  assert.equal(stageWorkspaceStoreEntry("project-a", equivalent).entries.length, 1);
+  const before = storage.getItem(STORE_MANIFEST_STORAGE_KEY);
+  for (const invalid of [null, {}, { ...storeEntry(), id: " " }]) {
+    assert.throws(() => stageWorkspaceStoreEntry("project-a", invalid as AssetStoreEntry),
+      (error: unknown) => error instanceof WorkspaceStoreCommandError && error.code === "invalid_asset");
+    assert.equal(storage.getItem(STORE_MANIFEST_STORAGE_KEY), before);
+  }
+});
+
 test("shared Store commands stage, export, and remove one project asset", () => {
   const staged = stageWorkspaceStoreEntry("project / unsafe", storeEntry());
   assert.equal(staged.entries.length, 1);

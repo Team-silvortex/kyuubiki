@@ -82,6 +82,8 @@ try:
     asyncio.run(ky.sleep())
     if request.get("save"):
         result = asyncio.run(ky.save_model(name="Saved", material=70, request_id=request.get("requestId")))
+    elif "storeSelection" in request:
+        result = asyncio.run(ky.stage_store_entry("operator", "bar", **request["storeSelection"]))
     elif request.get("recipe"):
         result = asyncio.run(ky.run_recipe(request["recipe"], {"timeoutMs": 50}))
     else:

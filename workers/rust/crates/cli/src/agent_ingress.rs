@@ -1,5 +1,8 @@
-use std::io::{self, Read};
-use std::net::{SocketAddr, TcpStream};
+use kyuubiki_agent_transport::SocketIo;
+use std::io;
+use std::net::SocketAddr;
+#[cfg(test)]
+use std::net::TcpStream;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
@@ -124,7 +127,7 @@ impl Ingress {
 
     pub(crate) fn read_connection_frame(
         &self,
-        stream: &mut TcpStream,
+        stream: &mut impl SocketIo,
         recovery_only: bool,
     ) -> Result<RequestFrame, FrameReadError> {
         self.read_request_in(stream, recovery_only)
@@ -144,7 +147,7 @@ impl Ingress {
 
     fn read_request_in(
         &self,
-        stream: &mut TcpStream,
+        stream: &mut impl SocketIo,
         recovery_only: bool,
     ) -> io::Result<RequestFrame> {
         // Idle/header/body reads share one budget; progress never resets it.
@@ -217,7 +220,7 @@ impl Ingress {
             "overflow_action":"close_connection_before_dispatch",
             "overload_queue":false,
             "automatic_retry":false,
-            "authenticated_transport":false,
+            "authenticated_transport":crate::agent_api_security::enabled(),
             "network_access":crate::agent_network_access::snapshot(),
             "whole_process_memory_limit":false
         })
@@ -280,7 +283,11 @@ pub(crate) fn snapshot() -> serde_json::Value {
     current().snapshot()
 }
 
-fn read_before(stream: &mut TcpStream, mut bytes: &mut [u8], deadline: Instant) -> io::Result<()> {
+fn read_before(
+    stream: &mut impl SocketIo,
+    mut bytes: &mut [u8],
+    deadline: Instant,
+) -> io::Result<()> {
     while !bytes.is_empty() {
         stream.set_read_timeout(Some(remaining(deadline)?))?;
         match stream.read(bytes) {

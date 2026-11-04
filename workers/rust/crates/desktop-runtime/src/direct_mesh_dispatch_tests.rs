@@ -55,10 +55,12 @@ impl Peer {
                     }
                 }
                 let failure = (describe && behavior == "unavailable")
-                    || (!describe && behavior == "solver-error");
+                    || (!describe && matches!(behavior, "solver-error" | "policy-revoked"));
                 let response = if failure {
                     json!({"rpc_version":1, "id":request["id"], "ok":false,
-                        "error":{"code":"test-failure", "message":"test failure"}})
+                        "error":{"code":if behavior == "policy-revoked" {
+                            "agent_lan_control_requires_explicit_trust"
+                        } else { "test-failure" }, "message":"test failure"}})
                 } else {
                     json!({"rpc_version":1, "id":request["id"], "ok":true,
                         "result":if describe {advertised.lock().unwrap().clone()} else {json!({"max_stress":10.0})}})
@@ -92,6 +94,10 @@ fn accepting_descriptor(health: u8) -> Value {
         "schema_version":"kyuubiki.agent-execution-admission/v1", "configured":true,
         "max_active_executions":1, "active_execution_count":0
     });
+    descriptor["connection_access"] = serde_json::to_value(
+        kyuubiki_protocol::AgentNetworkAccessPolicy::default().connection_access(true),
+    )
+    .unwrap();
     descriptor
 }
 
@@ -201,7 +207,7 @@ impl Drop for Peer {
 #[test]
 fn legacy_mesh_solve_never_replays_after_lost_reply_or_solver_failure() {
     for mode in ["first_reachable", "healthiest"] {
-        for behavior in ["lost-reply", "solver-error"] {
+        for behavior in ["lost-reply", "solver-error", "policy-revoked"] {
             let first = Peer::start(behavior, 100);
             let second = Peer::start("success", 50);
             let result = solve(
@@ -219,6 +225,80 @@ fn legacy_mesh_solve_never_replays_after_lost_reply_or_solver_failure() {
             );
         }
     }
+}
+
+#[test]
+fn discovery_only_or_unreported_connection_never_receives_a_solver_dispatch() {
+    let mut discovery = accepting_descriptor(100);
+    discovery["connection_access"] = serde_json::to_value(
+        kyuubiki_protocol::AgentNetworkAccessPolicy::default().connection_access(false),
+    )
+    .unwrap();
+    let mut legacy = accepting_descriptor(100);
+    legacy.as_object_mut().unwrap().remove("connection_access");
+    for mode in ["first_reachable", "healthiest"] {
+        for blocked in [&discovery, &legacy] {
+            let first = Peer::start_with_descriptor("success", blocked.clone());
+            let second = Peer::start("success", 10);
+            let result = solve(
+                "solve_bar_1d",
+                json!({}),
+                &[first.endpoint.clone(), second.endpoint.clone()],
+                mode,
+            )
+            .unwrap();
+            assert_eq!(result.endpoint, second.endpoint);
+            assert_eq!(first.count(), 0);
+            assert_eq!(second.count(), 1);
+        }
+    }
+    let first = Peer::start_with_descriptor("success", discovery);
+    let second = Peer::start_with_descriptor("success", legacy);
+    let error = solve(
+        "solve_bar_1d",
+        json!({}),
+        &[first.endpoint.clone(), second.endpoint.clone()],
+        "healthiest",
+    )
+    .unwrap_err();
+    assert!(error.contains("connection_control_not_permitted"));
+    assert!(error.contains("invalid_connection_access"));
+    assert!(error.contains("no task dispatched"));
+    assert_eq!(first.count() + second.count(), 0);
+}
+
+#[test]
+fn new_tasks_observe_control_revocation_without_caching_the_old_permission() {
+    let first = Peer::start("success", 100);
+    let second = Peer::start("success", 10);
+    let endpoints = [first.endpoint.clone(), second.endpoint.clone()];
+    for (index, trusted) in [true, false, true].into_iter().enumerate() {
+        first.descriptor.lock().unwrap()["connection_access"] = serde_json::to_value(
+            kyuubiki_protocol::AgentNetworkAccessPolicy::default()
+                .with_trusted_lan_control(Some(if trusted { "true" } else { "false" }))
+                .unwrap()
+                .connection_access(false),
+        )
+        .unwrap();
+        let result = solve(
+            "solve_bar_1d",
+            json!({"job_id":format!("new-job-{index}")}),
+            &endpoints,
+            "healthiest",
+        )
+        .unwrap();
+        assert_eq!(
+            result.endpoint,
+            if trusted {
+                &first.endpoint
+            } else {
+                &second.endpoint
+            }
+            .as_str()
+        );
+    }
+    assert_eq!(first.count(), 2);
+    assert_eq!(second.count(), 1);
 }
 
 #[test]
@@ -250,4 +330,26 @@ fn failed_discovery_does_not_fall_back_to_blind_execution() {
     );
     assert_eq!(first.count() + second.count(), 0);
     assert!(result.is_err());
+}
+
+#[test]
+fn plaintext_descriptor_cannot_claim_tls_authentication() {
+    let mut descriptor = accepting_descriptor(100);
+    descriptor["connection_access"] = serde_json::to_value(
+        kyuubiki_protocol::AgentNetworkAccessPolicy::default()
+            .connection_access(true)
+            .with_tls_token(),
+    )
+    .unwrap();
+    let peer = Peer::start_with_descriptor("success", descriptor);
+    assert!(
+        solve(
+            "solve_bar_1d",
+            json!({}),
+            &[peer.endpoint.clone()],
+            "healthiest"
+        )
+        .is_err()
+    );
+    assert_eq!(peer.count(), 0);
 }

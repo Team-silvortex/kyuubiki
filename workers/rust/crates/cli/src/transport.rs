@@ -1,6 +1,9 @@
+use kyuubiki_agent_transport::SocketIo;
 #[cfg(test)]
 use std::io::Read;
+#[cfg(test)]
 use std::io::Write;
+#[cfg(test)]
 use std::net::TcpStream;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -91,8 +94,8 @@ fn write_json_frame<T: serde::Serialize>(
 
     let length = u32::try_from(encoded.len())
         .map_err(|_| "payload too large for 4-byte frame length".to_string())?;
-    let result = write_until(&mut guard, &length.to_be_bytes(), deadline)
-        .and_then(|()| write_until(&mut guard, &encoded, deadline))
+    let result = write_until(&mut *guard, &length.to_be_bytes(), deadline)
+        .and_then(|()| write_until(&mut *guard, &encoded, deadline))
         .map_err(|error| format!("failed to write response frame: {error}"));
     if result.is_err() {
         // A partial heartbeat must not be followed by a fresh final-response frame.
@@ -101,7 +104,11 @@ fn write_json_frame<T: serde::Serialize>(
     result
 }
 
-fn write_until(stream: &mut TcpStream, mut bytes: &[u8], deadline: Instant) -> std::io::Result<()> {
+fn write_until(
+    stream: &mut impl SocketIo,
+    mut bytes: &[u8],
+    deadline: Instant,
+) -> std::io::Result<()> {
     use std::io::{Error, ErrorKind};
     while !bytes.is_empty() {
         let remaining = deadline.saturating_duration_since(Instant::now());

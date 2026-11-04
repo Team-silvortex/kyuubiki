@@ -76,6 +76,53 @@
       </section>
 
       <section class="docs-card docs-section">
+        <h2 id="model-api-connection">User-owned model API connections</h2>
+        <p class="docs-copy">In Workbench, open Assistant, choose LLM, then configure Model API
+          connection. Use a Chat Completions-compatible API base URL, your provider key and an exact
+          model ID. A pasted full <code>/chat/completions</code> URL is normalized without doubling
+          the suffix. Remote addresses require HTTPS and explicit session trust; credentials in a
+          URL, query parameters and fragments are rejected. HTTP is limited to loopback services.</p>
+        <p class="docs-copy">Test connection / load models reads <code>/models</code> only. It does
+          not send research context, generate a completion or execute a simulation. The list does
+          not prove generation access: select a model or keep a manually entered ID, then explicitly
+          Generate plan. Services without a model-list endpoint can still use manual IDs. Model
+          inference may incur provider charges. Review returned actions before execution.</p>
+        <p class="docs-copy">Current native desktop frontends advertise a local Rust model gateway
+          to avoid provider CORS restrictions. Keys and context go from the local GUI through that
+          gateway directly to the chosen provider, not through a Kyuubiki central account service.
+          The gateway requires a same-origin JSON request, accepts only model-list and chat operations,
+          verifies HTTPS, refuses redirects, bounds concurrent requests, response size and time, and
+          does not echo provider error bodies. It is not a public forwarding API. Web-only or older
+          frontends use browser-direct transport and require the provider to allow their browser origin.</p>
+        <p class="docs-copy">Model keys are separate from Agent, Orchestra and Mesh gateway tokens.
+          Keys stay in page memory, not project exports or browser storage; a reload requires entry
+          again. Changing the normalized endpoint clears the previous key. Changing connection settings
+          cancels local waiting and clears old model lists/plans. Cancellation does not guarantee that
+          a provider has stopped an already received inference, and no automatic retry is performed.</p>
+        <p class="docs-copy">This Workbench path currently uses Chat Completions, not every provider's
+          proprietary API. Hub and Installer assistant parity, installed WebView acceptance and broader
+          provider qualification remain separate follow-ups. Default automated suites use controlled
+          providers, not real customer keys or billable model calls.</p>
+        <p class="docs-copy">An opt-in native integration test reads a user-selected credential file
+          only in memory, starts an isolated loopback frontend and calls OpenAI through the production
+          Rust gateway. It performs one model-list request and at most one short completion, capped at
+          256 output tokens with <code>store: false</code>. It prints status, latency and token counts,
+          never credentials or raw responses. The temporary frontend and fixture directory are removed
+          when the test finishes. No Agent, Orchestra or simulation workload is started.</p>
+        <p class="docs-copy">Set <code>KYUUBIKI_MODEL_API_KEY_FILE</code> to a private file outside the
+          checkout before opting in. Do not put the key itself in environment variables, command arguments
+          or repository configuration. Ordinary test runs skip this test.</p>
+        <pre><code>KYUUBIKI_LIVE_MODEL_API_TEST=1 cargo test --locked --offline \
+  --manifest-path workers/rust/Cargo.toml -p kyuubiki-desktop-runtime \
+  --test model_gateway_live -- --ignored --nocapture</code></pre>
+        <p class="docs-copy">Live smoke evidence, 2026-11-04: <code>gpt-5.4-mini</code> was listed;
+          model discovery and completion both returned HTTP 200. The completion passed a strict,
+          non-executing plan contract with zero actions, using 67 input and 62 output tokens. Discovery
+          took 1,423 ms and completion 2,608 ms in this single run; these are observations, not a latency
+          guarantee or scientific validation. Installed GUI end-to-end acceptance remains separate.</p>
+      </section>
+
+      <section class="docs-card docs-section">
         <h2>Primary sources</h2>
         <div class="docs-links">
           <a class="docs-link" href="./accuracy-plan.md">accuracy-plan.md</a>

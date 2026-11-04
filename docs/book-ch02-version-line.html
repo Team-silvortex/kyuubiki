@@ -24,17 +24,17 @@
       </section>
 
       <section class="docs-card docs-section" id="current-checkpoint">
-        <h2>Daji 3.7.1 checkpoint</h2>
+        <h2>Daji 3.7.7 checkpoint</h2>
         <p class="docs-copy">
-          Reviewed October 24, 2026. Version labels describe different things;
+          Reviewed November 4, 2026. Version labels describe different things;
           verify the relevant source before reproducing a result.
-          Source and package metadata now target <code>daji 3.7.1</code>.
+          Source and package metadata now target <code>daji 3.7.7</code>.
         </p>
         <ul class="docs-list">
           <li><strong>Package and book baseline:</strong> the development point above, as recorded in the current manifests.</li>
-          <li><strong>Last recorded local macOS installation:</strong> 3.7.1, with three-shell startup and bounded Workbench observation in the release snapshot.</li>
-          <li><strong>Git checkpoint:</strong> commit 091b1393 is titled daji 3.7.3. That title does not update manifests or installed artifacts.</li>
-          <li><strong>Later source:</strong> committed CI repair 308eb93c and the subsequent workflow working-tree follow-ups are not a fresh installed qualification.</li>
+          <li><strong>Local macOS target:</strong> three independent arm64 shells and the native runtime. Consult the current snapshot for actual installation and startup results; the October 24 installation remains historical evidence.</li>
+          <li><strong>Git checkpoint:</strong> commit f28de0dd is titled daji 3.7.7; this alignment reconciles package metadata with that existing version.</li>
+          <li><strong>Source provenance:</strong> base 3fe22542 plus the working-tree recovery, Agent security, store and model-connection changes. This is not a clean-commit artifact or a claim that remote CI tested the overlay.</li>
         </ul>
         <p class="docs-copy">
           The installation record is not a live health check. Local installation
@@ -43,7 +43,7 @@
         </p>
         <div class="docs-links">
           <a class="docs-link" href="./current-line.md#version-and-evidence-ledger">Version and evidence ledger</a>
-          <a class="docs-link" href="../releases/snapshots/3.7.1.json">Recorded local packaging snapshot</a>
+          <a class="docs-link" href="../releases/snapshots/3.7.7.json">Current local packaging snapshot</a>
           <a class="docs-link" href="./version-line.md">Version policy</a>
         </div>
       </section>
@@ -51,6 +51,10 @@
       <section class="docs-card docs-section" id="source-progress">
         <h2>Latest source work</h2>
         <ul class="docs-list">
+          <li><strong>Agent access:</strong> native TLS/token transport, Rust SDK configuration and endpoint-bound Workbench controls; authenticated multi-host Mesh acceptance is still open.</li>
+          <li><strong>Workspace store and PWDT:</strong> grouped catalog browsing and exact recipe source/version matching. Production account, subscription and publishing integration remains separate backend work.</li>
+          <li><strong>Model API:</strong> model discovery, manual selection, cancellation, memory-only credentials and a bounded native gateway. A real OpenAI smoke check verified a reviewed-plan contract, not autonomous research; new UI copy is EN/ZH/JA with fallback in other locales.</li>
+          <li><strong>Workflow recovery:</strong> paired job/runtime commits fence stale evidence; durable finalization prevents graph replay after retained handoff loss. Process-kill tests do not establish physical power-loss safety.</li>
           <li><strong>Numerical admission:</strong> selected harmonic assembly and complex-arithmetic paths preserve small terms, recheck original equations and reject unrepresentable final values.</li>
           <li><strong>Payload ownership:</strong> compact and transient paths move owned values while preserving independent retained outputs.</li>
           <li><strong>Cancellation:</strong> local graph admission, node and completion boundaries cannot turn an observed cancellation into success through skip policy.</li>
@@ -59,7 +63,7 @@
           <li><strong>Execution receipts:</strong> Orchestra condition and failure traces agree with actual publications and shared Rust controls; local API and SQLite readback retain those records.</li>
         </ul>
         <p class="docs-copy">
-          These are scoped source checks, not a new installed binary, whole-system
+          These are scoped source checks, not whole-system
           coverage percentage, remote CI result or durable-checkpoint guarantee.
           Reports retain their exact test targets, platform and exclusions.
         </p>
@@ -96,7 +100,7 @@
       <section class="docs-card docs-section" id="readiness">
         <h2>What remains open</h2>
         <p class="docs-copy">
-          The October 24 local tensor readback has 13 modules, 11 paradigms,
+          The November 4 local tensor readback has 13 modules, 11 paradigms,
           zero structural gaps, two maturity gaps, 23 evidence-grade gaps and
           18 P0 gaps. Daji remains blocked. Structural success is not numerical,
           installed-platform or release qualification.

@@ -11,6 +11,7 @@ import type { WorkbenchCopy, WorkbenchLanguage } from "@/components/workbench/wo
 import type { TrussDiagnostics, TrussSuggestion } from "@/components/workbench/workbench-defaults";
 import type { WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
 import { classifyStudyKindDomain, classifyStudyKindFamily } from "@/lib/workbench/view-models";
+import { AssistantConnectionError, assistantTransport, assistantTrustedOrigins, setAssistantEndpointTrusted } from "@/lib/assistant/model-connection";
 
 export type WorkbenchAssistantCard = {
   id: string;
@@ -288,17 +289,21 @@ export function useWorkbenchAssistantController({
     [language, studyKind, t],
   );
 
-  const requestLlmAssistantPlan = async (prompt: string): Promise<AssistantPlan> => {
+  const requestLlmAssistantPlan = async (prompt: string, signal?: AbortSignal): Promise<AssistantPlan> => {
     const validation = validateAssistantEndpoint(assistantApiBaseUrl);
-    const trustedOrigins = new Set<string>();
-    if (validation.requiresTrust && validation.origin) {
+    if (!validation.ok) throw new AssistantConnectionError("endpoint");
+    const trustedOrigins = assistantTrustedOrigins();
+    if (validation.requiresTrust && validation.origin && !trustedOrigins.has(validation.origin)) {
       const approved = window.confirm(
-        `This assistant request will send${assistantApiKey ? " your API key and" : ""} the workbench snapshot directly to ${validation.origin}.\n\nOnly continue if you trust this host.`,
+        language.startsWith("zh")
+          ? `生成计划将向 ${validation.origin} 发送${assistantApiKey ? "模型密钥和" : ""}工作台上下文，可能产生服务商费用。仅在信任此服务时继续。`
+          : `Generating a plan sends${assistantApiKey ? " your model API key and" : ""} workbench context to ${validation.origin} and may incur provider charges. Continue only if you trust this service.`,
       );
       if (!approved) {
-        throw new Error("assistant request cancelled before contacting the configured host");
+        throw new AssistantConnectionError("cancelled");
       }
       trustedOrigins.add(validation.origin);
+      setAssistantEndpointTrusted(assistantApiBaseUrl, true);
     }
 
     return requestWorkbenchAssistantPlan({
@@ -314,6 +319,8 @@ export function useWorkbenchAssistantController({
         actionLabel: card.actionLabel,
       })),
       trustedOrigins,
+      signal,
+      transport: await assistantTransport(),
     });
   };
 

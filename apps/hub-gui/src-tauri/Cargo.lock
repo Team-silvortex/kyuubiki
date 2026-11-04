@@ -348,8 +348,27 @@ version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ddef33a339a91ea89fb53151bd0a4689cfce27055c291dfa69945475d22c747"
 dependencies = [
+ "percent-encoding",
  "time",
  "version_check",
+]
+
+[[package]]
+name = "cookie_store"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15b2c103cf610ec6cae3da84a766285b42fd16aad564758459e6ecf128c75206"
+dependencies = [
+ "cookie",
+ "document-features",
+ "idna",
+ "indexmap 2.13.1",
+ "log",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "time",
+ "url",
 ]
 
 [[package]]
@@ -638,6 +657,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "document-features"
+version = "0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4b8a88685455ed29a21542a33abd9cb6510b6b129abadabdcef0f4c55bc8f61"
+dependencies = [
+ "litrs",
 ]
 
 [[package]]
@@ -1699,22 +1727,37 @@ dependencies = [
 ]
 
 [[package]]
-name = "kyuubiki-desktop-runtime"
-version = "3.7.1"
+name = "kyuubiki-agent-transport"
+version = "3.7.7"
 dependencies = [
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "kyuubiki-desktop-runtime"
+version = "3.7.7"
+dependencies = [
+ "base64 0.22.1",
  "chrono",
  "fs2",
+ "kyuubiki-agent-transport",
  "kyuubiki-platform",
  "kyuubiki-protocol",
  "libc",
  "serde",
  "serde_json",
  "sha2",
+ "ureq",
 ]
 
 [[package]]
 name = "kyuubiki-engine"
-version = "3.7.1"
+version = "3.7.7"
 dependencies = [
  "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
@@ -1727,7 +1770,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-hub-gui"
-version = "3.7.1"
+version = "3.7.7"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "kyuubiki-installer",
@@ -1741,7 +1784,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-installer"
-version = "3.7.1"
+version = "3.7.7"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-operator-sdk",
@@ -1755,7 +1798,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-operator-sdk"
-version = "3.7.1"
+version = "3.7.7"
 dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
@@ -1765,7 +1808,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "3.7.1"
+version = "3.7.7"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
@@ -1773,7 +1816,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-project-bundle"
-version = "3.7.1"
+version = "3.7.7"
 dependencies = [
  "chrono",
  "serde",
@@ -1785,7 +1828,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-protocol"
-version = "3.7.1"
+version = "3.7.7"
 dependencies = [
  "serde",
  "serde_json",
@@ -1794,7 +1837,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-solver"
-version = "3.7.1"
+version = "3.7.7"
 dependencies = [
  "kyuubiki-protocol",
  "libc",
@@ -1870,6 +1913,12 @@ name = "litemap"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
+
+[[package]]
+name = "litrs"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11d3d7f243d5c5a8b9bb5d6dd2b1602c0cb0b9db1621bafc7ed66e35ff9fe092"
 
 [[package]]
 name = "lock_api"
@@ -4203,10 +4252,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "972d7902c8735f2695410b8aed7df6ed12a47394aa1c8d7af49f0497b731a94d"
 dependencies = [
  "base64 0.23.1",
+ "cookie_store",
  "log",
  "percent-encoding",
  "rustls",
  "rustls-pki-types",
+ "serde",
+ "serde_json",
  "ureq-proto",
  "utf8-zero",
  "webpki-roots",

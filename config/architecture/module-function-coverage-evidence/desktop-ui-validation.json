@@ -65,6 +65,17 @@
           "workers/rust/crates/desktop-runtime/src/panel_preferences_tests.rs",
           "tests/integration/workbench-ui-data-library-actions.test.mjs",
           "tests/integration/workbench-ui-functional-closure.test.mjs",
+          "tests/integration/workbench-ui-store-workspace.test.mjs",
+          "tests/integration/workbench-ui-agent-api-security.test.mjs",
+          "tests/integration/workbench-ui-model-connection.test.mjs",
+          "apps/frontend/test/workflow/workbench-model-connection.test.ts",
+          "apps/frontend/test/workflow/workbench-assistant-model-plan.test.ts",
+          "apps/frontend/test/workflow/workbench-agent-api-access.test.ts",
+          "apps/frontend/test/workflow/workbench-store-catalog.test.ts",
+          "apps/frontend/test/workflow/workbench-store-backend-service.test.ts",
+          "apps/frontend/test/workflow/workbench-script-store-controller.test.ts",
+          "apps/frontend/test/workflow/workbench-store-command-service.test.ts",
+          "docs/operator-store-integration.html",
           "tests/integration/workbench-ui-functional-recovery.test.mjs",
           "tests/integration/workbench-ui-project-boundaries.test.mjs",
           "tests/integration/workbench-ui-checkpoint-recovery.test.mjs",
@@ -219,6 +230,9 @@
           "Workbench System exports, imports, inspects, and resets a topology snapshot",
           "Workbench project export excludes other projects and unassigned jobs",
           "Workbench project export reports missing results and recovers on retry",
+          "Store PWDT selects an exact source/version and agrees with the GUI reference",
+          "Store lookup rejects an ambiguous source instead of taking the first detail",
+          "script Store controller rejects an adapter that ignores requested identity fields",
           "Workbench Pwdt generates, undoes, redoes, and exports a parametric model",
           "Workbench Pwdt saves a model then appends a version without duplicating the model",
           "Workbench Pwdt switching project cannot save over the previous project's model",
@@ -340,6 +354,32 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "workbench-user-model-api-connection-pilot",
+      "status": "partial",
+      "grade": "exercised",
+      "modules": ["workbench-shell", "desktop-shared-ui"],
+      "paradigms": ["runtime_api", "security", "validation"],
+      "dimensions": ["contract", "execution", "security"],
+      "files": [
+        "apps/frontend/src/lib/assistant/model-connection.ts",
+        "apps/frontend/test/workflow/workbench-model-connection.test.ts",
+        "apps/frontend/test/workflow/workbench-assistant-model-plan.test.ts",
+        "apps/frontend/test/workflow/workbench-secrets.test.ts",
+        "workers/rust/crates/desktop-runtime/src/model_gateway.rs",
+        "workers/rust/crates/desktop-runtime/tests/model_gateway_live.rs",
+        "tests/integration/workbench-ui-model-connection.test.mjs",
+        "docs/book-ch07-trust-and-safety.html"
+      ],
+      "required_text": [
+        "kyuubiki.model-gateway/v1",
+        "model_gateway_rejects_cross_origin_and_unsafe_targets_before_contact",
+        "native_model_gateway_does_not_follow_redirects_or_echo_provider_errors",
+        "openai_model_connection_through_native_gateway",
+        "legacy model URL secrets are scrubbed even without a separate key field",
+        "provider qualification remain separate follow-ups"
+      ]
+    },
     {
       "id": "desktop-content-density-local-controls",
       "status": "proven", "grade": "verified",

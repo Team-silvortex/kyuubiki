@@ -1,23 +1,23 @@
 # daji 3.x
 
 This is the active-status entrypoint, not an accumulated release diary.
-The current development point in this line is `daji 3.7.1`.
+The current development point in this line is `daji 3.7.7`.
 Read the [HTML chapter](book-ch02-version-line.html) for a WebView-friendly
 summary, or choose a task in the [documentation map](README.md).
 
 ## Version And Evidence Ledger
 
-Reviewed October 25, 2026. Distinguish these identities before reproducing a run:
+Reviewed November 4, 2026. Distinguish these identities before reproducing a run:
 
 | Identity | Recorded state | Authority |
 | --- | --- | --- |
 | Active product line | `daji 3.x`, hardening profile `daji-3-7-hardening` | [Version policy](../config/version-line-policy.json), [brand](../assets/brand/brand.json) |
-| Package and book baseline | `3.7.1` | [Book manifest](book-manifest.json), package manifests |
-| Last recorded local macOS installation | `3.7.1` | [Release snapshot](../releases/snapshots/3.7.1.json), [installation report](../reports/daji-3.7.1-local-rebuild-20261024.md) |
-| Latest version-named Git checkpoint | `305e3009`, subject `daji 3.7.3` | Git history; not an artifact version |
-| Earlier committed repair | `308eb93c`, isolated CI dependency/read repair | Git history; no new desktop build |
-| Latest committed workflow repair | `e347cf8c`, skipped-node execution evidence | Git history; no new desktop build |
-| Latest workflow follow-up | Summary admission, comparison and reduction range | Dated reports below; not installed acceptance |
+| Package and book baseline | `3.7.7` | [Book manifest](book-manifest.json), package manifests |
+| Local macOS installation | `3.7.7`, three arm64 shells and native runtime, verified November 4 | [Current snapshot](../releases/snapshots/3.7.7.json), [installation report](../reports/daji-3.7.7-local-rebuild-20261104.md) |
+| Previous installed baseline | `3.7.1`, October 24 | [Historical installation report](../reports/daji-3.7.1-local-rebuild-20261024.md) |
+| Latest version-named Git checkpoint | `f28de0dd`, subject `daji 3.7.7` | Git history; not by itself an installation |
+| Source provenance | `3fe22542` plus uncommitted recovery, Agent security, store, model-connection and alignment work | Working-tree build, not a clean release commit |
+| CI versus local evidence | Committed Bandit/CI fixes are separate from local overlay verification | Do not attribute remote CI results to uncommitted code |
 
 A commit subject does not update package metadata or installed files. The last
 recorded installation is not a live health check. Local builds do not publish
@@ -32,10 +32,20 @@ execution/publication in Engine and Agent; the GUI is not runtime authority.
 
 | Area | Retained change | Scope |
 | --- | --- | --- |
+| Agent API security | Native TLS/token transport, Rust SDK configuration, endpoint-bound Workbench credentials and default LAN admission protection | Local contract/transport evidence; authenticated multi-host Mesh and Python/Elixir parity remain separate acceptance work |
+| Workspace store | Project-scoped browsing, filtering and package details with backend integration contracts | Self-host source support; production account/subscription/publishing integration is not claimed complete. [Contract](operator-store-integration.html) |
+| PWDT package identity | Match recipe/runtime source and version exactly before using a stored script | Reject mismatched provenance rather than falling back to another catalog; PWDT remains GUI automation, not the Headless SDK |
+| Model API connection | Model discovery/manual selection, native same-origin gateway, cancellation, endpoint-change fencing and memory-only keys | Workbench browser/native tests plus one bounded real OpenAI plan request on November 4; no automatic action execution, no scientific qualification. [Guide](book-ch07-trust-and-safety.html#model-api-connection) |
+| Distribution alignment | Package, SDK metadata, language targets, book and local build target agree on 3.7.7 | Three independent macOS arm64 apps and native runtime; installation results stay in the current snapshot, not inferred from manifests |
 | Harmonic assembly and arithmetic | Preserve coefficient/product tails, original-equation checks and checked complex ranges | Selected source kernels and manufactured/physical fixtures, not general physical qualification |
 | Workflow payload ownership | Move owned inputs and final-port values without redundant copies | In-process ownership; required independent retained copies remain |
 | Workflow cancellation | Poll admission, node and completion boundaries even under skip policy | Cooperative local cancellation, not preemption of opaque callbacks |
-| Terminal recovery diagnostics | Isolate malformed history and bound the final message before reconciling an active job to its retained terminal state | Same-entry reason or state fallback leaves raw evidence unchanged; manual scans and coordinator restarts continue to later healthy jobs. Local storage regression, not terminal-write atomicity or new replay authority. [Evidence](../reports/workflow-terminal-diagnostics-20261028.md) |
+| Terminal recovery diagnostics | Isolate malformed history and bound the final message before reconciling an active job to its retained terminal state | Same-entry reason or state fallback leaves raw evidence unchanged; manual scans and coordinator restarts continue to later healthy jobs. Local diagnostic regression, without new replay authority; commit fencing is covered separately below. [Evidence](../reports/workflow-terminal-diagnostics-20261028.md) |
+| Terminal recovery commit | Compare the complete runtime and current job together under the existing ownership guard; reject stale decisions and retain independent terminal jobs | Local SQLite races/write rollback and JSON persistence-fault regressions; rejected reconciliation marks the scan interrupted without counting a completed pass. Healthy siblings progress while ownership remains valid. [Commit evidence](../reports/workflow-terminal-diagnostics-20261028.md#atomic-terminal-reconciliation-follow-up) |
+| Legacy workflow recovery | Use the same paired commit before blocking a recognized legacy workflow; count only failures committed by this scan | Replaced/deleted evidence cannot apply the stale block. Independent terminal jobs remain untouched; plain jobs without workflow runtime are still skipped, not inferred failed. Rejected writes interrupt the scan with a legacy-specific reason. [Legacy evidence](../reports/workflow-terminal-diagnostics-20261028.md#legacy-recovery-commit-follow-up) |
+| Dispatch refusal snapshot | Bind claim/replay refusal to the exact runtime checked, rather than re-reading a replacement before blocking | Local SQLite races, initial-dispatch controls and JSON write failures; unresolved dispatch recovery interrupts the scan, while independent terminal jobs stay skipped. No new replay or automatic retry authority. [Refusal evidence](../reports/workflow-terminal-diagnostics-20261028.md#dispatch-refusal-snapshot-follow-up) |
+| Pending completion refusal | Bind invalid/missing checkpoint decisions to both the inspected job and runtime; preserve publication-only retry after stale writes or missing runtime | Local SQLite interleavings and shared JSON controls retain newer evidence without replay or record recreation. Known finalizers may publish via manual dispatch; retries for absent runtime stop when the job is gone or terminal. [Completion evidence](../reports/workflow-terminal-diagnostics-20261028.md#pending-completion-refusal-follow-up) |
+| Durable finalization phase | Persist `finalizing` with the completion checkpoint in the existing paired commit | Checkpoint removal cannot reopen graph replay after coordinator or OS-process restart while the phase is retained. Late execution writes are fenced; missing/corrupt handoffs block rather than rebuild from memory. Whole-runtime deletion/rollback and physical power loss remain outside this evidence. [Phase evidence](../reports/workflow-terminal-diagnostics-20261028.md#durable-finalization-phase-follow-up) |
 | Selected-input attribution | Name the actual fallback source without weakening readiness or named-input bindings | Fresh Rust execution traces and direct lineage |
 | Requested output retention | Keep requested published outputs despite optional ports, cache hints or later consumers | Local result retention, not a durable checkpoint |
 | Execution receipts | Align Orchestra branch/failed-fallback traces with Rust and actual publications | Shared fixture, local API routing and SQLite result readback |
@@ -194,7 +204,14 @@ Follow the evidence rather than treating this table as a new combined run:
   target. New directory/budget reasons remain sealed and limited to three attempts;
   a final durable authority check rejects changes during directory lookup.
 
-The latest summary reduction report records 3,544 web tests with zero failures
+The November 4 alignment and installation pass records 1,982 frontend unit
+passes, 150 native-runtime passes with three ignored opt-in tests, seven browser
+interaction passes and three installed-shell startup passes. Installed Workbench
+observation confirms the model configuration, Agent TLS/token panel and store
+browse/filter/detail flow. These scopes do not replace physical, distributed or
+cross-language acceptance. [Rebuild evidence](../reports/daji-3.7.7-local-rebuild-20261104.md).
+
+The earlier summary reduction report records 3,544 web tests with zero failures
 and 77 skips, plus 758 passed Rust Engine/selected integration tests and one
 ignored test. These are that report's source checks, not coverage percentages,
 a new Solver-wide campaign, remote CI results or installed acceptance. Overlapping

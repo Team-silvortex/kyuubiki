@@ -161,7 +161,7 @@
   },
   "release_profile": {
     "id": "daji-3-7-hardening",
-    "current_checkpoint": "daji 3.7.1",
+    "current_checkpoint": "daji 3.7.7",
     "target_release": "daji 3.7.x",
     "gate_mode": "advisory",
     "enforce_from": "explicit gate-mode decision",

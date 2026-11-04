@@ -1,8 +1,8 @@
 # Current Architecture Map
 
 This is the compact navigation map for the current `daji 3.x` line, reviewed
-on October 23, 2026 against the source tree and current constraint-admission
-work. It describes ownership and call paths, not installed qualification.
+on November 4, 2026 against the source tree, workspace Store, native admission
+and recovery boundaries. It describes ownership and call paths, not installed qualification.
 Version declarations belong to the manifests and [current line](current-line.md),
 not a second release timeline in this navigation map.
 
@@ -76,6 +76,27 @@ control-plane topology, not a second platform or an additional top-level module.
 Keep its service policy and deployment boundaries explicit; its existence does
 not qualify native Agent authentication. See [module-architecture.md](module-architecture.md).
 
+## Workspace Store Ownership
+
+The Store belongs to the Workbench project workflow, not Hub and not a new
+runtime engine. Reuse these owners rather than adding another plugin platform:
+
+| Boundary | Source owner | Limit |
+| --- | --- | --- |
+| Catalog state and compact/expanded UI | [Store mount](../apps/frontend/src/components/workbench/workbench-store-section-mount.tsx), workspace and details components | Presentation and request ownership, not installation |
+| Search, filters and page selection | [Catalog helpers](../apps/frontend/src/lib/workbench/store-catalog.ts) | Operate on catalog data, not executable packages |
+| GUI/PWDT project reference mutations | [Command service](../apps/frontend/src/lib/workbench/store-command-service.ts) and [manifest](../apps/frontend/src/lib/workbench/store-manifest.ts) | One normalization/conflict policy; staging is not download or admission |
+| Backend/source access | [Store adapter](../apps/frontend/src/lib/workbench/store-backend-service.ts) | Runtime-backed transport, not UI-owned account or payment logic |
+| Existing service catalog and package distribution | [Asset store](../apps/web/lib/kyuubiki_web/asset_store.ex), [central store](../apps/web/lib/kyuubiki_web/central_store.ex), [package distribution](../apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex) | Existing local/managed services, not a completed hosted commerce system |
+
+The [HTML integration handoff](operator-store-integration.html) owns the current
+implementation boundary and proposed backend contract. Team Silvortex supplies
+shared identity; Kyuubiki does not build another password/payment system.
+Self-hosted sources do not require a vendor account. Hosted entitlements,
+immutable downloads, native installation receipts and publisher submission are
+still integration work, not implied by a successful catalog or browser test.
+Neither Store access nor a project reference grants Agent control.
+
 ## Runtime Data Plane
 
 | Rust crate | Responsibility |
@@ -125,6 +146,31 @@ completed solve or production qualification. Source anchors:
 - [Engine solver adapter](../workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs)
 - [Runtime and recovery book](book-ch04-runtime-modes.html)
 
+## Workflow Recovery Ownership
+
+These are responsibility groups within Orchestra, not extra topology modules or
+services. Keep the coordinator as the state-machine entrypoint; do not move its
+authority into the GUI, SDK or numerical kernel.
+
+| Boundary | Existing source owner | Must remain separate |
+| --- | --- | --- |
+| API calls, lifecycle messages and recovery routing | [Coordinator](../apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex) | Routes work; does not duplicate store transactions or numerical admission |
+| Owning lease, renewal and loss | [Ownership](../apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex) | Permission to write is not permission to replay unknown work |
+| Runner monitoring and retirement | [Runners](../apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_runners.ex) | A dead waiter is not proof that a remote computation stopped |
+| Scan accounting and terminal/legacy reconciliation | [Scan](../apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_scan.ex) | Scan completion is not task success; plain jobs without workflow data are not inferred failed |
+| Execution claim and replay admission | [Dispatch guard](../apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_dispatch_guard.ex) | Checkpoint/journal evidence must authorize the original attempt, not a guessed replacement |
+| Completion checkpoint and publication | [Completion store](../apps/web/lib/kyuubiki_web/orchestra/workflow_completion_store.ex) | Durable staged evidence is distinct from final result publication |
+| Failure, expiry and cancellation | [Failure](../apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_failure.ex) and [cancellation handoff](../apps/web/lib/kyuubiki_web/orchestra/workflow_cancellation_handoff.ex) | A cancellation request or acknowledgement does not prove remote termination |
+| Atomic job/result persistence | [Jobs Store](../apps/web/lib/kyuubiki_web/jobs/store.ex) and backend transactions | Job status and the exact observed runtime must commit together, not through independent writes |
+
+Checkpoint/receipt schemas and their validators remain the contract owners.
+The stores compose those checks with lease and snapshot conditions. Ordinary
+exceptions are not silently reclassified as storage outages. Recovery counters,
+runtime lifecycle, raw evidence retention and solver accuracy are different
+contracts; one green test cannot qualify them all. See the
+[terminal and legacy commit evidence](../reports/workflow-terminal-diagnostics-20261028.md)
+and the [recovery source/test placement rules](project-architecture-organization.md#workflow-recovery-source-and-test-placement).
+
 ## Numerical Admission Ownership
 
 Numerical acceptance belongs in Solver, after reconstruction and before
@@ -146,92 +192,27 @@ operators. A nonlinear state is not a static tangent solution; a dynamic
 increment is not a static physical displacement. Family-specific reaction and
 postprocessing checks remain separate from the shared equation gate.
 
-Harmonic [complex arithmetic](../workers/rust/crates/solver/src/harmonic_spring_complex_range.rs)
-also owns exceptional elimination updates, complete-row substitution replay and
-element-force product restoration. A wide temporary numerator may be divided
-before restoration; an unrepresentable final coefficient, force or extension
-must still fail instead of becoming a successful zero-valued result.
-The [exceptional RHS adapter](../workers/rust/crates/solver/src/harmonic_spring_rhs.rs)
-retains independent binary-scaled components across row normalization, elimination
-and pivot swaps until solution division. Ordinary RHS storage keeps its original
-allocation; coefficient preparation and pivot admission remain separate policies.
-See the [bounded RHS range report](../reports/harmonic-complex-rhs-range-20261024.md).
-Promotion now builds its wide buffer from an intact finite source and replaces
-it only after every fallible conversion checkpoint passes. On checkpoint error,
-the same adapter retains all rows and its original allocation for explicit retry;
-see the [local promotion atomicity report](../reports/harmonic-rhs-promotion-20261024.md).
-This does not roll back earlier matrix/RHS mutations or resume an interrupted solve.
-Coefficient normalization separately rejects erased or irreversibly rounded tiny
-components before elimination, with reduced-row/column/component diagnostics.
-This [admission guard](../reports/harmonic-coefficient-normalization-range-20261024.md)
-does not expand matrix representability or replace the original-equation check.
-Nonzero component terms that cancel to a rounded zero also trigger complete
-expression replay, retaining FMA product tails and earlier row-sum tails.
-See the [bounded zero-cancellation report](../reports/harmonic-complex-zero-cancellation-20261024.md).
-Ordinary non-cancelling arithmetic keeps its existing order; this is not a
-general forward-accuracy guarantee for all nonzero cancellation.
-The [near-cancellation follow-up](../reports/harmonic-complex-near-cancellation-20261024.md)
-also replays strongly reduced nonzero components. Independent real/imaginary
-row peaks detect gradual cancellation without row copies. The relative
-`2^-26` trigger is an internal routing heuristic, not a physical residual
-tolerance, singularity threshold or forward-error certificate.
-Replay's [fixed integer accumulator](../workers/rust/crates/solver/src/harmonic_spring_exact_sum.rs)
-retains already aligned binary64 parts without a rounded floating-point error
-balance. Checked capacity and one final rounding prevent nested-tail loss;
-see the [scoped accumulation report](../reports/harmonic-complex-exact-accumulation-20261024.md).
-This does not make assembly, alignment or subsequent division exact.
-The [row-normalization policy](../workers/rust/crates/solver/src/harmonic_spring_normalization.rs)
-prefers exact binary shifts before elimination, falling back to the legacy
-divisor when a tiny coefficient would otherwise be lost. Row weights travel
-with pivot swaps so comparison units remain tied to each original row maximum.
-See the [bounded preparation report](../reports/harmonic-binary-normalization-20261024.md);
-this does not certify exact factorization or all weak-response components.
-Exceptional purely real/imaginary divisors use independent scaled scalar
-quotients rather than squared complex denominators. The
-[near-underflow quotient helper](../workers/rust/crates/solver/src/harmonic_spring_quotient.rs)
-rounds directly to quantum units using bounded integer arithmetic, retaining
-the nonzero-to-zero rejection policy. See the
-[public readback and cancellation report](../reports/harmonic-quotient-rounding-20261024.md);
-this does not by itself remove general complex numerator/denominator rounding.
-The exceptional general-divisor path now uses a separate
-[bounded exact-ratio helper](../workers/rust/crates/solver/src/harmonic_spring_complex_quotient.rs).
-It retains both products as integers and rounds each final component once,
-without first restoring tiny squared terms or rounding a reciprocal. See the
-[range, public readback and cancellation report](../reports/harmonic-general-division-20261024.md).
-Its checked fixed capacity is not arbitrary precision. The ordinary divisor
-path now uses a [compact integer-pair candidate](../workers/rust/crates/solver/src/harmonic_spring_fast_division.rs)
-and exact rounding-cell midpoint comparisons before admitting normal components.
-An FMA-refined candidate is not trusted without that check; capacity, subnormal
-and ambiguous cases retain checked exact replay. Shared product decoding serves
-both branches. See the [fast-path evidence](../reports/harmonic-fast-division-20261024.md).
-Ordinary division bits may change; standalone product/legacy-difference bits and
-numerical gates do not. RHS elimination and back-substitution numerator updates
-now have a separate [fused row helper](../workers/rust/crates/solver/src/harmonic_spring_row_update.rs).
-Its upward-padded local FMA rounding estimate selects complete-expression replay
-when partial-sum loss is amplified relative to the final numerator. The eight
-epsilon budget is an internal routing rule, not physical admission. See the
-[weak-response and cancellation evidence](../reports/harmonic-row-update-20261024.md).
-Schur coefficient updates now enter a separate `matrix_difference` wrapper that
-reuses the same fused/replay policy for dense cells, path diagonals and generated
-fill-in. See the [coefficient-tail and soft-mode evidence](../reports/harmonic-schur-update-20261024.md).
-This intentionally changes coefficient-update bits, not the weighted pivot floor,
-standalone product/difference semantics or operator contracts. Assembly, factors
-and updated coefficients remain rounded. Ordinary fused rows still divide a
-represented numerator. For replayed substitution rows, the admitted integer sums
-now pass directly to the checked quotient machinery without intermediate numerator
-rounding. See the [complete replayed-row quotient evidence](../reports/harmonic-row-quotient-20261024.md).
-The unchanged alignment guards bound that local expression guarantee; it is not a
-correct-rounding guarantee for ordinary rows or a global solution certificate.
-An [elimination-step factor](../workers/rust/crates/solver/src/harmonic_spring_factor.rs)
-now carries a rounded value plus a residual-quotient correction through both
-matrix and RHS updates. It is transient, not a stored factor snapshot. Nonzero
-inputs and update operands must fit the conservative `2^-100` to `2^100`
-compensation headroom. Shared preflight disables correction for the whole step
-if any updated coefficient or RHS operand is unsupported, preserving one effective
-factor and the prior range-checked path, including wide RHS values.
-See the [non-dyadic factor evidence](../reports/harmonic-factor-compensation-20261024.md).
-The correction is approximate and bounded, not an exact factor or a general
-conditioning-independent solution certificate.
+Harmonic arithmetic has several internal owners, not separate engines. Use this
+index to find source and bounded evidence; the reports retain experimental
+details, limits and failures rather than duplicating them in this architecture map.
+
+| Internal responsibility | Source and bounded evidence |
+| --- | --- |
+| Complex range, row replay and force restoration | [Complex arithmetic](../workers/rust/crates/solver/src/harmonic_spring_complex_range.rs); [zero cancellation](../reports/harmonic-complex-zero-cancellation-20261024.md), [near cancellation](../reports/harmonic-complex-near-cancellation-20261024.md) |
+| Scaled RHS storage and conversion atomicity | [RHS adapter](../workers/rust/crates/solver/src/harmonic_spring_rhs.rs); [range](../reports/harmonic-complex-rhs-range-20261024.md), [promotion](../reports/harmonic-rhs-promotion-20261024.md) |
+| Reversible coefficient preparation and weighted pivots | [Normalization](../workers/rust/crates/solver/src/harmonic_spring_normalization.rs); [coefficient admission](../reports/harmonic-coefficient-normalization-range-20261024.md), [binary normalization](../reports/harmonic-binary-normalization-20261024.md) |
+| Checked accumulation of aligned parts | [Integer accumulator](../workers/rust/crates/solver/src/harmonic_spring_exact_sum.rs); [accumulation](../reports/harmonic-complex-exact-accumulation-20261024.md) |
+| Axial and general complex quotient rounding | [Scalar quotient](../workers/rust/crates/solver/src/harmonic_spring_quotient.rs), [exact ratio](../workers/rust/crates/solver/src/harmonic_spring_complex_quotient.rs), [fast-path admission](../workers/rust/crates/solver/src/harmonic_spring_fast_division.rs); [axial](../reports/harmonic-quotient-rounding-20261024.md), [general](../reports/harmonic-general-division-20261024.md), [fast-path evidence](../reports/harmonic-fast-division-20261024.md) |
+| Fused RHS and Schur updates, complete replayed-row division | [Row helper](../workers/rust/crates/solver/src/harmonic_spring_row_update.rs); [row update](../reports/harmonic-row-update-20261024.md), [Schur update](../reports/harmonic-schur-update-20261024.md), [replayed-row quotient](../reports/harmonic-row-quotient-20261024.md) |
+| One bounded effective factor per elimination step | [Factor helper](../workers/rust/crates/solver/src/harmonic_spring_factor.rs); [compensation evidence](../reports/harmonic-factor-compensation-20261024.md) |
+
+Range restoration must reject unrepresentable final values, not turn them into
+successful zeros. Replay heuristics are not residual tolerances. Exact local
+integer operations have fixed checked capacity and do not make assembly,
+factorization or a whole solve exact. RHS promotion atomicity is not rollback of
+earlier elimination or process-restart recovery. The shared original-equation
+gate remains mandatory for its connected consumers; factor correction is bounded
+and cannot silently use different effective factors for coefficient and RHS updates.
 
 Solver unit tests own mathematical and range counterexamples. Engine integration
 tests own serialized dispatch/workflow equality, gate reachability and failure
@@ -263,12 +244,16 @@ from their configured authority as needed rather than replicated in full to
 every Agent.
 
 Keep desired authority rules separate from enforced transport security. The
-native listener currently defaults to loopback and admits configured source
-IPs, but this is not TLS or cryptographic peer/controller authentication.
-Agent, Installer and runtime preflight share the policy parser. Managed restart
-validates that policy before stopping existing services; status distinguishes
-configuration from the policy observed on a running process. See the
-[bounded containment and preflight evidence](../reports/agent-network-access-20261016.md).
+native listener defaults to loopback. Explicitly allowed LAN source IPs receive
+discovery-only access unless the host also opts into trusted LAN control;
+drain/resume remain loopback-only. This is not TLS, caller identity or proof of
+one-Orchestra authentication. Protocol owns the pure policy and connection-access
+contract; Agent enforces it. Installer/runtime preflight and Orchestra/direct-Mesh
+selection consume it rather than inventing independent allowlists. Restart
+validates settings before stopping services, and observed connection readiness
+does not replace lease or recovery evidence. See the
+[runtime ingress guide](book-ch04-runtime-modes.html#native-agent-ingress) and
+[Agent boundary](agent-orchestrator-boundary.md#native-execution-capacity-and-orphaned-work).
 
 ## Verification Spine
 
@@ -287,6 +272,12 @@ than copying a growing sequence of historical counts into this map. A successful
 structural check does not imply release readiness. Local tests, same-host TCP,
 installed journeys, multi-host partitions and host power loss are distinct scopes.
 
+The active cross-shell GUI report is
+`releases/usability-evidence/current/desktop-ui-validation.json`;
+`make check-desktop-ui-validation` checks it against the current manifest.
+Historical release reports retain their original scope. Changing report paths or
+passing browser mocks does not close native deployment or backend integration gaps.
+
 Solver experiment results remain in their original reports and current-line
 index. Removing duplicate experiment narratives from this overview does not
 remove tests, failures, qualification requirements or numerical acceptance gates.
@@ -300,6 +291,8 @@ Agent, Engine, SDK and desktop shells merely to reduce build artifacts.
 - Incremental caches and hashed test executables are regenerable. Use the native
   `make disk-usage` preview and `make clean-dev-cache` cleanup while builds/tests
   are idle; dependency libraries, top-level tools and release bundles are retained.
+- Stop confirmed orphaned test children by exact ownership before cleanup, never
+  by a broad Agent/BEAM process-name match. Installed and unrelated services stay running.
 - `tmp/` is mixed: reports can be temporary, but journals, SQLite files and
   execution receipts are state. Ignored by Git does not mean safe to delete.
 - Installed Apps, runtime versions, credentials and server storage are separate

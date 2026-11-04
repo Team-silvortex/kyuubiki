@@ -66,7 +66,7 @@
       "id": "native-agent-lan-ingress-authorization",
       "module_id": "runtime-agent-cli", "paradigm": "security", "dimension": "security",
       "scope": "native-agent/lan/peer-and-controller-authentication", "target": "qualified", "claims": [],
-      "basis": ["reports/agent-lan-mesh-recovery-20261013.md", "docs/book-ch04-runtime-modes.html"],
+      "basis": ["reports/agent-lan-mesh-recovery-20261013.md", "reports/agent-lan-control-gate-20261028.md", "reports/agent-connection-selection-20261028.md", "docs/book-ch04-runtime-modes.html"],
       "acceptance": "Qualify authenticated peer/controller identity, admission and recovery authorization, revocation and replay rejection on the native Agent listener. Cover one-Orchestra binding and mutually exclusive offline Mesh authority. Trusted-network raw TCP, public cluster/store IDs, HTTP gateway auth and connection limits cannot substitute."
     },
     {

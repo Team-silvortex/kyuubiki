@@ -12,13 +12,22 @@ const MAX_BODY_BYTES: usize = 32 * 1024 * 1024;
 const DESKTOP_FRAME_ANCESTORS: &str =
     "frame-ancestors 'self' tauri://localhost http://tauri.localhost https://tauri.localhost";
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct HttpRequest {
     pub method: String,
     pub target: String,
     pub path: String,
     pub headers: HashMap<String, String>,
     pub body: Vec<u8>,
+}
+
+impl std::fmt::Debug for HttpRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HttpRequest")
+            .field("header_count", &self.headers.len())
+            .field("body_bytes", &self.body.len())
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -407,6 +416,28 @@ mod tests {
     fn request_shape_remains_owned_by_native_runtime() {
         let request = request("/");
         assert_eq!(request.path, "/");
+    }
+
+    #[test]
+    fn request_debug_never_includes_credentials_or_payloads() {
+        let mut request = request("/api/direct-mesh/agents?secret=query-secret");
+        request
+            .headers
+            .insert("x-kyuubiki-agent-token".into(), "agent-secret".into());
+        request
+            .headers
+            .insert("authorization".into(), "Bearer gateway-secret".into());
+        request.body = b"private-research-payload".to_vec();
+        let debug = format!("{request:?}");
+        for secret in [
+            "query-secret",
+            "agent-secret",
+            "gateway-secret",
+            "private-research-payload",
+        ] {
+            assert!(!debug.contains(secret));
+        }
+        assert!(debug.contains("HttpRequest"));
     }
 
     #[test]

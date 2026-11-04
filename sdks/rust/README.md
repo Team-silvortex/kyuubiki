@@ -9,7 +9,45 @@ installer tooling, local automation, and high-confidence reference runners. It
 shares the same headless contracts as the Python and Elixir SDKs; Rust CLIs are
 packaged examples over those contracts rather than the only supported entry.
 
+## Native Agent API Security
+
+`SolverRpcClient` can use verified TLS 1.3 and a connection-scoped Agent API token.
+Configure the Agent's token, certificate and private key together before connecting;
+partial configuration stops startup, and TLS errors never trigger plaintext retry.
+
+```rust
+use kyuubiki_headless_sdk::{AgentApiSecurity, SolverRpcClient};
+
+let security = AgentApiSecurity::from_pem(
+    &std::fs::read_to_string("credentials/agent-ca.pem")?,
+    "agent.example",
+    std::env::var("KYUUBIKI_AGENT_API_TOKEN")?,
+)?;
+let agent = SolverRpcClient::new("agent.example", 5001).with_api_security(security);
+let descriptor = agent.describe_agent()?;
+```
+
+Inject a cryptographically random 32..256-character URL-safe token from your secret
+manager; never put it into task parameters, source control or command-line arguments.
+The certificate name must match its SAN. Keep the source-IP allowlist and explicit
+trusted-LAN control policy: this token is not an Orchestra binding or permission to
+repeat an uncertain task. Existing examples remain plaintext unless explicitly wired
+with `with_api_security`; merely setting the environment variable does not upgrade them.
+
+See the [native Agent TLS guide](../../docs/book-ch04-runtime-modes.html#agent-api-security)
+for server configuration, GUI access, rotation and current scope. Python/Elixir clients,
+Orchestra outbound RPC and automatic peer discovery are not yet TLS callers.
+
 ## Research example
+
+For an opt-in, paid model-driven experiment, see the
+[model-driven research guide](../../docs/research-model-driven.html).
+`examples/model_driven_thermal_research.rs` lets a model select bounded synthetic
+designs, runs them through this SDK, independently checks the numerical results,
+and requests a separate model review. Provider integration is example-only;
+it adds no model-provider dependency to the public SDK library. Offline safety
+tests run with `cargo test`; actual API calls require explicit opt-in and an
+external credential file. This is a research example, not an autonomous shell.
 
 `examples/layered_thermal_research.rs` runs 14 bounded heat-to-structure workflow
 cases through `KyuubikiAgentClient`, without a GUI or a separate research CLI.

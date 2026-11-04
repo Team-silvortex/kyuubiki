@@ -9,7 +9,7 @@
   <body>
     <main class="docs-shell docs-stack">
       <section class="docs-hero">
-        <div class="docs-kicker">daji 3.7.1 - Large-model entrypoint</div>
+        <div class="docs-kicker">daji 3.7.7 - Large-model entrypoint</div>
         <h1>From documentation to bounded research</h1>
         <p class="docs-copy">
           One ingestion path for a model to discover Kyuubiki, prepare a safe
@@ -112,10 +112,25 @@
           <a class="docs-link" href="../schemas/model-research-validation-report.schema.json">Validation report</a>
           <a class="docs-link" href="../schemas/model-research-readiness-report.schema.json">Planning readiness</a>
           <a class="docs-link" href="./automated-material-research-example.md">Research example</a>
+          <a class="docs-link" href="./research-model-driven.html">Live model-driven Rust experiment</a>
           <a class="docs-link" href="./accuracy-baselines.md">Accuracy baselines</a>
           <a class="docs-link" href="./security.md">Security boundary</a>
           <a class="docs-link" href="./model-research-onboarding.md">Engineering source</a>
         </div>
+      </section>
+      <section class="docs-card docs-section">
+        <h2>Workbench model configuration</h2>
+        <p class="docs-copy">The assistant's model connection panel separates service setup
+          from model selection. After a successful list request, connection fields collapse
+          to a summary and remain editable. Search filters the full returned catalog while
+          rendering at most 40 choices; manual ID entry remains available if discovery is
+          unsupported. Advanced protocol, transport and privacy details are collapsed by default.</p>
+        <p class="docs-copy">Testing reads the model list only, not paid inference or study
+          data. A loaded list is not proof that a model supports plan generation. A failed
+          recheck, changed connection or revoked trust clears old discovery state. Keys stay
+          in page memory, and changing provider clears the previous key. Connection notices
+          follow the selected interface language. The GUI uses Chat Completions-compatible
+          planning; the separate Rust research example uses Responses API tool calls.</p>
       </section>
     </main>
   </body>

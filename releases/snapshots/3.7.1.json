@@ -2,7 +2,7 @@
   "version": "3.7.1",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-10-24",
   "git_commit": "c4cc2f96",
   "summary": "Reconcile the existing Daji 3.7.1 Git checkpoint with package and current-document metadata; rebuild the compact desktop UI and current local runtime from the working-tree overlay.",

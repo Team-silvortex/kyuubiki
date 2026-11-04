@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use chrono::Utc;
 use serde_json::{Map, Value, json};
 
-use crate::direct_mesh_rpc::{describe_agents, parse_endpoint, solve};
+use crate::direct_mesh_rpc::parse_endpoint;
 use crate::frontend_http::{HttpRequest, HttpResponse, json_response, query_parameter};
 
 const MAX_ENDPOINTS: usize = 32;
@@ -16,6 +16,8 @@ const RESULT_TTL: Duration = Duration::from_secs(10 * 60);
 const MAX_CHUNK_LIMIT: usize = 1000;
 static NEXT_JOB_ID: AtomicU64 = AtomicU64::new(1);
 
+#[path = "direct_mesh_api_security.rs"]
+mod api_security;
 #[path = "direct_mesh_recovery_gateway.rs"]
 mod recovery;
 
@@ -124,7 +126,11 @@ impl DirectMeshGateway {
             Ok(endpoints) => endpoints,
             Err(error) => return json_response(400, json!({"error": error})),
         };
-        let agents = describe_agents(&endpoints);
+        let security = match api_security::security_for(request, &endpoints) {
+            Ok(security) => security,
+            Err(response) => return response,
+        };
+        let agents = crate::direct_mesh_rpc::describe_agents_secured(&endpoints, security);
         json_response(
             200,
             json!({
@@ -201,15 +207,24 @@ impl DirectMeshGateway {
             params["expected_store_id"] = json!(id);
         }
         // Durable operations stay pinned even during discovery; never migrate their identity.
-        let outcome = crate::direct_mesh_rpc::request_detailed(&endpoints[0], method, params)
-            .and_then(|(execution, progress)| {
-                validate_store_identity(&execution, expected_store)?;
-                // The RPC transport already bound a rejection to this exact submit request.
-                if !crate::direct_mesh_admission::is_rejection(&execution) {
-                    validate_durable_report(&execution, id)?;
-                }
-                Ok((execution, progress))
-            });
+        let security = match api_security::security_for(request, &endpoints) {
+            Ok(security) => security,
+            Err(response) => return response,
+        };
+        let outcome = crate::direct_mesh_rpc::request_secured(
+            &endpoints[0],
+            method,
+            params,
+            security.as_deref(),
+        )
+        .and_then(|(execution, progress)| {
+            validate_store_identity(&execution, expected_store)?;
+            // The RPC transport already bound a rejection to this exact submit request.
+            if !crate::direct_mesh_admission::is_rejection(&execution) {
+                validate_durable_report(&execution, id)?;
+            }
+            Ok((execution, progress))
+        });
         match outcome {
             Ok((execution, _)) => json_response(
                 200,
@@ -261,7 +276,17 @@ impl DirectMeshGateway {
         }
 
         let started_at = Utc::now().to_rfc3339();
-        let solved = match solve(method, input, &endpoints, selection_mode) {
+        let security = match api_security::security_for(request, &endpoints) {
+            Ok(security) => security,
+            Err(response) => return response,
+        };
+        let solved = match crate::direct_mesh_rpc::solve_secured(
+            method,
+            input,
+            &endpoints,
+            selection_mode,
+            security,
+        ) {
             Ok(solved) => solved,
             Err(error) => {
                 return json_response(

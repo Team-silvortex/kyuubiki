@@ -332,6 +332,7 @@ export function WorkbenchSystemSidebarMount({
             onImmersiveGuardrailsChange={setImmersiveGuardrails}
             onExportDatabase={() => void downloadDatabaseSnapshot()}
           />
+          <WorkbenchAgentApiPanel language={language} endpointsText={directMeshEndpointsText} directMode={frontendRuntimeMode === "direct_mesh_gui"} />
           <WorkbenchSystemInstallLayoutCard
             copy={t}
             title={t.workflowPackageInstallRulesTitle}
@@ -521,3 +522,4 @@ export function WorkbenchSystemSidebarMount({
     />
   );
 }
+import { WorkbenchAgentApiPanel } from "./workbench-agent-api-panel";

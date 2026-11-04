@@ -164,19 +164,7 @@ export function addManifestEntry(
   entry: AssetStoreEntry,
 ): WorkspaceStoreManifest | null {
   const now = new Date().toISOString();
-  const manifestEntry = normalizeManifestEntry(
-    {
-      id: entry.id,
-      kind: entry.kind,
-      title: entry.title,
-      version: entry.version,
-      source_id: entry.source_id,
-      package_ref: entry.package_ref,
-      target: entry.install?.target,
-      installed_at: now,
-    },
-    now,
-  );
+  const manifestEntry = manifestEntryFromAsset(entry, now);
   if (!manifestEntry) return null;
 
   const key = manifestEntryKey(manifestEntry.kind, manifestEntry.id);
@@ -191,6 +179,20 @@ export function addManifestEntry(
     },
     manifest.project_id,
   );
+}
+
+export function manifestEntryFromAsset(entry: AssetStoreEntry, installedAt = EPOCH_TIMESTAMP) {
+  if (!isRecord(entry)) return null;
+  return normalizeManifestEntry({
+    id: entry.id,
+    kind: entry.kind,
+    title: entry.title,
+    version: entry.version,
+    source_id: entry.source_id,
+    package_ref: entry.package_ref,
+    target: entry.install?.target,
+    installed_at: installedAt,
+  }, installedAt);
 }
 
 export function removeManifestEntry(

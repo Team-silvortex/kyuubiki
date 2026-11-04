@@ -474,6 +474,11 @@
     linear-gradient(180deg, rgba(30, 36, 47, 0.9), rgba(18, 23, 31, 0.96));
 }
 
+.workbench-shell[data-workbench-window-mode] .assistant-float-panel .card-copy {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 .assistant-float-panel .script-panel__action-head,
 .assistant-float-panel .script-panel__payload {
   flex-wrap: wrap;

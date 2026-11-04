@@ -6,7 +6,9 @@ import {
   buildWorkspaceStoreManifestExport,
   removeWorkspaceStoreEntry,
   stageWorkspaceStoreEntry,
+  WorkspaceStoreCommandError,
 } from "@/lib/workbench/store-command-service";
+import { normalizeStoreEntrySelection, resolveStoreCatalogEntry } from "@/lib/workbench/store-catalog";
 
 const STORE_ENTRY_KINDS = ["operator", "workflow_template", "frontend_dsl_template"] as const;
 
@@ -33,11 +35,19 @@ export async function handleWorkbenchScriptStoreAction({
     case "store/stageEntry": {
       const kind = requiredStoreKind(payload);
       const entryId = requiredText(payload, "entryId");
-      const entry = await storeBackendService.fetchEntry(kind, entryId);
+      if (!selectedProjectId?.trim()) {
+        throw new WorkspaceStoreCommandError("project_required", "A selected project is required.");
+      }
+      const selection = normalizeStoreEntrySelection(Object.fromEntries(
+        Object.entries(payload).filter(([key]) => key !== "kind" && key !== "entryId"),
+      ));
+      const entry = await storeBackendService.fetchEntry(kind, entryId, selection);
       if (!entry || entry.kind !== kind || entry.id !== entryId) {
         throw new Error(`Store entry response mismatch: ${kind}:${entryId}`);
       }
+      resolveStoreCatalogEntry([entry], kind, entryId, selection);
       const manifest = stageWorkspaceStoreEntry(selectedProjectId, entry);
+      const staged = manifest.entries.find((item) => item.kind === kind && item.id === entryId)!;
       setMessage(storeMessage(language, "staged", entry.title));
       return {
         ok: true,
@@ -45,6 +55,10 @@ export async function handleWorkbenchScriptStoreAction({
         projectId: manifest.project_id,
         kind,
         entryId,
+        sourceId: staged.source_id,
+        version: staged.version ?? null,
+        packageRef: staged.package_ref ?? null,
+        target: staged.target ?? null,
         manifestEntryCount: manifest.entries.length,
       };
     }
@@ -90,8 +104,8 @@ function requiredStoreKind(payload: Record<string, unknown>): AssetStoreEntryKin
 
 function requiredText(payload: Record<string, unknown>, key: string) {
   const value = payload[key];
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${key} is required.`);
+  if (typeof value !== "string" || !value.trim() || value.trim().length > 256) {
+    throw new Error(`${key} must be nonempty text of at most 256 characters.`);
   }
   return value.trim();
 }

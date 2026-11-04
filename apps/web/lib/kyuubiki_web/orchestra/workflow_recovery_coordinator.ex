@@ -468,14 +468,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
       :error ->
         case fetch_runtime(job_id) do
-          {:ok, _runtime, %{"state" => terminal} = recovery}
+          {:ok, runtime, %{"state" => terminal}}
           when terminal in ["completed", "failed", "cancelled", "recovery_blocked"] ->
             result =
               Ownership.guarded_write(state, fn ->
-                WorkflowRecoveryScan.reconcile_terminal(job_id, terminal, recovery)
+                WorkflowRecoveryScan.reconcile_terminal(job_id, runtime)
               end)
 
-            {:skipped, Ownership.after_write(state, result)}
+            outcome =
+              if result == :ok,
+                do: :skipped,
+                else: {:unreconciled, "workflow_terminal_reconciliation_incomplete"}
+
+            {outcome, Ownership.after_write(state, result)}
 
           {:ok, _runtime, _recovery} ->
             case dispatch_job(job_id, reason, state) do
@@ -492,22 +497,30 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
               when lease_error in [:orchestra_lease_lost, :orchestra_lease_store_unavailable] ->
                 {:skipped, Ownership.after_write(updated, error)}
 
-              {{:error, _reason}, updated} ->
+              {{:error, {:workflow_job_terminal, _status}}, updated} ->
                 {:skipped, updated}
+
+              {{:error, _reason}, updated} ->
+                {{:unreconciled, "workflow_recovery_dispatch_incomplete"}, updated}
             end
 
           {:legacy_workflow, runtime} ->
-            message =
-              "workflow recovery blocked: legacy active job has no durable execution envelope"
-
             result =
-              Ownership.guarded_write(state, fn -> mark_job_failed(job_id, runtime, message) end)
+              Ownership.guarded_write(state, fn ->
+                WorkflowRecoveryScan.block_legacy(job_id, runtime)
+              end)
 
-            outcome = if match?({:ok, _job}, result), do: :blocked, else: :skipped
+            outcome =
+              case result do
+                {:ok, _job} -> :blocked
+                :already_terminal -> :skipped
+                _ -> {:unreconciled, "workflow_legacy_reconciliation_incomplete"}
+              end
+
             {outcome, Ownership.after_write(state, result)}
 
           :error ->
-            {:skipped, state}
+            {:skipped, WorkflowRecoveryScan.missing_completion_runtime(state, job_id, reason)}
         end
     end
   end
@@ -523,6 +536,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   defp dispatch_available_job(job_id, reason, state) do
+    # Once finalization is known, neither manual dispatch nor a retry grants replay authority.
+    publication_only? =
+      reason == :completion_retry or Map.has_key?(state.completion_retries, job_id) or
+        Runners.finalizing?(state, job_id)
+
     case Runners.running(job_id, state) do
       {:error, :workflow_runner_registry_unavailable} = error ->
         next =
@@ -535,11 +553,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       {:ok, pid} ->
         {{:ok, pid}, Runners.track(job_id, pid, state)}
 
-      :error when reason == :initial ->
-        do_dispatch_job(job_id, reason, state)
+      :error when reason == :initial and not publication_only? ->
+        claim_and_dispatch_job(job_id, reason, state)
 
       :error ->
-        case WorkflowCompletionStore.pending(job_id, state.lease) do
+        case WorkflowCompletionStore.pending(job_id, state.lease, publication_only?) do
           {:ok, claim, result} ->
             case WorkflowJobRunner.start_finalizing(job_id, claim, result) do
               {:ok, pid} ->
@@ -552,14 +570,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
                 {error, state}
             end
 
-          {:error, :workflow_completion_checkpoint_invalid} ->
-            block_completion(job_id, state)
+          {:block, job, runtime} ->
+            reply = WorkflowCompletionStore.block_pending(job, runtime, state.lease)
+            {reply, WorkflowRecoveryScan.after_completion_block(state, job_id, reply)}
 
           :none ->
-            do_dispatch_job(job_id, reason, state)
+            claim_and_dispatch_job(job_id, reason, state)
 
-          {:error, {:workflow_recovery_not_found, _}} ->
-            do_dispatch_job(job_id, reason, state)
+          {:error, {:workflow_recovery_not_found, _}} when not publication_only? ->
+            claim_and_dispatch_job(job_id, reason, state)
+
+          {:error, {:workflow_recovery_not_found, _}} = error ->
+            {error,
+             WorkflowRecoveryScan.missing_completion_runtime(state, job_id, :completion_retry)}
 
           error ->
             {error, Ownership.after_write(state, error)}
@@ -567,22 +590,21 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end
   end
 
-  defp do_dispatch_job(job_id, reason, state) do
-    # A finalizer retry never grants replay authority, including intervening manual scans.
-    if reason == :completion_retry or Map.has_key?(state.completion_retries, job_id) or
-         Runners.finalizing?(state, job_id),
-       do: block_completion(job_id, state),
-       else: claim_and_dispatch_job(job_id, reason, state)
-  end
-
-  defp block_completion(job_id, state) do
-    reply = block_recovery(job_id, :workflow_completion_checkpoint_invalid, state.lease)
-    {reply, WorkflowRecoveryScan.after_completion_block(state, job_id, reply)}
-  end
-
   defp claim_and_dispatch_job(job_id, reason, state) do
-    with {:ok, runtime, recovery} <- fetch_runtime(job_id),
-         {:ok, claimed, claim} <-
+    case fetch_runtime(job_id) do
+      {:ok, runtime, recovery} ->
+        claim_and_dispatch_runtime(job_id, runtime, recovery, reason, state)
+
+      :error ->
+        {{:error, {:workflow_recovery_not_found, job_id}}, state}
+
+      {:legacy_workflow, _runtime} ->
+        {{:error, {:legacy_workflow_recovery_unavailable, job_id}}, state}
+    end
+  end
+
+  defp claim_and_dispatch_runtime(job_id, runtime, recovery, reason, state) do
+    with {:ok, claimed, claim} <-
            DispatchGuard.claim(job_id, recovery, state.session_id, reason, state.max_attempts),
          {:ok, envelope} <- WorkflowRecoveryEnvelope.execution(claimed),
          :ok <- put_runtime_recovery(job_id, runtime, claimed, state.lease) do
@@ -599,13 +621,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       end
     else
       {:error, {:workflow_replay_blocked, _safety} = reason} ->
-        {block_recovery(job_id, reason, state.lease), state}
+        {block_recovery(job_id, reason, state.lease, runtime), state}
 
       {:error, :workflow_recovery_attempts_exhausted = reason} ->
-        {block_recovery(job_id, reason, state.lease), state}
+        {block_recovery(job_id, reason, state.lease, runtime), state}
 
       {:error, {:workflow_dispatch_journal_unavailable, _error} = reason} ->
-        {block_recovery(job_id, reason, state.lease), state}
+        {block_recovery(job_id, reason, state.lease, runtime), state}
 
       {:error, integrity_reason}
       when integrity_reason in [
@@ -623,16 +645,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
              :invalid_workflow_recovery_record,
              :workflow_dispatch_outcome_unconfirmed
            ] ->
-        {block_recovery(job_id, integrity_reason, state.lease), state}
+        {block_recovery(job_id, integrity_reason, state.lease, runtime), state}
 
       {:error, _reason} = error ->
         {error, state}
-
-      :error ->
-        {{:error, {:workflow_recovery_not_found, job_id}}, state}
-
-      {:legacy_workflow, _runtime} ->
-        {{:error, {:legacy_workflow_recovery_unavailable, job_id}}, state}
     end
   end
 
@@ -672,32 +688,27 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end
   end
 
-  defp block_recovery(job_id, reason, lease) do
-    message = "workflow recovery blocked: #{format_reason(reason)}"
+  defp block_recovery(job_id, reason, lease, runtime) do
+    recovery = runtime[WorkflowRecoveryEnvelope.internal_key()]
 
-    case fetch_runtime(job_id) do
-      {:ok, runtime, recovery} ->
-        blocked =
-          WorkflowRecoveryEnvelope.transition(recovery, "recovery_blocked", %{
-            "reason" => format_reason(reason),
-            "next_action" => DispatchGuard.next_action(reason)
-          })
+    blocked =
+      WorkflowRecoveryEnvelope.transition(recovery, "recovery_blocked", %{
+        "reason" => format_reason(reason),
+        "next_action" => DispatchGuard.next_action(reason)
+      })
 
-        LeaseStore.with_lease(lease, fn ->
-          with {:ok, job} <- active_job(job_id),
-               :ok <-
-                 update_recovery(job, runtime, blocked, %{
-                   stage: "failed",
-                   progress: 1.0,
-                   message: message
-                 }) do
-            {:error, normalize_block_reason(reason)}
-          end
-        end)
-
-      _ ->
-        {:error, reason}
-    end
+    # A refusal belongs to the checked snapshot, never a replacement read after validation.
+    LeaseStore.with_lease(lease, fn ->
+      with {:ok, job} <- active_job(job_id),
+           :ok <-
+             update_recovery(job, runtime, blocked, %{
+               stage: "failed",
+               progress: 1.0,
+               message: "workflow recovery blocked: #{format_reason(reason)}"
+             }) do
+        {:error, normalize_block_reason(reason)}
+      end
+    end)
   end
 
   defp fetch_runtime(job_id) do
@@ -739,10 +750,6 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       {:ok, job} -> {:error, {:workflow_job_terminal, job.status}}
       :error -> {:error, {:job_not_found, job_id}}
     end
-  end
-
-  defp mark_job_failed(job_id, _runtime, message) do
-    Store.apply_progress(%{job_id: job_id, stage: "failed", progress: 1.0, message: message})
   end
 
   defp normalize_block_reason({:workflow_replay_blocked, safety}),

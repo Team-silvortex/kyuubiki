@@ -50,7 +50,7 @@
       ]
     },
     "state": {
-      "enum": ["pending", "running", "recovery_blocked", "completed", "failed", "cancelled"]
+      "enum": ["pending", "running", "finalizing", "recovery_blocked", "completed", "failed", "cancelled"]
     },
     "generation": {
       "type": "integer",
@@ -84,7 +84,7 @@
       "if": {
         "properties": {
           "state": {
-            "enum": ["pending", "running", "recovery_blocked"]
+            "enum": ["pending", "running", "finalizing", "recovery_blocked"]
           }
         },
         "required": ["state"]

@@ -100,6 +100,7 @@ impl RuntimeFixture {
             )
             .env("KYUUBIKI_AGENT_DISCOVERY", "static")
             .env_remove("KYUUBIKI_AGENT_ALLOWED_PEER_IPS")
+            .env_remove("KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL")
             .env("KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY", "false")
             .env("KYUUBIKI_RUNTIME_FRONTEND_DISABLED", "false");
         command

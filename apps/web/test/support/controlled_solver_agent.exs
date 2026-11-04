@@ -39,7 +39,10 @@ defmodule KyuubikiWeb.TestSupport.ControlledSolverAgent do
   defp serve_request(socket, owner, progress) do
     {:ok, payload} = :gen_tcp.recv(socket, 0, 2_000)
     request = Jason.decode!(payload)
-    send_frame(socket, request, %{"event" => "progress", "progress" => progress})
+
+    unless progress == :no_progress,
+      do: send_frame(socket, request, %{"event" => "progress", "progress" => progress})
+
     send(owner, {:solver_request, self(), request})
 
     receive do

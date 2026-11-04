@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.usability-release-gate/v1",
-  "baseline_release": "daji 3.2.x",
-  "target_release": "daji 3.2.x",
+  "baseline_release": "daji 3.7.x",
+  "target_release": "daji 3.7.x",
   "policy": {
     "all_blocking_journeys_must_pass": true,
     "planned_or_static_only_is_not_release_evidence": true,
@@ -267,7 +267,7 @@
         [
           "check-desktop-ui-validation",
           "--verify-report",
-          "releases/usability-evidence/3.2.0/desktop-ui-validation-recovery.json"
+          "releases/usability-evidence/current/desktop-ui-validation.json"
         ]
       ]
     },

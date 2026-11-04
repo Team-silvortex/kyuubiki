@@ -14,6 +14,7 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
   @default_recv_timeout_ms 15_000
   @default_request_timeout_ms 120_000
   @default_max_rpc_frame_bytes 512 * 1024 * 1024
+  @non_admission_codes ~w(agent_at_capacity agent_lan_control_requires_explicit_trust)
 
   @spec request(map(), String.t(), map(), (map() -> any()), keyword()) ::
           {:ok, term()} | {:error, term()}
@@ -91,6 +92,10 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
 
   defp valid_rpc_error?(_error), do: false
 
+  @doc false
+  @spec non_admission_code?(term()) :: boolean()
+  def non_admission_code?(code), do: code in @non_admission_codes
+
   @spec emit_progress((map() -> any()), map()) :: :ok | {:error, term()}
   def emit_progress(on_progress, progress)
       when is_function(on_progress, 1) and is_map(progress) do
@@ -130,16 +135,31 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
 
   defp request_over_socket(socket, request_id, method, payload, on_progress, deadline_ms) do
     with :ok <- tag_transport_error(send_request(socket, payload, deadline_ms), :send),
-         {:ok, response} <-
+         {:ok, response, progress_seen} <-
            tag_transport_error(
              recv_response(socket, request_id, on_progress, deadline_ms),
              :receive
            ),
          :ok <- tag_transport_error(validate_terminal_response(response, request_id), :protocol),
+         :ok <-
+           tag_transport_error(validate_admission_sequence(response, progress_seen), :protocol),
          :ok <- tag_transport_error(check_deadline(deadline_ms), :receive) do
       terminal_result(response, method)
     end
   end
+
+  defp validate_admission_sequence(%{"ok" => false, "error" => error}, progress_seen) do
+    receipt_claimed =
+      is_map(error["details"]) and Map.has_key?(error["details"], "operator_task_failure_receipt")
+
+    # A pre-execution denial cannot follow execution telemetry or carry a task receipt.
+    # Preserve uncertainty rather than turning a contradictory stream into replay permission.
+    if non_admission_code?(error["code"]) and (progress_seen or receipt_claimed),
+      do: {:error, {:invalid_response, :contradictory_non_admission}},
+      else: :ok
+  end
+
+  defp validate_admission_sequence(_response, _progress_seen), do: :ok
 
   defp tag_transport_error({:error, {:request_encoding_failed, _detail}} = error, _stage),
     do: error
@@ -212,36 +232,56 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
     error -> {:error, {:request_encoding_failed, Exception.message(error)}}
   end
 
-  defp recv_response(socket, request_id, on_progress, deadline_ms) do
+  defp recv_response(socket, request_id, on_progress, deadline_ms, progress_seen \\ false) do
     case remaining_recv_timeout_ms(deadline_ms) do
-      0 -> {:error, :request_timeout}
-      timeout_ms -> recv_response_frame(socket, request_id, on_progress, deadline_ms, timeout_ms)
+      0 ->
+        {:error, :request_timeout}
+
+      timeout_ms ->
+        recv_response_frame(
+          socket,
+          request_id,
+          on_progress,
+          deadline_ms,
+          timeout_ms,
+          progress_seen
+        )
     end
   end
 
-  defp recv_response_frame(socket, request_id, on_progress, deadline_ms, timeout_ms) do
+  defp recv_response_frame(
+         socket,
+         request_id,
+         on_progress,
+         deadline_ms,
+         timeout_ms,
+         progress_seen
+       ) do
     case :gen_tcp.recv(socket, 0, timeout_ms) do
-      {:ok, payload} -> decode_frame(socket, payload, request_id, on_progress, deadline_ms)
-      {:error, reason} -> {:error, reason}
+      {:ok, payload} ->
+        decode_frame(socket, payload, request_id, on_progress, deadline_ms, progress_seen)
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  defp decode_frame(socket, payload, request_id, on_progress, deadline_ms) do
+  defp decode_frame(socket, payload, request_id, on_progress, deadline_ms, progress_seen) do
     with :ok <- check_deadline(deadline_ms),
          decoded = AgentRpcJson.decode(payload),
          :ok <- check_deadline(deadline_ms) do
-      dispatch_frame(socket, decoded, request_id, on_progress, deadline_ms)
+      dispatch_frame(socket, decoded, request_id, on_progress, deadline_ms, progress_seen)
     end
   end
 
-  defp dispatch_frame(socket, decoded, request_id, on_progress, deadline_ms) do
+  defp dispatch_frame(socket, decoded, request_id, on_progress, deadline_ms, progress_seen) do
     case decoded do
       {:ok, %{"event" => event, "rpc_version" => @rpc_version, "id" => ^request_id} = frame}
       when event in ["progress", "heartbeat"] ->
         with :ok <- validate_progress_kind(frame),
              %{} = progress <- frame["progress"],
              :ok <- emit_progress(on_progress, progress) do
-          recv_response(socket, request_id, on_progress, deadline_ms)
+          recv_response(socket, request_id, on_progress, deadline_ms, true)
         else
           nil -> {:error, {:invalid_response, :missing_progress_payload}}
           {:error, _reason} = error -> error
@@ -249,7 +289,7 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
         end
 
       {:ok, %{"rpc_version" => @rpc_version, "id" => ^request_id} = frame} ->
-        {:ok, frame}
+        {:ok, frame, progress_seen}
 
       {:ok, _frame} ->
         {:error, {:invalid_response, :unexpected_rpc_frame}}

@@ -20,6 +20,7 @@ fn native_default_is_local_only_and_preserves_real_durable_execution() -> Result
     assert_eq!(access["allowed_peer_ips"], json!([]));
     assert_eq!(access["authenticated"], false);
     assert_eq!(access["encrypted"], false);
+    assert_eq!(access["lan_control"]["mode"], "discovery_only");
     let reply = agent.request(
         "local-task",
         "submit_durable_agent_task",
@@ -85,6 +86,44 @@ fn invalid_network_configuration_stops_startup_but_preserves_original_store()
         successful_result(&response, "after-invalid")["max_stress"],
         10.0
     );
+    Ok(())
+}
+
+#[test]
+fn lan_control_configuration_is_strict_and_keeps_original_local_receipts()
+-> Result<(), Box<dyn Error>> {
+    let mut agent = LiveAgent::start_with_durable_store()?;
+    let response = agent.request(
+        "before-trust",
+        "submit_durable_agent_task",
+        task('d', "saved"),
+    )?;
+    assert_eq!(
+        successful_result(&response, "before-trust")["status"],
+        "running"
+    );
+    let retained = wait_status(&agent, 'd', "completed")?;
+    for invalid in ["", "TRUE", "1", "secret-config-value"] {
+        let error = agent
+            .restart_with_trusted_lan_control(Some(invalid))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL"));
+        assert!(!error.contains("secret-config-value"));
+    }
+    for (value, mode) in [
+        (Some("true"), "trusted_lan_control"),
+        (Some("false"), "discovery_only"),
+        (None, "discovery_only"),
+    ] {
+        agent.restart_with_trusted_lan_control(value)?;
+        let access = policy(&agent)?;
+        assert_eq!(access["lan_control"]["mode"], mode);
+        assert_eq!(access["mode"], "loopback_only");
+        assert_eq!(access["authenticated"], false);
+        assert_eq!(fetch(&agent, 'd')?, retained);
+        assert_eq!(lifecycle(&agent, "no-replay")?["active_execution_count"], 0);
+    }
     Ok(())
 }
 
@@ -155,6 +194,106 @@ fn real_non_loopback_socket_is_denied_then_explicitly_admitted_and_revoked()
         }
         Err("too many progress frames".into())
     };
+    let response = request(&mut stream, "discovery", "describe_agent", json!({}))?;
+    let access = &successful_result(&response, "discovery")["connection_access"];
+    assert_eq!(access["peer_scope"], "non_loopback");
+    assert_eq!(access["control_allowed"], false);
+    let local = agent.request("local-access", "describe_agent", json!({}))?;
+    assert_eq!(
+        successful_result(&local, "local-access")["connection_access"]["control_allowed"],
+        true
+    );
+    assert_eq!(
+        successful_result(&response, "discovery")["request_ingress"]["network_access"]["lan_control"]
+            ["mode"],
+        "discovery_only"
+    );
+    let local = agent.request(
+        "keep-receipt",
+        "submit_durable_agent_task",
+        task('e', "local-owned"),
+    )?;
+    assert_eq!(
+        successful_result(&local, "keep-receipt")["status"],
+        "running"
+    );
+    let retained = wait_status(&agent, 'e', "completed")?;
+    let methods = kyuubiki_protocol::AgentDescriptor::solver_agent_default()
+        .protocol
+        .methods;
+    for method in methods {
+        use kyuubiki_protocol::RpcMethod;
+        if matches!(
+            method,
+            RpcMethod::Ping
+                | RpcMethod::DescribeAgent
+                | RpcMethod::DescribeAgentLifecycle
+                | RpcMethod::BeginAgentDrain
+                | RpcMethod::ResumeAgentAdmission
+        ) {
+            continue;
+        }
+        let name = serde_json::to_value(method)?;
+        let mut params = task('f', "must-not-run");
+        params["store_id"] = retained["store_id"].clone();
+        params["expected_store_id"] = retained["store_id"].clone();
+        params["controller_id"] = json!("claimed-controller");
+        params["authenticated"] = json!(true);
+        let response = request(&mut stream, "blocked", name.as_str().unwrap(), params)?;
+        assert_eq!(
+            response["error"]["code"],
+            "agent_lan_control_requires_explicit_trust"
+        );
+        assert_eq!(response["error"]["details"]["dispatched"], false);
+        assert_eq!(
+            response["error"]["details"]["automatic_replay_authorized"],
+            false
+        );
+    }
+    assert_eq!(fetch(&agent, 'e')?, retained);
+    assert_eq!(fetch(&agent, 'f')?["status"], "not_found");
+    assert_eq!(
+        lifecycle(&agent, "no-admission")?["active_execution_count"],
+        0
+    );
+    drop(stream);
+
+    // Saturate the general pool: a recovery slot must not bypass LAN control policy.
+    agent.restart_with_ingress_limits(65_536, 131_072, 5000, 1)?;
+    let mut general = connect(&agent)?;
+    assert_eq!(
+        request(&mut general, "hold-general", "ping", json!({}))?["ok"],
+        true
+    );
+    let mut reserve = connect(&agent)?;
+    let response = request(
+        &mut reserve,
+        "reserved-recovery",
+        "fetch_durable_agent_execution",
+        json!({"execution_id":"e".repeat(32)}),
+    )?;
+    assert_eq!(
+        response["error"]["code"],
+        "agent_lan_control_requires_explicit_trust"
+    );
+    assert_eq!(
+        request(&mut reserve, "reserved-ping", "ping", json!({}))?["ok"],
+        true
+    );
+    drop((reserve, general));
+    agent.restart_with_ingress_limits(65_536, 131_072, 5000, 4)?;
+    agent.restart_with_trusted_lan_control(Some("true"))?;
+    let mut stream = connect(&agent)?;
+    let response = request(
+        &mut stream,
+        "trusted-discovery",
+        "describe_agent",
+        json!({}),
+    )?;
+    let access = &successful_result(&response, "trusted-discovery")["connection_access"];
+    assert_eq!(access["control_allowed"], true);
+    assert_eq!(access["control_mode"], "trusted_lan_control");
+    assert_eq!(access["authenticated"], false);
     let response = request(
         &mut stream,
         "explicit-source",
@@ -176,6 +315,56 @@ fn real_non_loopback_socket_is_denied_then_explicitly_admitted_and_revoked()
         "agent_lifecycle_control_requires_loopback"
     );
     assert_eq!(lifecycle(&agent, "still-accepting")?["state"], "accepting");
+
+    let response = request(
+        &mut stream,
+        "trusted-submit",
+        "submit_durable_agent_task",
+        task('a', "lan-owned"),
+    )?;
+    assert_eq!(
+        successful_result(&response, "trusted-submit")["status"],
+        "running"
+    );
+    let lan_retained = wait_status(&agent, 'a', "completed")?;
+    let response = request(
+        &mut stream,
+        "trusted-fetch",
+        "fetch_durable_agent_execution",
+        json!({"execution_id":"a".repeat(32)}),
+    )?;
+    assert_eq!(successful_result(&response, "trusted-fetch"), &lan_retained);
+
+    agent.restart_with_trusted_lan_control(None)?;
+    assert!(request(&mut stream, "old-connection", "ping", json!({})).is_err());
+    drop(stream);
+    let mut stream = connect(&agent)?;
+    let response = request(
+        &mut stream,
+        "revoked-discovery",
+        "describe_agent",
+        json!({}),
+    )?;
+    assert_eq!(
+        successful_result(&response, "revoked-discovery")["connection_access"]["control_allowed"],
+        false
+    );
+    assert_eq!(
+        request(&mut stream, "after-revoke", "ping", json!({}))?["ok"],
+        true
+    );
+    let response = request(
+        &mut stream,
+        "revoked-fetch",
+        "fetch_durable_agent_execution",
+        json!({"execution_id":"a".repeat(32), "store_id":lan_retained["store_id"]}),
+    )?;
+    assert_eq!(
+        response["error"]["code"],
+        "agent_lan_control_requires_explicit_trust"
+    );
+    assert_eq!(fetch(&agent, 'a')?, lan_retained);
+    assert_eq!(fetch(&agent, 'e')?, retained);
     drop(stream);
 
     agent.restart_with_allowed_peer_ips(None)?;

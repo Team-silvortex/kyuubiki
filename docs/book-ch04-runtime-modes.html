@@ -126,24 +126,42 @@
           <li>The older <code>/api/direct-mesh/solve</code> route selects an eligible
             Agent using fresh read-only discovery for each new task, then dispatches once.
             Both <code>first_reachable</code> and <code>healthiest</code> require the
-            current solver RPC protocol, the requested method, an explicit valid
-            accepting lifecycle and configured available execution capacity. Missing
+            current solver RPC protocol, the requested method, explicit current
+            connection control permission, an explicit valid accepting lifecycle
+            and configured available execution capacity. Missing
             metadata is not silently treated as ready. Health only ranks eligible
             candidates. If none qualifies, the gateway reports rejection reasons and
             sends no solver request. A missing reply or
-            solver error cannot trigger cross-Agent retry, and failed discovery cannot
+            solver error or post-discovery permission revocation cannot trigger
+            cross-Agent retry, and failed discovery cannot
             trigger blind dispatch. It still has a process-local result cache, not a
             durable receipt. For restart-safe records use the pinned
             <code>/api/direct-mesh/tasks</code> contract.</li>
+          <li>Native <code>describe_agent</code> replies carry
+            <code>connection_access</code> using
+            <code>kyuubiki.agent-connection-access/v1</code>. Its
+            <code>native_socket_connection</code> scope is derived from the actual
+            peer address and host policy, not request claims. A
+            <code>discovery_only</code> peer stays visible but is excluded from new
+            legacy solver selection with <code>connection_control_not_permitted</code>.
+            Missing or inconsistent fields produce <code>invalid_connection_access</code>.
+            Upgrade Agent and gateway together; older descriptors are not treated as
+            ready. Shared registration/heartbeat metadata does not carry this
+            caller-specific observation.</li>
           <li>The read-only <code>kyuubiki.direct-mesh-selection/v1</code> policy appears
             as <code>selection_policy</code> in discovery and solve errors, and as
             <code>direct_mesh.selection_policy</code> on solve success. Lifecycle and
             admission counts are sampled separately, so the larger count is used.
             Discovery does not reserve a slot: the Agent still makes the final atomic
-            admission decision. Eligibility is not authentication or recovery proof.
+            admission decision and rechecks control permission on the actual request
+            connection. All current access modes explicitly report
+            <code>authenticated=false</code> and <code>encrypted=false</code>.
+            Eligibility is not authentication or recovery proof.
             Pinned durable inspection, listing and cancellation do not reselect an
             owner or require new-work eligibility; busy/draining owners can still
-            expose original uncertain receipts while ingress remains available.</li>
+            expose original uncertain receipts while ingress remains available.
+            Recovery still requires the Agent's source-IP/LAN-control gate and
+            original owner fence; it does not inherit authority from discovery.</li>
           <li>The native gateway publishes <code>kyuubiki.direct-mesh-transport/v1</code>
             in discovery's <code>transport_policy</code> and solve responses'
             <code>direct_mesh.transport_policy</code>. Describe, async submit, receipt
@@ -187,7 +205,8 @@
           Native TCP connections now default to host loopback only, including when
           the Agent binds to <code>0.0.0.0</code>. This applies equally to standalone,
           Orchestra-bound and decentralized Mesh modes. Before upgrading a LAN
-          deployment, explicitly configure its permitted caller addresses; changing
+          deployment, explicitly configure its permitted caller addresses and
+          decide whether to permit unauthenticated LAN control; changing
           the bind address, declaring a cluster, or supplying certificate metadata
           does not grant remote access.
         </p>
@@ -198,6 +217,19 @@
             subnet, multicast or unspecified address rejects startup. The input
             limit is 4096 bytes. IPv4-mapped IPv6 addresses are canonicalized.
             There is no DNS expansion or automatic trust of discovered peers.</li>
+          <li>Allowed non-loopback sources default to discovery only:
+            <code>ping</code>, <code>describe_agent</code> and
+            <code>describe_agent_lifecycle</code>. Solver/TaskIR execution, durable
+            admission, result reads, listing, cancellation and package-job cleanup
+            return <code>agent_lan_control_requires_explicit_trust</code> before
+            dispatch. Public task/store/controller IDs and request-supplied claims
+            of authentication cannot bypass this gate, including in recovery slots.</li>
+          <li><code>KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL=true</code> explicitly restores
+            those operations for already-allowed sources on an isolated trusted LAN.
+            Unset or exactly <code>false</code> keeps discovery only; any other value
+            rejects startup. This is not authentication or encryption and does not
+            grant remote drain/resume. Loopback control is unchanged. A local proxy
+            is still trusted as loopback and must enforce its own client authorization.</li>
           <li>Configure this in the Agent service's host-owned environment, not in
             a project bundle, task or source-controlled server configuration.
             Permit the actual socket source of the controller/gateway and each
@@ -212,8 +244,12 @@
           <li><code>describe_agent.request_ingress.network_access</code> and the
             registration/heartbeat payload expose
             <code>kyuubiki.agent-network-access/v1</code>, effective addresses,
-            rejection count and limitations. Changes, including removal of an
-            allowed address, take effect on process restart, not hot reload.
+            connection rejection count and limitations. Its <code>lan_control</code>
+            section reports effective control mode, denial count and the unchanged
+            authentication limitations. Changes, including removal of an
+            allowed address or revocation of trusted LAN control, take effect on
+            process restart, not hot reload. Old sockets close on restart; retained
+            receipts remain available to permitted local callers.
             Drain/reconcile existing work before a planned restart; access-policy
             changes do not authorize replay of uncertain executions.</li>
           <li>Agent startup, Installer environment validation and managed-runtime
@@ -229,6 +265,48 @@
             inspection and explicit stop; fixing it does not silently restart work.
             This preflight does not make arbitrary launch failures transactional.</li>
         </ul>
+        <p class="docs-copy">
+          The generic Elixir TaskIR client aligns atom/string parameter names and
+          mode values with their JSON representation before routing, permission
+          checks and dispatch journaling. Conflicting names are rejected before
+          opening a connection, without echoing input values. This normalizes only
+          the outer control envelope, not the embedded model or task data.
+          Before sending a new solver or execute-mode TaskIR request to a remote
+          address or hostname, Orchestra checks a fresh
+          <code>describe_agent.connection_access</code> observation. The probe
+          sends no task inputs, has a reply limit of 1 MiB, and waits at most
+          1500 ms, further limited by the request timeout and remaining capacity
+          wait budget. Strict loopback IP targets keep their direct path;
+          hostnames, including <code>localhost</code>, are probed. Discovery-only,
+          missing or inconsistent access is skipped before dispatch-journal
+          reservation, not reported as an accepted task failure. Older remote
+          Agents without the descriptor must be upgraded with Orchestra.
+        </p>
+        <p class="docs-copy">
+          Cancellation during probing stops selection. Expired capacity waiting
+          remains <code>agent_capacity_timeout</code>, not an Agent outage.
+          Previously excluded candidates do not re-enter capacity retries in
+          that call; a later task checks access afresh. This is a readiness
+          observation, not authentication or a reserved permission: the actual
+          execution socket still passes the Agent gate. Pinned recovery and cleanup
+          keep their original target. See the
+          <a href="../reports/orchestra-connection-preflight-20261028.md">scoped
+          Orchestra preflight evidence</a>.
+        </p>
+        <p class="docs-copy">
+          After an actual execution request, Orchestra distinguishes a plain
+          LAN-control denial from an uncertain
+          execution. A well-formed denial before any progress/heartbeat is recorded
+          as <code>not_dispatched</code> and returned to the caller, without
+          automatic peer selection or retry. If progress/heartbeat preceded a
+          capacity or LAN-control denial, or the denial also carries a task failure
+          receipt, the reply is contradictory: managed TaskIR retains
+          <code>outcome_unknown</code>, and legacy recovery reports
+          <code>agent_non_admission_conflict</code> without replay even when the
+          caller supplies idempotent/checkpoint hints. A late denial cannot overwrite
+          an already sealed unknown observation. This is local response consistency,
+          not authenticated proof that a remote peer told the truth.
+        </p>
         <p class="docs-copy">
           This is source-IP containment, not authentication, encryption, user
           identity or single-Orchestra authorization. Local processes still share
@@ -856,6 +934,53 @@
           records available through <code>remote-deployment-journal</code> and
           artifact delivery preview through <code>remote-artifacts</code>.
         </p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2 id="agent-api-security">Native Agent API token and TLS</h2>
+        <p class="docs-copy">The native Agent now has an opt-in TLS 1.3 API mode, independent of
+          Orchestra and direct-mesh gateway tokens. Set <code>KYUUBIKI_AGENT_API_TOKEN</code>,
+          <code>KYUUBIKI_AGENT_TLS_CERT_FILE</code> and <code>KYUUBIKI_AGENT_TLS_KEY_FILE</code>
+          together before starting the Agent. Partial or invalid configuration stops startup;
+          a configured TLS listener never falls back to plaintext. Use a cryptographically random
+          32..256-character URL-safe token injected by a secret manager, not a command-line argument,
+          project file or committed environment file. The certificate must contain the expected
+          server DNS name or IP in its SAN. Keep private keys in the owned credential area; on Unix
+          the loader requires an owner-only, current-user-owned regular file and refuses symlinks.
+          Windows ACL enforcement and installed-platform acceptance are not covered by this pilot.</p>
+        <p class="docs-copy">TLS verifies the server certificate and negotiates
+          <code>kyuubiki-agent/1</code>. A bounded <code>kyuubiki.agent-auth/v1</code> exchange then
+          authenticates the connection before any task frame is read. Tokens are not inserted into
+          RPC parameters, TaskIR, execution digests or durable receipts. The source-IP allowlist and
+          <code>KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL=true</code> are still required for remote control;
+          remote drain/resume remains forbidden. A shared API token is not an individual user identity,
+          Orchestra binding, lease, or permission to replay uncertain work.</p>
+        <p class="docs-copy">Workbench: System &rarr; Settings &rarr; Configuration &rarr;
+          Agent API secure connection. Pin one Agent address, enter its certificate name, load the
+          public CA/self-signed PEM certificate, and enter its token. Apply, then verify in direct mode.
+          The native Rust gateway forwards the credential only to that exact Agent over verified TLS.
+          The browser-to-gateway hop must use HTTPS or loopback HTTP. Configuration remains in page
+          memory and is cleared on reload; no secret is saved in local/session storage or exports.
+          Changing gateway requires reconfiguration; multiple endpoints with one pinned credential
+          are rejected rather than broadcasting it.</p>
+        <pre><code>use kyuubiki_headless_sdk::{AgentApiSecurity, SolverRpcClient};
+
+let security = AgentApiSecurity::from_pem(
+    &amp;std::fs::read_to_string("credentials/agent-ca.pem")?,
+    "agent.example",
+    std::env::var("KYUUBIKI_AGENT_API_TOKEN")?,
+)?;
+let agent = SolverRpcClient::new("agent.example", 5001)
+    .with_api_security(security);
+let descriptor = agent.describe_agent()?;</code></pre>
+        <p class="docs-copy">Scope: GUI native gateway and the public Rust headless SDK share
+          <code>kyuubiki-agent-transport</code>; the solver/engine has no TLS or token dependency.
+          Python/Elixir clients, Orchestra outbound RPC and automatic peer Mesh probes have not yet
+          adopted this transport. Do not switch their existing Agents to TLS until those callers
+          are upgraded. This is shared-token authentication, not mTLS, per-user scopes, hot revocation,
+          automatic certificate renewal or installed cross-platform qualification. Rotate by draining
+          and reconciling tasks, restarting with new material, then updating clients; old credentials
+          no longer connect and original receipts remain available without replay.</p>
       </section>
 
       <section class="docs-card docs-section">

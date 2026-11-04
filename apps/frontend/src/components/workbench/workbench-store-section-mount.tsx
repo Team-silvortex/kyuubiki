@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { WorkbenchPanelPages } from "./workbench-panel-pages";
+import { StoreWorkspace, storeWorkspaceCopy, useStorePageSize } from "./workbench-store-workspace";
+import { StoreEntryDetails } from "./workbench-store-details";
+import { selectStoreEntries, storeEntryIdentity, storeProjectEntryState } from "@/lib/workbench/store-catalog";
 import {
   type AssetStoreEntry,
   type AssetStoreEntryKind,
@@ -35,9 +38,7 @@ type WorkbenchStoreSectionMountProps = {
   storeBackendService?: WorkbenchStoreBackendService;
 };
 
-type StoreView = "catalog" | "project" | "sources";
-
-const STORE_PAGE_SIZE = 5;
+type StoreView = "catalog" | "project" | "sources" | "detail";
 
 const KIND_FILTERS: Array<{ kind: "" | AssetStoreEntryKind; en: string; zh: string; ja: string }> = [
   { kind: "", en: "All", zh: "全部", ja: "すべて" },
@@ -56,6 +57,10 @@ export function WorkbenchStoreSectionMount({
   const [payload, setPayload] = useState<AssetStorePayload | null>(null);
   const [kind, setKind] = useState<"" | AssetStoreEntryKind>("");
   const [query, setQuery] = useState("");
+  const [source, setSource] = useState("");
+  const [domain, setDomain] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<AssetStoreEntry | null>(null);
   const [view, setView] = useState<StoreView>("catalog");
   const [catalogPage, setCatalogPage] = useState(0);
   const [manifestPage, setManifestPage] = useState(0);
@@ -64,9 +69,14 @@ export function WorkbenchStoreSectionMount({
   const [storageError, setStorageError] = useState<string | null>(null);
   const [manifest, setManifest] = useState(() => blankWorkspaceStoreManifest(selectedProjectId));
   const refreshRequestRef = useRef(0);
+  const expandButtonRef = useRef<HTMLButtonElement>(null);
 
   const copy = resolveStoreCopy(language);
-  const entries = useMemo(() => payload?.entries ?? [], [payload?.entries]);
+  const workspaceCopy = storeWorkspaceCopy(language);
+  const catalogEntries = useMemo(() => payload?.entries ?? [], [payload?.entries]);
+  const entries = selectStoreEntries(catalogEntries, source, domain);
+  const domains = [...new Set(catalogEntries.map((entry) => entry.domain).filter((value): value is string => !!value))].sort();
+  const pageSize = useStorePageSize(expanded);
   const sources = payload?.sources ?? [];
 
   async function refreshStore() {
@@ -95,6 +105,7 @@ export function WorkbenchStoreSectionMount({
 
   useEffect(() => {
     void refreshStore();
+    return () => { refreshRequestRef.current += 1; };
   }, [kind]);
 
   useEffect(() => {
@@ -110,18 +121,22 @@ export function WorkbenchStoreSectionMount({
 
   const selectedProjectLabel = selectedProjectId ?? copy.noProject;
   const activeManifest = manifestForSelectedProject(manifest, selectedProjectId);
-  const installedKeys = useMemo(
-    () => new Set(activeManifest.entries.map((entry) => manifestEntryKey(entry.kind, entry.id))),
-    [activeManifest.entries],
-  );
-  const catalogPageCount = Math.max(1, Math.ceil(entries.length / STORE_PAGE_SIZE));
+  const catalogPageCount = Math.max(1, Math.ceil(entries.length / pageSize));
   const activeCatalogPage = Math.min(catalogPage, catalogPageCount - 1);
-  const catalogStart = activeCatalogPage * STORE_PAGE_SIZE;
-  const visibleEntries = entries.slice(catalogStart, catalogStart + STORE_PAGE_SIZE);
-  const manifestPageCount = Math.max(1, Math.ceil(activeManifest.entries.length / STORE_PAGE_SIZE));
+  const catalogStart = activeCatalogPage * pageSize;
+  const visibleEntries = entries.slice(catalogStart, catalogStart + pageSize);
+  const manifestPageCount = Math.max(1, Math.ceil(activeManifest.entries.length / pageSize));
   const activeManifestPage = Math.min(manifestPage, manifestPageCount - 1);
-  const manifestStart = activeManifestPage * STORE_PAGE_SIZE;
-  const visibleManifestEntries = activeManifest.entries.slice(manifestStart, manifestStart + STORE_PAGE_SIZE);
+  const manifestStart = activeManifestPage * pageSize;
+  const visibleManifestEntries = activeManifest.entries.slice(manifestStart, manifestStart + pageSize);
+
+  function stageState(entry: AssetStoreEntry) {
+    const state = storeProjectEntryState(entry, activeManifest.entries);
+    return {
+      disabled: !selectedProjectId || busy || !!error || !!storageError || state !== "available",
+      label: state === "staged" ? copy.installedBadge : state === "conflict" ? workspaceCopy.conflict : state === "invalid" ? copy.invalidAsset : copy.stage,
+    };
+  }
 
   function reportStorageFailure(message: string) {
     setStorageError(message);
@@ -133,7 +148,7 @@ export function WorkbenchStoreSectionMount({
       reportStorageFailure(copy.storageWriteFailed);
       return;
     }
-    const message = commandErrorMessage(commandError.code, copy);
+    const message = commandError.code === "entry_conflict" ? workspaceCopy.conflict : commandErrorMessage(commandError.code, copy);
     reportStorageFailure(message);
   }
 
@@ -180,6 +195,7 @@ export function WorkbenchStoreSectionMount({
   }
 
   return (
+    <StoreWorkspace expanded={expanded} onClose={() => setExpanded(false)} title={copy.title} closeLabel={workspaceCopy.close} returnFocusRef={expandButtonRef}>
     <WorkbenchPanelPages
       data-workbench-store-panel="true"
       data-workbench-store-manifest-count={activeManifest.entries.length}
@@ -199,35 +215,29 @@ export function WorkbenchStoreSectionMount({
         <button className={`panel-tab${view === "sources" ? " panel-tab--active" : ""}`} aria-pressed={view === "sources"} data-workbench-store-view-tab="sources" onClick={() => setView("sources")} type="button">
           {copy.sources} · {sources.length}
         </button>
+        {!expanded ? <button ref={expandButtonRef} className="panel-tab" type="button" data-workbench-store-workspace-action="expand" onClick={() => setExpanded(true)}>{workspaceCopy.expand}</button> : null}
       </div>
       }>
       <section className="sidebar-card sidebar-card--compact store-context-card">
-        <div className="card-head">
-          <div>
-            <p className="eyebrow">{copy.eyebrow}</p>
-            <h2>{copy.title}</h2>
-          </div>
-          <span className="status-pill">{busy ? copy.loading : copy.ready}</span>
-        </div>
-        <div className="store-context-grid">
-          <div className="sidebar-list__row">
-            <span>{copy.project}</span>
-            <strong>{selectedProjectLabel}</strong>
-          </div>
-          <div className="sidebar-list__row">
-            <span>{copy.installedAssets}</span>
-            <strong>{activeManifest.entries.length}</strong>
-          </div>
+        <div className="store-workspace-context">
+          <span>{copy.project}: <strong>{selectedProjectLabel}</strong></span>
+          <span>{copy.installedAssets}: <strong>{activeManifest.entries.length}</strong></span>
+          <span className="status-pill" role="status">{busy ? copy.loading : error ? copy.failed : copy.ready}</span>
         </div>
         {error ? <p className="warning-copy">{error}</p> : null}
         {storageError ? <p className="warning-copy">{storageError}</p> : null}
+        {!selectedProjectId ? <p className="card-copy">{copy.selectProjectFirst}</p> : null}
       </section>
+
+      {view === "detail" && selectedEntry ? <StoreEntryDetails entry={selectedEntry} language={language}
+        onBack={() => setView("catalog")} onStage={() => installEntry(selectedEntry)}
+        disabled={stageState(selectedEntry).disabled} actionLabel={stageState(selectedEntry).label} /> : null}
 
       {view === "catalog" ? (
         <section className="sidebar-card sidebar-card--compact">
           <div className="card-head">
             <h2>{copy.entries}</h2>
-            <button className="ghost-button ghost-button--compact" disabled={busy} onClick={() => void refreshStore()} type="button">
+            <button className="ghost-button ghost-button--compact" data-workbench-store-action="refresh" disabled={busy} onClick={() => void refreshStore()} type="button">
               {copy.refresh}
             </button>
           </div>
@@ -246,14 +256,16 @@ export function WorkbenchStoreSectionMount({
               value={query}
             />
           </label>
-          <div className="panel-tabs panel-tabs--wrap" role="tablist">
+          <div className="panel-tabs panel-tabs--wrap" role="group" aria-label={copy.entries}>
             {KIND_FILTERS.map((filter) => (
               <button
                 className={kind === filter.kind ? "active" : ""}
                 data-workbench-store-kind={filter.kind || "all"}
+                aria-pressed={kind === filter.kind}
                 key={filter.kind || "all"}
                 onClick={() => {
                   setCatalogPage(0);
+                  setDomain("");
                   setKind(filter.kind);
                 }}
                 type="button"
@@ -262,12 +274,30 @@ export function WorkbenchStoreSectionMount({
               </button>
             ))}
           </div>
+          <details>
+            <summary>{workspaceCopy.filters}</summary>
+            <div className="store-filter-grid">
+              <label className="form-field"><span>{workspaceCopy.source}</span>
+                <select data-workbench-store-filter="source" value={source} onChange={(event) => { setSource(event.target.value); setCatalogPage(0); }}>
+                  <option value="">{workspaceCopy.allSources}</option>
+                  {sources.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                </select>
+              </label>
+              <label className="form-field"><span>{workspaceCopy.domain}</span>
+                <select data-workbench-store-filter="domain" value={domain} onChange={(event) => { setDomain(event.target.value); setCatalogPage(0); }}>
+                  <option value="">{workspaceCopy.allDomains}</option>
+                  {domains.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </label>
+            </div>
+          </details>
           <StorePager
             copy={copy}
             count={entries.length}
             page={activeCatalogPage}
             pageCount={catalogPageCount}
             pageStart={catalogStart}
+            pageSize={pageSize}
             onPageChange={setCatalogPage}
           />
           <div className="history-list store-entry-list">
@@ -275,8 +305,11 @@ export function WorkbenchStoreSectionMount({
               <StoreEntryCard
                 copy={copy}
                 entry={entry}
-                installed={installedKeys.has(manifestEntryKey(entry.kind, entry.id))}
-                key={`${entry.kind}:${entry.id}`}
+                disabled={stageState(entry).disabled}
+                actionLabel={stageState(entry).label}
+                detailsLabel={workspaceCopy.details}
+                onDetails={() => { setSelectedEntry(entry); setView("detail"); }}
+                key={storeEntryIdentity(entry)}
                 onInstall={installEntry}
               />
             )) : <p className="card-copy">{busy ? copy.loading : copy.empty}</p>}
@@ -298,12 +331,14 @@ export function WorkbenchStoreSectionMount({
           </button>
         </div>
         <p className="card-copy">{copy.manifestHint}</p>
+        <p className="card-copy">{workspaceCopy.stageOnly}</p>
         <StorePager
           copy={copy}
           count={activeManifest.entries.length}
           page={activeManifestPage}
           pageCount={manifestPageCount}
           pageStart={manifestStart}
+          pageSize={pageSize}
           onPageChange={setManifestPage}
         />
         <div className="history-list">
@@ -316,7 +351,7 @@ export function WorkbenchStoreSectionMount({
             >
               <div>
                 <strong>{entry.title}</strong>
-                <small>{copy.kindLabel(entry.kind)} · {entry.source_id} · {entry.version ?? "v0"}</small>
+                <small>{copy.kindLabel(entry.kind)} · {entry.source_id} · {entry.version ?? "--"}</small>
               </div>
               <div className="button-row">
                 <button
@@ -338,16 +373,18 @@ export function WorkbenchStoreSectionMount({
           <h2>{copy.sourceTitle}</h2>
           <span className="status-pill">{sources.length}</span>
         </div>
+        <p className="card-copy">{workspaceCopy.scope}</p>
         <div className="sidebar-list">
           {sources.map((source) => (
             <div className="sidebar-list__row" key={source.id}>
               <span>{source.label}</span>
-              <strong>{source.status}</strong>
+              <strong>{source.status} · {source.type}</strong>
             </div>
           ))}
         </div>
       </section> : null}
     </WorkbenchPanelPages>
+    </StoreWorkspace>
   );
 }
 
@@ -357,6 +394,7 @@ function StorePager({
   page,
   pageCount,
   pageStart,
+  pageSize,
   onPageChange,
 }: {
   copy: ReturnType<typeof resolveStoreCopy>;
@@ -364,10 +402,11 @@ function StorePager({
   page: number;
   pageCount: number;
   pageStart: number;
+  pageSize: number;
   onPageChange: (page: number) => void;
 }) {
   if (count === 0) return null;
-  const pageEnd = Math.min(count, pageStart + STORE_PAGE_SIZE);
+  const pageEnd = Math.min(count, pageStart + pageSize);
   return (
     <div className="store-page-controls" data-workbench-store-page={`${page + 1}/${pageCount}`}>
       <span>{copy.pageRange(pageStart + 1, pageEnd, count)}</span>
@@ -386,12 +425,18 @@ function StorePager({
 function StoreEntryCard({
   copy,
   entry,
-  installed,
+  disabled,
+  actionLabel,
+  detailsLabel,
+  onDetails,
   onInstall,
 }: {
   copy: ReturnType<typeof resolveStoreCopy>;
   entry: AssetStoreEntry;
-  installed: boolean;
+  disabled: boolean;
+  actionLabel: string;
+  detailsLabel: string;
+  onDetails: () => void;
   onInstall: (entry: AssetStoreEntry) => void;
 }) {
   return (
@@ -402,18 +447,19 @@ function StoreEntryCard({
     >
       <div>
         <strong>{entry.title}</strong>
-        <small>{copy.kindLabel(entry.kind)} · {entry.source_id} · {entry.version ?? "v0"}</small>
+        <small>{copy.kindLabel(entry.kind)} · {entry.source_id} · {entry.version ?? "--"}</small>
       </div>
       <p>{entry.summary ?? entry.id}</p>
       <div className="button-row">
+        <button className="ghost-button ghost-button--compact" type="button" data-workbench-store-entry-action="details" onClick={onDetails}>{detailsLabel}</button>
         <button
           className="ghost-button ghost-button--compact"
           data-workbench-store-entry-action="stage"
-          disabled={installed}
+          disabled={disabled}
           onClick={() => onInstall(entry)}
           type="button"
         >
-          {installed ? copy.installedBadge : copy.stage}
+          {actionLabel}
         </button>
       </div>
     </article>
@@ -451,7 +497,7 @@ function resolveStoreCopy(language: string) {
       ? "像 Unity Editor 一样，在当前 Workbench 项目里挑选算子、工作流模板和前端 DSL 模板。"
       : ja
         ? "Unity Editor のように、現在の Workbench プロジェクトへ資産を追加します。"
-        : "Install operators, workflow templates, and frontend DSL templates into the current Workbench project.",
+        : "Choose operator and template references for the current Workbench project.",
     project: zh ? "当前项目" : ja ? "現在のプロジェクト" : "Current project",
     model: zh ? "当前模型" : ja ? "現在のモデル" : "Current model",
     noProject: zh ? "未选择项目" : ja ? "未選択" : "No project selected",
@@ -501,10 +547,10 @@ function resolveStoreCopy(language: string) {
           : `${start}-${end} of ${count}`,
     manifestTitle: zh ? "项目资产 manifest" : ja ? "プロジェクト資産 manifest" : "Project asset manifest",
     manifestHint: zh
-      ? "商店资产随当前项目保存，并自动写入导出的 .kyuubiki 项目包。"
+      ? "资产引用随当前项目保存，并写入导出的 .kyuubiki 清单；不代表包文件已安装。"
       : ja
-        ? "ストア資産は現在のプロジェクトに保存され、書き出した .kyuubiki バンドルにも自動的に含まれます。"
-        : "Store assets are saved with the current project and included automatically in exported .kyuubiki bundles.",
+        ? "資産参照は .kyuubiki に含まれますが、パッケージのインストールを意味しません。"
+        : "Asset references are included in exported .kyuubiki manifests; this does not mean package files are installed.",
     manifestEmpty: zh ? "当前项目还没有加入商店资产。" : ja ? "まだ追加済み資産はありません。" : "No store assets added to this project yet.",
     exportManifest: zh ? "导出" : ja ? "書き出し" : "Export",
     remove: zh ? "移除" : ja ? "削除" : "Remove",

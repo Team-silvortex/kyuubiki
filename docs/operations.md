@@ -160,6 +160,18 @@ Merely labeling a request `checkpointed` is rejected. Side-effecting
 includes a `kyuubiki.orchestra-agent-recovery/v1` receipt with the Agent,
 failure stage, reason code, retry safety, and next action.
 
+Those retry hints do not override contradictory execution observations. A capacity
+or LAN-control denial after native progress/heartbeat, or accompanied by a task
+failure receipt, produces `agent_non_admission_conflict` on the legacy route and
+never triggers automatic cross-Agent replay. Managed TaskIR retains
+`operator_task_dispatch_outcome_unknown` and its saved journal fence even after
+reopening the journal. Inspect original execution evidence before any manual retry;
+relabeling the task idempotent or checkpointed does not resolve the conflict.
+A plain, consistent `agent_lan_control_requires_explicit_trust` reply instead
+records `not_dispatched` and returns the permission error without trying a peer.
+Correct the host-owned deployment policy explicitly; do not weaken it from task
+parameters. This response handling is not peer authentication.
+
 Agent admission is capacity-gated for static, manifest, and registry discovery.
 `KYUUBIKI_AGENT_QUEUE_TIMEOUT_MS` bounds the Orchestra-side capacity queue;
 `KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS` independently bounds large artifact-backed

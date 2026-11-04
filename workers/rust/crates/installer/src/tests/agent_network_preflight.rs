@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use kyuubiki_protocol::AGENT_ALLOWED_PEER_IPS_ENV;
+use kyuubiki_protocol::{AGENT_ALLOWED_PEER_IPS_ENV, AGENT_TRUSTED_LAN_CONTROL_ENV};
 
 struct EnvFile(PathBuf);
 impl EnvFile {
@@ -60,5 +60,38 @@ fn agent_network_preflight_rejects_the_same_invalid_policy_as_native_agent() {
         let native = kyuubiki_protocol::AgentNetworkAccessPolicy::parse(Some(invalid)).unwrap_err();
         assert_eq!(error, native);
         assert!(!error.contains("secret.example.invalid"));
+    }
+}
+
+#[test]
+fn agent_network_preflight_validates_explicit_lan_control_without_authentication_claims() {
+    for (value, expected) in [
+        (None, "discovery_only"),
+        (Some("false"), "discovery_only"),
+        (Some("true"), "trusted_lan_control"),
+    ] {
+        let file = EnvFile::new(Some("192.0.2.1"));
+        if let Some(value) = value {
+            let mut content = fs::read_to_string(&file.0).unwrap();
+            content.push_str(&format!("{AGENT_TRUSTED_LAN_CONTROL_ENV}={value}\n"));
+            fs::write(&file.0, content).unwrap();
+        }
+        let report = crate::validate_env_path(&file.0).unwrap();
+        assert!(report.contains(&format!("agent-lan-control={expected}")));
+        assert!(report.contains("authentication=false"));
+    }
+    for invalid in ["", "TRUE", "1", "secret-config-value"] {
+        let file = EnvFile::new(None);
+        fs::write(
+            &file.0,
+            format!("KYUUBIKI_STORAGE_BACKEND=sqlite\n{AGENT_TRUSTED_LAN_CONTROL_ENV}={invalid}\n"),
+        )
+        .unwrap();
+        let error = crate::validate_env_path(&file.0).unwrap_err();
+        let native = kyuubiki_protocol::AgentNetworkAccessPolicy::default()
+            .with_trusted_lan_control(Some(invalid))
+            .unwrap_err();
+        assert_eq!(error, native);
+        assert!(!error.contains("secret-config-value"));
     }
 }

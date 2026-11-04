@@ -37,6 +37,7 @@ import {
   resolveInstalledWorkbenchLanguagePack,
 } from "@/components/workbench/workbench-language-pack-catalog";
 import { getWorkbenchLanguagePackSystemCopy } from "@/components/workbench/workbench-language-pack-system-copy";
+import { sameAssistantEndpoint } from "@/lib/assistant/model-connection";
 
 type UseWorkbenchShellStateArgs = {
   setLoadedModelName: (value: string | ((current: string) => string)) => void;
@@ -66,8 +67,14 @@ export function useWorkbenchShellState({
   const [clusterApiToken, setClusterApiToken] = useState("");
   const [directMeshApiToken, setDirectMeshApiToken] = useState("");
   const [assistantMode, setAssistantMode] = useState<AssistantMode>("local");
-  const [assistantApiBaseUrl, setAssistantApiBaseUrl] = useState("https://api.openai.com/v1");
+  const [assistantApiBaseUrl, setAssistantApiBaseUrlValue] = useState("https://api.openai.com/v1");
   const [assistantApiKey, setAssistantApiKey] = useState("");
+  const assistantEndpointRef = useRef(assistantApiBaseUrl);
+  const setAssistantApiBaseUrl = useCallback((value: string) => {
+    if (!sameAssistantEndpoint(assistantEndpointRef.current, value)) setAssistantApiKey("");
+    assistantEndpointRef.current = value;
+    setAssistantApiBaseUrlValue(value);
+  }, []);
   const [assistantModel, setAssistantModel] = useState("gpt-4.1-mini");
   const [assistantWindowOpen, setAssistantWindowOpen] = useState(false);
   const [directMeshExecution, setDirectMeshExecution] = useState<DirectMeshExecutionState | null>(null);

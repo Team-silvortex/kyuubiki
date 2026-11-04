@@ -7,6 +7,10 @@ fn descriptor() -> Value {
         "schema_version":"kyuubiki.agent-execution-admission/v1", "configured":true,
         "max_active_executions":2, "active_execution_count":0
     });
+    value["connection_access"] = serde_json::to_value(
+        kyuubiki_protocol::AgentNetworkAccessPolicy::default().connection_access(true),
+    )
+    .unwrap();
     value
 }
 
@@ -17,6 +21,7 @@ fn selection_requires_explicit_metadata_instead_of_compatibility_defaults() {
     for field in [
         "role",
         "protocol",
+        "connection_access",
         "lifecycle",
         "execution_admission",
         "runtime",
@@ -135,4 +140,50 @@ fn health_is_bounded_ranking_data_not_execution_permission() {
             Err("invalid_health_score")
         );
     }
+}
+
+#[test]
+fn discovery_only_connection_is_not_eligible_even_when_the_agent_is_healthy() {
+    let mut value = descriptor();
+    value["connection_access"] = json!({
+        "schema_version":"kyuubiki.agent-connection-access/v1",
+        "scope":"native_socket_connection", "peer_scope":"non_loopback",
+        "control_mode":"discovery_only", "control_allowed":false,
+        "lifecycle_mutations_allowed":false, "authenticated":false, "encrypted":false
+    });
+    assert_eq!(
+        eligible_score(&value, "solve_bar_1d"),
+        Err("connection_control_not_permitted")
+    );
+}
+
+#[test]
+fn selection_never_promotes_malformed_or_self_claimed_authenticated_access() {
+    for (field, wrong) in [
+        ("schema_version", json!("future")),
+        ("scope", json!("global")),
+        ("peer_scope", json!("non_loopback")),
+        ("control_mode", json!("authenticated")),
+        ("control_allowed", json!("true")),
+        ("lifecycle_mutations_allowed", json!(false)),
+        ("authenticated", json!(true)),
+        ("encrypted", json!(true)),
+    ] {
+        let mut value = descriptor();
+        value["connection_access"][field] = wrong;
+        assert_eq!(
+            eligible_score(&value, "solve_bar_1d"),
+            Err("invalid_connection_access"),
+            "{field}"
+        );
+    }
+    let mut trusted = descriptor();
+    trusted["connection_access"] = serde_json::to_value(
+        kyuubiki_protocol::AgentNetworkAccessPolicy::default()
+            .with_trusted_lan_control(Some("true"))
+            .unwrap()
+            .connection_access(false),
+    )
+    .unwrap();
+    assert_eq!(eligible_score(&trusted, "solve_bar_1d"), Ok(100));
 }

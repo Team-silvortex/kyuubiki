@@ -1,0 +1,39 @@
+.store-marketplace-dialog {
+  width: min(1440px, calc(100vw - 32px));
+  height: min(900px, calc(100dvh - 32px));
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel, #252a31);
+  color: var(--text, #edf1f5);
+  font: inherit;
+  overflow: hidden;
+}
+.store-marketplace-dialog[open] { display: flex; flex-direction: column; }
+.store-marketplace-dialog::backdrop { background: rgb(6 10 15 / 78%); }
+.store-workspace-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.store-marketplace-dialog .workbench-panel-pages { flex: 1; min-height: 0; padding: 12px 16px; }
+.store-marketplace-dialog .store-entry-list { grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); align-items: start; }
+.store-marketplace-dialog .store-entry-card { min-width: 0; align-content: start; }
+.store-marketplace-dialog .store-entry-card p { -webkit-line-clamp: 2; }
+.store-workspace-context { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; font-size: 0.85rem; }
+.store-workspace-context > span:first-child { flex: 1; min-width: min(100%, 180px); overflow-wrap: anywhere; }
+.store-entry-card > div:first-child { display: grid; gap: 4px; min-width: 0; }
+.store-entry-card small { display: block; overflow-wrap: anywhere; }
+.store-detail h2, .store-detail-facts dd, .store-entry-card strong { overflow-wrap: anywhere; }
+.store-detail-facts { display: grid; gap: 8px; margin: 16px 0; }
+.store-detail-facts > div { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, 3fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.store-detail-facts dt { color: var(--muted); }
+.store-detail-facts dd { margin: 0; min-width: 0; }
+.store-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.store-filter-grid { display: grid; gap: 8px; margin-top: 8px; }
+.store-marketplace-dialog .store-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.store-filter-grid select { min-width: 0; width: 100%; }
+@media (max-width: 600px) {
+  .store-marketplace-dialog { width: calc(100vw - 12px); height: calc(100dvh - 12px); }
+  .store-marketplace-dialog .workbench-panel-pages { padding: 8px; }
+  .store-marketplace-dialog .store-filter-grid { grid-template-columns: 1fr; }
+  .store-workspace-header { padding: 8px; }
+}

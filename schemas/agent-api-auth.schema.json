@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/agent-api-auth.schema.json",
+  "title": "Native Agent TLS authentication preface",
+  "description": "One length-prefixed JSON exchange inside verified TLS 1.3, before RPC frames. Not TaskIR or persistent project data. ALPN kyuubiki-agent/1. Maximum frame length 1024 bytes; handshake and authentication share a deadline.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "api_token"],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.agent-auth/v1" },
+        "api_token": { "type": "string", "minLength": 32, "maxLength": 256, "pattern": "^[A-Za-z0-9_-]+$", "writeOnly": true }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "authenticated"],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.agent-auth/v1" },
+        "authenticated": { "const": true }
+      }
+    }
+  ]
+}

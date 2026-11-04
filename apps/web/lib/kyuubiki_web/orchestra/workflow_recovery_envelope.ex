@@ -184,6 +184,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   def fenced?(_recovery, _claim), do: false
 
   @spec replayable?(map()) :: boolean()
+  def replayable?(%{"state" => "finalizing"}), do: false
   def replayable?(%{"retry_safety" => "idempotent"}), do: true
 
   def replayable?(%{"retry_safety" => "checkpointed", "checkpoint" => checkpoint}),

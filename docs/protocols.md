@@ -418,9 +418,75 @@ message takes precedence over a reason in that same entry; the final prefixed
 reason must also fit the existing 4096-byte progress-message limit. Raw history
 is retained unchanged, and completed/cancelled handling is unchanged. Local
 SQLite/JSON regressions cover continued scanning and coordinator restart; this
-does not authenticate terminal records, authorize replay or establish atomicity
-against concurrent record edits. See the
+does not authenticate terminal records or authorize replay. Commit fencing is
+separate from diagnostic selection. See the
 [terminal-diagnostic report](../reports/workflow-terminal-diagnostics-20261028.md).
+
+Separately, terminal reconciliation now uses the complete observed runtime and
+the current job as an atomic paired-snapshot condition under the owning lease.
+Concurrent result replacement, annotation or deletion cannot finalize an old
+decision; an already-terminal job wins without rewriting either record. Runtime
+payloads are unchanged, though SQL result storage timestamps may advance.
+Rejected terminal commits keep the existing skipped count but make the scan
+`interrupted`, with `workflow_terminal_reconciliation_incomplete` and no completed
+`recovery_runs` increment. Registry/lease errors retain their own reason. Later
+scans re-read evidence; no automatic retry loop or new execution authority is
+added. See the [local commit follow-up](../reports/workflow-terminal-diagnostics-20261028.md#atomic-terminal-reconciliation-follow-up).
+
+Recognized legacy workflows (a binary `workflow_id` without a map recovery
+envelope) use that same paired commit before marking an active job failed. Only
+a successful write counts as blocked; an independently terminal job is skipped,
+and deleted jobs/results are not reconstructed. Rejected legacy commits interrupt
+the scan with `workflow_legacy_reconciliation_incomplete` and no completed-pass
+increment. A mixed scan retains its first reconciliation failure reason, unless
+registry/ownership loss takes precedence. Plain jobs with no workflow runtime
+remain skipped, not inferred failed. A completed scan is not proof that such
+skipped jobs have recovered. No recovery envelope is fabricated. See the
+[legacy commit follow-up](../reports/workflow-terminal-diagnostics-20261028.md#legacy-recovery-commit-follow-up).
+
+Claim/replay admission refusals also retain the runtime snapshot they actually
+checked. A later corrected, annotated, terminal or deleted runtime cannot receive
+the old refusal through a fresh read. The existing lease and paired commit fence
+the write; independent terminal jobs remain untouched. Unresolved dispatch errors
+contribute to skipped but interrupt the recovery scan with
+`workflow_recovery_dispatch_incomplete`, without a completed-pass increment.
+Registry/ownership errors keep their existing precedence. A fresh scan can inspect
+current evidence; the change grants no new replay or retry authority. Initial
+dispatch uses the same snapshot-bound refusal path. Pending-completion decisions
+have separate evidence below. See the
+[dispatch refusal follow-up](../reports/workflow-terminal-diagnostics-20261028.md#dispatch-refusal-snapshot-follow-up).
+
+Pending-completion validation captures both the active job and runtime under the
+owning lease. An invalid checkpoint, or a missing one for a known finalizer,
+returns a blocking decision bound to that pair; committing it compares both
+snapshots again under the lease. A newer job identity, progress update, repaired
+checkpoint, terminal result or deleted record cannot receive the old refusal.
+Snapshot conflicts and a missing result retain the existing publication-only
+retry, without incrementing blocked/completed-pass counts or replaying the graph.
+If a retry finds no runtime, it stays pending only while the job remains active;
+it never recreates that runtime. Manual dispatch of a known finalizer also
+revalidates its checkpoint instead of unconditionally blocking or executing the
+graph. These in-process retry markers alone are not a durable tombstone; the
+durable phase added below distinguishes newly staged computation from replay.
+See the
+[pending completion follow-up](../reports/workflow-terminal-diagnostics-20261028.md#pending-completion-refusal-follow-up).
+
+Successful staging now transitions the private recovery record to `finalizing`
+in the same paired commit as its `pending_completion` payload. Generation,
+attempt and owner remain unchanged. This phase is not claimable or replayable,
+even for an idempotent graph. Publication validates the original claim through a
+separate completion fence; execution progress/checkpoint/failure writes retain
+their running-only fence. Duplicate staging is unchanged only when the retained
+checkpoint matches. Missing finalizing payload is an error for both restaging
+and publication: cached output cannot silently reconstruct deleted evidence.
+Recovery blocks missing/corrupt completion payloads without advancing the claim,
+including after coordinator restart and tested OS-process SIGKILL/restart.
+Valid legacy `running` checkpoints still publish; restaging upgrades them to the
+new phase. Older binaries are not guaranteed to publish `finalizing` records.
+The marker lives in the existing runtime, not a second store or job tombstone;
+deletion/rollback of that entire record, legacy records already missing their
+checkpoint, malicious rewrites and physical power loss are not qualified by
+these tests. See the [durable phase follow-up](../reports/workflow-terminal-diagnostics-20261028.md#durable-finalization-phase-follow-up).
 
 Durable workflow expiry sweeps now reuse this lookup after reserving each attempt
 and after binding/authorizing the exact target, instead of retaining one endpoint

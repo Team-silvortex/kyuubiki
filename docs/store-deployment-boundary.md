@@ -1,5 +1,9 @@
 # Store Deployment Boundary
 
+The [operator-store integration handoff](operator-store-integration.html)
+separates the implemented Workbench reference workflow from proposed hosted
+catalog, shared-identity, download-authorization, and publishing APIs.
+
 Kyuubiki ships portable catalog, package, provenance, signature, publishing,
 and self-hosting contracts. These contracts describe how the product discovers
 and verifies resources; they do not select a hosted vendor or encode a vendor's

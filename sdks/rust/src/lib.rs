@@ -41,6 +41,7 @@ pub use durable_execution::DurableExecutionHandle;
 pub use durable_execution_index::{DurableExecutionIndexEntry, DurableExecutionIndexPage};
 pub use durable_execution_intent::DurableExecutionIntent;
 pub use error::{SdkError, SdkResult};
+pub use kyuubiki_agent_transport::ClientSecurity as AgentApiSecurity;
 pub use material_research_bundle::{
     MATERIAL_RESEARCH_BUNDLE_SCHEMA_VERSION, MaterialResearchBundle,
     MaterialResearchBundleArtifactChecksums, MaterialResearchBundleReproducibility,

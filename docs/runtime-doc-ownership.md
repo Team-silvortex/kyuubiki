@@ -118,6 +118,18 @@ back to it instead of re-explaining the same boundary in full.
 - Should not absorb:
   high-level product narrative or control-authority policy explanation
 
+### Workspace Store and service integration
+
+- `operator-store-integration.html` owns the implemented-versus-proposed Store
+  boundary, backend handoff and local acceptance limits.
+- `store-deployment-boundary.md` owns self-hosted versus hosted policy and shared
+  Team Silvortex identity responsibilities.
+- `central-server-components.md` owns the existing service components; it must
+  not describe proposed login/commerce endpoints as implemented services.
+- `current-architecture-map.md` only indexes source ownership. Keep detailed
+  endpoint proposals and measured test totals in the handoff and evidence, not
+  copied into every architecture page.
+
 ## Pointer rules
 
 When touching one of these docs, prefer pointers instead of restating the whole

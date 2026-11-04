@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { getWorkbenchScriptActionDefinition, isWorkbenchScriptActionHighRisk } from "@/lib/scripting/workbench-script-runtime";
 import {
@@ -9,6 +9,8 @@ import {
 } from "@/components/workbench/workbench-extended-language-copy";
 import { getWorkbenchScriptActionSummary } from "@/components/workbench/workbench-script-catalog-copy";
 import { WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF } from "@/lib/workbench/workflow-bridge-contract";
+import { WorkbenchModelConnection } from "./workbench-model-connection";
+import { modelConnectionCopy, modelConnectionError } from "./workbench-model-connection-copy";
 
 type AssistantMode = "local" | "llm";
 
@@ -39,7 +41,7 @@ type WorkbenchAssistantPanelProps = {
   onLlmBaseUrlChange: (value: string) => void;
   onLlmApiKeyChange: (value: string) => void;
   onLlmModelChange: (value: string) => void;
-  onRequestPlan: (prompt: string) => Promise<AssistantPlan>;
+  onRequestPlan: (prompt: string, signal?: AbortSignal) => Promise<AssistantPlan>;
   onExecuteLlmAction: (action: string, payload?: Record<string, unknown>, reason?: string) => Promise<void>;
   onExecuteLlmPlan: (actions: AssistantPlan["suggested_actions"], summary: string) => Promise<void>;
   onRollbackTransaction: (id: string) => void;
@@ -247,6 +249,13 @@ export function WorkbenchAssistantPanel({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approvedExecution, setApprovedExecution] = useState(false);
+  const request = useRef<AbortController | null>(null);
+  const promptInput = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    request.current?.abort(); request.current = null;
+    setPlan(null); setApprovedExecution(false); setPending(false); setError(null);
+    return () => { request.current?.abort(); request.current = null; };
+  }, [llmBaseUrl, llmApiKey, llmModel, mode]);
 
   const requestPlan = async () => {
     if (!llmBaseUrl.trim() || !llmModel.trim()) {
@@ -256,15 +265,19 @@ export function WorkbenchAssistantPanel({
 
     setPending(true);
     setError(null);
+    setPlan(null); setApprovedExecution(false);
+    request.current?.abort();
+    const controller = new AbortController(); request.current = controller;
 
     try {
-      const nextPlan = await onRequestPlan(prompt.trim() || t.promptPlaceholder);
+      const nextPlan = await onRequestPlan(prompt.trim() || t.promptPlaceholder, controller.signal);
+      if (request.current !== controller || controller.signal.aborted) return;
       setPlan(nextPlan);
       setApprovedExecution(false);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : String(requestError));
+      if (request.current === controller) setError(modelConnectionError(requestError, language));
     } finally {
-      setPending(false);
+      if (request.current === controller) { setPending(false); request.current = null; }
     }
   };
 
@@ -306,10 +319,8 @@ export function WorkbenchAssistantPanel({
       )}
 
       <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.context}</h2>
-          <span>{currentStudyLabel}</span>
-        </div>
+        <details open={mode === "local"}>
+        <summary>{t.context} · {currentStudyLabel}</summary>
         <div className="sidebar-list">
           <div>
             <span>{t.currentStudy}</span>
@@ -328,9 +339,10 @@ export function WorkbenchAssistantPanel({
             <strong>{currentResultLabel}</strong>
           </div>
         </div>
+        </details>
       </section>
 
-      {floating ? (
+      {floating && mode === "local" ? (
         <section className="sidebar-card sidebar-card--compact assistant-panel__welcome">
           <div className="card-head">
             <h2>{t.floatingWelcomeTitle}</h2>
@@ -372,6 +384,9 @@ export function WorkbenchAssistantPanel({
         )
       ) : (
         <>
+          <WorkbenchModelConnection language={language} baseUrl={llmBaseUrl} apiKey={llmApiKey} model={llmModel}
+            onBaseUrl={onLlmBaseUrlChange} onApiKey={onLlmApiKeyChange} onModel={onLlmModelChange}
+            onReady={() => { promptInput.current?.focus(); promptInput.current?.scrollIntoView({ block:"center" }); }} />
           <section className="sidebar-card sidebar-card--compact">
             <div className="card-head">
               <h2>{t.llmTitle}</h2>
@@ -397,20 +412,9 @@ export function WorkbenchAssistantPanel({
             ) : null}
             <div className="form-grid compact">
               <label className="field-span-2">
-                <span>{t.baseUrl}</span>
-                <input type="text" value={llmBaseUrl} onChange={(event) => onLlmBaseUrlChange(event.target.value)} />
-              </label>
-              <label className="field-span-2">
-                <span>{t.apiKey}</span>
-                <input type="password" value={llmApiKey} onChange={(event) => onLlmApiKeyChange(event.target.value)} />
-              </label>
-              <label className="field-span-2">
-                <span>{t.model}</span>
-                <input type="text" value={llmModel} onChange={(event) => onLlmModelChange(event.target.value)} />
-              </label>
-              <label className="field-span-2">
                 <span>{t.prompt}</span>
                 <textarea
+                  ref={promptInput}
                   rows={4}
                   value={prompt}
                   placeholder={t.promptPlaceholder}
@@ -419,11 +423,12 @@ export function WorkbenchAssistantPanel({
                 />
               </label>
             </div>
-            {error ? <p className="card-copy">{error}</p> : null}
+            {error ? <p className="card-copy" role="status">{error}</p> : null}
             <div className="button-row">
               <button className="ghost-button" disabled={pending} onClick={() => void requestPlan()} type="button">
                 {pending ? t.requesting : t.requestPlan}
               </button>
+              {pending ? <button className="ghost-button" type="button" onClick={() => request.current?.abort()}>{modelConnectionCopy(language).cancel}</button> : null}
             </div>
           </section>
 

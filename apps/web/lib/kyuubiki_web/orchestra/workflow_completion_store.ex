@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionStore do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.LeaseStore
   alias KyuubikiWeb.Orchestra.WorkflowCompletionCheckpoint, as: Checkpoint
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryDispatchGuard, as: DispatchGuard
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope, as: Envelope
 
   @active [:queued, :preprocessing, :partitioning, :solving, :postprocessing]
@@ -12,7 +13,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionStore do
   def stage(job_id, claim, result, lease) do
     LeaseStore.with_lease(lease, fn ->
       with {:ok, job, runtime, recovery} <- current(job_id),
-           true <- Envelope.fenced?(recovery, claim),
+           true <- Checkpoint.fenced?(recovery, claim),
            {:ok, updated, disposition} <- Checkpoint.prepare(job, recovery, claim, result) do
         if disposition == :unchanged do
           :ok
@@ -32,17 +33,50 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionStore do
     end)
   end
 
-  def pending(job_id, lease) do
+  def pending(job_id, lease, publication_only? \\ false) do
     LeaseStore.with_lease(lease, fn ->
-      with {:ok, job, _runtime, recovery} <- current(job_id),
-           do: Checkpoint.read(job, recovery)
+      with {:ok, job, runtime, recovery} <- current(job_id) do
+        case Checkpoint.read(job, recovery) do
+          {:error, :workflow_completion_checkpoint_invalid} -> {:block, job, runtime}
+          :none when publication_only? -> {:block, job, runtime}
+          result -> result
+        end
+      end
+    end)
+  end
+
+  def block_pending(job, runtime, lease) do
+    reason = :workflow_completion_checkpoint_invalid
+
+    blocked =
+      Envelope.transition(runtime[Envelope.internal_key()], "recovery_blocked", %{
+        "reason" => Atom.to_string(reason),
+        "next_action" => DispatchGuard.next_action(reason)
+      })
+
+    # Checkpoint validation depends on both job identity and the exact runtime snapshot.
+    LeaseStore.with_lease(lease, fn ->
+      with {:ok, _job} <-
+             Store.apply_progress_with_result(
+               %{
+                 job_id: job.job_id,
+                 stage: "failed",
+                 progress: 1.0,
+                 message: "workflow recovery blocked: #{reason}"
+               },
+               job,
+               runtime,
+               Map.put(runtime, Envelope.internal_key(), blocked)
+             ) do
+        {:error, {:workflow_recovery_blocked, reason}}
+      end
     end)
   end
 
   def commit(job_id, claim, result, lease) do
     LeaseStore.with_lease(lease, fn ->
       with {:ok, job, runtime, recovery} <- current(job_id),
-           true <- Envelope.fenced?(recovery, claim),
+           true <- Checkpoint.fenced?(recovery, claim),
            :ok <- Checkpoint.matches(job, recovery, result),
            {:ok, failed_count} <- failed_node_count(result) do
         completed =

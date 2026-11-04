@@ -166,7 +166,12 @@ fn handle_connection(stream: &mut TcpStream, config: &FrontendServerConfig) -> R
         };
     }
     let head_only = request.method == "HEAD";
-    let response = if request.path.starts_with("/api/direct-mesh") {
+    let response = if matches!(
+        request.path.as_str(),
+        "/api/assistant/capabilities" | "/api/assistant/request"
+    ) {
+        crate::model_gateway::handle(&request)
+    } else if request.path.starts_with("/api/direct-mesh") {
         config.direct_mesh.handle(&request)
     } else {
         static_response(&config.static_root, &request)

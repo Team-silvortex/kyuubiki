@@ -44,7 +44,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowTerminalReconciliationTest do
       terminal = unquote(terminal)
       fixture = terminal_runtime(terminal, unquote(Macro.escape(history)))
 
-      assert :ok = Scan.reconcile_terminal(fixture.id, terminal, recovery(fixture))
+      assert :ok = Scan.reconcile_terminal(fixture.id, fixture.runtime)
       assert_failed(fixture, fallback(terminal))
     end
   end
@@ -82,7 +82,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowTerminalReconciliationTest do
     @tag :direct
     test "preserves usable #{label} diagnostics" do
       fixture = terminal_runtime("failed", [unquote(Macro.escape(entry))])
-      assert :ok = Scan.reconcile_terminal(fixture.id, "failed", recovery(fixture))
+      assert :ok = Scan.reconcile_terminal(fixture.id, fixture.runtime)
       assert_failed(fixture, unquote(expected))
     end
   end
@@ -92,7 +92,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowTerminalReconciliationTest do
     test "#{terminal} reconciliation does not depend on diagnostic history" do
       terminal = unquote(terminal)
       fixture = terminal_runtime(terminal, %{"message" => "malformed"})
-      assert :ok = Scan.reconcile_terminal(fixture.id, terminal, recovery(fixture))
+      assert :ok = Scan.reconcile_terminal(fixture.id, fixture.runtime)
       assert {:ok, job} = Store.get(fixture.id)
       assert Atom.to_string(job.status) == terminal
       assert job.progress == 1.0

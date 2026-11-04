@@ -1,0 +1,217 @@
+{
+  "schema_version": "kyuubiki.desktop-ui-validation-report/v1",
+  "generated_at_unix_ms": 1793778976393,
+  "contract_path": "config/architecture/desktop-ui-validation.json",
+  "status": "fail",
+  "platform": {
+    "os": "macos",
+    "arch": "aarch64"
+  },
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "--test-concurrency=2",
+    "tests/integration/desktop-deployment-update-closure.test.mjs",
+    "tests/integration/desktop-gui-action-sweep.test.mjs",
+    "tests/integration/desktop-gui-capability-closure.test.mjs",
+    "tests/integration/desktop-gui-call-chain-contract.test.mjs",
+    "tests/integration/desktop-gui-layout-priority.test.mjs",
+    "tests/integration/desktop-gui-content-density.test.mjs",
+    "tests/integration/desktop-gui-navigation-closure.test.mjs",
+    "tests/integration/desktop-hub-assistant-context.test.mjs",
+    "tests/integration/desktop-installer-action-recovery.test.mjs",
+    "tests/integration/desktop-shell-regression.test.mjs",
+    "tests/integration/http-preview-lifecycle.test.mjs",
+    "tests/integration/workbench-ui-data-library-actions.test.mjs",
+    "tests/integration/workbench-ui-large-model-lod.test.mjs",
+    "tests/integration/workbench-ui-functional-closure.test.mjs",
+    "tests/integration/workbench-ui-store-workspace.test.mjs",
+    "tests/integration/workbench-ui-functional-recovery.test.mjs",
+    "tests/integration/workbench-ui-project-boundaries.test.mjs",
+    "tests/integration/workbench-ui-checkpoint-recovery.test.mjs",
+    "tests/integration/workbench-ui-durable-direct-recovery.test.mjs",
+    "tests/integration/workbench-ui-checkpoint-reopen.test.mjs",
+    "tests/integration/workbench-ui-pwdt-completion.test.mjs",
+    "tests/integration/workbench-ui-pwdt-runtime.test.mjs",
+    "tests/integration/workbench-ui-pwdt-workspace.test.mjs",
+    "tests/integration/workbench-ui-compact-panels.test.mjs",
+    "tests/integration/workbench-ui-research-actions.test.mjs",
+    "tests/integration/workbench-ui-greek-localization.test.mjs",
+    "tests/integration/workbench-ui-language-fragment-localization.test.mjs",
+    "tests/integration/workbench-ui-pwdt-projection.test.mjs",
+    "tests/integration/workbench-ui-history-observation.test.mjs",
+    "tests/integration/workbench-ui-security-history-recovery.test.mjs",
+    "tests/integration/workbench-ui-result-history-recovery.test.mjs",
+    "tests/integration/workbench-ui-job-draft-recovery.test.mjs",
+    "tests/integration/workbench-ui-job-record-recovery.test.mjs",
+    "tests/integration/workbench-ui-result-record-recovery.test.mjs",
+    "tests/integration/workbench-ui-library-record-recovery.test.mjs",
+    "tests/integration/workbench-ui-admin-record-flight.test.mjs",
+    "tests/integration/workbench-ui-admin-feedback-recovery.test.mjs",
+    "tests/integration/workbench-ui-admin-record-source.test.mjs",
+    "tests/integration/workbench-ui-admin-job-cancellation.test.mjs",
+    "tests/integration/workbench-ui-linked-context-recovery.test.mjs",
+    "tests/integration/workbench-ui-saved-navigation-recovery.test.mjs",
+    "tests/integration/workbench-ui-library-write-source.test.mjs",
+    "tests/integration/workbench-ui-library-mutation-flight.test.mjs",
+    "tests/integration/workbench-ui-import-source-recovery.test.mjs",
+    "tests/integration/workbench-ui-import-mutation-flight.test.mjs",
+    "tests/integration/workbench-ui-workflow-builder-actions.test.mjs",
+    "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+    "tests/integration/workbench-ui-workflow-readiness.test.mjs",
+    "tests/integration/workbench-shell-regression.test.mjs"
+  ],
+  "exit_code": 1,
+  "elapsed_ms": 1479645,
+  "summary": {
+    "tests": 660,
+    "passed": 658,
+    "failed": 2,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "failed_actions": 0,
+    "missing_actions": 0
+  },
+  "shells": [
+    {
+      "id": "hub",
+      "actions": 43,
+      "blocked": 0
+    },
+    {
+      "id": "installer",
+      "actions": 53,
+      "blocked": 4
+    },
+    {
+      "id": "workbench",
+      "actions": 7,
+      "blocked": 0
+    }
+  ],
+  "assertions": [
+    {
+      "id": "deployment-update-closure",
+      "label": "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers",
+      "passed": true
+    },
+    {
+      "id": "declarative-terminal-state",
+      "label": "all desktop declarative actions reach an observable terminal state",
+      "passed": true
+    },
+    {
+      "id": "capability-closure",
+      "label": "every required desktop capability closes UI, route, native, and result layers",
+      "passed": true
+    },
+    {
+      "id": "pwdt-parity",
+      "label": "capabilities that promise PWDT parity are catalogued and executable",
+      "passed": true
+    },
+    {
+      "id": "layout-priority",
+      "label": "desktop shell layout keeps operational workspaces dominant",
+      "passed": true
+    },
+    {
+      "id": "navigation-closure",
+      "label": "desktop primary navigation forms a reversible non-empty loop",
+      "passed": true
+    },
+    {
+      "id": "hub-installer-regression",
+      "label": "Hub and Installer desktop shells render regression-critical panels in a headless preview",
+      "passed": true
+    },
+    {
+      "id": "installer-mock-ipc-action-recovery",
+      "label": "Installer mock-IPC mutations reject overlap and recover after failure without automatic replay",
+      "passed": true
+    },
+    {
+      "id": "workbench-regression",
+      "label": "Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview",
+      "passed": true
+    },
+    {
+      "id": "workbench-interaction-closure",
+      "label": "Workbench rail mounts every declared sidebar chunk without client errors",
+      "passed": true
+    },
+    {
+      "id": "workbench-library-project-lifecycle-closure",
+      "label": "Workbench Library GUI creates, updates, exports, and deletes a project",
+      "passed": true
+    },
+    {
+      "id": "workbench-data-record-lifecycle-closure",
+      "label": "Workbench Data GUI updates, exports, and deletes Job and Result records",
+      "passed": true
+    },
+    {
+      "id": "workbench-system-snapshot-closure",
+      "label": "Workbench System exports, imports, inspects, and resets a topology snapshot",
+      "passed": true
+    },
+    {
+      "id": "workbench-store-gui-command-closure",
+      "label": "Workbench Store GUI stages, exports, removes, and restores an asset action",
+      "passed": true
+    },
+    {
+      "id": "workbench-workflow-catalog-run-closure",
+      "label": "Workbench workflow catalog runs a visible entry directly to completion",
+      "passed": true
+    },
+    {
+      "id": "workbench-workflow-graph-run-closure",
+      "label": "Workbench isolated workflow UI promotes and runs a valid graph draft",
+      "passed": true
+    },
+    {
+      "id": "workbench-workflow-topology-mutation-closure",
+      "label": "Workbench workflow builder mutates topology and inserts a control-flow plane",
+      "passed": false
+    },
+    {
+      "id": "workbench-model-navigation-closure",
+      "label": "Workbench Model navigation and Pwdt study alias preserve the complete workspace path",
+      "passed": true
+    },
+    {
+      "id": "workbench-system-navigation-closure",
+      "label": "Workbench System navigation preserves controlled state across deep page round trips",
+      "passed": true
+    },
+    {
+      "id": "workbench-library-navigation-closure",
+      "label": "Workbench Library navigation mounts every primary and secondary page without client errors",
+      "passed": true
+    },
+    {
+      "id": "workbench-store-request-ownership",
+      "label": "Workbench Store ignores stale responses after the active kind changes",
+      "passed": true
+    },
+    {
+      "id": "workbench-pwdt-store-command-closure",
+      "label": "Workbench Pwdt stages, exports, and removes Store assets through shared commands",
+      "passed": true
+    },
+    {
+      "id": "workbench-pwdt-store-workflow-navigation-closure",
+      "label": "Workbench Pwdt opens Store and round-trips every Workflow surface without DOM clicks",
+      "passed": true
+    },
+    {
+      "id": "workbench-pwdt-session-recovery",
+      "label": "Workbench Pwdt preserves hydrated script and DSL sessions",
+      "passed": true
+    }
+  ],
+  "output_excerpt": "Required assertion TAP lines (verbatim):\nok 1 - Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers\nok 2 - all desktop declarative actions reach an observable terminal state\nok 14 - every required desktop capability closes UI, route, native, and result layers\nok 15 - capabilities that promise PWDT parity are catalogued and executable\nok 19 - desktop shell layout keeps operational workspaces dominant\nok 20 - desktop primary navigation forms a reversible non-empty loop\nok 24 - Hub and Installer desktop shells render regression-critical panels in a headless preview\nok 23 - Installer mock-IPC mutations reject overlap and recover after failure without automatic replay\nok 26 - Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview\nok 638 - Workbench rail mounts every declared sidebar chunk without client errors\nok 133 - Workbench Library GUI creates, updates, exports, and deletes a project\nok 134 - Workbench Data GUI updates, exports, and deletes Job and Result records\nok 166 - Workbench System exports, imports, inspects, and resets a topology snapshot\nok 167 - Workbench Store GUI stages, exports, removes, and restores an asset action\nok 631 - Workbench workflow catalog runs a visible entry directly to completion\nok 632 - Workbench isolated workflow UI promotes and runs a valid graph draft\nok 639 - Workbench Model navigation and Pwdt study alias preserve the complete workspace path\nok 640 - Workbench System navigation preserves controlled state across deep page round trips\nok 641 - Workbench Library navigation mounts every primary and secondary page without client errors\nok 642 - Workbench Store ignores stale responses after the active kind changes\nok 643 - Workbench Pwdt stages, exports, and removes Store assets through shared commands\nok 644 - Workbench Pwdt opens Store and round-trips every Workflow surface without DOM clicks\nok 645 - Workbench Pwdt preserves hydrated script and DSL sessions\n\nFailure excerpts:\nnot ok 204 - Workbench confirmed cancellation survives network history refresh and retains a visibly stale catalog\n  ---\n  duration_ms: 1634.110833\n  type: 'test'\n  location: '@repo/tests/integration/workbench-ui-history-observation.test.mjs:275:3'\n  failureType: 'testCodeFailure'\n  error: |-\n    page.evaluate: Execution context was destroyed, most likely because of a navigation.\n    state={\"studyKind\":\"heat_plane_quad_2d\",\"sidebarSection\":\"library\",\"studyTab\":\"summary\",\"modelTab\":\"tools\",\"modelToolsPage\":\"overview\",\"workflowPanelTab\":\"overview\",\"libraryTab\":\"jobs\",\"systemPanelTab\":\"overview\",\"systemDataTab\":\"jobs\",\"language\":\"en\",\"theme\":\"graphite\",\"frontendRuntimeMode\":\"orchestrated_gui\",\"selectedProjectId\":\"qualification-project\",\"selectedModelId\":null,\"selectedVersionId\":null,\"selectedAdminJobId\":\"projection-job-1\",\"selectedAdminResultJobId\":null,\"adminFilterProjectId\":\"\",\"adminFilterModelVersionId\":\"\",\"loadedModelName\":\"manual-study\",\"activeMaterial\":\"210\",\"selectedNode\":null,\"selectedElement\":null,\"selectedTruss3dNodeIndices\":[],\"memberDraftNodeIndices\":[],\"immersiveViewport\":false,\"immersiveToolDrawerOpen\":false,\"immersiveToolTab\":\"node\",\"immersiveHelpDrawerOpen\":false,\"truss3dProjectionMode\":\"ortho\",\"truss3dViewPreset\":\"iso\",\"truss3dBoxSelectMode\":false,\"truss3dLinkMode\":false,\"hasResult\":true,\"jobStatus\":\"solving\",\"projectCount\":1,\"jobHistoryCount\":1,\"resultCount\":0,\"protocolAgentCount\":0,\"healthStatus\":\"ok\",\"storeManifestEntryCount\":0,\"storeManifestReadable\":true,\"message\":\"projection-job-1 solving\"}\n    errors=[]\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    usingWorkbench (file://@repo/tests/integration/workbench-ui-project-fixture.shared.mjs:40:11)\n    async TestContext.<anonymous> (file://@repo/tests/integration/workbench-ui-history-observation.test.mjs:276:5)\n    async Test.run (node:internal/test_runner/test:1088:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:763:7)\n  ...\n# Subtest: Workbench confirmed cancellation survives malformed history refresh and retains a visibly stale catalog\nok 205 - Workbench confirmed cancellation survives malformed history refresh and retains a visibly stale catalog\n  ---\nnot ok 633 - Workbench workflow builder mutates topology and inserts a control-flow plane\n  ---\n  duration_ms: 32159.907459\n  type: 'test'\n  location: '@repo/tests/integration/workbench-ui-workflow-builder-actions.test.mjs:136:1'\n  failureType: 'testCodeFailure'\n  error: 'page.waitForFunction: Timeout 30000ms exceeded.'\n  code: 'ERR_TEST_FAILURE'\n  name: 'TimeoutError'\n  stack: |-\n    test.timeout (@repo/tests/integration/workbench-ui-workflow-builder-actions.test.mjs:150:16)\n  ...\n# Subtest: Workbench isolated workflow UI completes catalog, builder, draft, submit, poll, and result rendering\nok 634 - Workbench isolated workflow UI completes catalog, builder, draft, submit, poll, and result rendering\n  ---\n  duration_ms: 21086.929292\n  type: 'test'\n  ...\n# Subtest: Workbench isolated workflow UI blocks invalid d\n\nOutput prefix:\nTAP version 13\n# Subtest: Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers\nok 1 - Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers\n  ---\n  duration_ms: 2572.37575\n  type: 'test'\n  ...\n# Subtest: all desktop declarative actions reach an observable terminal state\n    # Subtest: hub action sweep\n    ok 1 - hub action sweep\n      ---\n      duration_ms: 1407.5525\n      type: 'test'\n      ...\n    # Subtest: installer action sweep\n    ok 2 - installer action sweep\n      ---\n      duration_ms: 749.323708\n      type: 'test'\n      ...\n    # Subtest: workbench action sweep\n    ok 3 - workbench action sweep\n      ---\n      duration_ms: 620.325625\n      type: 'test'\n      ...\n    1..3\nok 2 - all desktop declarative actions reach an observable terminal state\n  ---\n  duration_ms: 3244.59875\n  type: 'test'\n  ...\n# hub: 43 actions, 0 explicitly blocked by preconditions\n# installer: 53 actions, 4 explicitly blocked by preconditions\n# workbench: 7 actions, 0 explicitly blocked by preconditions\n# Subtest: IPC reachability follows static, re-export and literal dynamic imports, not unused copies\nok 3 - IPC reachability follows static, re-export and literal dynamic imports, not unused copies\n  ---\n  duration_ms: 6.35125\n  type: 'test'\n  ...\n# Subtest: IPC reachability fails closed on unresolved or nonliteral modules\nok 4 - IPC reachability fails closed on unresolved or nonliteral modules\n  ---\n  duration_ms: 10.235375\n  type: 'test'\n  ...\n# Subtest: only Workbench loads the direct execution journal host\nok 5 - only Workbench loads the direct execution journal host\n  ---\n  duration_ms: 113.042666\n  type: 'test'\n  ...\n# Subtest: Hub closes every direct UI-to-Tauri IPC chain\nok 6 - Hub closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 38.731375\n  type: 'test'\n  ...\n# Subtest: Hub routes every declarative action and guarded mutation\nok 7 - Hub routes every declarative action and guarded mutation\n  ---\n  duration_ms: 33.272625\n  type: 'test'\n  ...\n# Subtest: Workbench closes every direct UI-to-Tauri IPC chain\nok 8 - Workbench closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 7.927959\n  type: 'test'\n  ...\n# Subtest: Workbench routes every declarative action and guarded mutation\nok 9 - Workbench routes every declarative action and guarded mutation\n  ---\n  duration_ms: 7.784625\n  type: 'test'\n  ...\n# Subtest: Installer closes every direct UI-to-Tauri IPC chain\nok 10 - Installer closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 29.837333\n  type: 'test'\n  ...\n# Subtest: Installer routes every declarative action and guarded mutation\nok 11 - Installer routes every declarative action and guarded mutation\n  ---\n  duration_ms: 23.665667\n  type: 'test'\n  ...\n# Subtest: delegated secondary action families keep an event owner\nok 12 - delegated secondary action families keep an event owner\n  ---\n  duration_ms: 0.659458\n  type: 'test'\n  ...\n# Subtest: desktop capability closure contract has unique, complete coordinates\nok 13 - desktop capability closure contract has unique, complete coordinates\n  ---\n  duration_ms: 0.787\n  type: 'test'\n  ...\n# Subtest: every required desktop capability closes UI, route, native, and result layers\nok 14 - every required desktop capability closes UI, route, native, and result layers\n  ---\n  duration_ms: 14.17325\n  type: 'test'\n  ...\n# Subtest: capabilities tha\n\nOutput suffix:\nt input without backend submission\nok 635 - Workbench isolated workflow UI blocks invalid draft input without backend submission\n  ---\n  duration_ms: 2405.950125\n  type: 'test'\n  ...\n# Subtest: Workbench startup preserves hydrated settings and language packs\nok 636 - Workbench startup preserves hydrated settings and language packs\n  ---\n  duration_ms: 11026.169125\n  type: 'test'\n  ...\n# Subtest: Workbench startup does not overwrite a corrupt language pack store\nok 637 - Workbench startup does not overwrite a corrupt language pack store\n  ---\n  duration_ms: 1980.316083\n  type: 'test'\n  ...\n# Subtest: Workbench rail mounts every declared sidebar chunk without client errors\nok 638 - Workbench rail mounts every declared sidebar chunk without client errors\n  ---\n  duration_ms: 1823.162667\n  type: 'test'\n  ...\n# Subtest: Workbench Model navigation and Pwdt study alias preserve the complete workspace path\nok 639 - Workbench Model navigation and Pwdt study alias preserve the complete workspace path\n  ---\n  duration_ms: 2559.955958\n  type: 'test'\n  ...\n# Subtest: Workbench System navigation preserves controlled state across deep page round trips\nok 640 - Workbench System navigation preserves controlled state across deep page round trips\n  ---\n  duration_ms: 3763.631417\n  type: 'test'\n  ...\n# Subtest: Workbench Library navigation mounts every primary and secondary page without client errors\nok 641 - Workbench Library navigation mounts every primary and secondary page without client errors\n  ---\n  duration_ms: 3011.405\n  type: 'test'\n  ...\n# Subtest: Workbench Store ignores stale responses after the active kind changes\nok 642 - Workbench Store ignores stale responses after the active kind changes\n  ---\n  duration_ms: 3003.298166\n  type: 'test'\n  ...\n# Subtest: Workbench Pwdt stages, exports, and removes Store assets through shared commands\nok 643 - Workbench Pwdt stages, exports, and removes Store assets through shared commands\n  ---\n  duration_ms: 2680.236625\n  type: 'test'\n  ...\n# Subtest: Workbench Pwdt opens Store and round-trips every Workflow surface without DOM clicks\nok 644 - Workbench Pwdt opens Store and round-trips every Workflow surface without DOM clicks\n  ---\n  duration_ms: 2508.151833\n  type: 'test'\n  ...\n# Subtest: Workbench Pwdt preserves hydrated script and DSL sessions\nok 645 - Workbench Pwdt preserves hydrated script and DSL sessions\n  ---\n  duration_ms: 3105.00125\n  type: 'test'\n  ...\n# Subtest: Workbench draft blocker closes locate, repair, submit, and result at 1180px\nok 646 - Workbench draft blocker closes locate, repair, submit, and result at 1180px\n  ---\n  duration_ms: 17948.088125\n  type: 'test'\n  ...\n# Subtest: Workbench draft blocker closes locate, repair, submit, and result at 390px\nok 647 - Workbench draft blocker closes locate, repair, submit, and result at 390px\n  ---\n  duration_ms: 2596.884292\n  type: 'test'\n  ...\n# Subtest: Workbench draft blocker repeatedly reopens the relevant topology editor\nok 648 - Workbench draft blocker repeatedly reopens the relevant topology editor\n  ---\n  duration_ms: 2365.624125\n  type: 'test'\n  ...\n# Subtest: Workbench draft readiness follows newly added and removed input contracts\nok 649 - Workbench draft readiness follows newly added and removed input contracts\n  ---\n  duration_ms: 2608.594875\n  type: 'test'\n  ...\n1..649\n# tests 660\n# suites 0\n# pass 658\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 1479458.413833\n"
+}

@@ -1,6 +1,9 @@
 use std::net::IpAddr;
 
+use crate::{AgentConnectionAccess, RpcMethod};
+
 pub const AGENT_ALLOWED_PEER_IPS_ENV: &str = "KYUUBIKI_AGENT_ALLOWED_PEER_IPS";
+pub const AGENT_TRUSTED_LAN_CONTROL_ENV: &str = "KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL";
 pub const AGENT_NETWORK_MAX_PEERS: usize = 64;
 pub const AGENT_NETWORK_MAX_CONFIG_BYTES: usize = 4096;
 
@@ -9,6 +12,7 @@ pub const AGENT_NETWORK_MAX_CONFIG_BYTES: usize = 4096;
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct AgentNetworkAccessPolicy {
     allowed_peers: Vec<IpAddr>,
+    trusted_lan_control: bool,
 }
 
 impl AgentNetworkAccessPolicy {
@@ -44,7 +48,45 @@ impl AgentNetworkAccessPolicy {
                 allowed_peers.push(ip);
             }
         }
-        Ok(Self { allowed_peers })
+        Ok(Self {
+            allowed_peers,
+            ..Self::default()
+        })
+    }
+
+    /// Explicit trust of an isolated network, never proof of caller identity.
+    pub fn with_trusted_lan_control(mut self, value: Option<&str>) -> Result<Self, String> {
+        self.trusted_lan_control = match value {
+            None | Some("false") => false,
+            Some("true") => true,
+            _ => {
+                return Err(format!(
+                    "{AGENT_TRUSTED_LAN_CONTROL_ENV} must be exactly true or false; unset it for discovery only"
+                ));
+            }
+        };
+        Ok(self)
+    }
+
+    pub fn allows_remote_method(&self, method: &RpcMethod) -> bool {
+        match method {
+            // Host lifecycle controls remain local even with explicit LAN trust.
+            RpcMethod::BeginAgentDrain | RpcMethod::ResumeAgentAdmission => false,
+            RpcMethod::Ping | RpcMethod::DescribeAgent | RpcMethod::DescribeAgentLifecycle => true,
+            _ => self.trusted_lan_control,
+        }
+    }
+
+    pub fn connection_access(&self, peer_is_loopback: bool) -> AgentConnectionAccess {
+        AgentConnectionAccess::new(peer_is_loopback, self.trusted_lan_control)
+    }
+
+    pub fn control_mode(&self) -> &'static str {
+        if self.trusted_lan_control {
+            "trusted_lan_control"
+        } else {
+            "discovery_only"
+        }
     }
 
     pub fn allows_ip(&self, ip: IpAddr) -> bool {

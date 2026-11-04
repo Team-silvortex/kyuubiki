@@ -325,6 +325,11 @@ fn validate_env_path(env_file: &Path) -> Result<String, String> {
         env_map
             .get(kyuubiki_protocol::AGENT_ALLOWED_PEER_IPS_ENV)
             .map(String::as_str),
+    )?
+    .with_trusted_lan_control(
+        env_map
+            .get(kyuubiki_protocol::AGENT_TRUSTED_LAN_CONTROL_ENV)
+            .map(String::as_str),
     )?;
     let deployment_mode = env_map
         .get("KYUUBIKI_DEPLOYMENT_MODE")
@@ -406,7 +411,7 @@ fn validate_env_path(env_file: &Path) -> Result<String, String> {
     };
 
     Ok(format!(
-        "validated {} (deployment={}, storage={}, discovery={}, agents={}, agent-network-config={})",
+        "validated {} (deployment={}, storage={}, discovery={}, agents={}, agent-network-config={}, agent-lan-control={}, authentication=false)",
         env_file
             .file_name()
             .and_then(|name| name.to_str())
@@ -415,7 +420,8 @@ fn validate_env_path(env_file: &Path) -> Result<String, String> {
         storage_backend,
         agent_discovery,
         endpoints.len(),
-        network.mode()
+        network.mode(),
+        network.control_mode()
     ))
 }
 

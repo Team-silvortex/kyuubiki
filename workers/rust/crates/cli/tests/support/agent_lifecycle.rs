@@ -44,7 +44,9 @@ pub(crate) struct LiveAgent {
     mesh: Option<(String, Vec<String>, u64)>,
     ingress_limits: Option<[String; 4]>,
     allowed_peer_ips: Option<String>,
+    trusted_lan_control: Option<String>,
     wildcard_bind: bool,
+    api_security: Option<(String, kyuubiki_agent_transport::ClientSecurity)>,
 }
 
 impl LiveAgent {
@@ -153,7 +155,9 @@ impl LiveAgent {
             mesh: None,
             ingress_limits: None,
             allowed_peer_ips: None,
+            trusted_lan_control: None,
             wildcard_bind: false,
+            api_security: None,
         };
         agent.start_process()?;
         Ok(agent)
@@ -183,6 +187,23 @@ impl LiveAgent {
             .env("KYUUBIKI_AGENT_HOST", bind_host)
             .env_remove("KYUUBIKI_AGENT_PORT");
         command.env_remove("KYUUBIKI_AGENT_ALLOWED_PEER_IPS");
+        for name in [
+            "KYUUBIKI_AGENT_API_TOKEN",
+            "KYUUBIKI_AGENT_TLS_CERT_FILE",
+            "KYUUBIKI_AGENT_TLS_KEY_FILE",
+        ] {
+            command.env_remove(name);
+        }
+        if let Some((token, _)) = &self.api_security {
+            command
+                .env("KYUUBIKI_AGENT_API_TOKEN", token)
+                .env("KYUUBIKI_AGENT_TLS_CERT_FILE", self.root.join("agent.crt"))
+                .env("KYUUBIKI_AGENT_TLS_KEY_FILE", self.root.join("agent.key"));
+        }
+        command.env_remove("KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL");
+        if let Some(control) = &self.trusted_lan_control {
+            command.env("KYUUBIKI_AGENT_TRUSTED_LAN_CONTROL", control);
+        }
         if let Some(peers) = &self.allowed_peer_ips {
             command.env("KYUUBIKI_AGENT_ALLOWED_PEER_IPS", peers);
         }
@@ -318,6 +339,35 @@ impl LiveAgent {
         Ok(())
     }
 
+    pub(crate) fn restart_with_api_security(
+        &mut self,
+        certificate: &str,
+        key: &str,
+        token: &str,
+    ) -> Result<(), Box<dyn Error>> {
+        self.stop_process()?;
+        fs::write(self.root.join("agent.crt"), certificate)?;
+        let mut options = OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        options
+            .open(self.root.join("agent.key"))?
+            .write_all(key.as_bytes())?;
+        self.api_security = Some((
+            token.into(),
+            kyuubiki_agent_transport::ClientSecurity::from_pem(
+                certificate,
+                "localhost",
+                token.into(),
+            )?,
+        ));
+        self.start_process()
+    }
+
     pub(crate) fn restart_with_ingress_limits(
         &mut self,
         frame_bytes: usize,
@@ -347,6 +397,15 @@ impl LiveAgent {
     pub(crate) fn restart_with_wildcard_bind(&mut self) -> Result<(), Box<dyn Error>> {
         self.stop_process()?;
         self.wildcard_bind = true;
+        self.start_process()
+    }
+
+    pub(crate) fn restart_with_trusted_lan_control(
+        &mut self,
+        value: Option<&str>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.stop_process()?;
+        self.trusted_lan_control = value.map(str::to_owned);
         self.start_process()
     }
 
@@ -430,7 +489,13 @@ impl LiveAgent {
         method: &str,
         params: Value,
     ) -> Result<Value, Box<dyn Error>> {
-        rpc_request(self.port, id, method, params)
+        rpc_request_secured(
+            self.port,
+            id,
+            method,
+            params,
+            self.api_security.as_ref().map(|(_, security)| security),
+        )
     }
 
     pub(crate) fn port(&self) -> u16 {
@@ -460,7 +525,22 @@ pub(crate) fn rpc_request(
     method: &str,
     params: Value,
 ) -> Result<Value, Box<dyn Error>> {
-    let mut stream = TcpStream::connect(("127.0.0.1", port))?;
+    rpc_request_secured(port, id, method, params, None)
+}
+
+pub(crate) fn rpc_request_secured(
+    port: u16,
+    id: &str,
+    method: &str,
+    params: Value,
+    security: Option<&kyuubiki_agent_transport::ClientSecurity>,
+) -> Result<Value, Box<dyn Error>> {
+    use kyuubiki_agent_transport::SocketIo;
+    let stream = TcpStream::connect(("127.0.0.1", port))?;
+    let mut stream = match security {
+        Some(security) => security.connect(stream, Duration::from_secs(3))?,
+        None => stream.into(),
+    };
     stream.set_read_timeout(Some(Duration::from_secs(30)))?;
     stream.set_write_timeout(Some(Duration::from_secs(30)))?;
     let payload = serde_json::to_vec(&json!({
@@ -481,7 +561,7 @@ pub(crate) fn rpc_request(
     }
 }
 
-pub(crate) fn read_json_frame(stream: &mut TcpStream) -> Result<Value, Box<dyn Error>> {
+pub(crate) fn read_json_frame(stream: &mut impl Read) -> Result<Value, Box<dyn Error>> {
     let mut header = [0_u8; 4];
     stream.read_exact(&mut header)?;
     let length = u32::from_be_bytes(header) as usize;

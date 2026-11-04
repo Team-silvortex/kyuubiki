@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kyuubiki 算子商店：实现边界与后端交接</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Operator Store · Integration Draft · 2026-11-04</div>
+        <h1>从项目资产目录到可验证的算子商店</h1>
+        <p class="docs-copy">本文可直接交给中心商店后端团队。下文标为“建议”的接口尚未实现，
+          需要双方确认后冻结契约；现有目录、策略与算子分发契约继续复用。
+          Team Silvortex 负责共享账号，Kyuubiki 不另建账号、密码或支付系统。</p>
+        <div class="docs-links">
+          <a class="docs-link" href="./book.html">项目手册</a>
+          <a class="docs-link" href="./store-deployment-boundary.md">自部署与托管边界</a>
+          <a class="docs-link" href="./central-server-components.md">现有中心服务</a>
+          <a class="docs-link" href="#handoff">后端交付清单</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section" id="current">
+        <h2>1. 本轮已实现与尚未实现</h2>
+        <ul class="docs-list">
+          <li>已实现：Workbench 内的紧凑商店入口与可展开工作区，类型和搜索筛选、来源和领域筛选、
+            分页、详情、项目引用清单、移除与清单导出。查看详情使用选中的目录快照，避免旧详情接口的跨源同名歧义。</li>
+          <li>已实现：GUI 与 PWDT 共用项目清单命令。相同 kind/id 的其他来源、版本、包引用或运行目标
+            不再静默覆盖；必须先明确移除旧引用。比较与存储共用规范化规则。</li>
+          <li>已实现：PWDT 可按 sourceId、version、packageRef 和 target 精确选择引用；
+            两参数简写仅在目录匹配唯一时可用，歧义、缺失和不完整目录均拒绝。
+            不再回退到缺少来源/版本的旧详情接口；写入前再次核对响应，回执返回实际加入的引用身份。
+            Python 参数与错误说明见 <a href="./tutorial-pwdt-automation.html#store-reference-selection">PWDT 商店教程</a>。</li>
+          <li>已实现：详情明确区分内置目录引用与外部包，并说明“加入项目”不等于下载、验签或安装。
+            浏览器本地清单和 bundle 中的引用不是运行时安装凭据。</li>
+          <li>已有服务：本地目录、只读发布与身份策略、指定根目录的算子包解析及校验下载。
+            这些能力不是完整的商业商店、登录流程、上传审核或结算系统。</li>
+          <li>尚未实现：本轮 UI 对中心账号、额度、授权下载、原生安装回执及作者发布流程的串联。
+            没有伪造登录、下载、已验签或安装成功状态；未设置中心商店生产地址。</li>
+          <li>验收边界：浏览器模拟目录用于验证 UI 与项目引用链；不能证明真实中心服务器、CDN、
+            支付服务、原生安装器或 Tauri 安装包已通过端到端验收。新增文案目前覆盖中、英、日。</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="ownership">
+        <h2>2. 分工与不可混淆的边界</h2>
+        <ul class="docs-list">
+          <li><strong>中心商店后端：</strong>对接 Team Silvortex 身份，提供商品目录、不可变版本元数据、
+            服务端权益判定、下载授权、作者资格、上传审核和下载计量。订阅、付款方式验证及分成规则留在该部署的私有策略中。</li>
+          <li><strong>Kyuubiki：</strong>Workbench 项目工作流、通用源适配器、原生安全下载与安装、
+            验签及兼容性检查、项目版本锁定、安装状态查询和 SDK/PWDT 对等调用。</li>
+          <li><strong>开源自部署：</strong>可使用机构或本地目录，不强制注册 Team Silvortex 账号，
+            不依赖托管订阅。机构可配置自己的访问策略；“无需中心账号”不意味着任意远程端点均可访问。</li>
+          <li><strong>运行时：</strong>商店权限不授予 Agent 控制权。执行引擎不导入 GUI，也不实现支付逻辑。
+            Orchestra 模式下，算子库由绑定的 Orchestra 管理，Agent 按需取得任务依赖，不保存全部商店副本。</li>
+          <li><strong>直连和 Mesh：</strong>通过受管的本地包缓存及已有运行时准入策略交付依赖，不隐式创建 Orchestra。
+            项目引用、下载缓存、已准入包和正在执行的任务是四种不同状态。</li>
+          <li><strong>产品政策：</strong>中心商店免费用户有有限下载额度，订阅用户可获得不限次数权益；
+            具体数值、周期、计费事件和作者分成比例由后端返回，客户端不硬编码。额度不足不能阻止本地计算。</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="reuse">
+        <h2>3. 先复用的接口与格式</h2>
+        <ul class="docs-list">
+          <li><code>GET /api/v1/store?kind=&amp;q=&amp;source_id=</code>：当前 Workbench 目录。
+            当前配置的 <code>remote_http</code> 源不代表已经接通远程目录抓取；不要据此展示“中心商店在线”。</li>
+          <li><code>GET /api/v1/store/:kind/:entry_id</code>：现有详情路径不包含来源和版本，
+            不应作为跨源下载的唯一选择依据。新适配器必须使用明确的源、资源、版本和摘要。</li>
+          <li><code>GET /api/v1/central/catalog</code> 及相应详情：现有中心目录预览。</li>
+          <li><code>/api/v1/central/session-policy</code>、<code>publisher-policy</code>、
+            <code>publish-policy</code>、<code>publish-readiness</code>：现有只读策略，不是登录和提交接口。</li>
+          <li><code>/api/v1/central/provenance-policy</code>、<code>artifact-admission-policy</code>、
+            <code>publish-pipeline</code>：复用签名、证据、审核与撤回语义。</li>
+          <li><code>/api/v1/central/operator-packages/:package_id/:version/:target/resolve</code>
+            及 <code>/:artifact_kind</code>：现有受管目录包解析与下载；中心商店可在适配层添加授权，
+            不得降低原有摘要、路径和签名检查。</li>
+          <li>格式依据：<a href="../schemas/operator-package-distribution.schema.json">分发索引</a>、
+            <a href="../schemas/operator-package-resolution.schema.json">目标解析</a>、
+            <a href="../schemas/central-store-catalog.schema.json">中心目录</a>及
+            <a href="../schemas/central-provenance-policy.schema.json">来源策略</a>。
+            下述托管适配接口是这些格式的业务外壳，不另造可执行算子格式。</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="p0">
+        <h2>4. P0 后端需求：目录、身份、下载</h2>
+        <p class="docs-copy">以下为建议的托管适配器路径，前缀 <code>/store/v1</code> 待双方确认。
+          不要求把这些私有策略放入 Kyuubiki 仓库。提供 OpenAPI 与固定测试数据后，Kyuubiki 接入同一通用源接口。</p>
+        <h3>发现与目录</h3>
+        <ul class="docs-list">
+          <li><code>GET /store/v1/capabilities</code>：返回 API 版本、资源种类、身份模式、
+            分页上限及下载/发布是否启用。不支持的能力必须显式禁用，不能用空成功响应冒充实现。</li>
+          <li><code>GET /store/v1/assets?kind=&amp;q=&amp;domain=&amp;cursor=&amp;limit=&amp;locale=</code>：
+            建议默认 24、上限 100 条，稳定排序和不透明游标；返回下一页游标与目录修订号。
+            目录更新使游标失效时返回可恢复的 <code>catalog_changed</code>，不得重复或跳过条目。</li>
+          <li><code>GET /store/v1/assets/:kind/:id/releases/:version</code>：返回不可变发布元数据、
+            作者标识、许可证、简介、领域/标签、依赖、更新说明、支持平台、运行时/Worker SDK/TaskIR 兼容范围、
+            各目标摘要与字节数、签名和来源证据引用。</li>
+          <li>源身份由本地可信配置决定，远端不能自行冒充 <code>builtin.local</code>。
+            资源唯一选择为 source + kind + id + version + target + digest，不使用标题或 email 作为主键。</li>
+          <li>明确 <code>active</code>、<code>yanked</code>、<code>recalled</code> 的含义；
+            撤回和安全召回不得改写已有版本内容。缺少目标或兼容信息应阻止安装，而非乐观猜测。</li>
+          <li>搜索需返回完整资源引用而非执行代码。文案当作文本，详情富文本需要消毒；
+            外链和图标只允许明确的安全协议，不能触发本地文件、shell 或任意网络代理访问。</li>
+        </ul>
+        <h3>共享身份与权益</h3>
+        <ul class="docs-list">
+          <li>复用 Team Silvortex 的 OIDC Authorization Code + PKCE S256，或双方明确的受管会话网关。
+            需提供测试 issuer、公开客户端标识、允许的桌面/浏览器回调、audience、scopes、登出与撤销语义。</li>
+          <li>以 issuer + subject 标识用户，校验 state、nonce、issuer、audience 和过期时间。
+            UI 不接收 client secret，不保存密码；访问/刷新令牌不得写入项目文件、localStorage 或日志。</li>
+          <li>持久凭证通过已有原生受管凭证边界；纯浏览器优先安全 HttpOnly 会话并保护 CSRF，
+            无持久安全通道时仅在内存保留短期材料。不要新增明文配置目录存 token 的捷径。</li>
+          <li><code>GET /store/v1/me</code>：最小显示信息及会话到期状态。
+            <code>GET /store/v1/me/entitlements</code>：可下载种类、限额、剩余额度、重置时间、
+            是否无限以及发布资格。不限次数也保留合理限流，不能把“无限”解释成无安全限制。</li>
+          <li>发布资格需服务端确认账号状态和有效付款方式；只返回资格/阻断原因，
+            不返回卡号或付款凭据。免费额度与订阅规则留在中心服务，客户端不得自行判定放行。</li>
+        </ul>
+        <h3>授权下载与重试</h3>
+        <ul class="docs-list">
+          <li><code>POST /store/v1/download-grants</code>：提交固定资源版本、目标和摘要，
+            带 <code>Idempotency-Key</code>。授权绑定当前主体与不可变制品，并返回 grant id、
+            短时 HTTPS 下载票据、有效期、摘要、长度和本次额度处理结果。</li>
+          <li>同一主体、幂等键、相同请求必须返回同一逻辑授权；相同键配不同内容返回冲突。
+            额度预留/扣减与授权写入必须同一事务。成功响应丢失后重试不能再次收费或扣额。</li>
+          <li><code>POST /store/v1/download-grants/:id/renew</code>：续签失效票据，
+            不重复计次；重校验授权主体、撤销及安全召回。提供 <code>GET /store/v1/download-grants/:id</code>
+            查询中断后的结果。幂等记录保留周期和额度事件规则需在契约中明确。</li>
+          <li>“授权已签发”不等于下载完成。P0 建议按唯一授权计额度，统计中分开授权数、
+            完整制品下载数和安装回执；作者收益的有效下载及反作弊规则另行确认，不信任客户端自报。</li>
+          <li>CDN 支持 Range、ETag、准确 Content-Length 与重试。下载票据不是账号 token；
+            不得将身份 Authorization 头转发到第三方 CDN 或跨源重定向。票据也必须从日志中脱敏。</li>
+          <li>客户端只访问配置允许的 HTTPS 来源，重新检查重定向；自部署 HTTP 只能显式启用受信来源。
+            服务器不能因目录带一个 URL 就成为任意地址下载代理。</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="example">
+        <h2>5. 建议响应示例与错误语义</h2>
+        <p class="docs-copy">示例 ID 和域名仅用于契约说明，不是可用下载服务。摘要应为制品真实 SHA-256；
+          下例为占位值。分发证据指向既有包格式，兼容范围与 targets 均为必须返回的字段。</p>
+        <pre><code>{
+  "api_version": "store/v1",
+  "asset": {
+    "id": "research.heat-bar",
+    "kind": "operator",
+    "version": "1.0.0",
+    "title": "Heat bar research operator",
+    "publisher_id": "publisher-example",
+    "license": "Apache-2.0",
+    "status": "active",
+    "compatibility": {
+      "runtime": "&gt;=3.7.1 &lt;4.0.0",
+      "worker_sdk": "REPLACE_WITH_SUPPORTED_RANGE",
+      "task_ir": ["REPLACE_WITH_SUPPORTED_SCHEMA"]
+    },
+    "targets": [{
+      "target": "macos-aarch64",
+      "bytes": 1048576,
+      "sha256": "REPLACE_WITH_64_HEX_CHARACTERS",
+      "distribution_ref": "immutable-distribution-index-id",
+      "signature_ref": "immutable-signature-id"
+    }],
+    "dependencies": []
+  }
+}</code></pre>
+        <pre><code>{
+  "grant_id": "grant-example",
+  "asset_id": "research.heat-bar",
+  "version": "1.0.0",
+  "target": "macos-aarch64",
+  "sha256": "REPLACE_WITH_64_HEX_CHARACTERS",
+  "bytes": 1048576,
+  "download_url": "https://downloads.example.invalid/opaque-ticket",
+  "expires_at": "2026-11-04T04:10:00Z",
+  "quota": { "unlimited": false, "charged": true, "remaining": 2 },
+  "request_id": "request-example"
+}</code></pre>
+        <p class="docs-copy">无限额度使用 <code>unlimited: true</code> 与 <code>remaining: null</code>，
+          不用超大整数。字节数为非负安全整数，时间为 UTC RFC3339，摘要为小写 64 位十六进制。
+          数组、文本、依赖深度和响应大小必须有服务端上限；上限及未知字段策略写入 OpenAPI。</p>
+        <p class="docs-copy">当前 macOS 联调为 Apple Silicon：Rust 编译目标是
+          <code>aarch64-apple-darwin</code>，分发/解析 schema 的目标标识是
+          <code>macos-aarch64</code>，两者不能直接混用。上述单摘要下载票据为业务外壳建议，
+          不能替代现有分发索引中 manifest 和 entrypoint 各自的摘要、长度及 SDK/ABI 检查。</p>
+        <pre><code>{
+  "error": {
+    "code": "quota_exhausted",
+    "request_id": "request-example",
+    "retryable": false,
+    "details": { "reset_at": "2026-12-01T00:00:00Z" }
+  }
+}</code></pre>
+        <ul class="docs-list">
+          <li>401：<code>session_expired</code>，提示登录，不循环自动刷新。</li>
+          <li>403：<code>quota_exhausted</code> / <code>publisher_ineligible</code> / <code>access_denied</code>，
+            区分额度、发布资格和访问策略；不能统一显示为“网络故障”。</li>
+          <li>404：资源不存在或无权获知；409：<code>idempotency_conflict</code> / <code>catalog_changed</code>；
+            410：<code>release_recalled</code> / <code>grant_revoked</code>；422：目标或依赖不支持。</li>
+          <li>429/503：给出 <code>Retry-After</code>，允许有上限的退避。所有错误包含请求关联号，
+            不含服务器路径、token、数据库连接串和用户付款数据。</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="install">
+        <h2>6. P1 Kyuubiki 原生安装闭环</h2>
+        <p class="docs-copy">此阶段由 Kyuubiki 跟进，不能只凭后端的下载成功响应改 UI 为“已安装”。
+          工作区引用清单保持轻量；安装回执由实际运行时或受管包库提供。</p>
+        <ol class="docs-list">
+          <li>用户选定项目、来源、版本、运行模式及目标，生成可预览安装计划；捕获项目身份，
+            过程中切换项目不会把结果写进另一个项目。</li>
+          <li>通过共享原生下载服务处理授权、断点续传和取消，使用有配额的临时缓存，
+            同一制品内容寻址去重；没有新的 shell/Node 安装脚本。</li>
+          <li>检查字节数、摘要、签名信任根、撤回状态、平台与协议兼容性及依赖。
+            限制解包大小/文件数量，拒绝路径穿越、软链接逃逸和覆盖已有包。</li>
+          <li>验证通过后原子登记包与安装回执，再明确确认项目锁定；失败保留原有引用和可用包。
+            不在下载完成后自动执行用户算子或安装钩子。</li>
+          <li>GUI、无头 SDK 和 PWDT 查询同一个操作状态及关联号。
+            中断恢复核实实际落盘记录；暂存不算安装成功，内存状态不算断电安全。</li>
+          <li>卸载先检查项目引用及执行中任务，清理只限受管暂存和无引用缓存。
+            开发期不复制整套备份；也不删除未知用户目录或现场正在执行的依赖。</li>
+        </ol>
+      </section>
+
+      <section class="docs-card docs-section" id="publish">
+        <h2>7. P2 后端需求：作者发布与分发统计</h2>
+        <ul class="docs-list">
+          <li>建议 <code>POST /store/v1/submissions</code> 创建草稿，
+            <code>POST /store/v1/submissions/:id/uploads</code> 获取受限上传票据，
+            <code>POST /store/v1/submissions/:id/finalize</code> 校验完成提交，
+            <code>GET /store/v1/submissions/:id</code> 查询审核。所有写接口要求授权范围、主体归属和幂等键。</li>
+          <li>上传暂存区与公开分发库隔离；限制大小、并发、保留时间与解包后资源使用。
+            finalize 必须服务端计算摘要，核实许可证、来源、签名、依赖、兼容矩阵及测试证据。</li>
+          <li>审核状态建议为 draft / uploaded / validating / pending_review / approved / rejected / withdrawn。
+            只有 approved 且完整制品入库后才可建立公开索引；事务失败不得出现“有条目无文件”。</li>
+          <li>发布服务本身不执行上传的算子；如需计算验证，交给单独隔离、限额、无生产凭证的审核执行环境。
+            审核通过不能被文案扩大为物理精度或工业适用性的无条件保证。</li>
+          <li>有效下载、反作弊、退费/撤销和收益账本由服务端维护；
+            读接口只返回当前主体有权查看的统计。付款方式绑定与订阅支付复用已有 Team Silvortex 服务。</li>
+          <li>公开版本不可覆盖；更新发布新版本，安全召回保留原因与证据链。
+            索引缓存、授权签发及续签都必须感知召回。</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="acceptance">
+        <h2>8. 联调验收矩阵</h2>
+        <ul class="docs-list">
+          <li>自部署无中心账号：目录、已有包、本地计算正常；断开托管中心不影响已有研究。</li>
+          <li>来源隔离：两个源同 kind/id，不混用详情或下载；同版本被篡改摘要时拒绝。</li>
+          <li>权限：匿名、有效会话、失效会话、额度耗尽、订阅无限、无发布资格各有稳定结果。</li>
+          <li>故障重试：授权成功后丢失响应、多客户端并发扣额度、票据过期、分段下载断网和进程强制退出，
+            不重复扣额，不重复登记，不留下无限增长的半包。</li>
+          <li>供应链：摘要错误、签名不可信、不支持的平台、依赖冲突、循环依赖、解包逃逸、撤回/召回均阻止准入。</li>
+          <li>交互：搜索空结果、服务不可达后重试、窄屏详情、关闭后焦点返回、未选项目、下载中切换项目、
+            明确取消及存储失败，不能出现虚假的成功提示。</li>
+          <li>发布：越权访问他人草稿、重复 finalize、上传未完成、审核失败、重复版本发布及数据库事务失败，
+            不产生公开脏记录。</li>
+          <li>证据：模拟 UI 测试、真实源 HTTP 联调、原生安装回执、实际算子执行和断电恢复分别记证据；
+            不把一个坐标通过计为整个商店闭环完成。</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="handoff">
+        <h2>9. 请后端先交付这些</h2>
+        <ol class="docs-list">
+          <li>P0 OpenAPI：capabilities、分页目录、固定版本详情、会话/权益和幂等下载授权/续签/查询；
+            标明与现有 schemas 的字段映射、限流、兼容策略及错误码。</li>
+          <li>联调环境说明：可配置 base URL、测试 issuer、公开客户端与回调配置、允许的下载来源。
+            账号、私钥、生产地址和服务器配置不提交到 Kyuubiki 仓库，凭证走安全的独立渠道。</li>
+          <li>至少两份小型测试资源：一个算子包和一个工作流模板，固定版本/摘要、许可证、公开验证密钥与撤回样例。
+            算子至少提供当前 macOS 联调目标，不支持的平台要明确返回不可用。</li>
+          <li>测试身份及情景：免费有额度、额度耗尽、订阅不限次数、可发布、禁止发布、会话过期；
+            支持人为注入授权响应丢失、短期票据过期和重复请求。</li>
+          <li>确认额度计数事件、幂等保留周期、票据期限、续签政策、源身份与签名信任根分发方式。
+            先打通浏览到可验证下载，再接原生安装，最后做作者发布与分成展示。</li>
+        </ol>
+        <p class="docs-copy">下一轮 Kyuubiki 接入点：
+          <code>apps/frontend/src/lib/workbench/store-backend-service.ts</code>、
+          既有原生包分发/Installer 服务和受管凭证层。
+          新增远程操作必须保留来源、版本、请求关联号和失败原因，不能回退为拼接脚本命令。</p>
+      </section>
+
+      <section class="docs-card docs-section" id="local-evidence">
+        <h2>10. 本轮开发验收记录</h2>
+        <ul class="docs-list">
+          <li>2026-11-04，PWDT 精确引用选择补充：前端全量单元回归 1971/1971、
+            定向 Chromium 调用链 22/22、无产物 TypeScript 检查和前端生产构建通过。
+            覆盖跨源同名、多版本/包引用/目标、重复目录行、参数无效、目录不完整、适配器忽略选择、
+            503 重试、现有引用冲突以及 GUI/PWDT 一致性。浏览器初次执行被本机端口权限阻止；
+            获准后首轮 21/22，通过补齐新测试的移除确认步骤后，整组 22/22 通过，未降低产品确认要求。</li>
+          <li>精确选择补充中的 Python 测试实际执行随产品生成的前导代码，但使用本机 Python 和内存桥接，
+            不是 Pyodide WASM 实机测试；浏览器使用模拟目录，不是中心商店服务器联调。
+            新增测试已登记到 GUI 张量证据索引，未提升成熟度等级；没有据此重写下述历史完整 GUI 报告。</li>
+          <li>2026-11-04，macOS 本地源码：15 项 Store/PWDT 命令及清单单元测试通过；
+            TypeScript 无产物类型检查通过。</li>
+          <li>17 项 Chromium 浏览器回归通过：商店工作区、旧布局深度保护、项目清单闭环与工作流调用。
+            新增商店用例覆盖 1440×900 和 390×844，包含分页、筛选、详情、移除、空结果、503 恢复及焦点返回。</li>
+          <li>新测试已加入原生测试入口和 GUI 验收清单，并登记到覆盖张量的验证证据路径。
+            张量结构检查与中心商店契约检查通过，不代表全局成熟度缺口已关闭。</li>
+          <li>全局 GUI 验收入口已改为
+            <code>releases/usability-evidence/current/desktop-ui-validation.json</code>，不再复用仅含 22 个文件的 3.2.0 报告。
+            当前清单含 49 个文件；清单不匹配会指出缺失项并要求完整重跑，不能改写历史报告或降低门槛。</li>
+          <li>首次完整执行为 658/660 通过、2 项失败，原始证据保留于
+            <code>releases/usability-evidence/current/desktop-ui-validation-initial-failure.json</code>。
+            失败涉及取消后的历史刷新上下文丢失及拓扑编辑等待超时；相关 35 项定向复测通过，
+            但不能替代完整验收，也尚不能证明偶发问题已消除。</li>
+          <li>补充拓扑草稿初始化等待及原始调用栈、导航和开发预览重载诊断后，再次完整执行：
+            660/660 通过，0 失败、取消、跳过或待办；24 项必需断言通过。
+            Hub/Installer/Workbench 分别覆盖 43/53/7 个动作，保留 4 个有意阻止的不满足前置条件的 Installer 动作。
+            当前报告记录该次真实执行，首轮失败仍作为待跟踪的稳定性证据保留。</li>
+          <li>本轮未重打或安装 Tauri 应用，未验证 WebKit 实机、中心账号、真实包下载、原生安装或发布审核。
+            窄屏浏览器验证不等于移动操作系统验收。</li>
+        </ul>
+        <p class="docs-copy">针对本轮可重跑：</p>
+        <pre><code>cd apps/frontend
+node node_modules/typescript/bin/tsc --noEmit --incremental false
+node --experimental-strip-types --import ./test/support/register-alias-loader.mjs --test test/workflow/workbench-store*.test.ts test/workflow/workbench-script-store-controller.test.ts
+cd ../..
+node --test tests/integration/workbench-ui-store-workspace.test.mjs tests/integration/workbench-ui-layout-flow.test.mjs tests/integration/workbench-ui-functional-closure.test.mjs tests/integration/workbench-ui-workflow-invocation.test.mjs
+make check-module-function-coverage-tensor check-central-store-contract</code></pre>
+        <p class="docs-copy">精确来源/版本补充回归：</p>
+        <pre><code>./scripts/kyuubiki frontend-unit-test
+node --test --test-concurrency=1 tests/integration/workbench-ui-store-workspace.test.mjs tests/integration/workbench-ui-functional-recovery.test.mjs tests/integration/workbench-ui-workflow-invocation.test.mjs</code></pre>
+      </section>
+    </main>
+  </body>
+</html>

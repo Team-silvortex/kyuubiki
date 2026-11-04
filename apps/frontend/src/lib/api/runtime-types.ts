@@ -280,6 +280,7 @@ export type ProtocolAgentDescriptor = {
       operator_cache_policy: string;
     };
     protocol: {
+      // Wire framing stays JSON RPC over TCP; TLS state is connection-scoped below.
       name: string;
       rpc_version: number;
       transport: {
@@ -288,6 +289,11 @@ export type ProtocolAgentDescriptor = {
         encoding: string;
       };
       methods: string[];
+    };
+    connection_access?: {
+      schema_version: string; scope: string; peer_scope: string; control_mode: string;
+      control_allowed: boolean; lifecycle_mutations_allowed: boolean;
+      authenticated: boolean; encrypted: boolean;
     };
     capabilities: Array<{
       id: string;

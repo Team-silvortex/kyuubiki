@@ -257,6 +257,25 @@ await ky.invoke("viewport/setUiState", {"immersiveViewport": False})</pre>
         <p class="docs-copy">Unit and browser tests cover response ordering, invalid payloads, material provenance, arithmetic boundaries, source preservation, and a fresh-solve retry. Browser solver responses are synthetic; these tests do not qualify physical coupling accuracy, installed native WebViews, or Pyodide WebAssembly execution.</p>
       </section>
 
+      <section class="docs-card docs-section" id="store-reference-selection">
+        <h2>Select an exact Store reference</h2>
+        <p class="docs-copy">GUI details stage the selected catalog entry. PWDT resolves a unique entry from the current complete catalog instead of using the legacy kind/id detail endpoint, which cannot distinguish sources. Select a project first, then pin the source and version when reproducibility matters:</p>
+        <pre class="docs-code">receipt = await ky.stage_store_entry(
+    "operator", "solve.bar_1d",
+    source_id="builtin.local", version="1.0.0",
+)
+ky.log(receipt["projectId"], receipt["sourceId"], receipt["version"])</pre>
+        <ul class="docs-list">
+          <li>Python also accepts keyword-only <code>package_ref</code> and <code>target</code>. Browser <code>stageStoreEntry(kind, entryId, selection)</code> and raw <code>store/stageEntry</code> payloads use <code>sourceId</code>, <code>version</code>, <code>packageRef</code> and <code>target</code>.</li>
+          <li>Selectors are optional, trimmed, bounded, nonempty exact strings, not version ranges. Omitted Python arguments or <code>None</code> mean unspecified. The raw action rejects null, empty, wrongly typed or unknown selectors instead of silently broadening the search.</li>
+          <li>The two-argument shorthand remains available only when exactly one entry matches. Multiple sources, versions, targets or duplicate rows raise <code>store_entry_ambiguous</code>. A missing exact identity raises <code>store_entry_not_found</code>; no latest-version or built-in fallback is attempted.</li>
+          <li>The current adapter requires the complete filtered <code>/api/v1/store</code> response. A missing or inconsistent entry count raises <code>store_catalog_invalid</code>; a future paginated adapter must not claim uniqueness from its first page alone.</li>
+          <li>Before writing, the action rechecks the returned reference against the requested selectors. A conflicting existing reference requires explicit removal. Lookup, validation and storage failures do not publish a success receipt.</li>
+          <li>The receipt identifies the captured project, kind, entry ID, source, version, package reference and target. It confirms only a project reference, not download, signature verification, installation or execution permission. Use the target exactly as declared by that catalog entry.</li>
+        </ul>
+        <p class="docs-copy">The hosted account/download contract is separate; see the <a href="./operator-store-integration.html">Store integration handoff</a>. Local selection checks are not a substitute for package digest and signature verification.</p>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Waiting and failure rules</h2>
         <ul class="docs-list">

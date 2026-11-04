@@ -162,7 +162,7 @@ fn failed_execution_keeps_its_original_cause_when_reply_delivery_also_fails() {
 fn expired_delivery_deadline_writes_no_bytes() {
     let (mut client, writer) = pair();
     let mut stream = writer.stream.lock().unwrap();
-    let error = write_until(&mut stream, b"no partial frame", Instant::now()).unwrap_err();
+    let error = write_until(&mut *stream, b"no partial frame", Instant::now()).unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::TimedOut);
     stream.shutdown(Shutdown::Write).unwrap();
     let mut received = vec![];

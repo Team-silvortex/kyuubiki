@@ -81,6 +81,45 @@ test("sanitizeWorkbenchSettings never persists secret-shaped fields", () => {
   assert.equal("assistantApiKey" in sanitized, false);
 });
 
+test("model URL credentials and query strings cannot enter saved preferences", () => {
+  for (const assistantApiBaseUrl of ["https://user:model-secret@example.test/v1", "https://example.test/v1?key=model-secret", "https://example.test/v1#model-secret"]) {
+    const settings = sanitizeWorkbenchSettings(buildSettingsInput({ assistantApiBaseUrl }));
+    assert.equal(settings.assistantApiBaseUrl, "");
+    assert.ok(!JSON.stringify(settings).includes("model-secret"));
+  }
+});
+
+test("legacy model URL secrets are scrubbed even without a separate key field", () => {
+  const previousWindow = globalThis.window;
+  const storage = new Map([["kyuubiki-workbench-settings", JSON.stringify({ assistantApiBaseUrl:"https://example.test/v1?key=legacy-model-secret" })]]);
+  globalThis.window = {
+    localStorage:{ getItem:(key:string) => storage.get(key) ?? null, setItem:(key:string, value:string) => storage.set(key, value) },
+    sessionStorage:{ getItem:() => null, removeItem:() => {} },
+  } as unknown as Window & typeof globalThis;
+  try {
+    assert.equal(safeStorageGetResult().settings.assistantApiBaseUrl, "");
+    assert.ok(!storage.get("kyuubiki-workbench-settings")?.includes("legacy-model-secret"));
+  } finally { globalThis.window = previousWindow; }
+});
+
+test("invalid legacy model endpoints cannot rebind keys to the default provider", () => {
+  const previousWindow = globalThis.window;
+  const storage = new Map([["kyuubiki-workbench-settings", JSON.stringify({
+    assistantApiBaseUrl:"https://example.test/v1?key=legacy-url-secret", assistantApiKey:"legacy-model-key",
+  })]]);
+  writeInMemoryWorkbenchSecrets({ controlPlaneApiToken:"control-token" });
+  globalThis.window = {
+    localStorage:{ getItem:(key:string) => storage.get(key) ?? null, setItem:(key:string, value:string) => storage.set(key, value) },
+    sessionStorage:{ getItem:() => JSON.stringify({ assistantApiKey:"legacy-session-key" }), removeItem:() => {} },
+  } as unknown as Window & typeof globalThis;
+  try {
+    const result = safeStorageGetResult();
+    assert.equal(result.settings.assistantApiBaseUrl, "");
+    assert.equal(result.settings.assistantApiKey, undefined);
+    assert.equal(readInMemoryWorkbenchSecrets().assistantApiKey, undefined);
+  } finally { writeInMemoryWorkbenchSecrets({}); globalThis.window = previousWindow; }
+});
+
 test("persistWorkbenchSettings stores preferences but keeps secrets memory-only", () => {
   const localStorage = new Map<string, string>();
   const sessionStorage = new Map<string, string>([[WORKBENCH_SECRETS_KEY, "{\"assistantApiKey\":\"legacy\"}"]]);

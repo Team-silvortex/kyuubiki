@@ -90,6 +90,7 @@ pub struct SolverRpcClient {
     host: String,
     port: u16,
     limits: SolverRpcLimits,
+    security: Option<crate::AgentApiSecurity>,
 }
 
 pub struct RpcCallOutcome {
@@ -103,7 +104,14 @@ impl SolverRpcClient {
             host: host.into(),
             port,
             limits: SolverRpcLimits::default(),
+            security: None,
         }
+    }
+
+    /// TLS 1.3 plus a connection-scoped API token. No plaintext fallback.
+    pub fn with_api_security(mut self, security: crate::AgentApiSecurity) -> Self {
+        self.security = Some(security);
+        self
     }
 
     /// Caller-owned resource policy; errors never imply task cancellation or retry.
@@ -224,7 +232,14 @@ impl SolverRpcClient {
         method: &str,
         params: Value,
     ) -> SdkResult<(String, RpcCallOutcome)> {
-        solver_rpc_transport::call_identified(&self.host, self.port, &self.limits, method, params)
+        solver_rpc_transport::call_identified(
+            &self.host,
+            self.port,
+            &self.limits,
+            method,
+            params,
+            self.security.as_ref(),
+        )
     }
 }
 

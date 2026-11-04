@@ -60,10 +60,10 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     category: "store",
     risk: "normal",
     summary: {
-      en: "Fetch a Store asset and stage it in the selected project manifest.",
-      zh: "获取商店资产并加入当前项目 manifest。",
+      en: "Stage one exact Store reference; optionally pin sourceId, version, packageRef and target. Ambiguous matches are rejected.",
+      zh: "精确选择商店引用并加入项目；可指定 sourceId、version、packageRef 和 target，匹配不唯一时拒绝。",
     },
-    payloadExample: { kind: "operator", entryId: "solve.bar_1d" },
+    payloadExample: { kind: "operator", entryId: "solve.bar_1d", sourceId: "builtin.local", version: "1.0.0" },
   },
   {
     id: "store/removeEntry",

@@ -32,7 +32,6 @@ export function createWorkbenchRuntimeBackedBackendServices(runtimeClient: Runti
     studyRun: createStudyRunBackendServiceFromRuntimeClient(runtimeClient),
     store: createWorkbenchStoreBackendService({
       fetchCatalog: runtimeClient.fetchAssetStore,
-      fetchEntry: runtimeClient.fetchAssetStoreEntry,
     }),
     workflow: createWorkflowBackendService({
       fetchCatalog: runtimeClient.fetchWorkflowCatalog,

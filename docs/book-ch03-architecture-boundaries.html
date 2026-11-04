@@ -47,7 +47,7 @@
       <section class="docs-card docs-section" id="source-ownership">
         <h2>One owner per responsibility</h2>
         <p class="docs-copy">
-          The October 23, 2026 organization review separates three views:
+          The November 4, 2026 organization review separates three views:
           13 logical topology modules, 15 Rust workspace crates, and independently
           deployed processes. They are not the same count. Engine and Solver are
           libraries used by the Agent; keeping their responsibilities separate
@@ -65,6 +65,12 @@
           <li>TaskIR execute is implemented behind capability and package gates.
             A successful preflight is not a completed solve, and source-IP
             containment is not cryptographic peer authentication.</li>
+          <li>Workbench owns the project Store. GUI and PWDT share reference
+            commands; identity, download grants, native installation and Agent
+            execution are separate boundaries, not one "installed" UI flag.</li>
+          <li>Allowed LAN peers receive discovery access by default. Explicit
+            trusted-LAN control remains distinct from authenticated identity,
+            and does not enable remote drain/resume.</li>
           <li>The current map owns navigation. Current-line notes and dated
             reports own progress; the tensor owns scoped evidence requirements.</li>
         </ul>
@@ -72,6 +78,33 @@
           <a class="docs-link" href="./current-architecture-map.md">Compact source map</a>
           <a class="docs-link" href="./project-architecture-organization.md">Source and disk ownership</a>
           <a class="docs-link" href="./runtime-doc-ownership.md">Documentation ownership</a>
+          <a class="docs-link" href="./operator-store-integration.html">Store implementation and backend handoff</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section" id="workflow-recovery-ownership">
+        <h2>Recovery has explicit internal owners</h2>
+        <p class="docs-copy">
+          These are responsibilities inside Orchestra, not extra services or
+          topology modules. The coordinator routes calls and lifecycle messages;
+          existing helpers own lease fencing, runner monitoring, replay admission,
+          checkpoint publication, failure handling and scan accounting.
+        </p>
+        <ul class="docs-list">
+          <li>The owning lease permits a write, not a replay of an unknown remote
+            outcome. A dead local runner does not prove remote termination.</li>
+          <li>Completion and terminal/legacy reconciliation use paired job/result
+            commits. Stale or deleted evidence cannot publish an old decision.</li>
+          <li>A completed scan is not a successful job. Rejected reconciliation
+            interrupts the scan; ordinary jobs without workflow data are not
+            automatically declared failed or recovered.</li>
+          <li>Raw recovery evidence, deployment lifecycle and numerical acceptance
+            have separate owners. Keep tests and tensor claims scoped accordingly.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./current-architecture-map.md#workflow-recovery-ownership">Recovery source map</a>
+          <a class="docs-link" href="./project-architecture-organization.md#workflow-recovery-source-and-test-placement">Recovery test placement</a>
+          <a class="docs-link" href="./data-lifecycle.html">Storage and retention contract</a>
         </div>
       </section>
 
@@ -94,57 +127,15 @@
             tangent and residual before line search. Complete nonlinear states
             also check dimensions, finite values and fixed support identity.</li>
           <li>Harmonic spring checks the complete complex state and original
-            element/mass/load equations at every frequency. Binary product
-            scaling must not erase finite forces or change fixed supports.
-            Frequency products must also retain finite inertia and acceleration
-            even when the intermediate angular-frequency square is out of range.
-            Complex substitution replays complete exceptional rows before pivot
-            division; element-force products combine terms before restoration.
-            Exceptional right-hand sides also retain binary-scaled components
-            through row normalization, elimination and pivot swaps until division.
-            Ordinary RHS storage keeps its allocation. Promotion retains the
-            original finite buffer until all conversion checkpoints pass, so a
-            checkpoint error preserves that adapter for explicit retry. This
-            is local conversion atomicity, not whole-solver rollback.
-            Row normalization prefers
-            exact binary shifts, retaining the legacy divisor for reversible tiny
-            coefficients when necessary. Row weights follow pivot swaps, keeping
-            comparison units tied to the original row maxima; the pivot-floor
-            constant is unchanged. Coefficient normalization separately rejects
-            erased or non-round-tripping tiny components before elimination,
-            identifying the prepared row, column and real/imaginary component.
-            Nonzero normal component terms that cancel to rounded zero also
-            trigger complete-expression replay with product tails; this bounded
-            repair is not general forward-accuracy qualification. Strongly reduced
-            nonzero components also replay, with independent row-component peaks
-            detecting gradual cancellation. The relative replay heuristic changes
-            neither physical residual tolerances nor pivot admission. Replay sums
-            already aligned parts in fixed checked integer storage before one
-            binary64 rounding, so its own error balance cannot lose nested tails.
-            Assembly and subsequent division are not made exact by this step.
-            Exceptional axial divisors avoid complex squaring; scaled scalar
-            quotients near underflow round directly to quantum units. Exceptional
-            general divisors retain both products and the squared denominator in
-            checked fixed integer storage until final ratio rounding. Ordinary
-            divisors now use compact integer pairs and exact rounding-cell
-            midpoint admission for normal candidates, with checked exact replay
-            on unsupported or ambiguous cases. This can change ordinary division
-            bits, not standalone product/legacy-difference bits or numerical gates.
-            RHS elimination and back-substitution updates use fused scalar
-            operations with a local rounding-risk budget that can request full
-            expression replay. Dense Schur cells, path diagonals and generated
-            fill-in now reuse that policy through a separate coefficient wrapper.
-            Eligible elimination factors carry a transient residual correction
-            shared by coefficient and RHS updates. Conservative exponent headroom
-            bounds compensation. A shared preflight disables it for the entire
-            step if any coefficient or RHS is unsupported, retaining one effective
-            factor and prior range checks without a full factor snapshot.
-            Replayed substitution rows retain admitted integer numerator sums
-            through final complex quotient rounding, avoiding a second rounding
-            of their numerator. Ordinary fused rows retain their prior fast route.
-            This is not exact factorization or a correctly rounded whole solve.
-            Upstream assembly and
-            whole-model forward accuracy are not thereby certified.</li>
+            element/mass/load equations at every frequency. Internal helpers own
+            coefficient preparation, scaled RHS storage, bounded complex division,
+            complete-expression replay and shared-factor updates. Range handling
+            must not erase finite responses or change support identities.</li>
+          <li>The harmonic source/evidence index below replaces the growing
+            experiment narrative here. Replay heuristics are not residual
+            tolerances; local exact arithmetic is not exact factorization or a
+            correctly rounded whole solve. RHS conversion atomicity is not
+            whole-solver rollback or durable restart.</li>
           <li>These are named consumer scopes, not all-operator qualification.
             Cooperative cancellation/replay is not durable restart evidence.</li>
         </ul>
@@ -184,7 +175,7 @@
         </p>
         <p class="docs-copy">
           Tensor v5 uses the daji-3-7-hardening profile. Package/book metadata
-          remains 3.7.1; the version ledger separates later Git/source work without
+          is aligned to 3.7.7; the version ledger separates source and installation without
           promoting retained evidence grades. The three axes remain module,
           function paradigm, and scoped evidence depth: 13 modules, 11
           paradigms, and 77 required coordinates. Recalculation reviews retained
@@ -475,8 +466,12 @@
           caps concurrent test files at two to bound preview resource use;
           it does not reduce the case inventory.
           The current report is
-          <code>releases/usability-evidence/3.2.0/desktop-ui-validation-recovery.json</code>;
+          <code>releases/usability-evidence/current/desktop-ui-validation.json</code>;
           run <code>make check-desktop-ui-validation</code> to revalidate it.
+          After test inventory changes, rerun the full suite with
+          <code>make qualify-desktop-ui-validation OUTPUT=releases/usability-evidence/current/desktop-ui-validation.json</code>.
+          Historical reports remain unchanged; a passing summary from an older
+          test inventory is not current evidence.
         </p>
         <p class="docs-copy">
           <strong>Not an installed-service qualification:</strong> mock IPC cannot

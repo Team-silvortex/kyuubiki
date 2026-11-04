@@ -70,14 +70,17 @@ Example:
 cd <repo>
 KYUUBIKI_STORAGE_BACKEND=postgres \
 DATABASE_URL=ecto://postgres@127.0.0.1:5432/kyuubiki_dev \
-zsh ./scripts/kyuubiki start
+./scripts/kyuubiki start
 ```
 
 If your local database requires a password, inject it from an untracked local
 environment or secret store instead of committing it into examples.
 
-If those environment variables are not set, local development falls back to the
-lightweight memory/json backend so tests and quick UI iteration keep working.
+Without an explicit backend, local development uses SQLite. Web tests get a
+disposable SQLite directory unless `SQLITE_DATABASE_PATH` is explicitly supplied.
+Memory/JSON is opt-in with `KYUUBIKI_STORAGE_BACKEND=memory`; use a fresh disposable
+`KYUUBIKI_DATA_DIR` for tests, not installed runtime or research data. See
+`apps/web/config/runtime.exs` for the authoritative defaults.
 
 ## Test Placement
 

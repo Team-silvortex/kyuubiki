@@ -30,7 +30,11 @@ defmodule KyuubikiWeb.Playground.AgentTaskUncertainDispatchTest do
     first =
       agent(
         "uncertain-first",
-        if(ctx[:stall_before_read], do: :stall_before_read, else: %{"stage" => "agent-received"})
+        cond do
+          ctx[:stall_before_read] -> :stall_before_read
+          ctx[:rejection] == :capacity -> :no_progress
+          true -> %{"stage" => "agent-received"}
+        end
       )
 
     peer = agent("unused-peer")

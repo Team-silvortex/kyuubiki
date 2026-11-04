@@ -5,7 +5,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowCompletionCrashTest do
   @moduletag skip: match?({:win32, _}, :os.type())
   @moduletag timeout: 60_000
 
-  for backend <- ["sqlite", "memory"], phase <- ["before_stage", "after_stage"] do
+  for backend <- ["sqlite", "memory"],
+      phase <- ["before_stage", "after_stage", "after_stage_missing", "after_stage_corrupt"] do
+    @tag completion_phase: phase == "after_stage_missing"
     test "#{backend}: SIGKILL #{phase} obeys the durable publication boundary" do
       root =
         Path.join(

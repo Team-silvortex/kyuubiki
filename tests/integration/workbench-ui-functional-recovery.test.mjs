@@ -185,8 +185,10 @@ test("Workbench Pwdt Store retry preserves project isolation and survives reload
     };
     let unavailable = true;
     await page.route("**/api/v1/store**", async (route) => {
-      const detail = new URL(route.request().url()).pathname.endsWith(`/${entry.id}`);
-      await route.fulfill(detail && unavailable
+      const url = new URL(route.request().url());
+      const detail = url.pathname.endsWith(`/${entry.id}`);
+      const selecting = url.searchParams.get("q") === entry.id;
+      await route.fulfill((detail || selecting) && unavailable
         ? { status: 503, json: { error: "qualification store unavailable" } }
         : { json: detail ? { entry } : {
           entries: [entry], sources: [],

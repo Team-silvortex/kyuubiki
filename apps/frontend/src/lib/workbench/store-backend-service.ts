@@ -6,6 +6,7 @@ import {
   type WorkbenchStoreBackendService,
   type WorkbenchStoreBackendTransport,
   type WorkbenchStoreCatalogQuery,
+  type WorkbenchStoreEntrySelection,
 } from "@/lib/workbench/store-backend-service-core";
 
 export {
@@ -13,6 +14,7 @@ export {
   type WorkbenchStoreBackendService,
   type WorkbenchStoreBackendTransport,
   type WorkbenchStoreCatalogQuery,
+  type WorkbenchStoreEntrySelection,
 };
 
 export const workbenchStoreBackendService =

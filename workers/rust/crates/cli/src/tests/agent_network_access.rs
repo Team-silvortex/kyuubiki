@@ -113,3 +113,77 @@ fn denied_connection_counter_is_bounded_and_safe_under_concurrency() {
     assert!(!access.admit(peer("192.0.2.1")));
     assert_eq!(access.snapshot()["denied_connections"], u64::MAX);
 }
+
+#[test]
+fn lan_control_requires_an_exact_opt_in_without_expanding_network_access() {
+    for (value, mode) in [
+        (None, "discovery_only"),
+        (Some("false"), "discovery_only"),
+        (Some("true"), "trusted_lan_control"),
+    ] {
+        let access = NetworkAccess::default()
+            .with_trusted_lan_control(value)
+            .unwrap();
+        assert_eq!(access.snapshot()["lan_control"]["mode"], mode);
+        assert!(!access.admit(peer("192.0.2.1")));
+        assert_eq!(access.snapshot()["authenticated"], false);
+        assert_eq!(access.snapshot()["authority_binding_verified"], false);
+        assert_eq!(
+            access.snapshot()["lan_control"]["trusted_mode_is_authentication"],
+            false
+        );
+        assert_eq!(
+            access
+                .policy
+                .allows_remote_method(&RpcMethod::SubmitDurableAgentTask),
+            value == Some("true")
+        );
+    }
+    for invalid in [
+        "",
+        " ",
+        "TRUE",
+        "False",
+        "1",
+        "yes",
+        "true ",
+        "secret-config-value",
+    ] {
+        let error = NetworkAccess::default()
+            .with_trusted_lan_control(Some(invalid))
+            .err()
+            .unwrap();
+        assert!(error.starts_with(AGENT_TRUSTED_LAN_CONTROL_ENV));
+        assert!(!error.contains("secret-config-value"));
+    }
+}
+
+#[test]
+fn lan_denial_counter_saturates_without_claiming_authentication() {
+    let access = NetworkAccess::default();
+    std::thread::scope(|scope| {
+        for _ in 0..8 {
+            let access = &access;
+            scope.spawn(move || {
+                for _ in 0..100 {
+                    assert!(
+                        access
+                            .reject_remote_request("denied", &RpcMethod::FetchDurableAgentExecution)
+                            .is_some()
+                    );
+                }
+            });
+        }
+    });
+    assert_eq!(access.snapshot()["lan_control"]["denied_requests"], 800);
+    access.denied_requests.store(u64::MAX, Ordering::Relaxed);
+    assert!(
+        access
+            .reject_remote_request("denied", &RpcMethod::CancelJob)
+            .is_some()
+    );
+    assert_eq!(
+        access.snapshot()["lan_control"]["denied_requests"],
+        u64::MAX
+    );
+}

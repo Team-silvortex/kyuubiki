@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-10-24T05:44:20Z",
-  "shipping_version": "3.7.1",
+  "generated_at": "2026-11-04T10:35:42Z",
+  "shipping_version": "3.7.7",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -17,13 +17,13 @@
         "daji:latest",
         "daji:3",
         "daji:3.7",
-        "daji:3.7.1"
+        "daji:3.7.7"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.7.1",
-      "summary": "Reconcile the existing Daji 3.7.1 Git checkpoint with package and current-document metadata; rebuild the compact desktop UI and current local runtime from the working-tree overlay.",
-      "date": "2026-10-24",
+      "version": "3.7.7",
+      "summary": "Align the existing Daji 3.7.7 checkpoint across packages, SDK metadata, documentation and local installation inputs; integrate scoped workflow recovery, Agent TLS/token, workspace store/PWDT and model API work.",
+      "date": "2026-11-04",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,46 +65,24 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.7.1.json",
+      "snapshot_path": "releases/snapshots/3.7.7.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
         "packaging": "docs/packaging-and-deployment.md"
       },
       "product_surfaces": {},
-      "desktop_artifacts": [
-        {
-          "product": "hub",
-          "kind": "app",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
-        },
-        {
-          "product": "installer",
-          "kind": "app",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": true
-        },
-        {
-          "product": "workbench",
-          "kind": "app",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
-        }
-      ]
+      "desktop_artifacts": []
     }
   ],
   "versions": [
     {
-      "version": "3.7.1",
+      "version": "3.7.7",
       "line": "3.x",
       "status": "current",
-      "date": "2026-10-24",
-      "summary": "Reconcile the existing Daji 3.7.1 Git checkpoint with package and current-document metadata; rebuild the compact desktop UI and current local runtime from the working-tree overlay.",
-      "snapshot_path": "releases/snapshots/3.7.1.json",
+      "date": "2026-11-04",
+      "summary": "Align the existing Daji 3.7.7 checkpoint across packages, SDK metadata, documentation and local installation inputs; integrate scoped workflow recovery, Agent TLS/token, workspace store/PWDT and model API work.",
+      "snapshot_path": "releases/snapshots/3.7.7.json",
       "channels": [
         "stable"
       ],
@@ -113,8 +91,20 @@
         "daji:latest",
         "daji:3",
         "daji:3.7",
-        "daji:3.7.1"
+        "daji:3.7.7"
       ],
+      "product_surfaces": {},
+      "desktop_artifacts": []
+    },
+    {
+      "version": "3.7.1",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-10-24",
+      "summary": "Reconcile the existing Daji 3.7.1 Git checkpoint with package and current-document metadata; rebuild the compact desktop UI and current local runtime from the working-tree overlay.",
+      "snapshot_path": "releases/snapshots/3.7.1.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {},
       "desktop_artifacts": [
         {

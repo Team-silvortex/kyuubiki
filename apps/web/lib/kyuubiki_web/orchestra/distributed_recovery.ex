@@ -19,7 +19,7 @@ defmodule KyuubikiWeb.Orchestra.DistributedRecovery do
     {stage, transport_reason} = failure_stage(reason)
     checkpoint_digest = verified_checkpoint_digest(opts)
     retry_safety = retry_safety(method, opts, checkpoint_digest)
-    retryable = retryable?(stage, retry_safety)
+    retryable = retryable?(stage, transport_reason, retry_safety)
 
     %{
       schema_version: @schema_version,
@@ -100,13 +100,16 @@ defmodule KyuubikiWeb.Orchestra.DistributedRecovery do
   defp default_retry_safety(method) when method in @idempotent_methods, do: :idempotent
   defp default_retry_safety(_method), do: :checkpoint_required
 
-  defp retryable?(:connect, _retry_safety), do: true
+  defp retryable?(:protocol, {:invalid_response, :contradictory_non_admission}, _retry_safety),
+    do: false
 
-  defp retryable?(stage, retry_safety)
+  defp retryable?(:connect, _reason, _retry_safety), do: true
+
+  defp retryable?(stage, _reason, retry_safety)
        when stage in [:send, :receive, :protocol] and retry_safety in [:idempotent, :checkpointed],
        do: true
 
-  defp retryable?(_stage, _retry_safety), do: false
+  defp retryable?(_stage, _reason, _retry_safety), do: false
 
   defp process_loss?(:connect, reason), do: reason in @process_loss_reasons
 
@@ -125,6 +128,9 @@ defmodule KyuubikiWeb.Orchestra.DistributedRecovery do
   defp reason_code(stage, reason)
        when stage in [:connect, :send, :receive] and reason in [:timeout, :request_timeout],
        do: "agent_transport_timeout"
+
+  defp reason_code(:protocol, {:invalid_response, :contradictory_non_admission}),
+    do: "agent_non_admission_conflict"
 
   defp reason_code(:protocol, _reason), do: "agent_protocol_failure"
   defp reason_code(:dispatch, _reason), do: "orchestra_dispatch_rejected"

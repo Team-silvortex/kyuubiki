@@ -1,0 +1,91 @@
+.assistant-float-panel:has(.assistant-model-connection) {
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(86dvh, 920px);
+  border-radius: 14px;
+}
+.assistant-float-panel__body:has(.assistant-model-connection) {
+  align-content: start;
+  padding: 12px;
+  gap: 10px;
+  scroll-padding-block-start: 52px;
+}
+.assistant-model-connection { container-type: inline-size; padding: 12px; }
+.assistant-model-connection details { min-width: 0; }
+.assistant-model-connection summary { cursor: pointer; font-weight: 650; }
+.assistant-model-connection__url { display: block; overflow-wrap: anywhere; font-size: 0.78rem; margin-block: 0.4rem; }
+.assistant-model-connection__summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; list-style: none;
+}
+.assistant-model-connection__summary::-webkit-details-marker { display: none; }
+.assistant-model-connection__summary > span:first-child { display: grid; gap: 4px; min-width: 0; }
+.assistant-model-connection small { color: var(--muted); font-size: 0.73rem; line-height: 1.45; font-weight: 400; }
+.assistant-model-connection__summary small { overflow-wrap: anywhere; }
+.assistant-model-connection__summary::after { content: ">"; color: var(--muted); }
+.assistant-model-connection > details[open] > summary::after { transform: rotate(90deg); }
+.assistant-model-connection__status {
+  margin-inline-start: auto; flex-shrink: 0; padding: 4px 7px;
+  border: 1px solid var(--line); border-radius: 5px; font-size: 0.7rem; color: var(--muted);
+}
+.assistant-model-connection [data-status="connected"] { color: #97d4bd; }
+.assistant-model-connection [data-status="failed"] { color: #f0b29f; }
+.assistant-model-connection__grid {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
+  margin-block: 16px 12px; align-items: start;
+}
+.assistant-model-connection__section {
+  display: grid; align-content: start; gap: 10px; min-width: 0; margin: 0; padding: 12px;
+  border: 1px solid var(--line); border-radius: 7px; background: rgba(0, 0, 0, 0.08);
+}
+.assistant-model-connection__section legend { font-size: 0.8rem; font-weight: 650; padding-inline: 5px; }
+.assistant-model-connection__fields { display: grid; gap: 10px; min-width: 0; }
+.assistant-model-connection__fields[hidden] { display: none; }
+.assistant-model-connection__origin { overflow-wrap: anywhere; }
+.assistant-model-connection__section legend b { color: var(--accent); margin-inline-end: 5px; font-size: 0.7rem; }
+.assistant-model-connection__section label { display: grid; gap: 6px; min-width: 0; font-size: 0.76rem; color: var(--muted); }
+.assistant-model-connection__section input:not([type="checkbox"]),
+.assistant-model-connection__section select {
+  width: 100%; min-width: 0; box-sizing: border-box; font-size: 0.8rem;
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 9px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 50%), rgba(31, 35, 40, 0.92);
+  color: var(--ink);
+}
+.assistant-model-connection__section select[size] { height: auto; min-height: 68px; max-height: 160px; padding: 4px; }
+.assistant-model-connection__section option { padding: 7px; }
+.assistant-model-connection .card-copy { margin: 0; font-size: 0.74rem; line-height: 1.5; }
+.assistant-model-connection .ghost-button { min-height: 30px; padding: 6px 10px; font-size: 0.76rem; }
+.assistant-model-connection__presets,
+.assistant-model-connection__test,
+.assistant-model-connection__key-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.assistant-model-connection__key-actions small { flex: 1 1 100%; }
+.assistant-model-connection__section .assistant-model-connection__trust { display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; overflow-wrap: anywhere; }
+.assistant-model-connection__trust input { flex: 0 0 16px; width: 16px; height: 16px; min-height: 0; padding: 0; margin: 2px 0 0; }
+.assistant-model-connection__trust strong { display: block; color: var(--ink); font-weight: 500; }
+.assistant-model-connection__message { margin: 0; padding: 8px; border-inline-start: 2px solid currentColor; background: rgba(255, 255, 255, 0.025); font-size: 0.75rem; line-height: 1.5; overflow-wrap: anywhere; }
+.assistant-model-connection__picker { gap: 4px; flex-wrap: wrap; }
+.assistant-model-connection__picker .panel-tab { min-height: 30px; padding: 6px 10px; font-size: 0.76rem; }
+.assistant-model-connection__advanced { padding-block: 10px; border-top: 1px solid var(--line); }
+.assistant-model-connection__advanced summary { color: var(--muted); font-size: 0.76rem; }
+.assistant-model-connection__advanced .card-copy { margin-top: 8px; }
+.assistant-model-connection__footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--line); }
+.assistant-model-connection__footer > div { display: grid; gap: 4px; min-width: 0; flex: 1 1 140px; }
+.assistant-model-connection__footer strong { font-size: 0.8rem; overflow-wrap: anywhere; }
+.assistant-model-connection__footer > button { border-color: var(--accent); }
+.assistant-model-connection :is(button, input, select, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@container (min-width: 520px) {
+  .assistant-model-connection__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .workbench-shell[data-workbench-scrollable-shell="true"] .assistant-float-panel:has(.assistant-model-connection) {
+    max-height: calc(100dvh - var(--workbench-bottom-safe-area, 56px) - env(safe-area-inset-bottom) - 12px);
+    right: 12px; width: calc(100vw - 24px);
+  }
+  .assistant-float-panel:has(.assistant-model-connection) .assistant-float-panel__header {
+    flex-wrap: nowrap; gap: 8px; padding: 12px;
+  }
+  .assistant-float-panel:has(.assistant-model-connection) .assistant-float-panel__headline { flex-basis: auto; }
+  .assistant-float-panel:has(.assistant-model-connection) .assistant-float-panel__headline p { display: none; }
+  .assistant-float-panel:has(.assistant-model-connection) .assistant-float-panel__header .ghost-button { font-size: 0.74rem; padding: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-float-panel:has(.assistant-model-connection) { animation: none; }
+}

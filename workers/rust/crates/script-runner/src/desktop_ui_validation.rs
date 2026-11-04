@@ -344,8 +344,25 @@ fn validate_report(contract: &ValidationContract, report: &ValidationReport) -> 
         ));
     }
     let expected_command = test_command(contract);
-    if report.command != expected_command
-        || report.summary.tests < contract.minimum_test_count
+    if report.command != expected_command {
+        let missing: Vec<_> = contract
+            .test_files
+            .iter()
+            .filter(|file| !report.command.contains(file))
+            .collect();
+        let unexpected: Vec<_> = report
+            .command
+            .iter()
+            .filter(|arg| arg.ends_with(".test.mjs") && !contract.test_files.contains(arg))
+            .collect();
+        return Err(format!(
+            "desktop UI validation report command does not match the current manifest; \
+             missing tests: {missing:?}; unexpected tests: {unexpected:?}; \
+             runner settings/order must also match. Regenerate with \
+             `make qualify-desktop-ui-validation OUTPUT=releases/usability-evidence/current/desktop-ui-validation.json`"
+        ));
+    }
+    if report.summary.tests < contract.minimum_test_count
         || report.summary.tests != report.summary.passed
         || report.summary.failed
             + report.summary.cancelled
@@ -495,5 +512,55 @@ mod tests {
                     .contains("concurrency")
             );
         }
+    }
+
+    #[test]
+    fn stale_reports_require_fresh_execution_not_a_summary_rewrite() {
+        let contract = ValidationContract {
+            schema_version: CONTRACT_SCHEMA.into(),
+            report_schema: REPORT_SCHEMA.into(),
+            test_concurrency: 2,
+            test_files: vec!["tests/integration/current.test.mjs".into()],
+            minimum_test_count: 40,
+            shell_minimum_actions: vec![],
+            required_assertions: vec![],
+        };
+        let mut report = ValidationReport {
+            schema_version: REPORT_SCHEMA.into(),
+            generated_at_unix_ms: 1,
+            contract_path: CONTRACT_PATH.into(),
+            status: "pass".into(),
+            platform: Platform {
+                os: "test".into(),
+                arch: "test".into(),
+            },
+            command: test_command(&contract),
+            exit_code: Some(0),
+            elapsed_ms: 1,
+            summary: TestSummary {
+                tests: 40,
+                passed: 40,
+                ..Default::default()
+            },
+            shells: vec![],
+            assertions: vec![],
+            output_excerpt: String::new(),
+        };
+        validate_report(&contract, &report).unwrap();
+        report.command[4] = "tests/integration/old.test.mjs".into();
+        let error = validate_report(&contract, &report).unwrap_err();
+        assert!(error.contains("current.test.mjs"));
+        assert!(error.contains("old.test.mjs"));
+        assert!(error.contains("make qualify-desktop-ui-validation"));
+        report.command = test_command(&contract);
+        report.command[3] = "--test-concurrency=4".into();
+        assert!(
+            validate_report(&contract, &report)
+                .unwrap_err()
+                .contains("runner settings/order")
+        );
+        report.command = test_command(&contract);
+        report.summary.skipped = 1;
+        assert!(validate_report(&contract, &report).is_err());
     }
 }

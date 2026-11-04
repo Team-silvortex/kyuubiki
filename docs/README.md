@@ -13,7 +13,9 @@ metadata, the last recorded installation, Git checkpoints and source follow-ups.
 | Finish a first study | [First research tutorial](tutorial-first-research.html) | [Failure and recovery](tutorial-recovery.html) |
 | Compose operators | [Workflow tutorial](tutorial-composite-workflow.html) | [Workflow contracts](book-ch05-workflow-and-operators.html) |
 | Integrate a research agent | [Model entry](../llms.txt), [bootstrap](model-research-bootstrap.json) | [Research onboarding](model-research-onboarding.html) |
+| Configure a model API in Workbench | [Model connection guide](book-ch07-trust-and-safety.html#model-api-connection) | [Safety boundaries](book-ch07-trust-and-safety.html), [Current acceptance scope](book-ch02-version-line.html) |
 | Implement an operator | [Rust Operator SDK tutorial](tutorial-operator-sdk.html) | [Reliability policy](operator-reliability.md) |
+| Integrate or self-host a Store | [Store backend handoff](operator-store-integration.html) | [Deployment boundary](store-deployment-boundary.md), [Existing services](central-server-components.md) |
 | Automate the GUI | [PWDT tutorial](tutorial-pwdt-automation.html) | [UI contract](ui-automation-contract.html) |
 | Deploy or update | [Runtime chapter](book-ch04-runtime-modes.html) | [Installer remote control](installer-remote-control.md) |
 | Assess trust or debug a failure | [Testing and CI](testing-and-ci.md) | [Weakness roadmap](weakness-roadmap.md), [accuracy plan](accuracy-plan.md) |
@@ -131,6 +133,7 @@ Execution coverage, result identity and numerical qualification are distinct. Re
 - [automated-material-research-example.md](automated-material-research-example.md)
 - [automated-material-research-example.manifest.json](automated-material-research-example.manifest.json)
 - [research-layered-thermal.html](research-layered-thermal.html)
+- [research-model-driven.html](research-model-driven.html)
 - [material-research-roadmap.md](material-research-roadmap.md)
 - [material-score-contract.md](material-score-contract.md)
 - [material-score-contract.manifest.json](material-score-contract.manifest.json)
@@ -170,6 +173,7 @@ Installer owns deployment, lifecycle, integrity and update visibility. Runtime p
 - [remote-pilot.md](remote-pilot.md)
 - [central-server-components.md](central-server-components.md)
 - [store-deployment-boundary.md](store-deployment-boundary.md)
+- [operator-store-integration.html](operator-store-integration.html)
 - [component-integrity-protocol.html](component-integrity-protocol.html)
 - [installation-integrity-contract.html](installation-integrity-contract.html)
 - [update-catalog.html](update-catalog.html)

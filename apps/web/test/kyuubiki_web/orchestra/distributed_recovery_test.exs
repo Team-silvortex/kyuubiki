@@ -127,6 +127,35 @@ defmodule KyuubikiWeb.Orchestra.DistributedRecoveryTest do
     assert receipt.next_action == "await_agent_recovery"
   end
 
+  test "contradictory non-admission overrides default idempotent and verified checkpoint hints" do
+    for policy <- [
+          [],
+          [retry_safety: "idempotent"],
+          [retry_safety: "checkpoint_required"],
+          [retry_safety: "checkpointed", replay_checkpoint: verified_checkpoint()]
+        ],
+        remaining <- [0, 1] do
+      receipt =
+        DistributedRecovery.failure_receipt(
+          @endpoint,
+          "solve_bar_1d",
+          {:agent_transport_failure, :protocol,
+           {:invalid_response, :contradictory_non_admission}},
+          policy,
+          remaining,
+          1
+        )
+
+      assert receipt.reason_code == "agent_non_admission_conflict"
+      assert receipt.failure_stage == "protocol"
+      assert DistributedRecovery.agent_health_failure?(receipt)
+      refute DistributedRecovery.retryable?(receipt)
+      refute receipt.process_loss
+      assert receipt.safe_to_continue_other_tasks
+      assert receipt.next_action == "checkpoint_before_retry"
+    end
+  end
+
   defp verified_checkpoint do
     %{
       "operator_task_batch_checkpoint_verification_contract" =>

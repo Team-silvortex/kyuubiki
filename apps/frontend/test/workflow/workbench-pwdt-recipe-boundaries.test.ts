@@ -9,6 +9,7 @@ import {
 
 function runPython(recipe?: string, stopAt?: number, options: {
   stopRunAt?: number; jobStatus?: string; save?: boolean; failSave?: boolean; requestId?: string;
+  storeSelection?: Record<string, unknown>;
 } = {}) {
   const process = spawnSync(globalThis.process.platform === "win32" ? "python" : "python3", [
     "-I", "-B", fileURLToPath(new URL("../support/pwdt-python-harness.py", import.meta.url)),
@@ -28,6 +29,16 @@ test("PWDT shipped Python prelude initializes and calls its JavaScript bridge", 
   assert.equal(outcome.result.initialized, true);
   assert.equal(outcome.result.actions, WORKBENCH_SCRIPT_ACTIONS.length);
   assert.deepEqual(outcome.logs, ["bridge ready"]);
+});
+
+test("PWDT shipped Python Store helper forwards explicit identity and omits unused selectors", () => {
+  for (const storeSelection of [{}, { source_id: "lab", version: "1.0.0", package_ref: "operator://bar/1", target: "mac" }]) {
+    const outcome = runPython(undefined, undefined, { storeSelection });
+    assert.equal(outcome.error, undefined);
+    assert.deepEqual(outcome.calls, ["store/stageEntry"]);
+    assert.deepEqual(outcome.payloads, [{ kind: "operator", entryId: "bar", ...(storeSelection.source_id
+      ? { sourceId: "lab", version: "1.0.0", packageRef: "operator://bar/1", target: "mac" } : {}) }]);
+  }
 });
 
 for (const failSave of [false, true]) {

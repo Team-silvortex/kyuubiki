@@ -1,5 +1,10 @@
 # Central Server Components
 
+For the formal operator-store rollout, see the
+[backend integration handoff](operator-store-integration.html). It distinguishes
+existing read-only contracts from proposed hosted APIs and does not treat a
+Workbench project reference as a verified runtime installation.
+
 `daji 3.x` now has a preview contract for the future Kyuubiki central
 server. The central server is not the solver engine and not the desktop Hub. It
 is the distribution plane that can back self-hosted stores, publisher profiles,
