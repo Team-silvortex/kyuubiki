@@ -17,6 +17,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
       when is_map(operator) and is_map(execution) and is_map(node) do
     operator_id = Map.get(operator, "id")
     kind = Map.get(operator, "kind")
+    rpc_solver = kind == "solver" and not packaged_solver?(operator_id, kind, execution)
 
     %{
       "schema_version" => @schema_version,
@@ -27,9 +28,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
       "package_ref" => Map.get(execution, "package_ref"),
       "package_version" => Map.get(execution, "package_version", "library-managed"),
       "package_integrity" => package_integrity(Map.get(execution, "integrity")),
-      "runtime_protocol" => runtime_protocol(kind),
-      "abi" => execution_abi(kind),
-      "entrypoint" => entrypoint(operator_id, kind),
+      "runtime_protocol" => runtime_protocol(rpc_solver),
+      "abi" => execution_abi(rpc_solver),
+      "entrypoint" => entrypoint(operator_id, kind, rpc_solver),
       "bindings" => bindings(),
       "node_binding" => node_binding(node)
     }
@@ -37,10 +38,28 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
 
   def build(_operator, _execution, _node), do: %{"schema_version" => @schema_version}
 
-  defp runtime_protocol("solver"), do: "kyuubiki.solver-rpc/v1"
+  @doc false
+  def packaged_solver?(operator_id, "solver", execution) when is_binary(operator_id) do
+    ref = Map.get(execution, "package_ref")
+    version = Map.get(execution, "package_version")
+
+    external =
+      case ref do
+        "bundle://" <> path -> String.trim(path) != ""
+        "orchestra://" <> path -> String.trim(path) != ""
+        _ -> false
+      end
+
+    external and is_binary(version) and String.trim(version) != "" and
+      WorkflowSolverRegistry.fetch(operator_id) == :error
+  end
+
+  def packaged_solver?(_operator_id, _kind, _execution), do: false
+
+  defp runtime_protocol(true), do: "kyuubiki.solver-rpc/v1"
   defp runtime_protocol(_kind), do: "kyuubiki.operator-execution/v1"
 
-  defp execution_abi("solver") do
+  defp execution_abi(true) do
     %{
       "kind" => "solver_rpc",
       "input_encoding" => "json",
@@ -56,14 +75,14 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
     }
   end
 
-  defp entrypoint(operator_id, "solver") when is_binary(operator_id) do
+  defp entrypoint(operator_id, "solver", true) when is_binary(operator_id) do
     %{
       "kind" => "solver_method",
       "name" => solver_method(operator_id)
     }
   end
 
-  defp entrypoint(operator_id, kind) do
+  defp entrypoint(operator_id, kind, _rpc_solver) do
     %{
       "kind" => "operator_id",
       "name" => operator_id,

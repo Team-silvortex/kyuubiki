@@ -80,6 +80,9 @@ pub(crate) fn run_node_command(
             &[
                 "apps/desktop-shared/test/tauri-bridge.test.mjs",
                 "apps/desktop-shared/test/workbench-panel-layout-bridge.test.mjs",
+                "apps/desktop-shared/test/store-account-bridge.test.mjs",
+                "apps/desktop-shared/test/store-identity-bridge.test.mjs",
+                "apps/desktop-shared/test/store-download-bridge.test.mjs",
                 "apps/desktop-shared/test/direct-execution-journal-bridge.test.mjs",
                 "apps/desktop-shared/test/checkpoint-recovery-bridge.test.mjs",
                 "apps/desktop-shared/test/journal-host-lifecycle.test.mjs",

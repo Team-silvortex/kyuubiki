@@ -9,6 +9,9 @@ pub fn case() -> Case {
         refinement: 8,
         reference: 293.15,
         rise: 20.0,
+        cold_offset: 0.0,
+        expansion: super::model::ALPHA,
+        poisson: [0.0; 2],
     }
 }
 
@@ -190,11 +193,21 @@ mod tests {
             "checkpoint_required"
         );
         assert_eq!(
-            request["graph"]["nodes"][3]["retry_safety"],
+            request["graph"]["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|node| node["id"] == "structure")
+                .unwrap()["retry_safety"],
             "checkpoint_required"
         );
         assert_eq!(
-            request["graph"]["nodes"][3]["operator_id"],
+            request["graph"]["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|node| node["id"] == "structure")
+                .unwrap()["operator_id"],
             "solve.thermal_plane_quad_2d"
         );
     }

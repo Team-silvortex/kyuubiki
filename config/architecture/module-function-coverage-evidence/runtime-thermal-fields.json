@@ -1,8 +1,33 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Bounded CST/Q4 and 2D/3D thermal-truss output, temperature-mean, norm, energy-volume, failure and cancellation evidence. In-process headless dispatch and Linux release regressions do not qualify general multiphysics, installed Agents, or end-to-end performance.",
+  "summary": "Bounded CST/Q4, thermal-truss and matching-node Q4-heat/Q9-package evidence. The Q9 chain uses an isolated macOS Agent; this does not qualify installed services, general multiphysics, durable workflow recovery or end-to-end performance.",
   "evidence_claims": [
+    {
+      "id": "q9-matching-heat-package-chain",
+      "status": "partial",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["execution", "contract", "numerical_validation", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/operator-thermal-q9/src/bridge.rs",
+        "workers/rust/crates/operator-thermal-q9/src/bridge_validation.rs",
+        "workers/rust/crates/operator-thermal-q9/kyuubiki-operator.json",
+        "workers/rust/crates/operator-thermal-q9/tests/heat_chain.rs",
+        "workers/rust/crates/operator-thermal-q9/tests/support/bilayer.rs",
+        "workers/rust/crates/cli/tests/operator_q9_live.rs",
+        "schemas/heat-to-thermal-q9-nodal.schema.json",
+        "reports/model-research-q9-heat-chain-20261111.md"
+      ],
+      "required_text": [
+        "kyuubiki.heat-to-thermal-q9-nodal/v1",
+        "bridge_maps_reindexed_heat_input_and_result_by_identity_through_c_abi",
+        "bridge_refuses_contacts_unknown_controls_and_missing_temperature",
+        "live_agent_heat_bridge_q9_chain_checks_bilayers_and_failed_transfer_recovery",
+        "not durable WorkflowGraph scheduling, crash recovery or an atomic transaction."
+      ]
+    },
     {
       "id": "thermal-plane-finite-output-and-replay",
       "status": "proven",

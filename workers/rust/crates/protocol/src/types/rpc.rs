@@ -166,6 +166,7 @@ pub enum RpcMethod {
     Ping,
     #[serde(rename = "describe_agent")]
     DescribeAgent,
+    ManageOperatorPackage,
     #[serde(rename = "begin_agent_drain")]
     BeginAgentDrain,
     #[serde(rename = "describe_agent_lifecycle")]

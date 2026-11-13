@@ -49,6 +49,30 @@ it adds no model-provider dependency to the public SDK library. Offline safety
 tests run with `cargo test`; actual API calls require explicit opt-in and an
 external credential file. This is a research example, not an autonomous shell.
 
+`examples/model_driven_thermal_reference.rs` follows up with eight approved
+temperature/reference scenarios and a mandatory 20-case mesh matrix. It checks
+uniform heating/cooling, unchanged boundary temperatures with a changed strain
+reference, energy and independently reconstructed mechanical equilibrium. See the
+[reference-decoupling guide](../../docs/research-model-driven.html#reference-decoupling)
+for opt-in execution and the distinction between reconstructed and solver-reported
+support reactions. The model chooses experiments; numerical gates remain caller-owned.
+Append `coupling` after the output directory for the
+[32-case Poisson/material-coupling suite](../../docs/research-model-driven.html#material-coupling):
+nonzero and layer-dependent Poisson ratios, unequal expansion/conductivity ratios,
+uniform heating/cooling and per-layer field-error checks through the same runner.
+Use `planar` instead for [32 free-transverse and shear patches](../../docs/research-model-driven.html#planar-patches):
+only three rigid-mode restraints, regular/distorted Q4 meshes, stress-invariant,
+all-DOF equilibrium and strain-energy checks. This homogeneous affine-field suite
+does not qualify general heterogeneous free expansion or non-affine convergence.
+Retained planar results can be replayed offline before payload cleanup; see the
+guide for the explicit opt-in test. No API call is needed for replay.
+Use `bending` for [24 non-affine thermal-bending cases](../../docs/research-model-driven.html#thermal-bending):
+nonuniform through-height temperature, material jumps, reconstructed equilibrium
+and explicit mesh-convergence gates. Homogeneous cases are mechanically free;
+bilayer cases use analytical self-equilibrated end tractions and must not be
+presented as arbitrary traction-free bilayer validation. This suite distinguishes
+continuum error from solver residuals and checks the thermal term's energy sign.
+
 `examples/layered_thermal_research.rs` runs 14 bounded heat-to-structure workflow
 cases through `KyuubikiAgentClient`, without a GUI or a separate research CLI.
 It retains requests, results, checksums and real job ids, checks analytical

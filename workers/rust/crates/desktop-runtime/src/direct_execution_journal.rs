@@ -51,7 +51,7 @@ impl DirectExecutionIntent {
             || !hash(&self.execution_id, 32)
             || !endpoint.is_ok_and(|value| value.endpoint == self.endpoint)
             || self.endpoint.len() > 255
-            || crate::direct_mesh_gateway::method_for_study(&self.study_kind).is_none()
+            || crate::direct_mesh_gateway::method_for_durable_task(&self.study_kind).is_none()
             || self.created_at > 8_640_000_000_000_000
         {
             return Err("direct:journal_corrupt".into());

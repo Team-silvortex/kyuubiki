@@ -529,6 +529,7 @@
       "owned_paths": [
         "workers/rust/crates/engine",
         "workers/rust/crates/solver",
+        "workers/rust/crates/operator-thermal-q9",
         "workers/rust/crates/benchmark",
         "workers/rust/benchmarks"
       ],

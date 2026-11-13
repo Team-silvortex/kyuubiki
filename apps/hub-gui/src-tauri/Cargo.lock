@@ -1728,7 +1728,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-agent-transport"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "rustls",
  "serde",
@@ -1740,7 +1740,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -1749,15 +1749,18 @@ dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
  "libc",
+ "ring",
  "serde",
  "serde_json",
  "sha2",
  "ureq",
+ "url",
+ "zeroize",
 ]
 
 [[package]]
 name = "kyuubiki-engine"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
@@ -1770,7 +1773,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-hub-gui"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "kyuubiki-installer",
@@ -1784,7 +1787,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-installer"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-operator-sdk",
@@ -1798,7 +1801,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-operator-sdk"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
@@ -1808,7 +1811,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
@@ -1816,7 +1819,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-project-bundle"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "chrono",
  "serde",
@@ -1828,7 +1831,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-protocol"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -1837,7 +1840,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-solver"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-protocol",
  "libc",

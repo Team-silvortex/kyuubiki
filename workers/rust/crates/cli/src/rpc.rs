@@ -91,6 +91,7 @@ fn handle_request_in(request: RpcRequest, writer: ExecutionContext<'_>) -> Agent
             RpcResponse::success(request.id, agent_descriptor_payload()),
         ),
         RpcMethod::BeginAgentDrain => crate::agent_lifecycle_rpc::handle_begin_drain(request),
+        RpcMethod::ManageOperatorPackage => crate::operator_package_deployment::handle(request),
         RpcMethod::DescribeAgentLifecycle => crate::agent_lifecycle_rpc::handle_describe(request),
         RpcMethod::ResumeAgentAdmission => crate::agent_lifecycle_rpc::handle_resume(request),
         RpcMethod::CancelJob => crate::operator_package_job_runtime::handle_cancel_job(request),
@@ -602,6 +603,18 @@ fn handle_request_from_peer_with_policy(
         return handle_request(request, writer);
     }
     if !peer_is_loopback {
+        if request.method == RpcMethod::ManageOperatorPackage
+            && !crate::agent_api_security::enabled()
+        {
+            return AgentReply::Stream(
+                Vec::new(),
+                RpcResponse::error(
+                    request.id,
+                    "package_deployment_requires_tls",
+                    "Package management requires authenticated TLS or a host-loopback SSH tunnel",
+                ),
+            );
+        }
         if crate::agent_lifecycle_rpc::is_mutation(&request.method) {
             return crate::agent_lifecycle_rpc::reject_non_loopback_mutation(request.id);
         }

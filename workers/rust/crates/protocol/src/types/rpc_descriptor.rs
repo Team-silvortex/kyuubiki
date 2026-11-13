@@ -19,6 +19,7 @@ impl RpcProtocolDescriptor {
             methods: vec![
                 RpcMethod::Ping,
                 RpcMethod::DescribeAgent,
+                RpcMethod::ManageOperatorPackage,
                 RpcMethod::BeginAgentDrain,
                 RpcMethod::DescribeAgentLifecycle,
                 RpcMethod::ResumeAgentAdmission,

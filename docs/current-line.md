@@ -1,7 +1,7 @@
 # daji 3.x
 
 This is the active-status entrypoint, not an accumulated release diary.
-The current development point in this line is `daji 3.7.7`.
+The current development point in this line is `daji 3.7.8`.
 Read the [HTML chapter](book-ch02-version-line.html) for a WebView-friendly
 summary, or choose a task in the [documentation map](README.md).
 
@@ -12,11 +12,11 @@ Reviewed November 4, 2026. Distinguish these identities before reproducing a run
 | Identity | Recorded state | Authority |
 | --- | --- | --- |
 | Active product line | `daji 3.x`, hardening profile `daji-3-7-hardening` | [Version policy](../config/version-line-policy.json), [brand](../assets/brand/brand.json) |
-| Package and book baseline | `3.7.7` | [Book manifest](book-manifest.json), package manifests |
-| Local macOS installation | `3.7.7`, three arm64 shells and native runtime, verified November 4 | [Current snapshot](../releases/snapshots/3.7.7.json), [installation report](../reports/daji-3.7.7-local-rebuild-20261104.md) |
-| Previous installed baseline | `3.7.1`, October 24 | [Historical installation report](../reports/daji-3.7.1-local-rebuild-20261024.md) |
-| Latest version-named Git checkpoint | `f28de0dd`, subject `daji 3.7.7` | Git history; not by itself an installation |
-| Source provenance | `3fe22542` plus uncommitted recovery, Agent security, store, model-connection and alignment work | Working-tree build, not a clean release commit |
+| Package and book baseline | `3.7.8` | [Book manifest](book-manifest.json), package manifests |
+| Local macOS installation | `3.7.8`, three arm64 shells and native runtime, verified November 4 | [Current snapshot](../releases/snapshots/3.7.8.json), [installation report](../reports/daji-3.7.8-local-rebuild-20261104.md) |
+| Previous installed baseline | `3.7.7`, November 4 | [Historical installation report](../reports/daji-3.7.7-local-rebuild-20261104.md) |
+| Latest version-named Git checkpoint | `fb93e316`, subject `daji 3.7.8` | Git history; not by itself an installation |
+| Source provenance | `fb93e316` plus version-alignment and local packaging evidence | Working-tree build, not a clean release commit |
 | CI versus local evidence | Committed Bandit/CI fixes are separate from local overlay verification | Do not attribute remote CI results to uncommitted code |
 
 A commit subject does not update package metadata or installed files. The last
@@ -36,7 +36,8 @@ execution/publication in Engine and Agent; the GUI is not runtime authority.
 | Workspace store | Project-scoped browsing, filtering and package details with backend integration contracts | Self-host source support; production account/subscription/publishing integration is not claimed complete. [Contract](operator-store-integration.html) |
 | PWDT package identity | Match recipe/runtime source and version exactly before using a stored script | Reject mismatched provenance rather than falling back to another catalog; PWDT remains GUI automation, not the Headless SDK |
 | Model API connection | Model discovery/manual selection, native same-origin gateway, cancellation, endpoint-change fencing and memory-only keys | Workbench browser/native tests plus one bounded real OpenAI plan request on November 4; no automatic action execution, no scientific qualification. [Guide](book-ch07-trust-and-safety.html#model-api-connection) |
-| Distribution alignment | Package, SDK metadata, language targets, book and local build target agree on 3.7.7 | Three independent macOS arm64 apps and native runtime; installation results stay in the current snapshot, not inferred from manifests |
+| Model configuration and bounded research | Grouped service/model controls, collapsed details, searchable catalog, stale-response and locale-notice fixes; Rust SDK boundary-case identities and numerical-band classification | Production export checked at desktop/mobile widths; a separate 26-workflow synthetic research round passed deterministic gates and advisory review. Not general material qualification. [Research evidence](../reports/model-research-boundary-and-connection-20261104.md) |
+| Distribution alignment | Package, SDK metadata, language targets, book and local build target agree on 3.7.8 | Three independent macOS arm64 apps and native runtime; installation results stay in the current snapshot, not inferred from manifests |
 | Harmonic assembly and arithmetic | Preserve coefficient/product tails, original-equation checks and checked complex ranges | Selected source kernels and manufactured/physical fixtures, not general physical qualification |
 | Workflow payload ownership | Move owned inputs and final-port values without redundant copies | In-process ownership; required independent retained copies remain |
 | Workflow cancellation | Poll admission, node and completion boundaries even under skip policy | Cooperative local cancellation, not preemption of opaque callbacks |

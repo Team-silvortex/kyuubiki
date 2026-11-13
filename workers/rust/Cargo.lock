@@ -575,7 +575,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-agent-transport"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "rcgen",
  "rustls",
@@ -588,7 +588,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-benchmark"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-headless-sdk",
@@ -602,7 +602,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-cli"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "ctrlc",
  "fs2",
@@ -624,14 +624,14 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-deploy-server"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -641,15 +641,19 @@ dependencies = [
  "kyuubiki-protocol",
  "libc",
  "rcgen",
+ "ring",
+ "rustls",
  "serde",
  "serde_json",
  "sha2",
  "ureq",
+ "url",
+ "zeroize",
 ]
 
 [[package]]
 name = "kyuubiki-engine"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
@@ -662,7 +666,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-headless-sdk"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-protocol",
  "serde",
@@ -672,8 +676,9 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-installer"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
+ "fs2",
  "kyuubiki-engine",
  "kyuubiki-operator-sdk",
  "kyuubiki-platform",
@@ -686,7 +691,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-kcore"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-headless-sdk",
  "serde",
@@ -697,7 +702,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-operator-sdk"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
@@ -706,8 +711,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "kyuubiki-operator-thermal-q9"
+version = "3.7.8"
+dependencies = [
+ "kyuubiki-operator-sdk",
+ "kyuubiki-protocol",
+ "kyuubiki-solver",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "kyuubiki-platform"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
@@ -715,7 +731,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-project-automation"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "chrono",
  "kyuubiki-headless-sdk",
@@ -726,7 +742,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-project-bundle"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "chrono",
  "serde",
@@ -738,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-protocol"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -747,7 +763,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-script-runner"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "fs2",
  "getrandom 0.4.3",
@@ -769,7 +785,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-solver"
-version = "3.7.7"
+version = "3.7.8"
 dependencies = [
  "kyuubiki-protocol",
  "libc",

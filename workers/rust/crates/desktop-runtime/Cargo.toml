@@ -12,10 +12,14 @@ fs2 = "0.4"
 kyuubiki-platform = { path = "../platform" }
 kyuubiki-protocol = { path = "../protocol" }
 libc = "0.2"
+ring = "0.17"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.10"
 ureq = { version = "3.4", default-features = false, features = ["json", "rustls"] }
+url = "2"
+zeroize = "1"
 
 [dev-dependencies]
 rcgen = "0.14"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }

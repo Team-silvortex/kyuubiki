@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/heat-to-thermal-q9-nodal.schema.json",
+  "title": "Matching-node Q4 heat to Q9 thermoelastic transfer v1",
+  "description": "Operator payload, wrapped in {payload, config:{}} at the JSON operator ABI. Semantic validation requires one unique heat node per target ID with identical coordinates, and four oriented Q4 subcells of equal thickness per Q9 cell. Source results are not a proof of provenance or physical accuracy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "temperature_unit", "reference_temperature", "heat_result", "seed_model"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.heat-to-thermal-q9-nodal/v1"},
+    "temperature_unit": {"const": "kelvin"},
+    "reference_temperature": {"type": "number", "minimum": 0},
+    "heat_result": {"$ref": "#/$defs/heatResult"},
+    "seed_model": {"$ref": "thermal-q9-rect-input.schema.json"}
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 128,
+      "description": "Unique in its collection; runtime also enforces 128 UTF-8 bytes."},
+    "index": {"type": "integer", "minimum": 0, "maximum": 4095},
+    "heatNode": {
+      "type": "object", "required": ["id", "x", "y", "fix_temperature"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "x": {"type": "number"}, "y": {"type": "number"},
+        "fix_temperature": {"type": "boolean"},
+        "temperature": {"type": "number", "default": 0,
+          "description": "Native heat input: fixed nodes prescribe nonnegative Kelvin; free-node input is not a solved temperature."},
+        "heat_load": {"type": "number", "default": 0}
+      }
+    },
+    "heatNodeResult": {
+      "type": "object", "required": ["index", "id", "x", "y", "temperature", "heat_load"],
+      "properties": {
+        "index": {"$ref": "#/$defs/index"}, "id": {"$ref": "#/$defs/id"},
+        "x": {"type": "number"}, "y": {"type": "number"},
+        "temperature": {"type": "number", "minimum": 0}, "heat_load": {"type": "number"}
+      }
+    },
+    "heatElement": {
+      "type": "object",
+      "required": ["id", "node_i", "node_j", "node_k", "node_l", "conductivity", "thickness"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "node_i": {"$ref": "#/$defs/index"}, "node_j": {"$ref": "#/$defs/index"},
+        "node_k": {"$ref": "#/$defs/index"}, "node_l": {"$ref": "#/$defs/index"},
+        "conductivity": {"type": "number", "exclusiveMinimum": 0},
+        "thickness": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "heatElementResult": {
+      "type": "object",
+      "required": ["index", "id", "node_i", "node_j", "node_k", "node_l", "area", "average_temperature", "temperature_gradient_x", "temperature_gradient_y", "heat_flux_x", "heat_flux_y", "heat_flux_magnitude", "heat_flow_rate"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0, "maximum": 2047}, "id": {"$ref": "#/$defs/id"},
+        "node_i": {"$ref": "#/$defs/index"}, "node_j": {"$ref": "#/$defs/index"},
+        "node_k": {"$ref": "#/$defs/index"}, "node_l": {"$ref": "#/$defs/index"},
+        "area": {"type": "number", "exclusiveMinimum": 0},
+        "average_temperature": {"type": "number", "minimum": 0},
+        "temperature_gradient_x": {"type": "number"}, "temperature_gradient_y": {"type": "number"},
+        "heat_flux_x": {"type": "number"}, "heat_flux_y": {"type": "number"},
+        "heat_flux_magnitude": {"type": "number", "minimum": 0}, "heat_flow_rate": {"type": "number"}
+      }
+    },
+    "heatResult": {
+      "type": "object",
+      "required": ["input", "nodes", "elements", "max_temperature", "max_heat_flux", "total_abs_heat_flow_rate"],
+      "properties": {
+        "input": {
+          "type": "object", "required": ["nodes", "elements"],
+          "properties": {
+            "nodes": {"type": "array", "minItems": 9, "maxItems": 4096, "items": {"$ref": "#/$defs/heatNode"}},
+            "elements": {"type": "array", "minItems": 4, "maxItems": 2048, "items": {"$ref": "#/$defs/heatElement"}},
+            "contact_interfaces": {"type": "array", "maxItems": 0}
+          }
+        },
+        "nodes": {"type": "array", "minItems": 9, "maxItems": 4096, "items": {"$ref": "#/$defs/heatNodeResult"}},
+        "elements": {"type": "array", "minItems": 4, "maxItems": 2048, "items": {"$ref": "#/$defs/heatElementResult"}},
+        "contact_interfaces": {"type": "array", "maxItems": 0},
+        "max_temperature": {"type": "number", "minimum": 0},
+        "max_heat_flux": {"type": "number", "minimum": 0},
+        "total_abs_heat_flow_rate": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}

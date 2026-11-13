@@ -18,6 +18,8 @@ static NEXT_JOB_ID: AtomicU64 = AtomicU64::new(1);
 
 #[path = "direct_mesh_api_security.rs"]
 mod api_security;
+#[path = "direct_mesh_package_gateway.rs"]
+mod packages;
 #[path = "direct_mesh_recovery_gateway.rs"]
 mod recovery;
 
@@ -75,6 +77,7 @@ impl DirectMeshGateway {
         }
         match (request.method.as_str(), request.path.as_str()) {
             ("POST", "/api/direct-mesh/agents") => self.inspect_agents(request),
+            ("POST", "/api/direct-mesh/operator-package") => self.package_deployment(request),
             ("POST", "/api/direct-mesh/solve") => self.run_study(request),
             ("POST", "/api/direct-mesh/tasks") => self.durable_task(request, true),
             ("POST", "/api/direct-mesh/tasks/inspect") => self.durable_task(request, false),
@@ -185,7 +188,7 @@ impl DirectMeshGateway {
             let method = match body
                 .get("study_kind")
                 .and_then(Value::as_str)
-                .and_then(method_for_study)
+                .and_then(method_for_durable_task)
             {
                 Some(method) => method,
                 None => {
@@ -196,6 +199,12 @@ impl DirectMeshGateway {
                 Some(Value::Object(input)) => Value::Object(input.clone()),
                 _ => return json_response(400, json!({"error":"input must be an object"})),
             };
+            if method == "run_operator_task_ir" && !valid_project_task_input(&input) {
+                return json_response(
+                    400,
+                    json!({"error":"invalid_prepared_operator_task","dispatched":false}),
+                );
+            }
             (
                 "submit_durable_agent_task",
                 json!({"execution_id":id, "method":method, "params":input}),
@@ -592,6 +601,32 @@ fn bool_env(name: &str) -> Result<Option<bool>, String> {
     }
 }
 
+pub(crate) fn method_for_durable_task(kind: &str) -> Option<&'static str> {
+    if kind == "operator_task" {
+        Some("run_operator_task_ir")
+    } else {
+        method_for_study(kind)
+    }
+}
+fn valid_project_task_input(input: &Value) -> bool {
+    use kyuubiki_protocol::{
+        build_operator_task_admission_report, summarize_operator_task_execution_checked,
+        verify_operator_task_digest,
+    };
+    if input.as_object().is_none_or(|m| m.len() != 2)
+        || input["mode"] != "execute"
+        || serde_json::to_vec(input).map_or(true, |v| v.len() > 131072)
+    {
+        return false;
+    }
+    let task = &input["task_ir"];
+    verify_operator_task_digest(task).is_ok()
+        && summarize_operator_task_execution_checked(task).is_ok_and(|s| {
+            s.authority_mode.as_deref() == Some("agent_local")
+                && s.execution_mode.as_deref() == Some("local_bundle")
+                && build_operator_task_admission_report(task, &s).accepted
+        })
+}
 pub(crate) fn method_for_study(kind: &str) -> Option<&'static str> {
     Some(match kind {
         "axial_bar_1d" => "solve_bar_1d",

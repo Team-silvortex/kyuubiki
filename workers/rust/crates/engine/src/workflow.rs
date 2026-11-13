@@ -4,7 +4,8 @@ use crate::workflow_execution_plan::{WorkflowExecutionPlan, WorkflowPlannedEdge}
 use crate::workflow_executor::{
     artifact_key, evaluate_condition_operator, run_export_operator, run_extract_operator,
     run_solve_operator, run_transform_operator, transform_operator_accepts_input_envelope,
-    transform_operator_accepts_partial_inputs, transform_operator_requires_port_map,
+    transform_operator_accepts_partial_inputs, transform_operator_accepts_seed_input,
+    transform_operator_requires_port_map,
 };
 use crate::workflow_security::{validate_workflow_artifact_budget, validate_workflow_security};
 use kyuubiki_protocol::{
@@ -227,7 +228,10 @@ pub fn run_workflow_graph_with_options(
                             &mut artifacts,
                             &artifact_retention,
                         )?
-                    } else if transform_operator_requires_port_map(operator_id) {
+                    } else if transform_operator_requires_port_map(operator_id)
+                        && (!transform_operator_accepts_seed_input(operator_id)
+                            || node.inputs.iter().any(|port| port.id == "seed_model"))
+                    {
                         resolve_named_input_payloads_for_execution(
                             node,
                             incoming,

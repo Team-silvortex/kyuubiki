@@ -1,5 +1,48 @@
 use super::*;
 
+#[test]
+fn prepared_project_operator_uses_durable_task_route_and_rejects_tampered_input() {
+    use kyuubiki_protocol::{
+        ProjectOperatorEntry, ProjectOperatorPin, build_project_operator_task,
+    };
+    let pin = ProjectOperatorPin {
+        package_id: "operator.demo".into(),
+        package_version: "1.0.0".into(),
+        manifest_sha256: "a".repeat(64),
+        entrypoint_sha256: "b".repeat(64),
+        operators: vec![ProjectOperatorEntry {
+            operator_id: "extract.demo".into(),
+            kind: "extract".into(),
+        }],
+    };
+    let task = build_project_operator_task("p", &pin, "extract.demo", "task", json!({}), json!({}))
+        .unwrap();
+    let mut body = input();
+    body["study_kind"] = json!("operator_task");
+    body["input"] = json!({"mode":"execute","task_ir":task});
+    let (response, _) = exchange("/api/direct-mesh/tasks", body.clone(), |r| {
+        r["method"] = json!("run_operator_task_ir");
+    });
+    assert_eq!(
+        response.status,
+        200,
+        "{}",
+        String::from_utf8_lossy(&response.body)
+    );
+    let g = gateway(vec!["127.0.0.1:1".into()]);
+    body["input"]["task_ir"]["input_artifact"] = json!({"tamper":true});
+    assert_eq!(
+        g.handle(&request("/api/direct-mesh/tasks", body.clone()))
+            .status,
+        400
+    );
+    assert_eq!(
+        g.handle(&request("/api/direct-mesh/solve", body)).status,
+        400,
+        "legacy solver route cannot execute package tasks"
+    );
+}
+
 fn exchange(
     path: &str,
     body: Value,

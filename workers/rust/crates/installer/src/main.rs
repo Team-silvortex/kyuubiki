@@ -34,6 +34,36 @@ fn main() {
 
     match command.as_str() {
         "help" | "--help" | "-h" => print_help(),
+        "project-operator" => {
+            exit_on_err(kyuubiki_installer::project_operator_command(args.collect()))
+        }
+        "prepare-operator-distribution" => {
+            let values: Vec<_> = args.collect();
+            let result = (|| {
+                if values.len() < 3 {
+                    return Err("usage: prepare-operator-distribution <manifest> <output> <rust-target>=<library> ...".to_string());
+                }
+                let artifacts = values[2..]
+                    .iter()
+                    .map(|value| {
+                        let (rust_target, library_path) = value
+                            .split_once('=')
+                            .ok_or("artifact requires rust-target=library")?;
+                        Ok(kyuubiki_installer::OperatorReleaseArtifact {
+                            rust_target: rust_target.into(),
+                            library_path: PathBuf::from(library_path),
+                        })
+                    })
+                    .collect::<Result<Vec<_>, String>>()?;
+                let distribution = kyuubiki_installer::prepare_operator_distribution(
+                    &PathBuf::from(&values[0]),
+                    &artifacts,
+                    &PathBuf::from(&values[1]),
+                )?;
+                serde_json::to_string_pretty(&distribution).map_err(|e| e.to_string())
+            })();
+            exit_on_err(result);
+        }
         "doctor" => run_doctor(),
         "installation-integrity" => println!("{}", installation_integrity_report().render()),
         "credential-storage" => println!("{}", credential_storage_contract().render()),
@@ -399,6 +429,32 @@ fn main() {
             ),
             Err(error) => exit_on_err(Err(error)),
         },
+        "install-store-operator" => {
+            use std::io::Read;
+            let result = (|| {
+                let root = args.next().ok_or("missing store download root")?;
+                let store = parse_operator_package_store_flag(args.collect())?
+                    .map(Ok)
+                    .unwrap_or_else(kyuubiki_installer::operator_package_store_root)?;
+                let mut bytes = Vec::new();
+                std::io::stdin()
+                    .take(16385)
+                    .read_to_end(&mut bytes)
+                    .map_err(|e| e.to_string())?;
+                if bytes.len() > 16384 {
+                    return Err("store install request too large".into());
+                }
+                let request = serde_json::from_slice(&bytes)
+                    .map_err(|e| format!("invalid store install request: {e}"))?;
+                kyuubiki_installer::install_store_operator_into(
+                    &PathBuf::from(root),
+                    &store,
+                    &request,
+                )
+                .and_then(pretty_json)
+            })();
+            exit_on_err(result);
+        }
         "install-operator-package" => {
             let Some(package_root) = args.next() else {
                 exit_on_err(Err(

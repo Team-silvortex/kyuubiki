@@ -45,6 +45,7 @@ pub(crate) struct ExternalOperatorExecution {
 }
 
 struct LoadedOperatorPackage {
+    project_pin: kyuubiki_protocol::ProjectOperatorPin,
     package_id: String,
     package_version: String,
     sdk_api_version: String,
@@ -152,6 +153,21 @@ fn load_operator_package_runtime(
                 .map(|operator| (operator.operator_id.clone(), operator.kind.clone()))
                 .collect();
             Ok(LoadedOperatorPackage {
+                project_pin: kyuubiki_protocol::ProjectOperatorPin {
+                    package_id: plan.manifest.package_id.clone(),
+                    package_version: plan.manifest.package_version.clone(),
+                    manifest_sha256: sha256_file(&plan.manifest_path)?,
+                    entrypoint_sha256: sha256_file(&plan.entrypoint_path)?,
+                    operators: plan
+                        .manifest
+                        .operators
+                        .iter()
+                        .map(|o| kyuubiki_protocol::ProjectOperatorEntry {
+                            operator_id: o.operator_id.clone(),
+                            kind: o.kind.clone(),
+                        })
+                        .collect(),
+                },
                 package_id: plan.manifest.package_id.clone(),
                 package_version: plan.manifest.package_version.clone(),
                 sdk_api_version: plan.manifest.sdk_api_version.clone(),
@@ -215,6 +231,17 @@ pub(crate) fn current_runtime_binding() -> OperatorPackageRuntimeBinding {
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .binding
         .clone()
+}
+
+pub(crate) fn active_project_pin(id: &str) -> Option<kyuubiki_protocol::ProjectOperatorPin> {
+    let state = runtime_state().read().ok()?;
+    state
+        .host
+        .as_ref()?
+        .packages
+        .iter()
+        .find(|p| p.package_id == id)
+        .map(|p| p.project_pin.clone())
 }
 
 pub(crate) fn prepared_operator_package_runtime_for_task(

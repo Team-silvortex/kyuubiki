@@ -14,6 +14,9 @@ import { normalizeDesktopPlatform } from "./shared/platform.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 import { loadDesktopLanguagePack } from "./shared/language-pack-loader.js";
 import { installWorkbenchPanelLayoutHost } from "./shared/workbench-panel-layout-bridge.js";
+import { installStoreAccountHost } from "./shared/store-account-bridge.js";
+import { installStoreIdentityHost } from "./shared/store-identity-bridge.js";
+import { installStoreDownloadHost } from "./shared/store-download-bridge.js";
 import { installWorkbenchCheckpointHost } from "./shared/checkpoint-recovery-bridge.js";
 import { installDirectExecutionJournalHost } from "./shared/direct-execution-journal-bridge.js";
 
@@ -535,6 +538,9 @@ watchDesktopLanguagePreference({
 });
 
 installWorkbenchPanelLayoutHost(elements.frame, invokeTauri);
+installStoreAccountHost(elements.frame, invokeTauri);
+installStoreIdentityHost(elements.frame, invokeTauri);
+installStoreDownloadHost(elements.frame, invokeTauri);
 installWorkbenchCheckpointHost(elements.frame, invokeTauri);
 installDirectExecutionJournalHost(elements.frame, invokeTauri);
 

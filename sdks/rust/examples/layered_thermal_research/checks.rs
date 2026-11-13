@@ -45,6 +45,17 @@ pub fn validate(case: Case, result: &Value) -> Result<Value, String> {
         }
     }
     let mut gates = vec![];
+    let mut transverse_error = 0.0_f64;
+    for node in structure["nodes"]
+        .as_array()
+        .ok_or("structure: missing nodes")?
+    {
+        transverse_error = transverse_error.max(number(node, "uy")?.abs());
+    }
+    gates.push(
+        json!({"id":"transverse_constraint", "max_abs_error":transverse_error,
+        "tolerance":1e-12, "passed":transverse_error <= 1e-12}),
+    );
     for (name, artifact, field, tolerance, expected) in [
         (
             "heat_temperature",
@@ -108,7 +119,7 @@ pub fn validate(case: Case, result: &Value) -> Result<Value, String> {
     );
     Ok(
         json!({"case": case.id(), "material": case.material, "refinement": case.refinement,
-        "reference_temperature": case.reference, "temperature_rise": case.rise,
+        "reference_temperature": case.reference, "temperature_rise": case.rise, "cold_offset":case.cold_offset,
         "node_count": expected_count, "expected_flux": case.flux(),
         "expected_tip_displacement": case.displacement(1.0), "gates": gates,
         "passed": gates.iter().all(|g| g["passed"] == true)}),

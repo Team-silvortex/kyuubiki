@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-11-04T10:35:42Z",
-  "shipping_version": "3.7.7",
+  "generated_at": "2026-11-04T11:54:50Z",
+  "shipping_version": "3.7.8",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -17,12 +17,12 @@
         "daji:latest",
         "daji:3",
         "daji:3.7",
-        "daji:3.7.7"
+        "daji:3.7.8"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.7.7",
-      "summary": "Align the existing Daji 3.7.7 checkpoint across packages, SDK metadata, documentation and local installation inputs; integrate scoped workflow recovery, Agent TLS/token, workspace store/PWDT and model API work.",
+      "version": "3.7.8",
+      "summary": "Align Daji 3.7.8 and rebuild the native macOS runtime and three independent shells with grouped model configuration and research boundary fixes.",
       "date": "2026-11-04",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
@@ -65,7 +65,7 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.7.7.json",
+      "snapshot_path": "releases/snapshots/3.7.8.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -77,12 +77,12 @@
   ],
   "versions": [
     {
-      "version": "3.7.7",
+      "version": "3.7.8",
       "line": "3.x",
       "status": "current",
       "date": "2026-11-04",
-      "summary": "Align the existing Daji 3.7.7 checkpoint across packages, SDK metadata, documentation and local installation inputs; integrate scoped workflow recovery, Agent TLS/token, workspace store/PWDT and model API work.",
-      "snapshot_path": "releases/snapshots/3.7.7.json",
+      "summary": "Align Daji 3.7.8 and rebuild the native macOS runtime and three independent shells with grouped model configuration and research boundary fixes.",
+      "snapshot_path": "releases/snapshots/3.7.8.json",
       "channels": [
         "stable"
       ],
@@ -91,8 +91,20 @@
         "daji:latest",
         "daji:3",
         "daji:3.7",
-        "daji:3.7.7"
+        "daji:3.7.8"
       ],
+      "product_surfaces": {},
+      "desktop_artifacts": []
+    },
+    {
+      "version": "3.7.7",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-11-04",
+      "summary": "Align the existing Daji 3.7.7 checkpoint across packages, SDK metadata, documentation and local installation inputs; integrate scoped workflow recovery, Agent TLS/token, workspace store/PWDT and model API work.",
+      "snapshot_path": "releases/snapshots/3.7.7.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {},
       "desktop_artifacts": []
     },

@@ -52,3 +52,23 @@ commands.allow = ["list_checkpoint_intents", "reserve_checkpoint_intent", "remov
 identifier = "allow-direct-execution-journal"
 description = "Manage bounded direct execution identities in a fixed application-owned journal, never model inputs or credentials."
 commands.allow = ["direct_execution_journal"]
+
+[[permission]]
+identifier = "allow-open-store-account-portal"
+description = "Open only the fixed account page at an explicit validated HTTPS origin; no arbitrary redirect, credentials or shell command."
+commands.allow = ["open_store_account_portal"]
+
+[[permission]]
+identifier = "allow-store-download"
+description = "Browse the account store, download bounded signed releases and explicitly install verified local operator packages without activation."
+commands.allow = ["store_download", "store_catalog"]
+
+[[permission]]
+identifier = "allow-store-identity"
+description = "Manage a memory-only native OIDC session through bounded actions; never expose credentials to the page."
+commands.allow = ["store_identity"]
+
+[[permission]]
+identifier = "allow-project-operator"
+description = "Verify installed operator bytes, manage explicit project pins and prepare TaskIR. No account access, arbitrary paths, Agent startup or execution."
+commands.allow = ["project_operator"]

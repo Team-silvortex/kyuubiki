@@ -58,6 +58,13 @@ defmodule KyuubikiWeb.WorkflowGraphInputs do
       when id in @named_operators,
       do: true
 
+  def named_inputs?(%{"kind" => "transform", "operator_id" => id} = node)
+      when id in [
+             "bridge.temperature_field_to_thermo_quad_2d",
+             "bridge.temperature_field_to_thermo_triangle_2d"
+           ],
+      do: Enum.any?(Map.get(node, "inputs", []), &(&1["id"] == "seed_model"))
+
   def named_inputs?(_node), do: false
 
   def input_envelope?(%{"kind" => "transform", "operator_id" => id})

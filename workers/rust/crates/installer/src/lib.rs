@@ -33,9 +33,14 @@ mod integrity;
 mod integrity_contract;
 mod integrity_versions;
 mod linux_desktop_dependencies;
+mod operator_deployment;
 mod operator_package_fetch;
 mod operator_package_preflight;
 mod operator_package_store;
+mod operator_release;
+mod operator_release_binary;
+mod project_operator;
+pub use operator_deployment::operator_deployment_in;
 mod release;
 mod remote_deployment;
 mod remote_deployment_artifacts;
@@ -50,6 +55,8 @@ mod remote_ssh_fixture;
 mod runtime_payload;
 mod runtime_payload_qualification;
 mod runtime_payload_qualification_validation;
+mod store_operator_install;
+pub use project_operator::{project_operator, project_operator_command, project_operator_in};
 #[cfg(test)]
 mod tests;
 mod update_catalog;
@@ -72,6 +79,8 @@ pub use operator_package_store::{
     managed_operator_package_status_in, operator_package_store_root, uninstall_operator_package,
     uninstall_operator_package_from, verify_managed_operator_package,
 };
+pub use operator_release::{OperatorReleaseArtifact, prepare_operator_distribution};
+pub use store_operator_install::{StoreOperatorInstallRequest, install_store_operator_into};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DoctorCheck {

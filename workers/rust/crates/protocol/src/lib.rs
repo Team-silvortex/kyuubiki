@@ -10,9 +10,14 @@ mod durable_agent_execution;
 mod graph_entity_input;
 mod job;
 mod operator;
+mod operator_deployment;
 mod operator_task_admission;
 mod operator_task_ir;
+mod project_operator;
+pub use operator_deployment::*;
 mod solver_execution_capability;
+mod store_install;
+pub use project_operator::*;
 mod task_digest_v2;
 mod workflow;
 
@@ -37,6 +42,7 @@ mod types {
     pub mod rpc;
     pub mod rpc_descriptor;
     pub mod space_structural;
+    pub mod thermal_q9;
     pub mod transport_results;
 }
 
@@ -112,6 +118,7 @@ pub use types::plane_frame::*;
 pub use types::plane_results::*;
 pub use types::rpc::*;
 pub use types::space_structural::*;
+pub use types::thermal_q9::*;
 pub use types::transport_results::*;
 pub use workflow::{
     CoupledWorkflowDescriptor, CoupledWorkflowKind, CoupledWorkflowRequest, CoupledWorkflowResult,
@@ -130,6 +137,7 @@ pub use workflow::{
 };
 
 pub const RPC_VERSION: u8 = 1;
+pub use store_install::{StoreInstallFile, StoreOperatorInstallRequest};
 pub const SOLVER_RPC_PROTOCOL: &str = "kyuubiki.solver-rpc/v1";
 pub const CONTROL_PLANE_PROTOCOL: &str = "kyuubiki.control-plane/http-v1";
 

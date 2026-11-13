@@ -29,7 +29,7 @@ function readStoredControlMode(): FrontendRuntimeMode | null {
   }
 }
 
-function readFrontendRuntimeModeFromWindow(): FrontendRuntimeMode {
+export function readFrontendRuntimeModeFromWindow(): FrontendRuntimeMode {
   return readStoredControlMode() ?? "orchestrated_gui";
 }
 

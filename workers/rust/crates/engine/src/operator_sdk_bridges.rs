@@ -42,6 +42,43 @@ struct MagnetostaticToHeatQuadBridgeOperator {
     descriptor: OperatorDescriptor,
 }
 
+fn heat_seed_inputs(
+    mut input: WorkflowOperatorEnvelope,
+    operator_id: &str,
+) -> Result<WorkflowOperatorEnvelope, OperatorSdkError> {
+    if input.payload.get("heat_result").is_none() && input.payload.get("seed_model").is_none() {
+        return Ok(input);
+    }
+    let valid = input.payload.as_object().is_some_and(|ports| {
+        ports.len() == 2
+            && ports
+                .get("heat_result")
+                .is_some_and(serde_json::Value::is_object)
+            && ports
+                .get("seed_model")
+                .is_some_and(serde_json::Value::is_object)
+    }) && input.config.as_object().is_some_and(|config| {
+        !["seed_model", "nodes", "elements"]
+            .iter()
+            .any(|key| config.contains_key(*key))
+    });
+    if !valid {
+        return Err(OperatorSdkError::DecodeInput {
+            operator_id: operator_id.to_string(),
+            message: "expected heat_result and seed_model input objects, with no seed in config"
+                .into(),
+        });
+    }
+    // Move the data-plane seed into the existing bridge adapter, without cloning the mesh.
+    let ports = input
+        .payload
+        .as_object_mut()
+        .expect("validated input ports");
+    input.config["seed_model"] = ports.remove("seed_model").expect("validated seed");
+    input.payload = ports.remove("heat_result").expect("validated heat result");
+    Ok(input)
+}
+
 impl JsonOperator for HeatToThermoQuadBridgeOperator {
     type Input = WorkflowOperatorEnvelope;
 
@@ -54,6 +91,7 @@ impl JsonOperator for HeatToThermoQuadBridgeOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
+        let input = heat_seed_inputs(input, &self.descriptor.id)?;
         let heat_result: SolveHeatPlaneQuad2dResult = serde_json::from_value(input.payload)
             .map_err(|error| OperatorSdkError::DecodeInput {
                 operator_id: self.descriptor.id.clone(),
@@ -106,6 +144,7 @@ impl JsonOperator for HeatToThermoTriangleBridgeOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
+        let input = heat_seed_inputs(input, &self.descriptor.id)?;
         let heat_result: SolveHeatPlaneTriangle2dResult = serde_json::from_value(input.payload)
             .map_err(|error| OperatorSdkError::DecodeInput {
                 operator_id: self.descriptor.id.clone(),

@@ -1,4 +1,4 @@
-import { directMeshMethodForStudyKind, normalizeDirectMeshStudyInput, type DirectMeshStudyKind } from "../runtime-gateway/direct-mesh-study-contract.ts";
+import { durableTaskMethod as directMeshMethodForStudyKind, normalizeDurableTaskInput as normalizeDirectMeshStudyInput, type DurableTaskKind as DirectMeshStudyKind } from "../runtime-gateway/durable-task-contract.ts";
 
 export const DURABLE_DIRECT_SCHEMA = "kyuubiki.agent-durable-execution/v1";
 export const DURABLE_DIRECT_REJECTION_SCHEMA = "kyuubiki.agent-durable-admission-rejection/v1";

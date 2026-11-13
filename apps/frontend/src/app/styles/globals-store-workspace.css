@@ -31,9 +31,48 @@
 .store-filter-grid { display: grid; gap: 8px; margin-top: 8px; }
 .store-marketplace-dialog .store-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .store-filter-grid select { min-width: 0; width: 100%; }
+.store-account { display: grid; min-width: 0; align-content: start; gap: 12px; }
+.store-account .card-copy { display: block; margin: 0; }
+.workbench-shell[data-workbench-window-mode] .store-account .card-copy { display: block; }
+.store-account input { width: 100%; min-width: 0; }
+.store-account .card-head { flex-wrap: wrap; }
+.store-account .button-row { flex-wrap: wrap; }
+.store-account .ghost-button { white-space: normal; text-decoration: none; }
+.store-account-destination { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.store-account-destination code { overflow-wrap: anywhere; font-size: 0.85rem; }
+.store-account-destination a { justify-self: start; }
+.store-account-steps { margin: 0; padding-left: 24px; display: grid; gap: 12px; }
+.store-account-steps li { padding-left: 4px; min-width: 0; }
+.store-account-steps p { margin: 4px 0 0; }
+.store-account-session { padding-top: 12px; border-top: 1px solid var(--line); }
+.store-marketplace-dialog .store-account { max-width: 920px; }
+@media (min-width: 900px) {
+  .store-marketplace-dialog .store-account-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+}
 @media (max-width: 600px) {
   .store-marketplace-dialog { width: calc(100vw - 12px); height: calc(100dvh - 12px); }
   .store-marketplace-dialog .workbench-panel-pages { padding: 8px; }
   .store-marketplace-dialog .store-filter-grid { grid-template-columns: 1fr; }
   .store-workspace-header { padding: 8px; }
 }
+.store-identity-settings { margin-block: 12px; }
+.store-identity-settings summary { cursor: pointer; font-weight: 600; padding-block: 8px; }
+.store-identity-fields { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 12px; }
+.store-identity-fields .form-field, .store-identity-fields input, .store-identity-fields textarea { min-width: 0; width: 100%; box-sizing: border-box; }
+.store-identity-fields textarea { resize: vertical; font-family: monospace; }
+.store-account-session code { overflow-wrap: anywhere; }
+.store-download-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
+.store-download-list { display: grid; gap: 12px; }
+.store-download-record { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.store-download-record strong, .store-download-record code { overflow-wrap: anywhere; }
+.store-download-record .status-pill { white-space: normal; }
+.store-download-record progress { width: 100%; accent-color: var(--accent, #70bfff); }
+.store-downloads select { width: 100%; min-width: 0; }
+/* Keep account-store navigation a compact list, not another full-height card grid. */
+.store-hosted-catalog { padding-block: 12px; border-block: 1px solid var(--line); min-width: 0; }
+.store-catalog-search { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.store-catalog-search .form-field { flex: 1 1 220px; min-width: 0; }
+.store-hosted-catalog-list { list-style: none; padding: 0; margin: 12px 0; }
+.store-hosted-catalog-list li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.store-hosted-catalog-list li > div { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.store-hosted-catalog-list code { display: block; overflow-wrap: anywhere; }

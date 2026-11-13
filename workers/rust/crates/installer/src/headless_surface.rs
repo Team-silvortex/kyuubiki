@@ -49,6 +49,11 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
         crate_name: "kyuubiki-installer",
         entrypoints: vec![
             InstallerHeadlessEntrypoint {
+                id: "operator_release",
+                role: "Prepare bounded immutable cross-target operator candidates without executing or publishing code.",
+                exports: &["prepare_operator_distribution"],
+            },
+            InstallerHeadlessEntrypoint {
                 id: "integrity",
                 role: "Component integrity, residue cleanup, and visible install rules.",
                 exports: &[

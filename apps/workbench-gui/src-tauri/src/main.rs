@@ -1,13 +1,13 @@
 use kyuubiki_desktop_runtime::{
-    append_desktop_provenance_record,
+    ServiceMode, ServiceStatusSummary, append_desktop_provenance_record,
     prepare_desktop_provenance_ledger,
     read_global_language_preference as desktop_read_global_language_preference,
+    read_runtime_log as read_shared_runtime_log,
     report_packaged_boot_ready as desktop_report_packaged_boot_ready,
-    read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
-    service_start as desktop_service_start, service_status as desktop_service_status,
-    service_stop as desktop_service_stop, summarize_service_status as desktop_summarize_service_status,
-    write_global_language_preference as desktop_write_global_language_preference, ServiceStatusSummary,
-    ServiceMode,
+    service_restart as desktop_service_restart, service_start as desktop_service_start,
+    service_status as desktop_service_status, service_stop as desktop_service_stop,
+    summarize_service_status as desktop_summarize_service_status,
+    write_global_language_preference as desktop_write_global_language_preference,
 };
 use serde::Serialize;
 use serde_json::json;
@@ -38,12 +38,74 @@ struct DesktopPreferencesPayload {
 }
 
 #[tauri::command]
-fn get_workbench_panel_layout() -> Result<Option<kyuubiki_desktop_runtime::WorkbenchPanelLayout>, String> {
+async fn project_operator(
+    request: kyuubiki_desktop_runtime::ProjectOperatorRequest,
+) -> Result<kyuubiki_desktop_runtime::ProjectOperatorStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kyuubiki_desktop_runtime::project_operator(request)
+    })
+    .await
+    .map_err(|_| "project_operator_unavailable".to_string())?
+}
+
+#[tauri::command]
+async fn store_catalog(
+    request: kyuubiki_desktop_runtime::store_download::CatalogRequest,
+    identity: tauri::State<'_, kyuubiki_desktop_runtime::store_identity::StoreIdentity>,
+) -> Result<kyuubiki_desktop_runtime::store_download::CatalogPage, String> {
+    let identity = identity.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        kyuubiki_desktop_runtime::store_download::catalog(&identity, request).map_err(str::to_owned)
+    })
+    .await
+    .map_err(|_| "catalog_unavailable".to_string())?
+}
+
+#[tauri::command]
+async fn store_download(
+    request: kyuubiki_desktop_runtime::store_download::DownloadRequest,
+    downloads: tauri::State<'_, kyuubiki_desktop_runtime::store_download::StoreDownloads>,
+    identity: tauri::State<'_, kyuubiki_desktop_runtime::store_identity::StoreIdentity>,
+) -> Result<Vec<kyuubiki_desktop_runtime::store_download::DownloadView>, String> {
+    let downloads = downloads.inner().clone();
+    let identity = identity.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        downloads.handle(&identity, request).map_err(str::to_owned)
+    })
+    .await
+    .map_err(|_| "download_operation_failed".to_string())?
+}
+
+#[tauri::command]
+async fn store_identity(
+    request: kyuubiki_desktop_runtime::store_identity::IdentityRequest,
+    identity: tauri::State<'_, kyuubiki_desktop_runtime::store_identity::StoreIdentity>,
+) -> Result<kyuubiki_desktop_runtime::store_identity::IdentityStatus, String> {
+    let identity = identity.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || identity.handle(request).map_err(str::to_owned))
+        .await
+        .map_err(|_| "identity_unavailable".to_string())?
+}
+
+#[tauri::command]
+async fn open_store_account_portal(origin: String, language: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        kyuubiki_desktop_runtime::open_store_account_portal(&origin, &language)
+    })
+    .await
+    .map_err(|_| "System browser request failed".to_string())?
+}
+
+#[tauri::command]
+fn get_workbench_panel_layout()
+-> Result<Option<kyuubiki_desktop_runtime::WorkbenchPanelLayout>, String> {
     kyuubiki_desktop_runtime::read_workbench_panel_layout()
 }
 
 #[tauri::command]
-fn direct_execution_journal(payload: kyuubiki_desktop_runtime::DirectExecutionJournalRequest) -> Result<serde_json::Value, String> {
+fn direct_execution_journal(
+    payload: kyuubiki_desktop_runtime::DirectExecutionJournalRequest,
+) -> Result<serde_json::Value, String> {
     kyuubiki_desktop_runtime::direct_execution_journal(payload)
 }
 
@@ -53,7 +115,9 @@ fn list_checkpoint_intents() -> Result<Vec<kyuubiki_desktop_runtime::CheckpointI
 }
 
 #[tauri::command]
-fn reserve_checkpoint_intent(payload: kyuubiki_desktop_runtime::CheckpointIntent) -> Result<kyuubiki_desktop_runtime::CheckpointReservation, String> {
+fn reserve_checkpoint_intent(
+    payload: kyuubiki_desktop_runtime::CheckpointIntent,
+) -> Result<kyuubiki_desktop_runtime::CheckpointReservation, String> {
     kyuubiki_desktop_runtime::reserve_checkpoint_intent(payload)
 }
 
@@ -177,7 +241,8 @@ fn workbench_environment() -> WorkbenchEnvironmentPayload {
     WorkbenchEnvironmentPayload {
         workbench_url: "http://127.0.0.1:3000".to_string(),
         orchestrator_url: "http://127.0.0.1:4000".to_string(),
-        deployment_mode: std::env::var("KYUUBIKI_DEPLOYMENT_MODE").unwrap_or_else(|_| "local".to_string()),
+        deployment_mode: std::env::var("KYUUBIKI_DEPLOYMENT_MODE")
+            .unwrap_or_else(|_| "local".to_string()),
     }
 }
 
@@ -189,7 +254,9 @@ fn get_global_language_preference() -> DesktopPreferencesPayload {
 }
 
 #[tauri::command]
-fn set_global_language_preference(payload: DesktopPreferencesInputPayload) -> Result<DesktopPreferencesPayload, String> {
+fn set_global_language_preference(
+    payload: DesktopPreferencesInputPayload,
+) -> Result<DesktopPreferencesPayload, String> {
     Ok(DesktopPreferencesPayload {
         language: desktop_write_global_language_preference(&payload.language)?,
     })
@@ -197,7 +264,14 @@ fn set_global_language_preference(payload: DesktopPreferencesInputPayload) -> Re
 
 fn main() {
     tauri::Builder::default()
+        .manage(kyuubiki_desktop_runtime::store_identity::StoreIdentity::default())
+        .manage(kyuubiki_desktop_runtime::store_download::StoreDownloads::default())
         .invoke_handler(tauri::generate_handler![
+            open_store_account_portal,
+            store_identity,
+            store_download,
+            project_operator,
+            store_catalog,
             service_status,
             packaged_boot_ready,
             read_runtime_log,

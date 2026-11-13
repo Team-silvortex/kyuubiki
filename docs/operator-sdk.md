@@ -106,6 +106,29 @@ That gives every operator the same broad lifecycle:
 
 ## Operator classes
 
+### Semantic kind versus execution ABI
+
+`kind: solver` describes what an operator does, not necessarily how it runs.
+Registered built-in RPC solvers keep `kyuubiki.solver-rpc/v1`, `solver_rpc` and
+`solver_method`. An external solver with an explicit nonempty `bundle://` or
+`orchestra://` package reference and version can use
+`kyuubiki.operator-execution/v1`, `operator_task` and `operator_id`. Its entrypoint
+name must equal the operator ID; mirror, digest, authority, package identity and
+host-readiness checks still apply. It cannot substitute this ABI for an existing
+native Agent built-in solver; Orchestra also reserves its registered solver IDs.
+
+The optional `operator.thermal-q9-rect` package demonstrates this split without
+adding a Q9 branch to the engine. It remains partially validated: supplied nodal
+temperatures, conforming axis-aligned rectangles, linear plane stress and bounded
+mesh size only. Its package-owned `workflow_bridge.heat_to_thermal_q9_rect_2d`
+accepts native Q4 heat results in Kelvin, with identical node identities and four
+heat subcells per Q9 cell; it does not interpolate arbitrary meshes. See the
+[HTML package guide](research-model-driven.html#q9-package) and
+[bridge contract](../schemas/heat-to-thermal-q9-nodal.schema.json).
+Real-Agent heat/bridge/mechanics sequencing is tested independently from the native
+solver. This does not qualify durable workflow recovery, dynamic-package
+cancellation/progress propagation, or arbitrary multi-material interfaces.
+
 The first useful SDK split is by operator class.
 
 ### `solver`
@@ -409,6 +432,15 @@ rollback yet; cross-platform packages must also carry a valid entrypoint for
 each platform on which they are installed.
 
 ### Orchestra-owned distribution
+
+Prepare release candidates with the native Installer API
+`prepare_operator_distribution(manifest_path, artifacts, output)` or
+`kyuubiki-installer prepare-operator-distribution <manifest> <output> <rust-target>=<library> ...`.
+This copies already-built target libraries, checks bounded binary headers, and
+generates the existing distribution index from actual sizes and hashes. It does
+not load, sign, approve or publish code. Output directories must be new; targets
+are explicit, not inferred from the packager's host. See the
+[cross-platform release guide and backend handoff](operator-store-integration.html#release-build).
 
 Publish-time platform variants use
 `kyuubiki.operator-package-distribution/v1`, separate from the execution

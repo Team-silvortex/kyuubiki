@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
 
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.Orchestra.OperatorTaskAdmission
+  alias KyuubikiWeb.Orchestra.OperatorExecutionProgram
 
   @solver_protocol "kyuubiki.solver-rpc/v1"
   @operator_protocol "kyuubiki.operator-execution/v1"
@@ -43,8 +44,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
            required_string(task, ["execution_program", "entrypoint", "name"]),
          :ok <- validate_program_match(operator_id, operator_kind, program_id, program_kind),
          :ok <- validate_mirror_fields(task, operator_kind),
-         :ok <- validate_execution_abi(program_kind, runtime_protocol, abi_kind, entrypoint_kind),
-         :ok <- validate_entrypoint(program_kind, operator_id, entrypoint_name) do
+         packaged_solver <-
+           OperatorExecutionProgram.packaged_solver?(
+             operator_id,
+             program_kind,
+             task["execution_program"]
+           ),
+         :ok <-
+           validate_execution_abi(
+             program_kind,
+             runtime_protocol,
+             abi_kind,
+             entrypoint_kind,
+             packaged_solver
+           ),
+         :ok <- validate_entrypoint(abi_kind, operator_id, entrypoint_name) do
       summary = %{
         "status" => "verified",
         "task_digest" => task_digest,
@@ -153,16 +167,20 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
       }}}
   end
 
-  defp validate_execution_abi("solver", @solver_protocol, "solver_rpc", "solver_method"), do: :ok
+  defp validate_execution_abi("solver", @solver_protocol, "solver_rpc", "solver_method", _),
+    do: :ok
 
-  defp validate_execution_abi(kind, @operator_protocol, "operator_task", "operator_id")
+  defp validate_execution_abi("solver", @operator_protocol, "operator_task", "operator_id", true),
+    do: :ok
+
+  defp validate_execution_abi(kind, @operator_protocol, "operator_task", "operator_id", _)
        when kind in @operator_kinds,
        do: :ok
 
-  defp validate_execution_abi(_kind, _protocol, _abi, _entrypoint),
+  defp validate_execution_abi(_kind, _protocol, _abi, _entrypoint, _packaged_solver),
     do: {:error, :operator_task_execution_abi_mismatch}
 
-  defp validate_entrypoint("solver", _operator_id, _entrypoint_name), do: :ok
+  defp validate_entrypoint("solver_rpc", _operator_id, _entrypoint_name), do: :ok
   defp validate_entrypoint(_kind, operator_id, operator_id), do: :ok
 
   defp validate_entrypoint(_kind, _operator_id, _entrypoint_name),

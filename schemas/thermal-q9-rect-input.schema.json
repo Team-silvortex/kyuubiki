@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/thermal-q9-rect-input.schema.json",
+  "title": "Rectangular Q9 plane stress input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "nodes", "elements"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.thermal-plane-q9-rect/v1"},
+    "nodes": {"type": "array", "minItems": 9, "maxItems": 4096, "items": {"$ref": "#/$defs/node"}},
+    "elements": {"type": "array", "minItems": 1, "maxItems": 512, "items": {"$ref": "#/$defs/element"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "minLength": 1, "maxLength": 128,
+      "description": "Unique within nodes or elements. The solver additionally enforces a 128-byte UTF-8 limit."},
+    "node": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "x", "y", "load_x", "load_y", "fix_x", "fix_y", "temperature_delta"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "x": {"type": "number"}, "y": {"type": "number"},
+        "load_x": {"type": "number"}, "load_y": {"type": "number"},
+        "fix_x": {"type": "boolean"}, "fix_y": {"type": "boolean"},
+        "temperature_delta": {"type": "number", "description": "Temperature minus the stress-free reference, in K. Not an absolute temperature."}
+      }
+    },
+    "element": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "nodes", "thickness", "youngs_modulus", "poisson_ratio", "thermal_expansion"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "nodes": {"type": "array", "minItems": 9, "maxItems": 9, "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 0, "maximum": 4095},
+          "description": "Zero-based shared indices, row-major 3x3 grid from bottom-left to top-right. Geometry and conformity are checked by the solver."},
+        "thickness": {"type": "number", "exclusiveMinimum": 0},
+        "youngs_modulus": {"type": "number", "exclusiveMinimum": 0},
+        "poisson_ratio": {"type": "number", "exclusiveMinimum": -1, "exclusiveMaximum": 0.5},
+        "thermal_expansion": {"type": "number"}
+      }
+    }
+  }
+}

@@ -30,7 +30,7 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The active profile is `daji-3-7-hardening`; package/book metadata is `3.7.7`.
+The active profile is `daji-3-7-hardening`; package/book metadata is `3.7.8`.
 The [version ledger](current-line.md#version-and-evidence-ledger) distinguishes
 later Git/source work from the recorded installation. The November 4 local
 readback has zero structural gaps, two maturity gaps, 23 evidence-grade gaps

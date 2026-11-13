@@ -245,6 +245,29 @@
   },
   "evidence_claims": [
     {
+      "id": "operator-release-native-candidate",
+      "status": "partial",
+      "grade": "verified",
+      "modules": ["runtime-installer"],
+      "paradigms": ["deployment_update", "validation"],
+      "dimensions": ["execution", "contract", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/installer/src/operator_release.rs",
+        "workers/rust/crates/installer/src/operator_release_binary.rs",
+        "workers/rust/crates/installer/tests/operator_release.rs",
+        "workers/rust/crates/cli/tests/operator_release_live.rs",
+        ".github/workflows/operator-store-release-candidate.yml",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "prepare_operator_distribution",
+        "rejects_identities_that_cannot_be_installed_portably",
+        "prepared_distribution_installs_executes_and_uninstalls_on_native_agent",
+        "Manual candidate generation only; no store credentials or automatic publication.",
+        "这一流程只为仓库内的模板包产生可复现证据"
+      ]
+    },
+    {
       "id": "operator-sdk-authoring-surface-verified",
       "status": "proven",
       "grade": "verified",

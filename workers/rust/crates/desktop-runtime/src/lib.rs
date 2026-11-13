@@ -7,6 +7,13 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 mod audit_log;
+mod native_installer;
+mod project_operator;
+mod store_account;
+pub use project_operator::{ProjectOperatorRequest, ProjectOperatorStatus, project_operator};
+pub mod store_download;
+pub mod store_identity;
+pub use store_account::{open_store_account_portal, store_account_portal_url};
 mod checkpoint_journal;
 mod direct_execution_journal;
 pub use direct_execution_journal::{DirectExecutionJournalRequest, direct_execution_journal};

@@ -1,11 +1,11 @@
 [package]
 name = "kyuubiki-headless-sdk"
-version = "3.7.7"
+version = "3.7.8"
 edition = "2024"
 license = "MIT"
 
 [dependencies]
-kyuubiki-agent-transport = { version = "3.7.7", path = "../../workers/rust/crates/agent-transport" }
+kyuubiki-agent-transport = { version = "3.7.8", path = "../../workers/rust/crates/agent-transport" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["float_roundtrip", "raw_value"] }
 sha2 = "0.10"
@@ -16,6 +16,10 @@ ureq = { version = "3.4", default-features = false, features = ["json", "rustls"
 
 [[example]]
 name = "model_driven_thermal_research"
+test = true
+
+[[example]]
+name = "model_driven_thermal_reference"
 test = true
 
 [profile.dev]

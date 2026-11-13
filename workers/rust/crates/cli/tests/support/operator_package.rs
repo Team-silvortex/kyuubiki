@@ -126,7 +126,20 @@ pub struct LiveAgent {
 }
 
 impl LiveAgent {
-    fn start(packages_root: &Path) -> Result<Self, Box<dyn Error>> {
+    pub fn start(packages_root: &Path) -> Result<Self, Box<dyn Error>> {
+        Self::start_with_store(packages_root, None, false)
+    }
+    pub fn start_durable(packages_root: &Path, store: &Path) -> Result<Self, Box<dyn Error>> {
+        Self::start_with_store(packages_root, Some(store), false)
+    }
+    pub fn start_deployment(packages_root: &Path) -> Result<Self, Box<dyn Error>> {
+        Self::start_with_store(packages_root, None, true)
+    }
+    fn start_with_store(
+        packages_root: &Path,
+        store: Option<&Path>,
+        deployment: bool,
+    ) -> Result<Self, Box<dyn Error>> {
         let port = reserve_port()?;
         let log_path =
             std::env::temp_dir().join(format!("kyuubiki-operator-package-live-{port}.log"));
@@ -135,7 +148,17 @@ impl LiveAgent {
             .truncate(true)
             .write(true)
             .open(&log_path)?;
-        let child = Command::new(env!("CARGO_BIN_EXE_kyuubiki-cli"))
+        let mut command = Command::new(env!("CARGO_BIN_EXE_kyuubiki-cli"));
+        command.env(
+            "KYUUBIKI_AGENT_PACKAGE_DEPLOYMENT",
+            if deployment { "true" } else { "false" },
+        );
+        if let Some(store) = store {
+            command.env("KYUUBIKI_AGENT_EXECUTION_STORE", store);
+        } else {
+            command.env_remove("KYUUBIKI_AGENT_EXECUTION_STORE");
+        }
+        let child = command
             .args([
                 "agent",
                 "--host",
@@ -149,7 +172,7 @@ impl LiveAgent {
                 "--operator-packages-root",
                 packages_root.to_str().ok_or("packages root is not utf-8")?,
                 "--operator-activated-package-count",
-                "1",
+                if deployment { "0" } else { "1" },
             ])
             .stdout(Stdio::from(log.try_clone()?))
             .stderr(Stdio::from(log))

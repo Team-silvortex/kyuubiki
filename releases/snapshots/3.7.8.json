@@ -1,0 +1,67 @@
+{
+  "version": "3.7.8",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-11-04",
+  "git_commit": "fb93e316",
+  "summary": "Align Daji 3.7.8 and rebuild the native macOS runtime and three independent shells with grouped model configuration and research boundary fixes.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md"
+  },
+  "verification": {
+    "source_revision_role": "Base commit plus version-alignment working-tree overlay; not a clean-commit or remote CI qualification.",
+    "desktop_packaging": {
+      "status": "built and installed",
+      "platform": "macos-aarch64",
+      "kind": "app",
+      "independent_shells": 3,
+      "total_build_seconds": 146.24,
+      "surface_build_seconds": {"hub": 58.84, "installer": 57.44, "workbench": 24.69},
+      "packaged_startup": {"passed": 3, "failed": 0},
+      "installed_startup": {"passed": 3, "failed": 0},
+      "startup_report": "releases/usability-evidence/3.7.8/macos-installed-desktop-smoke.json",
+      "installed_version_checks": {"passed": 3, "failed": 0},
+      "signature_verification": "strict recursive local signature verification passed; ad-hoc signing",
+      "installed_digest_comparison": "all three installed executables match the built outputs",
+      "executable_sha256": {
+        "hub": "493112db27d85b71904b51d8584aa6d1d9b68020e47feace5f500686e519f776",
+        "installer": "2a57cc5d8ac0f49fa3dbcaae3d9849cba75356a639d436be81800a858fad64c9",
+        "workbench": "df794e6da72ec18f6fd944a8c7c90bb413bb832b6774109563f8bfdb452aa3fc"
+      }
+    },
+    "runtime_payload": {
+      "status": "sealed, installed, activated and started",
+      "version": "3.7.8",
+      "previous_active_version": "3.7.7",
+      "manifest_file_count": 1741,
+      "manifest_sha256": "851b5f325745044b8defe4638f6998bbc06464871fd6ff7254bf0a5b5e898f95",
+      "installed_manifest_digest_comparison": "matches the sealed build manifest",
+      "node_runtime_required": false,
+      "running_services": ["frontend", "orchestrator", "agent[5001]", "agent[5002]"],
+      "orchestra_health": "HTTP 200, ok, two ready endpoints, zero active/queued jobs, healthy watchdog",
+      "served_frontend_brand_version": "3.7.8",
+      "model_gateway": "HTTP 200 capabilities; chat_completions, no credential storage, no automatic retries",
+      "state_scope": "Previous version state retained in place, not copied, migrated or deleted. No new persistent credential or remote exposure configured."
+    },
+    "local_checks": {
+      "exact_version_contracts": {"checks": 230, "mismatched": 0},
+      "frontend_production_build": "passed, including type validation",
+      "native_served_production_ui": {"passed": 2, "failed": 0, "viewports": ["1440x1000", "390x844"]},
+      "production_ui_scope": "Actual static export served by the packaged native runtime; PWDT language switch, grouped model panel, empty key, responsive layout, no page errors. No model inference or research execution in this packaging check.",
+      "language_pack_contracts": "60 validated; Workbench 960/960 and Hub 510/510; not linguistic quality review",
+      "shared_assets": "passed",
+      "desktop_stage_and_icons": "passed for macos",
+      "documentation_book_and_inventory": "passed",
+      "project_organization": "passed; source 800 lines, docs 2000 lines; no tracked debt",
+      "report": "reports/daji-3.7.8-local-rebuild-20261104.md"
+    },
+    "prior_source_evidence": "reports/model-research-boundary-and-connection-20261104.md",
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "Local macOS packaging and startup evidence only; no fresh full solver suite, Linux/Windows, migration, crash-recovery or remote CI qualification is implied."
+  }
+}

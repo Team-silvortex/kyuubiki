@@ -1,11 +1,28 @@
 //! Opt-in, bounded model-driven research using the official Rust headless SDK.
+#[path = "model_driven_thermal_research/bending_checks.rs"]
+#[allow(dead_code)]
+mod bending_checks;
+#[path = "model_driven_thermal_research/bending_direct.rs"]
+#[allow(dead_code)]
+mod bending_direct;
+#[path = "model_driven_thermal_research/bending_model.rs"]
+#[allow(dead_code)]
+mod bending_model;
 #[path = "layered_thermal_research/checks.rs"]
 mod checks;
 #[path = "model_driven_thermal_research/field_checks.rs"]
 mod field_checks;
+#[path = "model_driven_thermal_research/mechanical_checks.rs"]
+mod mechanical_checks;
 #[allow(dead_code)]
 #[path = "layered_thermal_research/model.rs"]
 mod model;
+#[path = "model_driven_thermal_research/planar_checks.rs"]
+#[allow(dead_code)]
+mod planar_checks;
+#[path = "model_driven_thermal_research/planar_patch.rs"]
+#[allow(dead_code)]
+mod planar_patch;
 #[path = "model_driven_thermal_research/policy.rs"]
 mod policy;
 #[path = "model_driven_thermal_research/provider.rs"]
@@ -50,6 +67,7 @@ fn run(root: &Path, key: &Path) -> Result<(), String> {
         include_str!("model_driven_thermal_research/provider.rs"),
         include_str!("model_driven_thermal_research/study.rs"),
         include_str!("model_driven_thermal_research/field_checks.rs"),
+        include_str!("model_driven_thermal_research/mechanical_checks.rs"),
         include_str!("layered_thermal_research/model.rs"),
         include_str!("layered_thermal_research/checks.rs")
     );

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/project-operator-request.schema.json",
+  "title": "Kyuubiki local project operator request v1",
+  "description": "Installer stdin/native IPC. Project intent is not an Agent permission or store grant. No paths, credentials or commands accepted. Native validation additionally enforces portable names, unique operator IDs and UTF-8 byte limits.",
+  "type": "object", "additionalProperties": false,
+  "required": ["project_id", "scope", "operation"],
+  "properties": {
+    "project_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "scope": {"$ref": "#/$defs/digest"},
+    "operation": {"oneOf": [
+      {"type": "object", "additionalProperties": false, "required": ["action"], "properties": {"action": {"const": "list"}}},
+      {"type": "object", "additionalProperties": false, "required": ["action", "package"], "properties": {
+        "action": {"enum": ["enable", "disable"]}, "package": {"$ref": "#/$defs/pin"}
+      }},
+      {"type": "object", "additionalProperties": false, "required": ["action", "package", "offset"], "properties": {
+        "action": {"const": "read_deployment"}, "package": {"$ref": "#/$defs/pin"},
+        "offset": {"type": "integer", "minimum": 0, "maximum": 33554432}
+      }},
+      {"type": "object", "additionalProperties": false, "required": ["action", "package", "operator_id", "task_id", "input", "config"], "properties": {
+        "action": {"const": "prepare"}, "package": {"$ref": "#/$defs/pin"}, "operator_id": {"$ref": "#/$defs/component"},
+        "task_id": {"$ref": "#/$defs/component"}, "input": {"type": "object"}, "config": {"type": "object"}
+      }}
+    ]}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "component": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*$"},
+    "pin": {
+      "type": "object", "additionalProperties": false,
+      "required": ["package_id", "package_version", "manifest_sha256", "entrypoint_sha256", "operators"],
+      "properties": {
+        "package_id": {"$ref": "#/$defs/component"}, "package_version": {"type": "string", "maxLength": 200, "pattern": "^[0-9][A-Za-z0-9._-]*$"},
+        "manifest_sha256": {"$ref": "#/$defs/digest"}, "entrypoint_sha256": {"$ref": "#/$defs/digest"},
+        "operators": {"type": "array", "minItems": 1, "maxItems": 128, "items": {
+          "type": "object", "additionalProperties": false, "required": ["operator_id", "kind"],
+          "properties": {"operator_id": {"$ref": "#/$defs/component"}, "kind": {"enum": ["extract", "transform", "solve"]}}
+        }}
+      }
+    }
+  }
+}

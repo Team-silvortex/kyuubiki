@@ -4,6 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { WorkbenchPanelPages } from "./workbench-panel-pages";
 import { StoreWorkspace, storeWorkspaceCopy, useStorePageSize } from "./workbench-store-workspace";
 import { StoreEntryDetails } from "./workbench-store-details";
+import { StoreAccountPanel } from "./workbench-store-account";
+import { storeAccountCopy } from "./workbench-store-account-copy";
+import { StoreDownloadsPanel } from "./workbench-store-downloads";
+import { ProjectOperatorsPanel } from "./workbench-project-operators";
+import { projectOperatorCopy } from "./workbench-project-operator-copy";
+import { storeDownloadCopy } from "./workbench-store-download-copy";
 import { selectStoreEntries, storeEntryIdentity, storeProjectEntryState } from "@/lib/workbench/store-catalog";
 import {
   type AssetStoreEntry,
@@ -38,7 +44,7 @@ type WorkbenchStoreSectionMountProps = {
   storeBackendService?: WorkbenchStoreBackendService;
 };
 
-type StoreView = "catalog" | "project" | "sources" | "detail";
+type StoreView = "catalog" | "project" | "sources" | "detail" | "account" | "downloads" | "operators";
 
 const KIND_FILTERS: Array<{ kind: "" | AssetStoreEntryKind; en: string; zh: string; ja: string }> = [
   { kind: "", en: "All", zh: "全部", ja: "すべて" },
@@ -215,10 +221,17 @@ export function WorkbenchStoreSectionMount({
         <button className={`panel-tab${view === "sources" ? " panel-tab--active" : ""}`} aria-pressed={view === "sources"} data-workbench-store-view-tab="sources" onClick={() => setView("sources")} type="button">
           {copy.sources} · {sources.length}
         </button>
+        <button className={`panel-tab${view === "operators" ? " panel-tab--active" : ""}`} aria-pressed={view === "operators"} data-workbench-store-view-tab="operators" onClick={() => setView("operators")} type="button">{projectOperatorCopy(language).title}</button>
+        <button className={`panel-tab${view === "account" ? " panel-tab--active" : ""}`} aria-pressed={view === "account"} data-workbench-store-view-tab="account" onClick={() => setView("account")} type="button">
+          {storeAccountCopy(language).tab}
+        </button>
+        <button className={`panel-tab${view === "downloads" ? " panel-tab--active" : ""}`} aria-pressed={view === "downloads"} data-workbench-store-view-tab="downloads" onClick={() => setView("downloads")} type="button">
+          {storeDownloadCopy(language).tab}
+        </button>
         {!expanded ? <button ref={expandButtonRef} className="panel-tab" type="button" data-workbench-store-workspace-action="expand" onClick={() => setExpanded(true)}>{workspaceCopy.expand}</button> : null}
       </div>
       }>
-      <section className="sidebar-card sidebar-card--compact store-context-card">
+      {view !== "account" && view !== "downloads" && view !== "operators" ? <section className="sidebar-card sidebar-card--compact store-context-card">
         <div className="store-workspace-context">
           <span>{copy.project}: <strong>{selectedProjectLabel}</strong></span>
           <span>{copy.installedAssets}: <strong>{activeManifest.entries.length}</strong></span>
@@ -227,7 +240,11 @@ export function WorkbenchStoreSectionMount({
         {error ? <p className="warning-copy">{error}</p> : null}
         {storageError ? <p className="warning-copy">{storageError}</p> : null}
         {!selectedProjectId ? <p className="card-copy">{copy.selectProjectFirst}</p> : null}
-      </section>
+      </section> : null}
+
+      {view === "account" ? <StoreAccountPanel language={language} onBack={() => setView("catalog")} onDownloads={() => setView("downloads")} /> : null}
+      {view === "downloads" ? <StoreDownloadsPanel language={language} onAccount={() => setView("account")} onProject={() => setView("operators")} /> : null}
+      {view === "operators" ? <ProjectOperatorsPanel key={selectedProjectId??"unselected"} language={language} projectId={selectedProjectId} /> : null}
 
       {view === "detail" && selectedEntry ? <StoreEntryDetails entry={selectedEntry} language={language}
         onBack={() => setView("catalog")} onStage={() => installEntry(selectedEntry)}

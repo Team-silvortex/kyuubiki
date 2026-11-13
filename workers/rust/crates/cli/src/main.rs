@@ -30,6 +30,7 @@ mod agent_task_results;
 mod agent_watchdog;
 mod agent_watchdog_runtime;
 mod config;
+mod operator_package_deployment;
 mod operator_package_fetch_runtime;
 mod operator_package_generation;
 mod operator_package_generation_session;
@@ -102,6 +103,7 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
     let mut config = config.clone();
     config.operator_activated_package_count = package_binding.activated_package_count();
     configure_operator_package_fetch_runtime(&config)?;
+    operator_package_deployment::configure(&config)?;
     agent_artifact::configure(&config);
     agent_fault_injection::configure_from_env()?;
     store_runtime_descriptor(build_agent_descriptor(&config));

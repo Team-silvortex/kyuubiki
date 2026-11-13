@@ -544,7 +544,7 @@ fn unique_staging_root(store_root: &Path, package_id: &str) -> Result<PathBuf, S
     Ok(path)
 }
 
-fn validate_component(value: &str, label: &str) -> Result<(), String> {
+pub(super) fn validate_component(value: &str, label: &str) -> Result<(), String> {
     let bytes = value.as_bytes();
     if bytes.is_empty()
         || value.len() > 128

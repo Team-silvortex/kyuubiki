@@ -2,7 +2,7 @@ import { captureWorkbenchApiAuthority } from "../api/auth-context.ts";
 import { resolveWorkbenchApiUrl } from "../api/backend-target.ts";
 import { defaultRuntimeApiClient, type RuntimeApiClient } from "../api/runtime-client.ts";
 import { validateDurableDirectEnvelope, validateDurableDirectHandle, type DurableDirectEnvelope } from "../api/durable-direct-client.ts";
-import { directMeshMethodForStudyKind, normalizeDirectMeshStudyInput, type DirectMeshStudyKind } from "../runtime-gateway/direct-mesh-study-contract.ts";
+import { durableTaskMethod as directMeshMethodForStudyKind, normalizeDurableTaskInput as normalizeDirectMeshStudyInput, type DurableTaskKind as DirectMeshStudyKind } from "../runtime-gateway/durable-task-contract.ts";
 import { createDurableDirectRecovery, type DurableDirectRecoveryHandle } from "./durable-direct-recovery.ts";
 import { workbenchDirectExecutionJournal, type DirectExecutionJournal, type DirectExecutionIntent } from "./direct-execution-journal.ts";
 import { checkpointDigest } from "./checkpoint-journal.ts";
@@ -42,11 +42,16 @@ export function createDurableDirectRunService({ client = defaultRuntimeApiClient
     return envelope;
   }
   return {
-    async submit<TResult>(studyKind: DirectMeshStudyKind, input: Record<string, unknown>, endpoint: string) {
+    async submit<TResult>(studyKind: DirectMeshStudyKind, input: Record<string, unknown>, endpoint: string, isCurrent = () => true) {
+      const callerCurrent = () => { if (!isCurrent()) throw new Error("direct:authority_changed"); };
+      callerCurrent();
       validateDurableDirectHandle({ endpoint, execution_id: "0".repeat(32) });
       // Reject malformed local input before reserving, and never snapshot after an await.
       const snapshot = structuredClone(normalizeDirectMeshStudyInput(studyKind, input)) as Record<string, unknown>;
       const ctx = await context();
+      const controlCheck = ctx.check;
+      ctx.check = () => { callerCurrent(); controlCheck(); };
+      ctx.check();
       const discovery = await client.fetchDirectMeshAgents([endpoint]);
       ctx.check();
       const agents = discovery.agents as unknown as Array<{ host?: string; port?: number; descriptor?: { durable_execution?: {

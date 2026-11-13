@@ -1,6 +1,6 @@
 import { createJournalSessionClient, validJournalSession } from "./journal-session-client.js";
 const kinds = new Set(["axial_bar_1d", "thermal_bar_1d", "heat_bar_1d", "beam_1d", "thermal_beam_1d", "torsion_1d",
-    "spring_1d", "spring_2d", "spring_3d", "truss_2d", "truss_3d", "thermal_truss_2d", "thermal_truss_3d", "frame_2d", "thermal_frame_2d",
+    "spring_1d", "spring_2d", "spring_3d", "truss_2d", "truss_3d", "thermal_truss_2d", "thermal_truss_3d", "frame_2d", "thermal_frame_2d", "operator_task",
     "plane_triangle_2d", "plane_quad_2d", "heat_plane_triangle_2d", "heat_plane_quad_2d", "thermal_plane_triangle_2d",
     "thermal_plane_quad_2d", "electrostatic_plane_triangle_2d", "electrostatic_plane_quad_2d"]);
 const fields = ["scope", "endpoint", "study_kind", "execution_id", "created_at", "store_id"];

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-deployment.schema.json",
+  "title": "Kyuubiki Agent operator package delivery v1",
+  "description": "Parameters of manage_operator_package. Agent control authentication is transport-owned, never a Store grant. Mutations require an exact live process identity, explicit deployment opt-in, and local or authenticated TLS transport. No code is loaded by this operation. See $defs/status for receipts.",
+  "type": "object", "additionalProperties": false,
+  "required": ["package", "operation"],
+  "properties": {
+    "package": {"$ref": "project-operator-request.schema.json#/$defs/pin"},
+    "expected_process_instance_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 256},
+    "operation": {"oneOf": [
+      {"type": "object", "additionalProperties": false, "required": ["action"], "properties": {
+        "action": {"enum": ["inspect", "commit", "abort"]}
+      }},
+      {"type": "object", "additionalProperties": false, "required": ["action", "spec"], "properties": {
+        "action": {"const": "begin"}, "spec": {"$ref": "#/$defs/spec"}
+      }},
+      {"type": "object", "additionalProperties": false, "required": ["action", "offset", "data"], "properties": {
+        "action": {"const": "chunk"}, "offset": {"$ref": "#/$defs/offset"}, "data": {"$ref": "#/$defs/bytes"}
+      }}
+    ]}
+  },
+  "allOf": [{
+    "if": {"properties": {"operation": {"properties": {"action": {"enum": ["begin", "chunk", "commit", "abort"]}}}}},
+    "then": {"required": ["expected_process_instance_id"], "properties": {"expected_process_instance_id": {"type": "string"}}}
+  }],
+  "$defs": {
+    "offset": {"type": "integer", "minimum": 0, "maximum": 33554432},
+    "bytes": {"type": "array", "minItems": 1, "maxItems": 65536, "items": {"type": "integer", "minimum": 0, "maximum": 255}},
+    "platform": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9_-]+$"},
+    "spec": {
+      "type": "object", "additionalProperties": false,
+      "required": ["package", "platform", "manifest_json", "size_bytes"],
+      "properties": {
+        "package": {"$ref": "project-operator-request.schema.json#/$defs/pin"},
+        "platform": {"$ref": "#/$defs/platform"},
+        "manifest_json": {"type": "string", "minLength": 1, "maxLength": 65536},
+        "size_bytes": {"type": "integer", "minimum": 1, "maximum": 33554432}
+      },
+      "description": "Native validation additionally bounds UTF-8 bytes, hashes the original manifest bytes, verifies its exact package/operator identity, requires one flat library entrypoint and the target platform. Commit validates binary format, ABI, total size and SHA-256 before atomic installation."
+    },
+    "status": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "package", "platform", "state", "installed", "active", "received_bytes", "total_bytes", "process_instance_id", "deployment_allowed"],
+      "properties": {
+        "schema_version": {"const": "kyuubiki.operator-deployment/v1"},
+        "package": {"$ref": "project-operator-request.schema.json#/$defs/pin"},
+        "platform": {"$ref": "#/$defs/platform"},
+        "state": {"enum": ["missing", "uploading", "installed_restart_required", "ready", "version_conflict"]},
+        "installed": {"oneOf": [{"type": "null"}, {"$ref": "project-operator-request.schema.json#/$defs/pin"}]},
+        "active": {"oneOf": [{"type": "null"}, {"$ref": "project-operator-request.schema.json#/$defs/pin"}]},
+        "received_bytes": {"$ref": "#/$defs/offset"}, "total_bytes": {"$ref": "#/$defs/offset"},
+        "process_instance_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 256},
+        "deployment_allowed": {"type": "boolean"}
+      },
+      "description": "RPC receipts require a non-null current process identity. Native validation also enforces received<=total; ready requires installed=active=requested pin, not just an installed receipt. Different content is a conflict even with the same version. Library-only Installer receipts may omit the process identity by returning null."
+    }
+  }
+}

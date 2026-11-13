@@ -1,5 +1,5 @@
 use super::{
-    checks, field_checks,
+    checks, field_checks, mechanical_checks,
     model::Case,
     policy::{Design, GRID, MAX_JOBS, TIP_LIMIT, TIP_TOLERANCE, tip_feasibility},
     provider::retain,
@@ -26,7 +26,7 @@ pub fn case(d: Design, reference: f64, rise: f64) -> Result<Case, String> {
         .position(|v| *v == d.right)
         .ok_or("invalid right conductivity")?;
     if ![1, 2, 4, 8].contains(&d.refinement)
-        || ![20.0, 293.15].contains(&reference)
+        || ![20.0, 30.0, 293.15].contains(&reference)
         || ![-20.0, 0.0, 20.0, 21.999, 22.0, 22.001, 40.0].contains(&rise)
     {
         return Err("unapproved verification case".into());
@@ -37,6 +37,9 @@ pub fn case(d: Design, reference: f64, rise: f64) -> Result<Case, String> {
         refinement: d.refinement,
         reference,
         rise,
+        cold_offset: 0.0,
+        expansion: super::model::ALPHA,
+        poisson: [0.0; 2],
     })
 }
 
@@ -125,6 +128,13 @@ pub struct Study {
     pub jobs: usize,
 }
 
+struct Execution {
+    result: Value,
+    job_id: String,
+    request_hash: String,
+    digest: String,
+}
+
 impl Study {
     pub fn new(root: &Path) -> Result<Self, String> {
         let url = "http://127.0.0.1:4000";
@@ -149,24 +159,203 @@ impl Study {
         rise: f64,
         origin: &str,
     ) -> Result<Value, String> {
+        self.evaluate_with_offset(d, reference, rise, 0.0, origin)
+    }
+
+    pub fn evaluate_with_offset(
+        &mut self,
+        d: Design,
+        reference: f64,
+        rise: f64,
+        cold_offset: f64,
+        origin: &str,
+    ) -> Result<Value, String> {
         let c = case(d, reference, rise)?;
+        if ![-10.0, 0.0, 10.0, 20.0].contains(&cold_offset) {
+            return Err("unapproved cold-boundary offset".into());
+        }
+        self.evaluate_case(Case { cold_offset, ..c }, origin)
+    }
+
+    pub fn evaluate_case(&mut self, c: Case, origin: &str) -> Result<Value, String> {
+        let d = Design {
+            left: c.conductivity[0],
+            right: c.conductivity[1],
+            refinement: c.refinement,
+        };
+        let expected = case(d, c.reference, c.rise)?;
+        if c.material != expected.material
+            || ![-10.0, 0.0, 10.0, 20.0].contains(&c.cold_offset)
+            || ![super::model::ALPHA, [10e-6, 35e-6], [18e-6, 6e-6]].contains(&c.expansion)
+            || ![
+                [0.0, 0.0],
+                [0.3, 0.3],
+                [0.2, 0.4],
+                [-0.2, 0.3],
+                [0.49, 0.25],
+            ]
+            .contains(&c.poisson)
+        {
+            return Err("unapproved material verification case".into());
+        }
         if let Some(row) = self.rows.iter().find(|r| r["case"] == c.id()) {
             let mut cached = row.clone();
             cached["reused_retained_evidence"] = json!(true);
             return Ok(cached);
         }
+        let (graph, input) = c.workflow();
+        let execution = self.dispatch(&c.id(), graph, input, origin)?;
+        let result = &execution.result;
+        let validation = checks::validate(c, result)?;
+        let field_validation = field_checks::validate(c, result)?;
+        let mechanical_validation = mechanical_checks::validate(c, result)?;
+        let tamper_rejected = rejects_tampered_results(c, result);
+        retain(
+            &self.root,
+            &format!("{}-validation.json", c.id()),
+            &validation,
+        )?;
+        retain(
+            &self.root,
+            &format!("{}-field-validation.json", c.id()),
+            &field_validation,
+        )?;
+        retain(
+            &self.root,
+            &format!("{}-mechanical-validation.json", c.id()),
+            &mechanical_validation,
+        )?;
+        if validation["passed"] != true
+            || field_validation["passed"] != true
+            || mechanical_validation["passed"] != true
+            || !tamper_rejected
+        {
+            return Err(format!(
+                "physics validation failed for {}; evidence retained",
+                c.id()
+            ));
+        }
+        let (flux, tip) = metrics(result)?;
+        let feasibility = tip_feasibility(tip)?;
+        let row = json!({"case":c.id(),"left":d.left,"right":d.right,"refinement":d.refinement,
+            "reference":c.reference,"rise":c.rise,"cold_offset":c.cold_offset,
+            "expansion":c.expansion,"poisson":c.poisson,"origin":origin,"job_id":execution.job_id,
+            "heat_flux_x":flux,"tip_ux":tip,"feasible":feasibility == "feasible",
+            "feasibility":feasibility,"tip_numerical_tolerance":TIP_TOLERANCE,
+            "physics_passed":true,"tampered_evidence_rejected":tamper_rejected,
+            "reused_retained_evidence":false,"readback_matches":true,"request_sha256":execution.request_hash,
+            "result_sha256":execution.digest,"validation":validation,
+            "field_validation":field_validation,"mechanical_validation":mechanical_validation});
+        retain(&self.root, &format!("{}-evidence.json", c.id()), &row)?;
+        self.rows.push(row.clone());
+        Ok(row)
+    }
+
+    #[allow(dead_code)] // The design-selection example shares dispatch but does not run patches.
+    pub fn evaluate_patch(
+        &mut self,
+        c: super::planar_patch::Case,
+        origin: &str,
+    ) -> Result<Value, String> {
+        if c != super::planar_patch::Case::new(c.name, c.refinement)? {
+            return Err("unapproved planar case".into());
+        }
+        if let Some(row) = self.rows.iter().find(|r| r["case"] == c.id()) {
+            let mut row = row.clone();
+            row["reused_retained_evidence"] = json!(true);
+            return Ok(row);
+        }
+        let (graph, input) = c.workflow();
+        let execution = self.dispatch(&c.id(), graph, input, origin)?;
+        let validation = super::planar_checks::validate(c, &execution.result)?;
+        retain(
+            &self.root,
+            &format!("{}-validation.json", c.id()),
+            &validation,
+        )?;
+        if validation["passed"] != true {
+            return Err(format!(
+                "planar validation failed for {}; evidence retained",
+                c.id()
+            ));
+        }
+        let row = json!({"case":c.id(),"scenario":c.name,"refinement":c.refinement,"job_id":execution.job_id,
+            "origin":origin,"reused_retained_evidence":false,"physics_passed":true,"readback_matches":true,
+            "request_sha256":execution.request_hash,"result_sha256":execution.digest,"planar_validation":validation});
+        retain(&self.root, &format!("{}-evidence.json", c.id()), &row)?;
+        self.rows.push(row.clone());
+        Ok(row)
+    }
+
+    #[allow(dead_code)]
+    pub fn evaluate_bending(
+        &mut self,
+        c: super::bending_model::Case,
+        origin: &str,
+    ) -> Result<Value, String> {
+        if c != super::bending_model::Case::new(c.name, c.refinement)? {
+            return Err("unapproved bending case".into());
+        }
+        if let Some(row) = self.rows.iter().find(|r| r["case"] == c.id()) {
+            let mut cached = row.clone();
+            cached["reused_retained_evidence"] = json!(true);
+            return Ok(cached);
+        }
+        let (graph, input) = c.workflow();
+        let execution = self.dispatch(&c.id(), graph, input, origin)?;
+        let validation = super::bending_checks::validate(c, &execution.result)?;
+        retain(
+            &self.root,
+            &format!("{}-validation.json", c.id()),
+            &validation,
+        )?;
+        if validation["passed"] != true {
+            return Err(format!(
+                "bending validation failed for {}; evidence retained",
+                c.id()
+            ));
+        }
+        let direct = if super::bending_model::ENERGY_NAMES.contains(&c.name) {
+            let v = super::bending_direct::validate(c, &execution.result)?;
+            retain(
+                &self.root,
+                &format!("{}-direct-validation.json", c.id()),
+                &v,
+            )?;
+            if v["passed"] != true {
+                return Err("independent bending direct comparison failed".into());
+            }
+            v
+        } else {
+            Value::Null
+        };
+        let row = json!({"case":c.id(),"scenario":c.name,"refinement":c.refinement,"job_id":execution.job_id,
+            "origin":origin,"reused_retained_evidence":false,"physics_passed":true,"readback_matches":true,
+            "request_sha256":execution.request_hash,"result_sha256":execution.digest,"bending_validation":validation,
+            "direct_validation":direct});
+        retain(&self.root, &format!("{}-evidence.json", c.id()), &row)?;
+        self.rows.push(row.clone());
+        Ok(row)
+    }
+
+    fn dispatch(
+        &mut self,
+        id: &str,
+        graph: Value,
+        input: Value,
+        origin: &str,
+    ) -> Result<Execution, String> {
         if self.jobs >= MAX_JOBS {
             return Err("workflow job budget reached".into());
         }
-        let (graph, input) = c.workflow();
         let request_hash = retain(
             &self.root,
-            &format!("{}-request.json", c.id()),
+            &format!("{id}-request.json"),
             &json!({"graph":graph,"input_artifacts":input,"origin":origin}),
         )?;
         // Count before dispatch; an ambiguous response never authorizes a retry.
         self.jobs += 1;
-        eprintln!("workflow {}: {} ({origin})", self.jobs, c.id());
+        eprintln!("workflow {}: {id} ({origin})", self.jobs);
         let outcome = self
             .agent
             .run_workflow_graph(
@@ -179,55 +368,31 @@ impl Study {
             .map_err(|e| format!("workflow outcome unresolved; no retry: {e}"))?;
         retain(
             &self.root,
-            &format!("{}-terminal.json", c.id()),
+            &format!("{id}-terminal.json"),
             &outcome.terminal,
         )?;
         let result = outcome.result.ok_or("workflow result missing")?;
-        let digest = retain(&self.root, &format!("{}-result.json", c.id()), &result)?;
+        let digest = retain(&self.root, &format!("{id}-result.json"), &result)?;
         if outcome.terminal["job"]["status"] != "completed" || outcome.validated_outputs.is_none() {
             return Err("workflow terminal/output contract failed".into());
         }
         let job_id = outcome.terminal["job"]["job_id"]
             .as_str()
-            .ok_or("missing job identity")?;
+            .ok_or("missing job identity")?
+            .to_owned();
         let readback = self
             .client
-            .fetch_result(job_id)
+            .fetch_result(&job_id)
             .map_err(|e| e.to_string())?;
         if readback != result {
             return Err("independent result readback mismatch".into());
         }
-        let validation = checks::validate(c, &result)?;
-        let field_validation = field_checks::validate(c, &result)?;
-        let tamper_rejected = rejects_tampered_results(c, &result);
-        retain(
-            &self.root,
-            &format!("{}-validation.json", c.id()),
-            &validation,
-        )?;
-        retain(
-            &self.root,
-            &format!("{}-field-validation.json", c.id()),
-            &field_validation,
-        )?;
-        if validation["passed"] != true || field_validation["passed"] != true || !tamper_rejected {
-            return Err(format!(
-                "physics validation failed for {}; evidence retained",
-                c.id()
-            ));
-        }
-        let (flux, tip) = metrics(&result)?;
-        let feasibility = tip_feasibility(tip)?;
-        let row = json!({"case":c.id(),"left":d.left,"right":d.right,"refinement":d.refinement,
-            "reference":reference,"rise":rise,"origin":origin,"job_id":job_id,
-            "heat_flux_x":flux,"tip_ux":tip,"feasible":feasibility == "feasible",
-            "feasibility":feasibility,"tip_numerical_tolerance":TIP_TOLERANCE,
-            "physics_passed":true,"tampered_evidence_rejected":tamper_rejected,
-            "readback_matches":true,"request_sha256":request_hash,"result_sha256":digest,"validation":validation,
-            "field_validation":field_validation});
-        retain(&self.root, &format!("{}-evidence.json", c.id()), &row)?;
-        self.rows.push(row.clone());
-        Ok(row)
+        Ok(Execution {
+            result,
+            job_id,
+            request_hash,
+            digest,
+        })
     }
 
     pub fn verify_load_boundary(&mut self, winner: Design) -> Result<Value, String> {
@@ -406,6 +571,7 @@ mod tests {
         }
         for n in structure["nodes"].as_array_mut().unwrap() {
             n["ux"] = json!(c.displacement(n["x"].as_f64().unwrap()));
+            n["uy"] = json!(0.0);
         }
         for n in bridge["nodes"].as_array_mut().unwrap() {
             n["temperature_delta"] = json!(c.temperature(n["x"].as_f64().unwrap()) - c.reference);
@@ -421,5 +587,12 @@ mod tests {
         let (flux, tip) = metrics(&result).unwrap();
         assert!((flux - c.flux()).abs() < 1e-8);
         assert!((tip - c.displacement(1.0)).abs() < 1e-12);
+        let mut corrupted_constraint = result.clone();
+        corrupted_constraint["artifacts"]["structure_out.result"]["nodes"][1]["uy"] = json!(0.1);
+        assert_ne!(
+            checks::validate(c, &corrupted_constraint).unwrap()["passed"],
+            true,
+            "a correct axial result must not hide violation of a transverse constraint"
+        );
     }
 }

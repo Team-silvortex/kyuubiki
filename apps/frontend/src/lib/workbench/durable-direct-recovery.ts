@@ -5,7 +5,7 @@ import {
   type DurableDirectEnvelope,
   type DurableDirectRecoveryHandle,
 } from "../api/durable-direct-client.ts";
-import { directMeshMethodForStudyKind, type DirectMeshStudyKind } from "../runtime-gateway/direct-mesh-study-contract.ts";
+import { durableTaskMethod as directMeshMethodForStudyKind, type DurableTaskKind as DirectMeshStudyKind } from "../runtime-gateway/durable-task-contract.ts";
 
 export type { DurableDirectRecoveryHandle } from "../api/durable-direct-client.ts";
 

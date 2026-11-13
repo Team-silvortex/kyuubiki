@@ -6,10 +6,9 @@ use kyuubiki_headless_sdk::{
 
 #[test]
 fn builds_output_manifest_from_graph() {
-    let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
-        "../fixtures/examples.workflow-graph.json"
-    ))
-    .expect("graph example");
+    let graph: WorkflowGraphDefinition =
+        serde_json::from_str(include_str!("../fixtures/examples.workflow-graph.json"))
+            .expect("graph example");
     let manifest = build_workflow_output_manifest(&graph).expect("manifest");
     assert_eq!(manifest.graph_id, "workflow.heat-to-thermo-quad-2d");
     assert_eq!(manifest.outputs[0].key, "thermo_summary.result");
@@ -17,10 +16,9 @@ fn builds_output_manifest_from_graph() {
 
 #[test]
 fn validates_result_payload_with_artifact_type_fallback() {
-    let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
-        "../fixtures/examples.workflow-graph.json"
-    ))
-    .expect("graph example");
+    let graph: WorkflowGraphDefinition =
+        serde_json::from_str(include_str!("../fixtures/examples.workflow-graph.json"))
+            .expect("graph example");
     let payload = serde_json::json!({
         "result": {
             "workflow_id": "workflow.demo",
@@ -49,10 +47,9 @@ fn validates_result_payload_with_artifact_type_fallback() {
 
 #[test]
 fn rejects_missing_required_output_artifact() {
-    let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
-        "../fixtures/examples.workflow-graph.json"
-    ))
-    .expect("graph example");
+    let graph: WorkflowGraphDefinition =
+        serde_json::from_str(include_str!("../fixtures/examples.workflow-graph.json"))
+            .expect("graph example");
     let payload = serde_json::json!({"result": {"artifacts": {}}});
     match validate_workflow_result_against_graph(&graph, &payload) {
         Err(SdkError::Validation { errors }) => {

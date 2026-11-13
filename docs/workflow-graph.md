@@ -144,6 +144,23 @@ The first headless reference runner now exists in the Rust engine for:
 - `electrostatic_plane_quad_2d -> bridge.electrostatic_field_to_heat_quad_2d -> heat_plane_quad_2d -> bridge.temperature_field_to_thermo_quad_2d -> thermal_plane_quad_2d`
 - `magnetostatic_plane_quad_2d -> bridge.magnetostatic_field_to_heat_quad_2d -> heat_plane_quad_2d -> bridge.temperature_field_to_thermo_quad_2d -> thermal_plane_quad_2d`
 
+For the quad and triangle `bridge.temperature_field_to_thermo_*_2d` operators,
+large structural seed meshes belong in a separate input artifact, not in node
+configuration. Declare both `heat_result` and `seed_model` input ports; bind the
+heat solve result to the first and a structural-model input node to the second.
+Keep only the field-transfer `contract` in `config` (use `{}` for defaults).
+Both inputs are retained in the bridge's dependency lineage in Rust and Orchestra.
+Direct transform calls use `{"heat_result": ..., "seed_model": ...}` as their
+payload. Missing inputs, extra envelope keys and simultaneous seed data in the
+payload and configuration are rejected rather than resolved by precedence.
+
+Legacy single-input bridges still accept the heat result directly and the seed
+in `config.seed_model` or the legacy model-shaped configuration. Do not declare
+a `seed_model` port for this legacy form. The 20,000-node JSON configuration
+budget and the separate 500,000-node input-artifact budget are unchanged; the
+new port is not permission to send unbounded data. Deploy the updated bridge
+runtime before using two-input graphs with an older installed release.
+
 That means this workflow is no longer only a UI direction:
 
 - the graph shape has a portable schema

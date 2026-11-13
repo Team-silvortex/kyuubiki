@@ -8,12 +8,12 @@ The active product identity is defined by the
 
 - codename: `daji`
 - active line: `3.x`
-- current development point: `daji 3.7.7`
+- current development point: `daji 3.7.8`
 - current documentation target: `daji 3.7.x` line
-- current source packaging target: `daji 3.7.7`
-- local macOS installed baseline: `daji 3.7.7`, verified November 4, 2026 in the [current snapshot](../releases/snapshots/3.7.7.json); previous baseline `3.7.1` is historical
-- latest version-named Git checkpoint: `f28de0dd`, subject `daji 3.7.7`; not by itself an installed version
-- build provenance: base `3fe22542` plus working-tree overlay, not a clean-commit release
+- current source packaging target: `daji 3.7.8`
+- local macOS installed baseline: `daji 3.7.8`, verified November 4, 2026 in the [current snapshot](../releases/snapshots/3.7.8.json); previous baseline `3.7.7` is historical
+- latest version-named Git checkpoint: `fb93e316`, subject `daji 3.7.8`; not by itself an installed version
+- build provenance: base `fb93e316` plus version-alignment overlay, not a clean-commit release
 - first version: `3.0.0`
 - terminal version: `3.20.9`
 - cadence: minor positions `0..20`, patch positions `0..9`
@@ -28,8 +28,8 @@ the active Daji line. This transition does not assert that every planned moxi
 patch was shipped.
 
 Current development documentation follows `docs/book-manifest.json` and is
-aligned on `3.7.7`. Desktop/runtime manifests, first-party SDK package metadata,
-brand mirrors, update channels, and language-pack targets also use `3.7.7`.
+aligned on `3.7.8`. Desktop/runtime manifests, first-party SDK package metadata,
+brand mirrors, update channels, and language-pack targets also use `3.7.8`.
 The macOS rebuild, installation, three-shell startup checks and bounded
 Workbench observation are tracked separately in the release snapshot. Registry publication
 and public distribution are separate actions; this local acceptance does not

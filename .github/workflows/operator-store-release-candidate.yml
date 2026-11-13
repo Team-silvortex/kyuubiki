@@ -1,0 +1,110 @@
+name: Operator Store Release Candidate
+
+# Manual candidate generation only; no store credentials or automatic publication.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operator-store-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: candidate-${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: macos-aarch64
+            rust_target: aarch64-apple-darwin
+            library: libkyuubiki_operator_template.dylib
+          - runner: macos-15-intel
+            target: macos-x86_64
+            rust_target: x86_64-apple-darwin
+            library: libkyuubiki_operator_template.dylib
+          - runner: ubuntu-24.04
+            target: linux-x86_64
+            rust_target: x86_64-unknown-linux-gnu
+            library: libkyuubiki_operator_template.so
+          - runner: ubuntu-24.04-arm
+            target: linux-aarch64
+            rust_target: aarch64-unknown-linux-gnu
+            library: libkyuubiki_operator_template.so
+          - runner: windows-2022
+            target: windows-x86_64
+            rust_target: x86_64-pc-windows-msvc
+            library: kyuubiki_operator_template.dll
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: ${{ matrix.rust_target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            workers/rust
+            workers/rust/templates/operator-crate-template
+          key: operator-store-${{ matrix.target }}
+      - name: Verify release preparation and rejection contracts
+        run: >-
+          cargo test --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-installer --test operator_release
+      - name: Build native-target release library
+        run: >-
+          cargo build --locked --manifest-path workers/rust/templates/operator-crate-template/Cargo.toml
+          --release --target ${{ matrix.rust_target }}
+      - name: Verify candidate install, execution and removal
+        run: >-
+          cargo test --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-cli --test operator_release_live -- --ignored --nocapture
+      - name: Prepare immutable single-target candidate
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer --
+          prepare-operator-distribution workers/rust/templates/operator-crate-template/kyuubiki-operator.json
+          operator-candidate
+          ${{ matrix.rust_target }}=workers/rust/templates/operator-crate-template/target/${{ matrix.rust_target }}/release/${{ matrix.library }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: operator-candidate-${{ matrix.target }}
+          path: operator-candidate/
+          if-no-files-found: error
+          retention-days: 7
+
+  assemble:
+    name: Assemble complete five-target candidate
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: operator-candidate-*
+          path: operator-candidates
+          merge-multiple: false
+      - name: Recheck all target headers and assemble one distribution index
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer --
+          prepare-operator-distribution workers/rust/templates/operator-crate-template/kyuubiki-operator.json
+          operator-release
+          aarch64-apple-darwin=operator-candidates/operator-candidate-macos-aarch64/macos-aarch64/operator.dylib
+          x86_64-apple-darwin=operator-candidates/operator-candidate-macos-x86_64/macos-x86_64/operator.dylib
+          aarch64-unknown-linux-gnu=operator-candidates/operator-candidate-linux-aarch64/linux-aarch64/operator.so
+          x86_64-unknown-linux-gnu=operator-candidates/operator-candidate-linux-x86_64/linux-x86_64/operator.so
+          x86_64-pc-windows-msvc=operator-candidates/operator-candidate-windows-x86_64/windows-x86_64/operator.dll
+      - uses: actions/upload-artifact@v4
+        with:
+          name: operator-store-release-candidate
+          path: operator-release/
+          if-no-files-found: error
+          retention-days: 7

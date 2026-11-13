@@ -54,6 +54,19 @@ fn build_rust_runtime(paths: &RepoPaths) -> RunnerResult<()> {
             "build",
             "--release",
             "-p",
+            "kyuubiki-installer",
+            "--bin",
+            "kyuubiki-installer",
+        ],
+        &[],
+    )?;
+    run_checked(
+        &paths.rust,
+        "cargo",
+        [
+            "build",
+            "--release",
+            "-p",
             "kyuubiki-cli",
             "--bin",
             "kyuubiki-cli",
@@ -112,6 +125,13 @@ fn populate_stage(paths: &RepoPaths, platform: Platform, stage: &Path) -> Runner
             name.to_string()
         }
     };
+    copy_file(
+        &paths
+            .rust
+            .join("target/release")
+            .join(executable("kyuubiki-installer")),
+        &stage.join("bin").join(executable("kyuubiki-installer")),
+    )?;
     copy_file(
         &paths
             .rust

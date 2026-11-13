@@ -26,6 +26,8 @@ fn default_lan_gate_covers_every_advertised_non_discovery_method_before_dispatch
         }
         let expected = if crate::agent_lifecycle_rpc::is_mutation(&method) {
             "agent_lifecycle_control_requires_loopback"
+        } else if matches!(method, RpcMethod::ManageOperatorPackage) {
+            "package_deployment_requires_tls"
         } else {
             "agent_lan_control_requires_explicit_trust"
         };
@@ -88,6 +90,24 @@ fn explicit_trust_does_not_grant_remote_lifecycle_mutations() {
             "agent_lifecycle_control_requires_loopback"
         );
     }
+}
+
+#[test]
+fn trusted_lan_cannot_authorize_unencrypted_package_delivery() {
+    let policy = NetworkAccess::default()
+        .with_trusted_lan_control(Some("true"))
+        .unwrap();
+    let AgentReply::Stream(frames, response) = handle_request_from_peer_with_policy(
+        request(RpcMethod::ManageOperatorPackage),
+        None,
+        false,
+        &policy,
+    );
+    assert!(frames.is_empty());
+    assert_eq!(
+        response.error.unwrap().code,
+        "package_deployment_requires_tls"
+    );
 }
 
 #[test]

@@ -1,4 +1,4 @@
-use super::model::{ALPHA, Case};
+use super::model::Case;
 use serde_json::{Value, json};
 
 fn number(value: &Value, field: &str) -> Result<f64, String> {
@@ -32,6 +32,7 @@ pub fn validate(c: Case, result: &Value) -> Result<Value, String> {
         return Err("field-check element count mismatch".into());
     }
     let mut midpoint_error = 0.0_f64;
+    let mut layer_midpoint_error = [0.0_f64; 2];
     let mut interpolation_error = 0.0_f64;
     let mut stress_error = 0.0_f64;
     let mut strain_error = 0.0_f64;
@@ -58,12 +59,18 @@ pub fn validate(c: Case, result: &Value) -> Result<Value, String> {
         let layer = usize::from(x > 0.5);
         let error = (ux - c.displacement(x)).abs();
         // Q4 interpolates a quadratic axial reference linearly; midpoint error is O(h^2).
-        let expected_error =
-            (ALPHA[layer] * c.flux() / c.conductivity[layer]).abs() * hx * hx / 8.0;
+        let expected_error = ((1.0 + c.poisson[layer]) * c.expansion[layer] * c.flux()
+            / c.conductivity[layer])
+            .abs()
+            * hx
+            * hx
+            / 8.0;
         midpoint_error = midpoint_error.max(error);
+        layer_midpoint_error[layer] = layer_midpoint_error[layer].max(error);
         interpolation_error = interpolation_error.max((error - expected_error).abs());
-        let strain = ALPHA[layer] * (c.temperature(x) - c.reference);
-        let stress_y = -[70e9, 3e9][layer] * strain;
+        let thermal = c.expansion[layer] * (c.temperature(x) - c.reference);
+        let strain = (1.0 + c.poisson[layer]) * thermal;
+        let stress_y = -[70e9, 3e9][layer] * thermal;
         stress_error = stress_error
             .max(number(&elements[index], "stress_x")?.abs())
             .max(number(&elements[index], "tau_xy")?.abs())
@@ -84,8 +91,13 @@ pub fn validate(c: Case, result: &Value) -> Result<Value, String> {
         .max((heat_in - expected_rate).abs())
         .max((heat_out - expected_rate).abs());
     let heat_tolerance = 1e-6 * expected_rate.abs().max(1.0);
-    let stress_tolerance = 1e-8 * (70e9 * ALPHA[0] * c.rise.abs()).max(1.0);
+    let delta_scale = (c.temperature(0.0) - c.reference)
+        .abs()
+        .max((c.temperature(1.0) - c.reference).abs());
+    let stress_tolerance =
+        1e-8 * ((70e9 * c.expansion[0]).max(3e9 * c.expansion[1]) * delta_scale).max(1.0);
     Ok(json!({"max_midpoint_displacement_error":midpoint_error,
+        "layer_midpoint_displacement_error_m":layer_midpoint_error,
         "midpoint_error_law_residual":interpolation_error,"midpoint_error_law_tolerance":1e-9,
         "max_element_mean_stress_error_pa":stress_error,"stress_tolerance_pa":stress_tolerance,
         "max_element_mean_axial_strain_error":strain_error,"strain_tolerance":1e-9,
@@ -96,7 +108,7 @@ pub fn validate(c: Case, result: &Value) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{model::ALPHA, policy::Design, study::case};
+    use super::super::{policy::Design, study::case};
     use super::*;
     use serde_json::json;
 
@@ -111,6 +123,10 @@ mod tests {
             20.0,
         )
         .unwrap();
+        fixture_for(c)
+    }
+
+    fn fixture_for(c: Case) -> (Case, Value) {
         let (mut heat, mut structure) = c.models();
         for n in structure["nodes"].as_array_mut().unwrap() {
             n["ux"] = json!(c.displacement(n["x"].as_f64().unwrap()));
@@ -128,10 +144,11 @@ mod tests {
                     .unwrap())
                 / 2.0;
             let layer = usize::from(x > 0.5);
-            let strain = ALPHA[layer] * (c.temperature(x) - c.reference);
+            let thermal = c.expansion[layer] * (c.temperature(x) - c.reference);
+            let strain = (1.0 + c.poisson[layer]) * thermal;
             e["stress_x"] = json!(0.0);
             e["tau_xy"] = json!(0.0);
-            e["stress_y"] = json!(-[70e9, 3e9][layer] * strain);
+            e["stress_y"] = json!(-[70e9, 3e9][layer] * thermal);
             e["total_strain_x"] = json!(strain);
         }
         (
@@ -169,5 +186,27 @@ mod tests {
             bad["artifacts"][artifact]["elements"][0][field] = value;
             assert!(validate(c, &bad).map_or(true, |v| v["passed"] != true));
         }
+    }
+
+    #[test]
+    fn nonzero_poisson_and_unequal_curvature_cannot_use_the_old_reference() {
+        let (base, _) = fixture(2);
+        let c = Case {
+            expansion: [10e-6, 35e-6],
+            poisson: [0.2, 0.4],
+            ..base
+        };
+        let (_, v) = fixture_for(c);
+        assert_eq!(validate(c, &v).unwrap()["passed"], true);
+        let (_, ignored_poisson) = fixture_for(Case {
+            poisson: [0.0; 2],
+            ..c
+        });
+        assert_eq!(validate(c, &ignored_poisson).unwrap()["passed"], false);
+        let (_, repeated_layer) = fixture_for(Case {
+            expansion: [10e-6; 2],
+            ..c
+        });
+        assert_eq!(validate(c, &repeated_layer).unwrap()["passed"], false);
     }
 }

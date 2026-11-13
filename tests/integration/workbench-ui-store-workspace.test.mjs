@@ -25,6 +25,307 @@ const sources = ["builtin.local", "lab"].map((id) => ({
   status: "ready", supports: ["operator"],
 }));
 
+for (const width of [1440, 390]) {
+  test(`Store desktop session and authorized download recovery loop at ${width}px (mock native bridge)`, async () => {
+    const context = await browser.newContext({ viewport: { width, height: 900 } });
+    // Chromium needs permission for the mock shell's loopback iframe; Tauri is tested separately.
+    await context.grantPermissions(["local-network-access"]);
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    const loadErrors = [];
+    page.on("requestfailed", request => loadErrors.push(`${request.url()}: ${request.failure()?.errorText}`));
+    page.on("console", message => { if (message.type() === "error") loadErrors.push(message.text()); });
+    try {
+      const url = new URL(workbenchUrl(runtime));
+      url.searchParams.set("desktopLayout", "1");
+      let remoteState="missing",received=0;
+      const deploymentActions=[];
+      await context.route("**/api/direct-mesh/operator-package",route=>{
+        const {request:r,endpoints}=route.request().postDataJSON();deploymentActions.push(r.operation.action);
+        if(r.operation.action==="begin")remoteState="uploading";
+        if(r.operation.action==="chunk")received+=r.operation.data.length;
+        if(r.operation.action==="commit")remoteState="installed_restart_required";
+        return route.fulfill({json:{endpoint:endpoints[0],gateway_runtime:"rust-native",deployment:{
+          schema_version:"kyuubiki.operator-deployment/v1",package:r.package,platform:"macos-aarch64",state:remoteState,
+          installed:["ready","installed_restart_required"].includes(remoteState)?r.package:remoteState==="version_conflict"?{...r.package,package_version:"2.0.0"}:null,
+          active:remoteState==="ready"?r.package:null,received_bytes:received,total_bytes:remoteState==="missing"?0:4,process_instance_id:"test-process",deployment_allowed:true,
+        }}});
+      });
+      await context.route("http://tauri.localhost/**", route => route.fulfill({ contentType: "text/html", body: `
+        <style>body{margin:0}iframe{border:0;width:100vw;height:100vh}</style><iframe src="${url.toString().replaceAll("&", "&amp;")}"></iframe>
+        <script>
+        const empty = {status:"signed_out",issuer:null,subject:null,display_name:null,expires_at:null,can_refresh:false,error:null};
+        window.view = {...empty}; window.actions = []; window.next = "waiting";
+        window.downloads = []; window.downloadActions = []; window.starts = 0;
+        window.enabled = [];
+        addEventListener("message", event => {
+          if (event.data?.type === "kyuubiki:store-download/v1") {
+            if(event.data.action === "connect") {
+              event.source.postMessage({type:"kyuubiki:store-download/v1:result",id:event.data.id,session:"12345678-1234-1234-1234-123456789abc",connected:true,views:null,error:null},event.origin);
+              return;
+            }
+            const {id,request} = event.data;
+            window.downloadActions.push(request);
+            if(request.action === "project") {
+              const packagePin={package_id:"demo",package_version:"1.0.0",manifest_sha256:"a".repeat(64),entrypoint_sha256:"b".repeat(64),operators:[{operator_id:"extract.demo",kind:"extract"}]};
+              const op=request.operation;
+              if(op.action==="enable")window.enabled=[{package:packagePin,state:"ready"}];
+              if(op.action==="disable")window.enabled=[];
+              const views={schema_version:"kyuubiki.project-operators/v1",project_id:request.project_id,scope:request.scope,packages_root:"/test-only/operator-packages/packages",
+                installed:[packagePin],installed_error:null,enabled:window.enabled,task:op.action==="prepare"?{schema_version:"kyuubiki.operator-task-ir/v1",task_id:op.task_id}:null};
+              if(op.action==="read_deployment")views.deployment={spec:{package:packagePin,platform:"macos-aarch64",manifest_json:"{}",size_bytes:4},offset:op.offset,data:[1,2,3,4].slice(op.offset)};
+              event.source.postMessage({type:"kyuubiki:store-download/v1:result",id,session:event.data.session,views,error:null},event.origin);return;
+            }
+            if(request.action === "catalog") {
+              const views={issuer:"https://account.example.test",host_platform:"macos-aarch64",catalog_revision:"r1",next_cursor:null,
+                items:[{kind:"operator",asset_id:"demo",title:"Verified demo",summary:"Catalog fixture",domain:"mechanical",languages:["en"],latest_version:"1.0.0"}]};
+              event.source.postMessage({type:"kyuubiki:store-download/v1:result",id,session:event.data.session,views,error:null},event.origin);return;
+            }
+            if(request.action === "prepare" && !window.downloads.length) window.downloads = [{
+              id:"b".repeat(64),issuer:"https://account.example.test",selection:request.selection,state:"prepared",
+              file_count:2,total_bytes:300,received_bytes:0,metered:true,remaining:1,unlimited:false,charged:null,error:null,directory:null}];
+            if(request.action === "start") {
+              window.starts++;
+              window.downloads[0] = {...window.downloads[0],state:window.starts === 1 ? "failed" : "downloaded",
+                remaining:0,charged:true,error:window.starts === 1 ? "download_connection_failed" : null,
+                received_bytes:window.starts === 1 ? 0 : 300,directory:window.starts === 1 ? null : "/test-only/store-downloads/verified/files"};
+            }
+            if(request.action === "remove") window.downloads = [];
+            if(request.action === "install") {
+              const attempts=window.downloadActions.filter(r=>r.action==="install").length;
+              window.downloads[0] = {...window.downloads[0],installation:attempts===1 ? "install_failed" : "installed"};
+            }
+            event.source.postMessage({type:"kyuubiki:store-download/v1:result",id,session:event.data.session,views:window.downloads,error:null},event.origin);
+            return;
+          }
+          if (event.data?.type !== "kyuubiki:store-identity/v1") return;
+          const {id,request} = event.data; window.actions.push(request.action);
+          if (request.action === "begin") window.view = {...empty,status:"awaiting_browser"};
+          if (request.action === "status" && window.next === "verified") window.view = {
+            ...empty,status:"signed_in",issuer:"https://account.example.test",subject:"test-researcher",display_name:"Researcher",expires_at:2000000000,can_refresh:true};
+          if (request.action === "refresh") window.view = {...window.view,expires_at:2000000600};
+          if (request.action === "logout" || request.action === "cancel") { window.view = {...empty}; window.next = "waiting"; }
+          event.source.postMessage({type:"kyuubiki:store-identity/v1:result",id,ok:true,status:window.view}, event.origin);
+        });
+        </script>` }));
+      await page.goto("http://tauri.localhost/", { waitUntil: "networkidle", timeout: 60_000 });
+      const frame = page.frames().find(frame => frame.url().startsWith(url.origin));
+      assert.ok(frame, JSON.stringify({ frames: page.frames().map(frame => frame.url()), loadErrors }));
+      await frame.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+      await frame.evaluate(() => window.__kyuubikiPwdt.openSidebar("store"));
+      await frame.locator('[data-workbench-store-view-tab="account"]').click();
+      await frame.locator('[data-workbench-store-workspace-action="expand"]').click();
+      await frame.locator('[data-store-account-origin]').fill("https://account.example.test");
+      await frame.locator('[data-store-account-save]').click();
+      await frame.locator('[data-store-identity-client]').fill("registered-test-client");
+      await frame.locator('[data-store-identity-save]').click();
+      await frame.locator('[data-store-identity-connect]').click();
+      const wait = state => frame.waitForFunction(state => document.querySelector('[data-store-identity]')?.dataset.storeIdentityStatus === state, state);
+      await wait("awaiting_browser");
+      assert.equal(await frame.locator('[data-store-identity-logout]').count(), 0, "opening browser is not signed-in");
+      await frame.locator('[data-store-identity-cancel]').click(); await wait("signed_out");
+      await frame.locator('[data-store-identity-connect]').click(); await wait("awaiting_browser");
+      await page.evaluate(() => { window.next = "verified"; }); await wait("signed_in");
+      await frame.locator('[data-store-identity-refresh]').click();
+      await page.waitForFunction(() => window.actions.includes("refresh"));
+      assert.equal(await frame.locator('[data-store-identity]').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
+      const stored = await frame.evaluate(() => JSON.parse(localStorage.getItem("kyuubiki-store-public-login-settings-v1")));
+      assert.deepEqual(Object.keys(stored).sort(), ["issuer","client_id","callback_port","ca_pem","ca_sha256"].sort());
+      assert.equal(stored.callback_port, 47831);
+      if (process.env.KYUUBIKI_STORE_SCREENSHOT_DIR) {
+        await mkdir(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR, { recursive: true });
+        await page.screenshot({ path: join(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR, `session-${width}.png`) });
+      }
+      await frame.locator('[data-store-identity-downloads]').click();
+      const downloads = frame.locator('[data-store-downloads]');
+      await downloads.locator('[data-store-catalog-load]').click();
+      await downloads.locator('[data-store-catalog-select]').click();
+      assert.equal(await downloads.locator('[data-store-download-asset]').inputValue(),"demo");
+      assert.equal(await downloads.locator('[data-store-download-version]').inputValue(),"1.0.0");
+      assert.equal(await downloads.locator('[data-store-download-platform]').inputValue(),"macos-aarch64");
+      await downloads.locator('[data-store-download-key]').fill("transport-test");
+      await downloads.locator('[data-store-download-pin]').fill("a".repeat(64));
+      assert.equal(await page.evaluate(() => window.starts), 0);
+      await downloads.locator('[data-store-download-prepare]').click();
+      await downloads.locator('[data-store-download-state="prepared"]').waitFor();
+      assert.equal(await page.evaluate(() => window.starts), 0, "preflight never authorizes or charges");
+      await downloads.locator('[data-store-download-start]').click();
+      await downloads.locator('[data-store-download-state="failed"]').waitFor();
+      await frame.locator('[data-workbench-store-view-tab="account"]').click();
+      await frame.locator('[data-workbench-store-view-tab="downloads"]').click();
+      await downloads.locator('[data-store-download-state="failed"]').waitFor();
+      assert.equal(await page.evaluate(() => window.starts), 1, "remount only reads the original record");
+      await downloads.locator('[data-store-download-start]').click();
+      await downloads.locator('[data-store-download-state="downloaded"]').waitFor();
+      const startIds = await page.evaluate(() => window.downloadActions.filter(r => r.action === "start").map(r => r.id));
+      assert.deepEqual(startIds, ["b".repeat(64), "b".repeat(64)]);
+      assert.match(await downloads.textContent(), /not installed|Not installed/);
+      assert.equal(await downloads.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
+      assert.equal(await downloads.locator('[data-store-download-start]').count(), 0);
+      page.once("dialog", dialog => dialog.dismiss());
+      await downloads.locator('[data-store-download-install]').click();
+      assert.equal(await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="install").length),0);
+      page.once("dialog", dialog => dialog.accept());
+      await downloads.locator('[data-store-download-install]').click();
+      await downloads.locator('[data-store-installation="install_failed"]').waitFor();
+      assert.doesNotMatch(await downloads.locator('[data-store-download-id]').textContent(), /not installed|Not installed/);
+      page.once("dialog", dialog => dialog.accept());
+      await downloads.locator('[data-store-download-install]').click();
+      await downloads.locator('[data-store-installation="installed"]').waitFor();
+      assert.equal(await page.evaluate(()=>window.starts),2,"installation never authorizes another download");
+      await downloads.locator('[data-store-download-project]').click();
+      await frame.locator('[data-project-operators]').waitFor();
+      assert.equal(await page.evaluate(()=>window.enabled.length),0,"installation never enables a project automatically");
+      await frame.locator('[data-workbench-store-view-tab="downloads"]').click();
+      await downloads.locator('[data-store-download-id]').waitFor();
+      if (process.env.KYUUBIKI_STORE_SCREENSHOT_DIR) {
+        await page.screenshot({ path: join(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR, `download-${width}.png`) });
+      }
+      page.once("dialog", dialog => dialog.dismiss());
+      await downloads.locator('[data-store-download-remove]').click();
+      assert.equal(await downloads.locator('[data-store-download-state="downloaded"]').count(), 1);
+      page.once("dialog", dialog => dialog.accept());
+      await downloads.locator('[data-store-download-remove]').click();
+      await downloads.locator('[data-store-download-id]').waitFor({state:"detached"});
+      await frame.locator('[data-workbench-store-view-tab="account"]').click();
+      await wait("signed_in");
+      await frame.locator('[data-store-identity-logout]').click(); await wait("signed_out");
+      assert.equal(await frame.locator('[data-store-identity]').textContent().then(text => text.includes("test-researcher")), false);
+      await frame.locator('[data-workbench-store-view-tab="operators"]').click();
+      const project=frame.locator('[data-project-operators]');
+      await project.locator('[data-project-operator-refresh]').click();
+      await project.locator('[data-project-operator-installed] option[value="demo"]').waitFor({state:"attached"});
+      await project.locator('[data-project-operator-installed]').selectOption("demo");
+      page.once("dialog",dialog=>dialog.dismiss());await project.locator('[data-project-operator-enable]').click();
+      assert.equal(await page.evaluate(()=>window.enabled.length),0);
+      page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-enable]').click();
+      await project.locator('[data-project-operator-enabled] option[value="demo"]').waitFor({state:"attached"});
+      await project.locator('[data-project-operator-enabled]').selectOption("demo");
+      await project.locator('[data-project-operator-id]').selectOption("extract.demo");
+      await project.locator('[data-project-operator-input]').fill('{"values":[2,4,8]}');
+      await project.locator('[data-project-operator-prepare]').click();
+      await project.locator('[role="status"]').filter({hasText:"Task prepared"}).waitFor();
+      assert.equal(await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="project"&&r.operation.action==="prepare").length),1);
+      await frame.evaluate(()=>window.__kyuubikiPwdt.invoke("settings/patch",{frontendRuntimeMode:"direct_mesh_gui"}));
+      await project.locator('[data-project-operator-endpoint]').fill("127.0.0.1:5001");
+      await project.locator('[data-project-operator-inspect-target]').click();
+      await project.locator('[data-project-operator-target-state="missing"]').waitFor();
+      page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-deploy]').click();
+      await project.locator('[data-project-operator-target-state="installed_restart_required"]').waitFor();
+      assert.deepEqual(deploymentActions,["inspect","inspect","begin","chunk","commit"]);
+      remoteState="ready";await project.locator('[data-project-operator-inspect-target]').click();
+      await project.locator('[data-project-operator-target-state="ready"]').waitFor();
+      remoteState="version_conflict";
+      page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-deploy]').click();
+      await project.locator('[data-project-operator-target-state="version_conflict"]').waitFor();
+      assert.equal(deploymentActions.filter(a=>a==="begin").length,1,"conflicts never upload, overwrite or restart");
+      assert.equal(await project.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,"project workflow fits the viewport");
+      if(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR,`project-${width}.png`)});
+      page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-disable]').click();
+      await page.waitForFunction(()=>window.enabled.length===0);
+      assert.equal(await page.evaluate(()=>window.starts),2,"signed-out project actions never acquire a store grant");
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }, { timeout: 120_000 });
+}
+
+for (const width of [1440, 390]) {
+  test(`Store account registration stays explicit and separate from local research at ${width}px`, async () => {
+    const context = await browser.newContext({ viewport: { width, height: 900 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    try {
+      await context.route("https://account.example.test/**", route => route.fulfill({
+        contentType: "text/html", body: "<h1>Test shared account portal</h1>",
+      }));
+      await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+      await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+      await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("store"));
+      const accountTab = page.locator('[data-workbench-store-view-tab="account"]');
+      await accountTab.click({ timeout: 10_000 });
+      await page.locator('[data-workbench-store-workspace-action="expand"]').click();
+      const panel = page.locator('[data-store-account]');
+      const origin = panel.locator('[data-store-account-origin]');
+      const save = panel.locator('[data-store-account-save]');
+      const open = panel.locator('[data-store-account-open]');
+      assert.equal(await open.count(), 0, "no guessed account destination");
+      await origin.fill("https://account.example.test?token=secret");
+      assert.equal(await save.isDisabled(), true);
+      assert.equal(await open.count(), 0);
+      await origin.fill("https://account.example.test");
+      await save.click();
+      assert.equal(await page.evaluate(() => localStorage.getItem("kyuubiki-store-account-origin")), "https://account.example.test");
+      assert.equal(await open.getAttribute("target"), "_blank");
+      assert.match(await open.getAttribute("rel"), /noopener/);
+      assert.match(await open.getAttribute("href"), /^https:\/\/account.example.test\/account\?lang=(en|zh)$/);
+      const currentUrl = page.url();
+      const popupPromise = page.waitForEvent("popup");
+      await open.click();
+      const popup = await popupPromise;
+      await popup.waitForLoadState();
+      assert.equal(await popup.locator("h1").textContent(), "Test shared account portal");
+      assert.equal(await popup.evaluate(() => window.opener === null), true);
+      assert.equal(page.url(), currentUrl);
+      await popup.close();
+      assert.equal(await panel.locator('[data-store-identity]').getAttribute("data-store-identity-status"), "signed_out");
+      assert.equal(await panel.locator(".store-account-session p").first().isVisible(), true, "the login boundary remains readable on narrow screens");
+      assert.equal(await panel.locator(".store-account-steps p").first().isVisible(), true, "registration guidance must not disappear in compact mode");
+      assert.equal(await panel.locator('[role="status"]').first().isVisible(), true, "opening a website is not a silent login");
+      assert.equal(await panel.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
+      if (process.env.KYUUBIKI_STORE_SCREENSHOT_DIR) {
+        await mkdir(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR, { recursive: true });
+        await page.screenshot({ path: join(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR, `account-${width}.png`) });
+      }
+      await origin.fill("http://account.example.test");
+      assert.equal(await open.count(), 0, "an invalid edit must not open the previous destination");
+      await page.reload({ waitUntil: "networkidle" });
+      await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+      await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("store"));
+      await accountTab.click();
+      await page.waitForFunction(() => document.querySelector('[data-store-account]')?.getAttribute("aria-busy") === "false");
+      assert.equal(await origin.inputValue(), "https://account.example.test");
+      await panel.locator('[data-store-account-clear]').click();
+      assert.equal(await open.count(), 0);
+      assert.equal(await page.evaluate(() => localStorage.getItem("kyuubiki-store-account-origin")), null);
+      await panel.locator('[data-store-account-back]').click();
+      assert.equal(await page.locator('[data-workbench-store-panel]').getAttribute("data-workbench-store-view"), "catalog");
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  }, { timeout: 120_000 });
+}
+
+test("Store account preference failure is visible and can recover without creating a session", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+    await page.evaluate(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key, value) {
+        if (key === "kyuubiki-store-account-origin") throw new DOMException("Private test detail", "QuotaExceededError");
+        return original.call(this, key, value);
+      };
+      window.restoreAccountStorage = () => { Storage.prototype.setItem = original; };
+      window.__kyuubikiPwdt.openSidebar("store");
+    });
+    await page.locator('[data-workbench-store-view-tab="account"]').click();
+    const panel = page.locator('[data-store-account]');
+    await panel.locator('[data-store-account-origin]').fill("https://account.example.test");
+    await panel.locator('[data-store-account-save]').click();
+    await panel.locator(':scope > [role="status"]').waitFor();
+    assert.match(await panel.locator(':scope > [role="status"]').textContent(), /could not be read or saved/);
+    assert.doesNotMatch(await panel.textContent(), /Private test detail/);
+    assert.equal(await panel.locator('[data-store-account-open]').count(), 0);
+    await page.evaluate(() => window.restoreAccountStorage());
+    await panel.locator('[data-store-account-save]').click();
+    await panel.locator('[data-store-account-open]').waitFor();
+    assert.equal(await panel.locator('[data-store-identity]').getAttribute("data-store-identity-status"), "signed_out");
+  } finally { await context.close(); }
+}, { timeout: 90_000 });
+
 test("Store PWDT selects an exact source/version and agrees with the GUI reference", async () => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();

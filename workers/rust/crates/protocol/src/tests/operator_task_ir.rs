@@ -129,6 +129,67 @@ fn operator_task_execution_summary_exposes_agent_ready_fields() {
 }
 
 #[test]
+fn packaged_solver_uses_operator_abi_without_shadowing_builtin_rpc() {
+    let mut task = golden_task_fixture(None);
+    task["operator"]["id"] = json!("solve.external_q9");
+    task["operator"]["kind"] = json!("solver");
+    task["execution_program"]["program_id"] = json!("solve.external_q9");
+    task["execution_program"]["program_kind"] = json!("solver");
+    task["execution_program"]["entrypoint"]["name"] = json!("solve.external_q9");
+    task["execution_program"]["entrypoint"]["operator_kind"] = json!("solver");
+    task["runtime_hints"]["operator_kind"] = json!("solver");
+    let report = preview_operator_task_execution(&task).expect("external solver JSON ABI");
+    assert_eq!(report.dispatch_route, "fetch_package_then_operator_task");
+    for reference in [
+        Value::Null,
+        json!("builtin://external_q9"),
+        json!("https://untrusted/package"),
+    ] {
+        let mut bad = task.clone();
+        for pointer in [
+            "/operator/execution/package_ref",
+            "/execution_program/package_ref",
+            "/runtime_hints/package_ref",
+        ] {
+            *bad.pointer_mut(pointer).unwrap() = reference.clone();
+        }
+        assert!(summarize_operator_task_execution(&bad).is_err());
+    }
+    let mut bad = task.clone();
+    bad["execution_program"]["entrypoint"]["name"] = json!("solve.other");
+    assert!(summarize_operator_task_execution(&bad).is_err());
+    let mut bad = task.clone();
+    bad["execution_program"]["package_version"] = Value::Null;
+    bad["runtime_hints"]["package_version"] = Value::Null;
+    assert!(summarize_operator_task_execution(&bad).is_err());
+    let mut builtin_ids: Vec<_> = crate::RpcProtocolDescriptor::solver_agent_default()
+        .methods
+        .into_iter()
+        .filter_map(|method| {
+            let value = serde_json::to_value(method).unwrap();
+            value
+                .as_str()?
+                .strip_prefix("solve_")
+                .map(|name| format!("solve.{name}"))
+        })
+        .collect();
+    builtin_ids.extend([
+        "solve.stokes_flow_quad_2d".into(),
+        "solve.stokes_flow_triangle_2d".into(),
+    ]);
+    for id in builtin_ids {
+        let mut bad = task.clone();
+        bad["operator"]["id"] = json!(id);
+        bad["execution_program"]["program_id"] = json!(id);
+        bad["execution_program"]["entrypoint"]["name"] = json!(id);
+        assert!(
+            summarize_operator_task_execution(&bad).is_err(),
+            "shadowed {id}"
+        );
+    }
+}
+
+#[test]
 fn operator_task_execution_preview_exposes_central_package_dispatch() {
     let task = golden_task_fixture(Some(
         "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f",

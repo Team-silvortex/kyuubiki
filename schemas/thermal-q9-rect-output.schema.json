@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/thermal-q9-rect-output.schema.json",
+  "title": "Rectangular Q9 plane stress output v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "nodes", "elements", "total_strain_energy_j", "solver_iterations", "solver_matrix_non_zero_count", "solver_residual_norm", "solver_rhs_norm"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.thermal-plane-q9-rect/v1"},
+    "nodes": {"type": "array", "minItems": 9, "maxItems": 4096, "items": {"$ref": "#/$defs/node"}},
+    "elements": {"type": "array", "minItems": 1, "maxItems": 512, "items": {"$ref": "#/$defs/element"}},
+    "total_strain_energy_j": {"type": "number", "minimum": 0},
+    "solver_iterations": {"type": "integer", "minimum": 0},
+    "solver_matrix_non_zero_count": {"type": "integer", "minimum": 0},
+    "solver_residual_norm": {"type": "number", "minimum": 0},
+    "solver_rhs_norm": {"type": "number", "minimum": 0}
+  },
+  "$defs": {
+    "vector3": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
+    "node": {
+      "type": "object", "additionalProperties": false,
+      "required": ["index", "id", "x", "y", "ux", "uy", "displacement_magnitude", "temperature_delta"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0}, "id": {"type": "string"},
+        "x": {"type": "number"}, "y": {"type": "number"},
+        "ux": {"type": "number"}, "uy": {"type": "number"},
+        "displacement_magnitude": {"type": "number", "minimum": 0}, "temperature_delta": {"type": "number"}
+      }
+    },
+    "element": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "nodes", "area", "mean_stress", "mean_mechanical_strain", "strain_energy_j"],
+      "properties": {
+        "id": {"type": "string"}, "nodes": {"type": "array", "minItems": 9, "maxItems": 9, "uniqueItems": true, "items": {"type": "integer", "minimum": 0}},
+        "area": {"type": "number", "exclusiveMinimum": 0},
+        "mean_stress": {"$ref": "#/$defs/vector3", "description": "Volume-weighted mean [sigma_x, sigma_y, tau_xy] in Pa, not peak stress."},
+        "mean_mechanical_strain": {"$ref": "#/$defs/vector3", "description": "Thermal-subtracted [epsilon_x, epsilon_y, engineering_gamma_xy]."},
+        "strain_energy_j": {"type": "number", "minimum": 0, "description": "Integral of quadratic energy density, not energy of mean stress/strain."}
+      }
+    }
+  }
+}

@@ -20,6 +20,17 @@
           <a class="docs-link" href="../sdks/rust/examples/model_driven_thermal_research.rs">Runnable Rust example</a>
           <a class="docs-link" href="../reports/model-driven-thermal-research-20261104.md">First live findings</a>
           <a class="docs-link" href="../reports/model-research-boundary-and-connection-20261104.md">Boundary and GUI follow-up</a>
+          <a class="docs-link" href="./research-model-driven.html#reference-decoupling">Independent temperature-reference tests</a>
+          <a class="docs-link" href="../reports/model-research-reference-decoupling-20261104.md">Live reference-decoupling findings</a>
+          <a class="docs-link" href="#material-coupling">Poisson and material-coupling tests</a>
+          <a class="docs-link" href="../reports/model-research-poisson-coupling-20261104.md">Live material-coupling findings</a>
+          <a class="docs-link" href="#planar-patches">Free transverse motion and shear patches</a>
+          <a class="docs-link" href="../reports/model-research-planar-patches-20261104.md">Live planar-patch findings</a>
+          <a class="docs-link" href="#thermal-bending">Non-affine thermal bending</a>
+          <a class="docs-link" href="../reports/model-research-thermal-bending-20261104.md">Live bending and convergence findings</a>
+          <a class="docs-link" href="#bending-energy">Bilayer energy error diagnosis</a>
+          <a class="docs-link" href="#bending-order">Offline Q4/Q9 order comparison</a>
+          <a class="docs-link" href="#q9-package">Native Q9 solver package</a>
         </div>
       </section>
 
@@ -65,13 +76,378 @@ KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml
           does not contact OpenAI or require installed services.</p>
       </section>
 
+      <section class="docs-card docs-section" id="reference-decoupling">
+        <h2>Separate temperature boundaries from strain reference</h2>
+        <p class="docs-copy">The follow-up example fixes conductivity at [100, 200] W/(m K)
+          and exposes only <code>evaluate_cases</code>: eight named synthetic scenarios,
+          batches of 1 to 4, and refinement levels 1, 2, 4 or 8. The model must select at
+          least four different scenarios. The caller then completes a fixed 20-case minimum
+          matrix; successful identical cases reuse retained evidence without resubmission.</p>
+        <pre class="docs-code">cargo test --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference
+
+# Same external credential-file variable and explicit paid-run approval:
+KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference -- tmp/model-reference-round-001</pre>
+        <ul class="docs-list">
+          <li><code>baseline</code>: boundaries 40/20, strain reference 20.</li>
+          <li><code>reference_only</code>: unchanged 40/20 boundaries, strain reference 30.
+            Heat flux is unchanged, but the analytical tip displacement changes from
+            +100 to -50 micrometres.</li>
+          <li><code>uniform_hot</code> and <code>uniform_cold</code>: both boundaries at
+            30 or 10 with reference 20. Zero heat flux does not imply zero thermal strain,
+            restraint stress or mechanical energy.</li>
+          <li><code>absolute_shift</code> and <code>uniform_shifted</code>: shift all
+            absolute temperatures and the reference together; mechanical results should
+            remain invariant. This is a constant-property numerical invariance test.</li>
+          <li><code>reversed_gradient</code>: boundaries 20/40, reference 20. Heat flux
+            reverses, but tip expansion remains positive; a negative gradient is not the
+            same experiment as uniform cooling.</li>
+          <li><code>zero</code>: both boundaries and the reference at 20.</li>
+        </ul>
+        <p class="docs-copy">The caller checks hard-coded analytical tip displacement and
+          heat-flux expectations, distinct execution identities, fixed x/y constraints,
+          structural temperature deltas, free-DOF residuals and Q4 strain-energy quadrature.
+          Support resultants and equilibrium are independently reconstructed from returned
+          displacement using rectangular Q4 quadrature and the analytical temperature field.
+          They are not solver-returned reactions. Discrete Q4 energy is distinguished from
+          continuum energy; their difference is not automatically a solver defect.</p>
+        <p class="docs-copy">The same 16-request, 40-job and estimated USD 8 ceilings apply.
+          This follow-up has at most 32 distinct approved scenario/mesh combinations rather
+          than the design-selection example's 24 exploration evaluations. It remains a
+          Poisson-ratio-zero, perfectly bonded, rectangular, linear-elastic reference study,
+          not qualification of general geometry, pointwise stress peaks or material safety.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="material-coupling">
+        <h2>Break the material symmetry</h2>
+        <p class="docs-copy">Append <code>coupling</code> to the reference example to select
+          eight material scenarios at all four mesh levels, for exactly 32 distinct approved
+          cases. The existing reference suite is still the default. Scenario names from the
+          other suite and arbitrary material fields are rejected before dispatch.</p>
+        <pre class="docs-code">KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference -- tmp/model-coupling-round-001 coupling</pre>
+        <ul class="docs-list">
+          <li><code>control</code>: expansion [10e-6, 20e-6]/K, Poisson ratios [0, 0].</li>
+          <li><code>poisson_only</code>: original expansion, Poisson ratios [0.3, 0.3].</li>
+          <li><code>ratio_only</code>: expansion [10e-6, 35e-6]/K, Poisson ratios [0, 0].</li>
+          <li><code>coupled</code>: expansion [10e-6, 35e-6]/K, Poisson ratios [0.2, 0.4].</li>
+          <li><code>coupled_hot</code> and <code>coupled_cold</code>: the coupled material
+            with uniform temperatures 10 K above or below the fixed strain reference.</li>
+          <li><code>coupled_auxetic</code>: expansion [18e-6, 6e-6]/K and Poisson ratios
+            [-0.2, 0.3], deliberately changing which layer has the larger curvature.</li>
+          <li><code>coupled_high_nu</code>: expansion [10e-6, 35e-6]/K, Poisson ratios
+            [0.49, 0.25]. Plane-stress acceptance is not a 3D incompressibility test.</li>
+        </ul>
+        <p class="docs-copy">Geometry, conductivities, Young moduli and constraints remain
+          fixed. Except for the uniform cases, boundary temperatures are 40/20 with strain
+          reference 20. Material expansion and Poisson ratios are included in execution
+          identities, actual workflow input, retained evidence and the model's observations.</p>
+        <p class="docs-copy">For this particular transversely restrained plane-stress
+          reference, the continuum conditions give <code>strain_x = (1 + nu) * alpha * theta</code>,
+          <code>stress_x = 0</code> and <code>stress_y = -E * alpha * theta</code>, where
+          theta is the departure from strain reference. These are derived reference relations,
+          not rules for a transversely free body. The constitutive starting point is the
+          <a href="https://www.mathworks.com/help/pde/ug/3-d-linear-elasticity-equations-in-toolbox-form.html">plane-stress Hooke law</a>.
+          Adding thermal eigenstrain and applying the declared constraints gives the relations above.</p>
+        <p class="docs-copy">Q4 midpoint errors are checked separately in each layer.
+          If m and v are an element's mean and variance of theta, expected discrete energy
+          density is <code>E * alpha^2 / 2 * (m^2 + 2 * v / (1 - nu))</code>, whereas
+          continuum energy density averaged over the element is
+          <code>E * alpha^2 / 2 * (m^2 + v)</code>. Checks independently reconstruct the
+          plane-stress constitutive response and equilibrium, and report force and moment
+          residuals in separate units. A model cannot relax these gates or change the budget.</p>
+        <p class="docs-copy">This suite does not validate arbitrary shear, free transverse
+          deformation, distorted meshes, nonmatching field transfer or stress peaks.
+          Numerical correctness and the inherited expansion-limit classification are separate;
+          the latter is not an optimization target or material-safety assessment in this suite.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="planar-patches">
+        <h2>Release transverse restraints and exercise shear</h2>
+        <p class="docs-copy">Append <code>planar</code> instead of <code>coupling</code>
+          to run eight affine plane-stress patches at four mesh levels. This is a homogeneous
+          1 x 0.25 m rectangle with thickness 0.01 m, E = 70 GPa, expansion coefficient
+          12e-6/K and conductivity 20 W/(m K). Exactly three rigid-mode restraints are used:
+          origin ux/uy and bottom-right uy. Other transverse degrees of freedom remain free.</p>
+        <pre class="docs-code">KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference -- tmp/model-planar-round-001 planar</pre>
+        <ul class="docs-list">
+          <li><code>free_hot</code> / <code>free_cold</code>: uniform +10/-10 K relative
+            to reference, no mechanical loads, nu = 0.3 and zero analytical stress.</li>
+          <li><code>tension</code> / <code>tension_distorted</code>: constant axial
+            stress 1 MPa, nu = 0.3, zero temperature rise; tests include Poisson contraction.</li>
+          <li><code>shear</code> / <code>shear_distorted</code>: constant shear stress
+            0.5 MPa, nu = 0.3, zero temperature rise; checks engineering shear convention.</li>
+          <li><code>mixed_hot</code> / <code>mixed_auxetic</code>: stresses
+            [1.2, -0.4, 0.3] MPa with nu/temperature rise [0.49, +10] and [-0.2, -10].</li>
+        </ul>
+        <p class="docs-copy">Boundary nodal loads represent t = sigma n on every exterior
+          edge, not a cantilever load. Distorted cases perturb interior nodes while preserving
+          the rectangular boundary. Free hot/cold and mixed cases also use distorted meshes.
+          Uniform boundary temperatures leave interior temperature degrees of freedom to be
+          solved. A refinement r uses (2r + 1)^2 nodes and (2r)^2 Q4 elements.</p>
+        <pre class="docs-code">ex = (sx - nu sy)/E + alpha theta
+ey = (sy - nu sx)/E + alpha theta
+gamma_xy = 2(1 + nu) tau/E
+ux = ex x + gamma_xy y; uy = ey y
+energy density = [sx(ex - alpha theta) + sy(ey - alpha theta) + tau gamma_xy]/2</pre>
+        <p class="docs-copy">The caller checks every returned displacement and stress,
+          principal stresses, von Mises stress, engineering shear and energy. Separate general
+          Q4 Jacobian/quadrature reconstruction checks all-DOF force balance and strain energy
+          without importing production solver routines. Returned stress/invariant fields
+          include observed minima/maxima, expected values and errors, not just a combined
+          pass flag. Final traction-displacement pairing <code>f^T u</code> is reported
+          separately from its thermal and thermal-subtracted elastic parts. Only half the
+          elastic part is compared with strain energy; none is called path-integrated work.
+          Endpoint and energy references are also hard-coded independently of the model builder.</p>
+        <p class="docs-copy">This tests affine displacement/constant stress on regular and
+          irregular meshes, a limited use of the
+          <a href="https://openseesdigital.com/2021/04/04/did-you-pass-your-patch-test/">finite-element patch test</a>.
+          It is not a non-affine convergence test, a heterogeneous free-expansion study,
+          nearly incompressible 3D qualification or general peak-stress validation.
+          Forces are independently reconstructed, not solver-returned reactions.</p>
+        <p class="docs-copy">Successful evaluations explicitly distinguish new execution
+          from reused evidence. The independent reviewer receives a compact request/observation
+          audit with real job IDs, not raw reasoning or credentials. Identical integer/float
+          JSON encodings are accepted for material/load numbers; missing fields, changed
+          values and non-boolean restraint flags are not.</p>
+        <p class="docs-copy">To diagnose a failed check without paid calls or new solves,
+          explicitly point the offline replay test at an owned directory whose raw result
+          payloads have not yet been cleaned up. It validates the cases found and requires
+          at least one result; it does not certify that all 32 are present.</p>
+        <pre class="docs-code">KYUUBIKI_PLANAR_REPLAY_DIR="$PWD/tmp/model-planar-round-001" \
+  cargo test --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference planar_replay_retained_results -- --ignored --nocapture</pre>
+      </section>
+
+      <section class="docs-card docs-section" id="thermal-bending">
+        <h2>Nonuniform temperature, material jumps and bending</h2>
+        <p class="docs-copy">Append <code>bending</code> to select six scenarios at four
+          mesh levels, for 24 distinct approved cases. This suite deliberately goes beyond
+          affine patches: displacement is piecewise quadratic and Q4 results must converge
+          toward the analytical continuum solution, not reproduce it exactly at every mesh.</p>
+        <pre class="docs-code">KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference -- tmp/model-bending-round-001 bending</pre>
+        <p class="docs-copy">Geometry is 1 x 0.25 m with thickness 0.01 m. Materials are
+          layered through y, not x. Heat uses bottom/top temperatures with insulated vertical
+          sides. Exactly three mechanical rigid-mode restraints are retained. Refinement r
+          uses 4r x 2r rectangular cells, up to 561 nodes and 512 Q4 elements at r = 8.
+          Free heat nodes start at the reference temperature, not the analytical solution;
+          only prescribed bottom/top nodes receive boundary temperatures.</p>
+        <ul class="docs-list">
+          <li><code>gradient_free</code>: homogeneous E = 70 GPa, nu = 0.3,
+            alpha = 12e-6/K, k = 20 W/(m K); bottom/top 20/40, reference 20,
+            zero mechanical loads. <code>gradient_free_reverse</code> uses 20/0.</li>
+          <li><code>bilayer_gradient</code>: equal bottom/top layers with E = [70, 20] GPa,
+            nu = [0.2, 0.35], alpha = [10e-6, 30e-6]/K, k = [10, 40] W/(m K),
+            bottom/top 20/40 and reference 20.</li>
+          <li><code>bilayer_gradient_reverse</code> reverses the thermal increment using
+            bottom/top 20/0. <code>bilayer_uniform</code> uses 30/30.</li>
+          <li><code>bilayer_shift</code> shifts bottom/top/reference together to
+            293.15/313.15/293.15 without changing thermal strain or heat flux.</li>
+        </ul>
+        <p class="docs-copy"><strong>Boundary-condition distinction:</strong> homogeneous
+          cases have no mechanical loads. Bilayer cases apply the analytical, self-equilibrated
+          end traction sigma_x(y) n_x at both vertical ends. Zero net section force and moment
+          do not mean zero local traction. These are not fully traction-free bilayer strips,
+          clamped cantilevers or generic bimetal-strip certifications.</p>
+        <p class="docs-copy">A separate opt-in control runs the free-gradient, bilayer-gradient,
+          uniform-bilayer and shifted-bilayer cases at r = 8 without any model API calls or
+          API key. It submits four real workflows to the local Orchestra/Agents and requires
+          a new output directory. This is not a repeat of the complete 24-case matrix.</p>
+        <pre class="docs-code">KYUUBIKI_LIVE_RESEARCH=1 KYUUBIKI_BENDING_PROBE_DIR="$PWD/tmp/bending-probe-001" \
+  cargo test --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference bending_live_unseeded_temperature_probe -- --ignored --nocapture</pre>
+        <p class="docs-copy">The independent reference obtains temperature from series
+          thermal resistances, and solves a 2 x 2 section force/moment balance for axial
+          strain e0 + kappa y. It then integrates transverse strain and constructs a continuous
+          piecewise-quadratic displacement field satisfying plane-stress equilibrium and the
+          declared tractions. The constitutive starting point is the
+          <a href="https://www.mathworks.com/help/pde/ug/3-d-linear-elasticity-equations-in-toolbox-form.html">plane-stress linear elasticity law</a>;
+          the full boundary/reference derivation is in the linked run report.</p>
+        <p class="docs-copy">The checker separately validates exact temperature/bridge
+          properties, heat flux, returned stress/strain/energy postprocessing, all-DOF force
+          residuals and an energy-error identity using independent rectangular Q4 quadrature.
+          Elastic energy obeys <code>2U = f^T u - integral(sigma : thermal_strain)</code>;
+          the traction-displacement pairing is not path-integrated work.</p>
+        <p class="docs-copy">The caller requires relative nodal RMS error and the normalized
+          quadratic strain-error energy to decrease by at least 20% per mesh doubling. At the
+          finest level, nodal RMS and middle-bottom bow errors must be at most 2%, normalized
+          error energy at most 0.001 and normalized stress L2 error at most 0.1. These are
+          predeclared catalog acceptance limits, not universal finite-element error bounds.
+          Nodal RMS is normalized by the analytical nodal displacement norm, stress by the
+          characteristic E_max alpha_max |theta|_max, and energy by that stress squared times
+          volume divided by E_min. Energy error is not divided by continuum elastic energy,
+          which vanishes in the homogeneous free cases.</p>
+        <pre class="docs-code"># No paid calls or new solves; requires retained raw result files:
+KYUUBIKI_BENDING_REPLAY_DIR="$PWD/tmp/model-bending-round-001" \
+  cargo test --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference bending_replay_retained_results -- --ignored --nocapture</pre>
+        <p class="docs-copy">Replay checks only the files present and requires at least one;
+          full-matrix convergence is a separate gate. Nonlinear behavior, transient coupling,
+          nonmatching meshes, arbitrary distortion, pointwise stress peaks and fully free
+          heterogeneous end effects remain outside this suite.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="bending-energy">
+        <h2>Diagnose bilayer energy error before changing the solver</h2>
+        <p class="docs-copy">The <code>bending-energy</code> suite revisits the 4.919177%
+          elastic-energy error at 32 x 16. It uses four scenarios at refinements 1, 2, 4,
+          for twelve actual workflows: gradient isotropic, x-only, y-only and uniform
+          temperature isotropic. Geometry, materials and analytical end tractions remain
+          those of the bilayer bending reference, not a fully traction-free strip.</p>
+        <pre class="docs-code">KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference -- tmp/model-energy-round-001 bending-energy</pre>
+        <p class="docs-copy">Gradient/uniform isotropic meshes are 16r x 8r, x probes
+          are 16r x 16 and y probes are 32 x 8r. The finest mesh has 2,145 nodes.
+          A separate banded-Cholesky Q4 implementation checks the production discrete
+          solution without importing solver kernels. The comparison uses the same
+          discretization and does not prove continuum accuracy. Both isotropic sequences
+          must reduce ordinary relative energy error by at least 20% per step and finish
+          within 2%; directional probes have no final accuracy gate.</p>
+        <p class="docs-copy">Observed gradient errors are 19.3374%, 4.9192%, 1.2354%
+          under isotropic refinement. X-only refinement finishes at 1.4679%, versus 4.6844%
+          for y-only refinement. The baseline shear term is 93.6% of strain-error energy,
+          not of the elastic-energy excess. Production/direct energy differences stay below
+          4.46e-11 J. These results support a case-specific interpolation limitation,
+          not an iteration-tolerance failure or universal shear-locking diagnosis.</p>
+        <p class="docs-copy">Large seed meshes must use the bridge's independent
+          <code>seed_model</code> input alongside <code>heat_result</code>, leaving only
+          the transfer contract in configuration. The shared research builder uses this
+          form. Install an updated bridge runtime first: legacy runtimes reject this
+          graph, and embedding a fine mesh in configuration exceeds its unchanged safety
+          budget. Legacy single-input small graphs remain supported.</p>
+        <p class="docs-copy">The offline interpolation audit rechecks all twelve retained
+          jobs and their file hashes, compares the exact-displacement Q4 interpolant with
+          the equilibrated result, and checks the Galerkin energy decomposition. It makes
+          no paid calls or new workflow submissions, requires raw payloads before cleanup,
+          and refuses to overwrite its output.</p>
+        <pre class="docs-code">KYUUBIKI_BENDING_REPLAY_DIR="$PWD/tmp/model-energy-round-001" \
+  cargo test --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference bending_interpolation_audit_retained_results -- --ignored --nocapture</pre>
+        <p class="docs-copy">The <a href="../reports/model-research-bending-energy-20261111.md">energy
+          diagnosis report</a> records the closed forms, numerical results, runtime repair,
+          model-review limits and costs. This is a diagnostic study, not a new production
+          element formulation or qualification of arbitrary interfaces and stress peaks.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="bending-order">
+        <h2>Compare element order without changing production Q4</h2>
+        <p class="docs-copy">The bounded Q9 prototype solves quadratic steady heat,
+          transfers all nine nodal temperatures on the matching mesh, then solves
+          plane-stress thermoelasticity with full 3 x 3 integration and consistent
+          quadratic end loads. It is a local research reference, not an installed
+          Agent operator or a solver added to the headless SDK API.</p>
+        <pre class="docs-code">cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example model_driven_thermal_reference -- \
+  --offline-bending-order tmp/bending-order-round-001</pre>
+        <p class="docs-copy">Use a new output directory. This mode needs neither a model
+          credential nor a running runtime, makes no model or network requests, and
+          retains compact evidence rather than full fields. It compares four independent
+          Q4 solves with equal-cell and equal-mechanical-DOF Q9 solves, plus four controls.
+          Q4 uses the exact reference temperature field; Q9 solves temperature explicitly.</p>
+        <p class="docs-copy">For the gradient bilayer, Q4 32 x 16 retains 4.919177%
+          energy error. Q9 16 x 8 has the same 1,119 free mechanical DOFs and an
+          absolute energy error of 1.0991e-13 J. The piecewise-quadratic solution is
+          representable on this interface-aligned rectangular Q9 mesh; this result does
+          not qualify arbitrary distorted meshes or fully traction-free bilayers.</p>
+        <p class="docs-copy">The <a href="../reports/model-research-bending-order-20261111.md">order
+          comparison report</a> records the finite-element definition, residual gates,
+          negative controls and remaining production integration work. Existing Q4
+          acceptance limits, installed runtime and model-review results are unchanged.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="q9-package">
+        <h2>Native Q9 solver package: bounded, partial validation</h2>
+        <p class="docs-copy"><code>solve.thermal_plane_q9_rect_2d</code> is now an optional
+          Rust operator package, separate from the independent research reference above.
+          Element mathematics live in the solver crate; the generic Agent loads the package
+          through TaskIR and the existing JSON C ABI. No Q9-specific engine dispatch was added.</p>
+        <p class="docs-copy">Input requires a conforming, single edge-connected mesh of
+          axis-aligned rectangles, nine row-major nodes per cell, linear isotropic plane
+          stress and an explicit temperature difference at every node. Limits are 4,096
+          nodes and 512 elements. The solver rejects hanging edges, overlapping/disconnected
+          cells, insufficient restraints, unknown input fields and nonrepresentable values.
+          This package does not contain a Q9 heat solver or automatically interpolate an
+          arbitrary Q4 mesh. Its explicit matching-node bridge is described below.</p>
+        <pre class="docs-code">cargo test --locked --manifest-path workers/rust/Cargo.toml \
+  -p kyuubiki-solver --test thermal_q9_operator --test thermal_q9_bilayer
+cargo build --locked --manifest-path workers/rust/Cargo.toml \
+  -p kyuubiki-operator-thermal-q9
+cargo test --locked --manifest-path workers/rust/Cargo.toml \
+  -p kyuubiki-cli --test operator_q9_live -- --ignored --nocapture</pre>
+        <p class="docs-copy">The last command uses an isolated loopback Agent and a temporary
+          package root, verifies execution, rejects malformed geometry and a wrong library
+          digest, then executes a valid task again. It does not replace installed services.
+          Use the source-built Agent: an already installed 3.7.8 runtime does not acquire
+          these changes merely because its version number matches.
+          The native bilayer tests use analytical nodal temperatures and end tractions;
+          at 16 x 8 cells the gradient energy error is 3.9097e-11 J with 59 sparse iterations.
+          This is polynomial reproduction for this benchmark, not arbitrary-mesh certification.</p>
+        <p class="docs-copy">The package manifest deliberately remains <code>partial</code>.
+          Native solver cancellation is tested, but cancellation/progress context is not yet
+          propagated across the dynamic-library ABI. No hard execution-time bound or process
+          isolation is claimed for the in-process package. Durable workflow recovery,
+          general multi-material interface qualification and cross-platform package runs remain open.</p>
+        <p class="docs-copy">See the <a href="../reports/model-research-q9-package-20261111.md">native
+          package report</a>, <a href="../schemas/thermal-q9-rect-input.schema.json">input schema</a>
+          and <a href="../schemas/thermal-q9-rect-output.schema.json">output schema</a>.
+          These checks made no new model API requests and did not reinstall the GUI or runtime.</p>
+        <h3>Matching-node heat-to-Q9 chain</h3>
+        <p class="docs-copy"><code>workflow_bridge.heat_to_thermal_q9_rect_2d</code>
+          lives in the same optional package, not in a new engine-specific dispatch branch.
+          First solve <code>solve_heat_plane_quad_2d</code> on four Q4 cells per mechanical
+          Q9 cell: both meshes use the same nodes, including every midside and centre node.
+          Then pass the actual heat result and mechanical seed model to the bridge.</p>
+        <pre class="docs-code">{
+  "payload": {
+    "schema_version": "kyuubiki.heat-to-thermal-q9-nodal/v1",
+    "temperature_unit": "kelvin",
+    "reference_temperature": 293.15,
+    "heat_result": "REPLACE with the complete native heat result object",
+    "seed_model": "REPLACE with a thermal-plane-q9-rect/v1 model object"
+  },
+  "config": {}
+}</pre>
+        <p class="docs-copy">The strings above are explanatory placeholders, not accepted
+          payload values. The bridge output <code>summary</code> is the complete Q9 model;
+          pass it unchanged as the solver's <code>payload</code>. Only
+          <code>temperature_delta</code> is replaced by solved Kelvin minus the explicit
+          reference. Loads, restraints, material properties and topology remain unchanged.</p>
+        <ul class="docs-list">
+          <li>Node IDs must be unique and coordinates must match exactly. Result arrays may
+            be reordered, but their indices must identify the correct source input nodes.</li>
+          <li>Each Q9 cell must correspond to four unique, oriented Q4 subcells of the same
+            thickness. Changing only array lengths is insufficient; connectivity is checked.</li>
+          <li>Missing temperatures, unknown units, invalid geometry/materials, duplicate
+            identities, thermal contact interfaces and unknown bridge controls are rejected.
+            There is no nearest-neighbour fallback, guessed reference or temperature scaling.</li>
+          <li>The contract checks correspondence, not authenticity or physical correctness
+            of an arbitrary supplied result. Keep execution receipts with research evidence.</li>
+        </ul>
+        <p class="docs-copy">The isolated Agent suite now executes eight actual
+          heat &rarr; bridge &rarr; mechanics chains, including nonzero Poisson ratios,
+          reversed temperature gradients and conductivity ratios up to 100. The 16 x 8
+          gradient case uses 561 shared nodes and has absolute energy error 6.38814e-11 J
+          against an independent section solution. Boundary tractions are prescribed from
+          that solution; this is not a fully traction-free bilayer benchmark.</p>
+        <p class="docs-copy">This is client-sequenced RPC/TaskIR execution, not an atomic or
+          resumable workflow graph. Wrong-unit and stale-identity bridge calls fail before a
+          mechanical submission; valid work then succeeds on the same Agent. See the
+          <a href="../reports/model-research-q9-heat-chain-20261111.md">heat-chain evidence</a>
+          and <a href="../schemas/heat-to-thermal-q9-nodal.schema.json">portable bridge schema</a>.
+          Matching nodes do not upgrade Q4 heat accuracy to Q9 heat accuracy.</p>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Cost, credentials and failure handling</h2>
         <ul class="docs-list">
           <li>Models: <code>gpt-6.1-sol</code> for planning/tool calls and
             <code>gpt-6-astra</code> for independent review, both using Responses API,
             high reasoning effort and the default service tier. No silent model fallback.</li>
-          <li>Per run: at most 16 API requests, 10 planning turns, 24 exploration evaluations,
+          <li>Per run: at most 16 API requests, 10 planning turns, 24 exploration evaluations
+            in the design-selection example (up to 32 distinct cases in the follow-up suites),
             40 actual workflow submissions, 128 KiB serialized input per API call and
             8,192 output tokens per call. A cached successful evaluation does not resubmit work.</li>
           <li>An estimated USD 8 ceiling is enforced by reserving an upper estimate before
@@ -104,7 +480,7 @@ KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml
         <h2>What passing means</h2>
         <p class="docs-copy">Each real workflow must complete, satisfy the output manifest,
           and return an identical result on a second fetch. Nodal temperatures, reference
-          subtraction, axial displacements and fluxes are checked against the analytical
+          subtraction, axial displacements, transverse constraints and fluxes are checked against the analytical
           layered solution. Corrupted temperature, displacement, reference and geometry
           evidence must fail validation.</p>
         <p class="docs-copy">The selected pair is checked against an exhaustive 16-pair
@@ -125,7 +501,10 @@ KYUUBIKI_LIVE_RESEARCH=1 cargo run --locked --manifest-path sdks/rust/Cargo.toml
           error separately from nodal error, compare it with the expected quadratic-reference
           interpolation error, validate element-mean axial strain and restraint stresses, and
           integrate boundary flux into heat rates. These are not general pointwise stress,
-          stiffness, reaction-force or arbitrary-geometry qualifications.</p>
+          stiffness, solver-reported reaction-force or arbitrary-geometry qualifications.
+          Mechanical scope depends on the selected suite: layered cases use their declared
+          rectangular reference and material properties; planar cases use homogeneous
+          affine patches. Neither establishes general nonlinear or peak-stress accuracy.</p>
         <p class="docs-copy">Inspect <code>numerical-report.json</code>,
           <code>independent-model-review.json</code> and <code>report.json</code> separately.
           A model review cannot override a failed numerical gate. Review issues yield a nonzero

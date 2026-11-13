@@ -1,0 +1,24 @@
+{
+  "schema_version": "kyuubiki.operator-package/v1",
+  "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "execution_abi": "kyuubiki.operator-json-c/v1",
+  "package_id": "operator.thermal-q9-rect",
+  "package_version": "0.1.0",
+  "minimum_host_version": "3.7.8",
+  "validation_status": "partial",
+  "validation_notes": "Bounded conforming rectangular plane-stress Q9 and strict matching-node Kelvin bridge from four Q4 heat cells per Q9 cell. No Q9 heat solve, arbitrary mesh interpolation, curved cells or general high-order mesh qualification.",
+  "runtime": "rust_crate",
+  "entrypoint": "{lib_prefix}kyuubiki_operator_thermal_q9.{lib_extension}",
+  "operators": [
+    {
+      "operator_id": "solve.thermal_plane_q9_rect_2d",
+      "kind": "solver",
+      "entry_symbol": "run_thermal_q9_operator_json"
+    },
+    {
+      "operator_id": "workflow_bridge.heat_to_thermal_q9_rect_2d",
+      "kind": "workflow_bridge",
+      "entry_symbol": "run_thermal_q9_operator_json"
+    }
+  ]
+}

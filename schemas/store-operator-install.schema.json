@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/store-operator-install.schema.json",
+  "title": "Kyuubiki local store-to-Installer handoff v1",
+  "description": "Local bounded stdin contract, not a backend authorization. No credentials or target paths. Requires exact canonical platform manifest and shared library; native Installer checks content and compatibility without activation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "package_id", "package_version", "platform", "files"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.store-operator-install/v1"},
+    "package_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "package_version": {"type": "string", "minLength": 1, "maxLength": 128},
+    "platform": {"enum": ["macos-aarch64", "macos-x86_64", "linux-aarch64", "linux-x86_64", "windows-x86_64"]},
+    "files": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "sha256", "size_bytes"],
+        "properties": {
+          "path": {"type": "string", "maxLength": 512},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "size_bytes": {"type": "integer", "minimum": 1, "maximum": 67108864}
+        }
+      }
+    }
+  }
+}

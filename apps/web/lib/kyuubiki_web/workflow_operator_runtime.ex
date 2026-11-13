@@ -51,6 +51,28 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   defp roadmap_operator_tags?(tags),
     do: is_list(tags) and ("partial" in tags or "roadmap" in tags)
 
+  def run_transform_operator(id, %{"heat_result" => heat, "seed_model" => seed} = payload, config)
+      when id in [
+             "bridge.temperature_field_to_thermo_quad_2d",
+             "bridge.temperature_field_to_thermo_triangle_2d"
+           ] and
+             is_map(heat) and is_map(seed) and is_map(config) do
+    if map_size(payload) == 2 and
+         not Enum.any?(["seed_model", "nodes", "elements"], &Map.has_key?(config, &1)) do
+      run_transform_operator(id, heat, Map.put(config, "seed_model", seed))
+    else
+      {:error, :invalid_heat_bridge_inputs}
+    end
+  end
+
+  def run_transform_operator(id, payload, _config)
+      when id in [
+             "bridge.temperature_field_to_thermo_quad_2d",
+             "bridge.temperature_field_to_thermo_triangle_2d"
+           ] and
+             (is_map_key(payload, "heat_result") or is_map_key(payload, "seed_model")),
+      do: {:error, :invalid_heat_bridge_inputs}
+
   def run_transform_operator(
         "bridge.temperature_field_to_thermo_quad_2d",
         heat_result,

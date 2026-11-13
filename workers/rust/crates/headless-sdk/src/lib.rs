@@ -191,6 +191,14 @@ pub use executor::{
 pub use hybrid_executor::HybridHeadlessExecutor;
 pub use kyuubiki_protocol::CancelExecutionRequest;
 pub use kyuubiki_protocol::{
+    OperatorDeploymentAction, OperatorDeploymentChunk, OperatorDeploymentRequest,
+    OperatorDeploymentSpec, OperatorDeploymentStatus,
+};
+pub use kyuubiki_protocol::{
+    ProjectOperatorEntry, ProjectOperatorOperation, ProjectOperatorPin, ProjectOperatorRequest,
+    ProjectOperatorStatus, build_project_operator_task,
+};
+pub use kyuubiki_protocol::{
     TASK_DIGEST_FIXED15_V1, TASK_DIGEST_TYPED_V2, seal_operator_task_digest,
 };
 pub use material_candidate_materialization::build_material_candidate_materialization_plan;

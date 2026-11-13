@@ -2,7 +2,7 @@
   "version": "3.7.7",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-11-04",
   "git_commit": "3fe22542",
   "summary": "Align the existing Daji 3.7.7 checkpoint across packages, SDK metadata, documentation and local installation inputs; integrate scoped workflow recovery, Agent TLS/token, workspace store/PWDT and model API work.",

@@ -15,6 +15,10 @@
     "allow-get-workbench-panel-layout",
     "allow-set-workbench-panel-layout",
     "allow-checkpoint-recovery",
-    "allow-direct-execution-journal"
+    "allow-direct-execution-journal",
+    "allow-open-store-account-portal",
+    "allow-store-identity",
+    "allow-store-download",
+    "allow-project-operator"
   ]
 }

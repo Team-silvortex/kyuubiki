@@ -9,7 +9,7 @@
   <body>
     <main class="docs-shell docs-stack">
       <section class="docs-hero">
-        <div class="docs-kicker">Operator Store · Integration Draft · 2026-11-04</div>
+        <div class="docs-kicker">Operator Store · Integration Draft · 2026-11-13</div>
         <h1>从项目资产目录到可验证的算子商店</h1>
         <p class="docs-copy">本文可直接交给中心商店后端团队。下文标为“建议”的接口尚未实现，
           需要双方确认后冻结契约；现有目录、策略与算子分发契约继续复用。
@@ -19,6 +19,12 @@
           <a class="docs-link" href="./store-deployment-boundary.md">自部署与托管边界</a>
           <a class="docs-link" href="./central-server-components.md">现有中心服务</a>
           <a class="docs-link" href="#handoff">后端交付清单</a>
+          <a class="docs-link" href="#account-entry">注册与账号入口</a>
+          <a class="docs-link" href="#authorized-downloads">登录后的授权下载</a>
+          <a class="docs-link" href="#project-operator-execution">项目启用与 Agent 执行</a>
+          <a class="docs-link" href="#agent-package-deployment">远程包部署与就绪</a>
+          <a class="docs-link" href="#release-build">跨平台发布候选</a>
+          <a class="docs-link" href="#release-handoff">发布后端增量需求</a>
         </div>
       </section>
 
@@ -37,11 +43,325 @@
             浏览器本地清单和 bundle 中的引用不是运行时安装凭据。</li>
           <li>已有服务：本地目录、只读发布与身份策略、指定根目录的算子包解析及校验下载。
             这些能力不是完整的商业商店、登录流程、上传审核或结算系统。</li>
-          <li>尚未实现：本轮 UI 对中心账号、额度、授权下载、原生安装回执及作者发布流程的串联。
+          <li>已实现：原生 Installer 发布候选生成入口，统一 Rust 编译目标与商店平台标识，
+            检查动态库文件头、计算真实摘要和长度，并生成既有分发索引。手动 CI 流程覆盖五个目标，
+            各目标必须实际安装执行通过后才汇总候选；配置流程不等于五个平台已经跑绿。</li>
+          <li>已实现：商店“账号”页可显式配置统一账号网站，在系统浏览器打开注册/登录页面，
+            给出邮箱验证与返回工作区的步骤。网站注册不等于 Workbench 已登录。</li>
+          <li>已实现源码接入：公共桌面客户端的 PKCE 登录、本机回调、ID Token 验证、内存会话、续期、取消及退出。
+            同一 issuer 下已接入权益预检、幂等授权、票据下载、传输签名/摘要校验和受限本地记录。
+            已追加账号目录到精确发布版本、原生安装回执、本机项目启用及持久 Agent 执行入口。
+            已接入直连 / Mesh 包部署和就绪核验；尚未完成真实部署账号下载验收、跨平台包变体交付、项目启用记录随 bundle 迁移及作者发布完整串联。
             没有伪造登录、下载、已验签或安装成功状态；未设置中心商店生产地址。</li>
           <li>验收边界：浏览器模拟目录用于验证 UI 与项目引用链；不能证明真实中心服务器、CDN、
             支付服务、原生安装器或 Tauri 安装包已通过端到端验收。新增文案目前覆盖中、英、日。</li>
         </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="account-entry">
+        <h2>注册与账号入口：2026-11-13</h2>
+        <ol class="docs-list">
+          <li>打开 Workbench → 商店 → 账号。填写管理员提供的 HTTPS 账号站点地址，可包含端口，
+            不能包含凭证、路径、查询参数或片段。此配置与目录源独立，默认不猜测生产或局域网站点。</li>
+          <li>保存后核对目标地址，点击“注册 / 账号网站”。入口固定为该站点的
+            <code>/account?lang=zh</code> 或 <code>/account?lang=en</code>，
+            不臆造后端尚未提供的注册专用路由。日语等其他界面语言暂使用账号网站的英文页。</li>
+          <li>在 Team Silvortex 账号网站选择注册，按网站要求完成邮箱验证及认证。
+            Kyuubiki 不接管密码、验证码或双重认证；本机只保存公开站点地址，不保存账号凭证。</li>
+          <li>完成注册后返回原工作区，在“连接工作台账号”的折叠设置里填写已登记的公共桌面客户端 ID、
+            固定回调端口，保存后点击“连接账号”。密码和验证码始终只在系统浏览器的账号站点输入。</li>
+          <li>只有原生层验证回调、令牌签名和当前用户身份成功，才显示“已连接”。
+            浏览器已有登录 cookie、打开网页或返回应用均不算登录成功。注册不授予 Agent 控制权限。</li>
+        </ol>
+        <p class="docs-copy">桌面壳通过专用 Rust 命令请求系统浏览器打开页面，不调用 Node 或 shell。
+          消息桥只接受固定本机前端窗口和来源，拒绝未知字段及不安全地址，并处理重复请求、失败和超时。
+          普通浏览器使用带 <code>noopener noreferrer</code> 的新标签页；工作区保持打开。
+          旧安装包若没有此命令，会提示复制公开目标地址或更新桌面应用，不静默成功。</p>
+        <p class="docs-copy">自部署目录和本地计算不强制注册中心账号。账号网站可移除，存储失败明确提示；
+          窄屏仍需展示注册步骤、错误和会话边界，不能被通用精简样式隐藏。</p>
+        <h3>后端后续交接</h3>
+        <ul class="docs-list">
+          <li>测试入口的公开交接目录：<code>handoff.json</code>、<code>root-ca.crt</code> 和
+            <code>root-ca.sha256</code>，并让开发账号可读；不交付私钥、密码或 token。
+            开发机还需正确解析站点域名。不可关闭 TLS 校验来跳过测试 CA 信任问题。</li>
+          <li>登记 <code>kyuubiki_desktop</code> public client，令牌端认证方式为 <code>none</code>，
+            不提供 client secret；交付真实 <code>client_id</code> 和准确的 HTTPS issuer。</li>
+          <li>精确登记回调 <code>http://127.0.0.1:47831/kyuubiki/account/callback</code>。
+            如需改端口，双方同时改登记与客户端设置；不自动改端口，不使用通配回调或新造 URL scheme。</li>
+          <li>后台允许 scope 集合按现有契约包含 <code>openid profile email offline_access</code>；
+            本客户端实际只申请 <code>openid profile offline_access</code>，不索取邮箱。
+            保持 S256、RS256、回调 <code>iss</code>、刷新令牌轮换及撤销语义；局域网部署不要求开启 backchannel logout。</li>
+          <li>真实邮箱验证、浏览器登录、工作台回调及授权投稿仍须独立端到端验收。
+            本轮不创建测试用户，不修改账号后台，也不公开上架任何算子。</li>
+        </ul>
+        <h3>会话与安全边界</h3>
+        <p class="docs-copy">客户端读取 issuer 的 discovery，并核对账号、token、userinfo、JWKS 和 revoke
+          都属于该 issuer 的现有固定路径。强制 HTTPS，不跟随重定向、不继承环境代理；私有 CA 必须同时提供
+          公开 PEM 和其 DER 内容的 SHA-256 指纹，并通过可信渠道独立核对。浏览器的站点信任需要另行配置。</p>
+        <p class="docs-copy">本机监听只绑定 127.0.0.1；回调限定 GET、Host、路径、大小、总等待时间、
+          单值 state/iss/code，拒绝重放和混合错误响应。ID Token 必须通过 RS256 签名、issuer、audience、
+          nonce、时间和 subject 检查，并与 userinfo 对应。登录与刷新只允许一个事务在途，退出及取消令旧事务失效。</p>
+        <p class="docs-copy">令牌只保存在原生进程内存，不发给 WebView，不进入 localStorage、项目或配置文件。
+          页面只保存公开站点、client ID、回调端口及公开 CA 设置，接收脱敏会话状态。进程退出后需重新登录。
+          “续期会话”使用轮换刷新令牌；响应丢失或验证失败就清除本地会话，不自动重试旧刷新令牌。</p>
+        <p class="docs-copy">“退出工作台账号”先清除本地身份，再尽力撤销令牌；网络失败会显示
+          <code>revocation_unconfirmed</code>，不能声称远端已撤销。此动作不会清除网站 SSO cookie。
+          当前没有全局浏览器退出、持久登录、纯浏览器登录回调或跨应用即时注销通知；原生页内状态查询不等同于服务器实时验证。</p>
+        <p class="docs-copy">协议参考：<a href="https://www.rfc-editor.org/rfc/rfc8252.html">RFC 8252 原生应用授权</a>、
+          <a href="https://openid.net/specs/openid-connect-core-1_0.html">OpenID Connect Core</a>。
+          身份实现独立于求解引擎和算子，登录不改变本地研究、Agent 控制或包验签的权限边界。</p>
+        <h3>本地验收范围</h3>
+        <p class="docs-copy">2026-11-13 注册入口基线：商店 Chromium 回归 6/6、桌面壳与调用链检查 11/11、
+          共享消息桥回归 78/78、前端单元测试 1983/1983 通过；后续会话新增独立回归。
+          新增用例覆盖 1440 与 390 像素窗口、公开地址保存/恢复/移除、存储失败重试、
+          不安全地址拒绝、浏览器返回、旧页面请求失效及不伪造登录状态。
+          窄屏提示隐藏、原生空主机名校验和遗漏的 Tauri 专用权限均由失败测试确认后修复。</p>
+        <p class="docs-copy">会话回归使用本机真实 TLS、临时 RSA 签名密钥和临时端口，覆盖回调兑换、PKCE、签名/声明拒绝、
+          刷新轮换、响应丢失不重试、取消与迟到结果隔离、撤销及证书/端口失败。
+          Unix 的测试密钥由 OpenSSL 临时生成，不写入仓库或磁盘；Windows 尚未实测这组 TLS 测试。
+          GUI 的状态机测试使用模拟原生桥，与真实 TLS 测试分层报告，不冒充部署端端到端测试。</p>
+        <p class="docs-copy">本轮会话接入验收：商店浏览器回归 8/8（包含 1440/390 像素模拟桌面会话），
+          共享桥回归 82/82、前端单元回归 1983/1983、原生桌面运行时 159 项通过（另有 3 项显式 opt-in 未运行）。
+          三个桌面应用的 macOS 编译检查、前端类型检查、Rust Clippy 严格检查、共享资源同步与文档检查通过。
+          张量结构检查通过，项目整体仍有既有 P0 与证据缺口，不能据此宣称全系统验收完成。</p>
+        <p class="docs-copy">macOS Workbench 原生编译检查通过，账号页没有授予远程 iframe 直接 IPC 权限。
+          这仍是源码和隔离浏览器验收：没有重打安装包，没有完成真实 HTTPS 注册、邮箱验证或登录回调，
+          也未进行 Linux/Windows 原生浏览器调用实测。张量登记为部分覆盖，不提升为真实商店身份闭环。</p>
+        <pre><code>node --test apps/desktop-shared/test/*.test.mjs
+node --test tests/integration/workbench-ui-store-workspace.test.mjs tests/integration/workbench-shell-regression.test.mjs tests/integration/desktop-gui-call-chain-contract.test.mjs
+cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-desktop-runtime
+./scripts/kyuubiki frontend-unit-test
+./scripts/kyuubiki frontend-typecheck
+./scripts/kyuubiki check-desktop-shared
+./scripts/kyuubiki check-module-function-coverage-tensor</code></pre>
+      </section>
+
+      <section class="docs-card docs-section" id="authorized-downloads">
+        <h2>登录后的授权下载：2026-11-13</h2>
+        <p class="docs-copy">实现以 Silvortex 后端仓库的 <code>contracts/kyuubiki/store-v1.openapi.json</code>
+          v1.2.0 和 <code>docs/apps/kyuubiki-store-publishing.md</code> 为准。
+          当前仅接受与已登录 issuer 同源的 <code>/store/v1</code>，不把账号令牌交给任意目录源、URL 或 CDN。</p>
+        <ol class="docs-list">
+          <li>Workbench → 商店 → 账号完成连接，再进入“授权下载”。“账号商店目录”直接查询已登录 issuer，
+            支持搜索和每页 20 条的游标分页；选中条目带入资源 ID、返回的确切版本和本机平台，仍需用户确认预检。
+            也保留手动输入确切版本的入口。目录换代或游标失效需回到第一页，不混合不同目录快照。
+            本轮不从旧目录引用的 <code>package_ref</code> 推断托管身份，不提供含糊的 latest 下载。</li>
+          <li>填写独立可信渠道取得的签名 <code>key_id</code> 及公钥 SPKI DER 的 SHA-256。
+            这是发布传输签名公钥，不是 TLS CA 指纹、OIDC 登录公钥或私钥；客户端不自动信任服务器返回的新根。</li>
+          <li>“预检版本和额度”查询 capabilities、me、entitlements、固定版本详情和 trust-roots，
+            核对账号、平台、发布状态、文件边界和签名。此步骤不创建授权、不扣额度。
+            预检后折叠输入区，将待确认记录放到主要位置；支持中、英、日和窄屏布局。</li>
+          <li>核对记录后显式点击“授权并下载”。算子和工作流模板始终提示可能消耗一次额度，
+            即使预检时不限额度也不承诺后续权益不变。授权前先落盘不可变文件清单和幂等键，
+            按后端 <code>grant_issued</code> 策略核对返回的原始计次结果。</li>
+          <li>短期票据只用于同源的固定下载路由；下载请求不带账号 Authorization，不跟随重定向。
+            校验 RS256 对小写 SHA-256 ASCII 文本的传输签名、准确长度及流式摘要后，
+            才将暂存目录切换为已校验文件。不会自动加载算子、运行脚本或显示“已安装”。</li>
+        </ol>
+        <h3>恢复、磁盘与安全边界</h3>
+        <ul class="docs-list">
+          <li>原生服务独立于 React、求解引擎与算子；UI 只提交受限操作，接收脱敏状态。
+            消息先进行不含业务参数的页面握手，再绑定页面代次提交操作；刷新后旧页面请求不得重放。
+            access/refresh token 和下载票据均不写入本地记录、项目、浏览器存储或日志。</li>
+          <li>记录保存在桌面偏好目录下的 <code>store-downloads/&lt;operation-id&gt;/record.json</code>，
+            本次临时文件为 <code>partial/</code>，完成文件为 <code>files/</code>。
+            Unix 目录 0700、文件 0600；拒绝符号链接、路径穿越、Windows 保留名称和大小写/文件目录冲突。
+            文件、目录与记录写入设有同步点；实际断电/强杀注入仍未验收。</li>
+          <li>最多 4 条记录，单文件 64 MiB、单次 32 个文件且总量 256 MiB；串行写入并使用跨进程锁。
+            只清理本操作的失败暂存；不清扫用户项目。用户可确认移除已完成记录，未确认的授权结果禁止直接遗忘。</li>
+          <li>授权响应丢失时沿用原请求体和原幂等键，即使剩余额度已经为零也允许恢复查询。
+            已知授权重试只续签原 grant，不新建授权；取消不退额度。本轮按整文件重试，尚无 Range 断点续传。</li>
+          <li>列表额度是预检或原授权时的快照，不冒充实时余额。另一应用实例可能仍在下载，
+            无本进程执行句柄的记录显示“未完成，需核对或恢复”；跨进程锁阻止重复运行或并发移除。</li>
+          <li>授权重放期限不超过后端声明的幂等保留期，并预留时间余量；超过期限停止自动 POST，
+            不能假定旧键永远不会重复扣次。票据过期、召回、撤销或会话失效均由服务端再次判定。</li>
+          <li>退出/续期使旧下载租约失效，迟到的旧 401 不得清除新会话。完成提交与当前会话串行核对。
+            网络请求有时限，取消不能瞬间打断在途阻塞读取，单文件请求最多等待 120 秒。</li>
+          <li>重开面板可恢复原生下载状态；本机进程退出后会话不保留。重新登录后的旧 grant 续签是否允许，
+            取决于服务端的原会话约束，不能承诺跨进程自动恢复。当前测试覆盖管理器重建与记录复读，
+            不将它计作真实进程崩溃或跨会话续签通过。</li>
+        </ul>
+        <h3 id="download-backend-handoff">请后端继续配合</h3>
+        <ul class="docs-list">
+          <li>提供账号公开交接材料：准确 issuer、已注册 public client ID、固定回调及公开 CA/指纹，
+            开发账号可读即可；仍不需要任何私钥、密码或 token。准备一个专用测试身份供用户完成浏览器登录。</li>
+          <li>独立交付下载签名的 <code>key_id</code>、公开 SPKI PEM 与 SPKI DER SHA-256 指纹，
+            并提供一组小型、已发布且不可变的真实示例：kind、asset_id、version、platform 及真实文件摘要。
+            macOS 首轮使用 <code>macos-aarch64</code>，不以合成 JSON 代替原生包验收。</li>
+          <li>仅在测试环境确认 <code>grant_issued</code> 的计次政策并开启下载，提供足够的测试额度。
+            联合验收余额为零时的同键恢复、续签不重复计次、召回、过期票据及 401；不自动改生产计费开关。</li>
+          <li>确认“重新登录但仍为同一 subject”的旧授权恢复策略。若原会话强绑定无法续签，
+            请提供不会再次扣次的显式恢复方案，或明确为不可恢复并可查询原扣次结果。</li>
+          <li>建议补充按原幂等键只读查询授权结果的能力，用于响应丢失且客户端未知 grant_id、
+            或保留期已过的人工核对。现有 GET-by-grant-id 无法解决未知 ID 的这类情况；客户端不会自行臆造此接口。</li>
+          <li>本机安装要求 <code>asset_id = manifest.package_id</code>、<code>version = manifest.package_version</code>，
+            对应平台 files 必须是 <code>&lt;platform&gt;/kyuubiki-operator.json</code> 和
+            <code>&lt;platform&gt;/operator.dylib</code>（Linux 为 <code>operator.so</code>，Windows 为 <code>operator.dll</code>）。
+            与已有原生分发生成器一致，清单 entrypoint 为同目录的动态库文件名；两个文件均需独立摘要、长度和传输签名。
+            若后端资源 ID 与包 ID 不同，必须先补充可信、不可变的映射契约，客户端不会猜测映射。</li>
+          <li>请在测试目录上架一个符合上述布局的 macOS arm64 最小包，并确认分页、固定版本详情和授权响应引用同一组文件。
+            <code>native_package_format_verified</code>、独立审核和传输签名仍是不同证据；不得仅因客户端本机安装通过就宣称任意投稿代码安全。</li>
+          <li>当前不支持跨 issuer 的商店/CDN 域名、服务端项目启用回执及自动安装。
+            若需要分域部署，请先交付明确的受信来源和票据契约；不能直接转发账号令牌。</li>
+        </ul>
+        <p class="docs-copy">新增下载回归使用真实本机 HTTPS 与临时 RSA 签名，GUI 使用模拟原生桥。
+          已覆盖不扣次预检、同键恢复、文件篡改、恶意路径/地址、取消、退出账号和刷新后的迟到响应。
+          部署端尚未完成真实注册 → 登录 → 计次 → 下载验收；本机原生安装链路已另行测试，见下节，
+          不能将本机隔离测试算成部署端完成。</p>
+        <p class="docs-copy">2026-11-13 下载接入验收：新增原生回归 16 项，桌面运行时合计 175 项通过，
+          另 3 项既有 opt-in 未运行；共享桥 86/86、商店浏览器 8/8、桌面壳/IPC 11/11、
+          前端单元回归 1983/1983 通过。桌面壳首次受本机端口权限限制，获准后完整重跑通过。
+          旧下载 401 误清新会话、同值访问令牌续期未退休旧租约这两项竞态均由失败测试复现后修复。
+          本轮没有真实商店账号/扣次请求，没有重打安装包，也没有启动模型 API。</p>
+      </section>
+
+      <section class="docs-card docs-section" id="native-store-install">
+        <h2>目录、下载与原生安装闭环：2026-11-13</h2>
+        <p class="docs-copy">已校验下载后，用户显式确认“安装到本机算子库”。Workbench 只提交原下载记录 ID，
+          不接受页面提供任意文件路径、安装器路径、命令、账号令牌或目标目录。
+          原生服务重新核对发布状态、签名和不可变文件清单，不创建下载授权，也不再次扣次。</p>
+        <ol class="docs-list">
+          <li>仅接受本机平台的最小 Rust 算子包；模板、语言包、任意目录结构、多动态库及其他平台文件暂不自动安装。
+            本机受管算子库不是当前项目已启用列表，也不是 Orchestra 的算子库。</li>
+          <li>持久化安装意图后，直接调用配套运行时的 <code>bin/kyuubiki-installer</code>，不经过 shell、Node 或网页下载执行。
+            Workbench 没有新增 Installer/求解引擎链接依赖；新版运行时打包流程会纳入这个独立二进制。
+            旧运行时缺少安装器时明确失败，需要后续重打、安装或修复，不能回退到 PATH 上的陌生程序。</li>
+          <li>本地交接契约是 <a href="../schemas/store-operator-install.schema.json">store-operator-install.schema.json</a>，
+            由 <code>install-store-operator &lt;files-root&gt;</code> 从有界 stdin 读取。
+            Installer 将两份文件复制进私有快照，重新核对长度、摘要、清单 ID/版本、SDK/执行 ABI、最低宿主版本及原生二进制头。
+            不接受未知清单字段、路径变体或安装脚本，也不加载动态库。</li>
+          <li>通过既有 Installer 的预检、暂存、原子晋升和安装回执核验后，桌面端还会再次比对回执 ID、版本、清单摘要和动态库摘要。
+            同版本同内容可幂等重试；已装不同内容不会自动覆盖或先卸载。</li>
+          <li>“安装回执已确认”是明确时点的安装记录，不冒充实时运行状态或 Agent 激活结果。
+            退出账号不能撤回已开始的本机安装；原账号重新连接后可核验结果。应用关闭、超时或回执写入失败时不猜测成功，
+            由“核验或重试安装”检查原始版本，不另建下载授权。</li>
+          <li>“移除本地下载”只删该下载缓存和记录，不卸载已经装入受管库的算子。安装结果不会自动加入项目、热加载到 Agent、
+            分发给远程机器或更新 Orchestra；这几步仍需要各自的准入与显式操作。</li>
+        </ol>
+        <p class="docs-copy">已实际运行隔离本机 HTTPS + 临时签名 + 真实模板动态库 + 原生 Installer 子进程测试，
+          覆盖目录到确切版本选择、授权下载、真实安装、桌面完成回执丢失后的重复核验、下载后篡改、召回阻断和缓存移除不卸载。
+          全程只使用临时目录，不执行模板算子，不使用真实商店账号或计费服务。GUI 的 1440/390px 链路使用模拟原生桥，不能替代真实壳与部署端联合验收。</p>
+        <p class="docs-copy">恢复测试模拟的是安装已经提交、桌面完成记录丢失，未模拟 Installer 进程强杀或真实断电。
+          既有 Installer 的遗留锁文件和中断暂存清理仍需专项验收；不承诺这一轮已经实现任意断点的自动恢复。
+          本轮未重打 APP、未更新已安装运行时、未使用模型 API。</p>
+        <p class="docs-copy">此前安装链路验证：桌面运行时默认回归 178 项通过，另单独启用真实模板/Installer 闭环并通过；
+          其余 3 个原有显式 opt-in 未运行。Installer 相关 19 项、共享桥 87 项、浏览器商店 8 项、桌面壳/IPC 11 项、
+          前端单元测试 1983 项通过；Mac Workbench 编译检查、类型检查、严格 lint、文档及张量结构检查通过。
+          张量保持 partial / exercised，不把隔离环境验证提升为部署端完成。</p>
+        <pre class="docs-code"><code>cargo build --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer
+cargo build --manifest-path workers/rust/templates/operator-crate-template/Cargo.toml
+cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-desktop-runtime --lib catalog_grant_real_native_install -- --ignored
+cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer --test store_install</code></pre>
+      </section>
+
+      <section class="docs-card docs-section" id="project-operator-execution">
+        <h2>项目启用与 Agent 执行：2026-11-13</h2>
+        <p class="docs-copy">Workbench → 商店 → 安装回执 → 项目算子，或直接打开“项目算子”。
+          此入口不要求中心账号登录；从本机受管库重新核验文件，不信任下载列表的历史 installed 标记。
+          旧版“项目资产”仍是目录引用，不自动升级为可执行权限。</p>
+        <ol class="docs-list">
+          <li>选定项目，核验本机安装，选择包版本，再显式启用。固定 package_id、package_version、
+            manifest_sha256、entrypoint_sha256 和导出的 operator_id/kind。
+            同名算子冲突或不同版本不会覆盖；需先明确停用旧绑定。</li>
+          <li>启用记录位于受管算子库的 <code>projects/&lt;sha256(scope, project_id)&gt;.json</code>。
+            GUI 的 scope 是当前控制通道地址的 SHA-256，与任务恢复采用同一来源；不同控制通道的同名项目不共享启用记录。
+            使用进程锁、私有文件、暂存写入、文件同步和原子替换；损坏记录不会被静默清空。
+            这仍是本机项目关联，尚未写入可迁移的 bundle，不应当作跨机器项目锁文件。</li>
+          <li>选择导出算子，填写输入和配置 JSON，“核验并准备任务”只生成现有 TaskIR，可导出，不计算。
+            每次准备和提交前重查绑定与安装内容；缺包、摘要变化、未启用或算子不属于该包均拒绝。</li>
+          <li>提交需要直连 / Mesh 控制模式和明确目标地址；沿用控制令牌、TLS 信任与持久任务通道。
+            Agent 必须事先配置 <code>--operator-package-host-id</code>、<code>--operator-packages-root</code>
+            及 <code>KYUUBIKI_AGENT_EXECUTION_STORE</code>。此入口不会启动、重配或热加载 Agent，也不会偷偷切换控制模式。</li>
+          <li>派发前保存 execution_id、目标地址和 Agent 存储身份，调用 <code>submit_durable_agent_task</code>，
+            内层仍是 <code>run_operator_task_ir</code>。断线、结果不明或页面切换时保留原记录，
+            只查询原任务，不自动重跑或迁移。确认终态回执后才能解除占位。</li>
+          <li>停用只撤销此项目后续准备资格，不卸载、不停止既有任务，也不销毁历史回执。
+            项目绑定是客户端工作流约束，不取代 Agent 控制鉴权；已交付的 TaskIR 不是可远程撤销的令牌。</li>
+        </ol>
+        <p class="docs-copy">本地协议见 <a href="../schemas/project-operator-request.schema.json">project-operator-request.schema.json</a>。
+          原生接口 <code>project_operator</code> 与商店会话独立；独立 Installer 提供
+          <code>project-operator [--store-root &lt;path&gt;]</code>，从 stdin 读取请求，GUI 不允许传入自选路径。
+          Rust 无头 SDK 重导出 ProjectOperatorPin 和 <code>build_project_operator_task</code>；此构造函数只构建语言无关任务，
+          不加载动态库、不验证本地安装或授予权限。实际本地绑定管理由 Installer 库负责，后续控制复用既有 SDK/Agent 接口。</p>
+        <p class="docs-copy">真实本机回归验证了：安装可信模板动态库 → 显式启用 → Agent 执行并返回 sum=14 →
+          强制终止 Agent → 使用原持久目录重启 → 取回完全相同的原回执 → 停用后禁止新准备，但仍可查询旧结果。
+          这是测试算子的链路验证，不是所有商店算子的物理正确性证明，也不是计算中任意断点可自动续算或真实断电认证。
+          浏览器回归在 1440/390px 检查安装交接、退出账号后启用、准备和停用，使用模拟原生桥；
+          真实 Tauri 联调仍需更新配套运行时，本轮未重打安装。</p>
+        <p class="docs-copy">项目启用接入时的回归基线：桌面运行时默认回归 179 项、Installer 默认回归 156 项（含项目入口 9 项及共用安装夹具测试）、
+          共享桥 88 项、前端单元测试 1985 项、浏览器商店 8 项通过。
+          另单独启用并通过真实 Agent 执行/重启查询，以及目录授权下载/原生安装回归；桌面运行时其余 3 个 opt-in 未运行。
+          独立 Installer 子进程之间已验证启用记录持久化；Mac Workbench 编译、类型检查、严格 lint、文档和张量结构检查通过。
+          未运行全仓库测试或 Linux/Windows 实机验收。张量继续保持 partial / exercised。</p>
+        <h3>需要后端配合的边界</h3>
+        <ul class="docs-list">
+          <li>中心商店本轮不需要新增执行/启用权限接口。继续交付原有公开 CA、OIDC 客户端登记、测试账号、独立签名公钥指纹及已上架的本机平台测试包，完成真实下载验收。</li>
+          <li>远程 Orchestra 需要 Kyuubiki 控制面提供独立鉴权的包入库与就绪回执，固定 ID、版本、平台、清单和二进制摘要。
+            只交付给该 Orchestra 绑定的 Agent，不能由中心商店直接下发控制或让每个 Agent 复制整库。</li>
+          <li>远程直连 / Mesh 的部署、就绪和版本冲突回执已接入此面板，边界见下节。
+            本机安装不表示远程机器已有包。项目记录迁移、跨机器平台变体及完整 PWDT 命令覆盖仍待后续迭代。</li>
+        </ul>
+        <pre class="docs-code"><code>cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer --test project_operator
+cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test project_operator_live -- --ignored
+./scripts/kyuubiki frontend-unit-test durable-direct
+node --test tests/integration/workbench-ui-store-workspace.test.mjs</code></pre>
+      </section>
+
+      <section class="docs-card docs-section" id="agent-package-deployment">
+        <h2>远程 Agent 包部署、就绪与冲突：2026-11-13</h2>
+        <p class="docs-copy">Workbench → 项目算子 → 已启用的包 → 明确目标 Agent → 核验目标 → 部署 / 继续上传。
+          商店只交付不可变包；项目启用只表达研究意图；控制通道负责部署与执行。中心账号、下载票据、额度和签名私钥均不传给 Agent。</p>
+        <ol class="docs-list">
+          <li>Agent 启动时显式设置 <code>KYUUBIKI_AGENT_PACKAGE_DEPLOYMENT=true</code> 才允许修改包库；默认关闭。
+            包根目录必须使用受管布局 <code>&lt;store-root&gt;/packages</code>，并预先配置算子宿主。
+            已绑定 Orchestra 的 Agent 禁止启用此直接上传入口，仍向自己绑定的控制器按需拉取。</li>
+          <li>非本机连接必须使用既有 Agent TLS 与 API token，同时遵守 Agent 网络准入和受信 LAN 控制配置。
+            普通 IP 白名单或受信 LAN 标记不能替代加密与认证；本机环回或由用户建立的 SSH 加密隧道可以使用环回端口。
+            网关要求一个精确目标地址，不广播凭证；商店登录不能授权部署。</li>
+          <li>来源是本机已安装且在当前项目启用的精确版本。当前只支持同平台、单清单加单个平铺动态库的包，
+            每库最多 32 MiB、每块最多 64 KiB，目标最多保留 4 个未完成上传。路径、URL、安装钩子和任意命令不进入传输协议。</li>
+          <li>请求固定包 ID、版本、平台、清单与二进制 SHA-256、导出算子列表，以及目标当前进程身份。
+            每块写入后同步文件，重连先查询落盘偏移；完全相同的已接收块可以幂等确认，空洞、不同重叠内容、错误长度均拒绝。
+            旧进程的修改请求在 Agent 重启后失效，必须重新核验，不自动猜测成功。</li>
+          <li>提交验证完整摘要、包格式、二进制平台和 ABI，调用现有 Installer 的原子安装流程；不在部署过程中加载原生代码。
+            返回 <code>installed_restart_required</code> 而不是“可执行”。由用户通过受管生命周期明确重启后，
+            重新核验磁盘包与 Agent 本进程已加载包都完全匹配，才返回 <code>ready</code>；GUI 提交任务前再次核验。</li>
+          <li>相同版本、相同摘要重复提交不重复安装；同名不同版本或同版本不同内容返回 <code>version_conflict</code>，保留目标原包。
+            本轮没有自动停服、卸载替换、热更新或自动回滚。更换冲突版本仍需 Installer 明确停服处理，不得把上传当成覆盖许可。</li>
+          <li>“清理未完成上传”只清理此精确包身份在 <code>&lt;store-root&gt;/deployments/&lt;pin-sha256&gt;</code> 下的暂存，
+            不删除已安装包、其他上传或研究结果。初始化中断、磁盘写失败或损坏暂存保持未确认，可以显式清理后重试，不静默丢弃。</li>
+        </ol>
+        <p class="docs-copy">协议：<a href="../schemas/operator-deployment.schema.json">operator-deployment.schema.json</a>。
+          原生 RPC 为 <code>manage_operator_package</code>，动作是 inspect / begin / chunk / commit / abort；
+          原生 GUI 网关为 <code>POST /api/direct-mesh/operator-package</code>。
+          本机 Installer 的 <code>read_deployment</code> 只输出固定偏移的有限字节，不执行算子。
+          Rust 无头 SDK 重导出同一协议类型；既有 Agent 传输可调用同一 RPC，不必经过商店或 GUI。
+          Engine 和 TaskIR 的求解接口没有新增商店依赖。</p>
+        <h3>验证范围与保留边界</h3>
+        <p class="docs-copy">真实 Mac Agent + 独立空包库测试：上传第一块 → 强制结束进程 → 重启后保留偏移 → 旧进程请求拒绝 →
+          继续上传并安装 → 仍显示待重启 → 重启并核验实际加载 → 执行可信模板算子返回 sum=14；另验证默认禁用与冲突不覆盖。
+          独立 TLS 网关测试验证凭证不进入任务、错误进程、伪就绪和越界回执被拒绝。浏览器 1440/390px 链路使用模拟原生桥与模拟 Agent 回执。
+          这些结果不是 Linux 物理服务器部署验收，也不是任意时间断电安全认证；本轮未重打或更新已安装 APP / 运行时。</p>
+        <p class="docs-copy">本轮远程部署回归：桌面运行时默认 182 项、Installer 163 项（部署入口 7 项含 4 项共用夹具）、协议 154 项、
+          共享桥 88 项、前端 1989 项、浏览器 8 项、Agent 单元 333 项（含 LAN 权限 8 项）通过；另外实际执行两个 Agent 包链路 opt-in 与 4 项 TLS Agent 测试。
+          Mac Workbench 编译检查、前端生产构建和类型检查、严格 Rust lint、文档、商店契约和张量结构检查通过，未运行全仓库测试。
+          默认桌面运行时仍跳过 4 个 opt-in，本轮未调用付费模型 API 或真实商店账号。</p>
+        <p class="docs-copy">完整回归同时修正了下载完成状态与文件锁释放之间的竞态：后台收尾期间不提前发布终态，释放写锁后才允许界面展示完成。
+          重试、安装或清理不再依赖固定延时躲避同一下载任务的锁；测试中的补偿等待已移除。</p>
+        <p class="docs-copy">本机当前平台包不能直接部署到其他平台。例如 Mac 包发往 Linux Agent 会在上传前拒绝，
+          不会尝试加载不兼容动态库。目标平台变体选择、Orchestra 受管入库、项目绑定迁移、受控版本替换和完整 PWDT 命令仍需后续工作。
+          张量保持 partial / exercised，不因本机通过就标为生产部署完成。</p>
+        <h3>给中心商店后端的增量说明</h3>
+        <ul class="docs-list">
+          <li>本轮不要求新增 Agent 控制或执行授权接口，也不让商店托管 Agent token。现有每平台 manifest / 动态库独立文件契约继续使用。</li>
+          <li>请继续保证每个已封存版本的平台文件清单、长度和摘要不可变，并交付一个已上架的 macOS ARM64 测试包及对应 Linux 变体，供后续跨平台选择验收。</li>
+          <li>真实联调仍需要原有公开 CA / 指纹、OIDC 客户端登记、测试账号及独立签名公钥指纹，不需要私钥。Orchestra 的包入库与就绪控制属于 Kyuubiki 控制面，不应塞进商店后台。</li>
+        </ul>
+        <pre class="docs-code"><code>cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer --test operator_deployment
+cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-desktop-runtime --lib package_gateway
+cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_deployment_live -- --ignored
+./scripts/kyuubiki frontend-unit-test project-operator-deployment
+node --test tests/integration/workbench-ui-store-workspace.test.mjs</code></pre>
       </section>
 
       <section class="docs-card docs-section" id="ownership">
@@ -112,7 +432,7 @@
             需提供测试 issuer、公开客户端标识、允许的桌面/浏览器回调、audience、scopes、登出与撤销语义。</li>
           <li>以 issuer + subject 标识用户，校验 state、nonce、issuer、audience 和过期时间。
             UI 不接收 client secret，不保存密码；访问/刷新令牌不得写入项目文件、localStorage 或日志。</li>
-          <li>持久凭证通过已有原生受管凭证边界；纯浏览器优先安全 HttpOnly 会话并保护 CSRF，
+          <li>持久凭证未来须接入经过验收的原生安全存储；纯浏览器优先安全 HttpOnly 会话并保护 CSRF，
             无持久安全通道时仅在内存保留短期材料。不要新增明文配置目录存 token 的捷径。</li>
           <li><code>GET /store/v1/me</code>：最小显示信息及会话到期状态。
             <code>GET /store/v1/me/entitlements</code>：可下载种类、限额、剩余额度、重置时间、
@@ -284,9 +604,114 @@
           新增远程操作必须保留来源、版本、请求关联号和失败原因，不能回退为拼接脚本命令。</p>
       </section>
 
+      <section class="docs-card docs-section" id="release-build">
+        <h2>原生跨平台发布候选：2026-11-11 增量</h2>
+        <p class="docs-copy">Rust API 为 <code>kyuubiki_installer::prepare_operator_distribution</code>；
+          CLI 与其共用实现，不新增 Node 或 shell 打包脚本。先在对应工具链上编译，再显式提供各目标动态库。
+          以下输出目录的父目录必须已存在，输出目录本身必须不存在。</p>
+        <pre><code>cargo run --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer -- \
+  prepare-operator-distribution path/to/kyuubiki-operator.json candidate \
+  aarch64-apple-darwin=build/apple-arm64/libexample.dylib \
+  x86_64-unknown-linux-gnu=build/linux-x64/libexample.so</code></pre>
+        <p class="docs-copy">这是命令形状示例；请替换为实际构建产物，不会自动下载或生成这些文件。
+          输入包清单的身份、算子列表、SDK/ABI、最低宿主版本和验证状态被保留，只把入口路径重定位为
+          包内 <code>operator.dylib</code> / <code>operator.so</code> / <code>operator.dll</code>。
+          许可证等中心商品元数据走提交外壳，不往严格执行清单里塞未知字段。</p>
+        <ul class="docs-list">
+          <li><code>aarch64-apple-darwin</code> → <code>macos-aarch64</code>。</li>
+          <li><code>x86_64-apple-darwin</code> → <code>macos-x86_64</code>。</li>
+          <li><code>aarch64-unknown-linux-gnu</code> → <code>linux-aarch64</code>。</li>
+          <li><code>x86_64-unknown-linux-gnu</code> → <code>linux-x86_64</code>。</li>
+          <li><code>x86_64-pc-windows-msvc</code> → <code>windows-x86_64</code>。</li>
+        </ul>
+        <p class="docs-copy">当前明确不接受 universal、musl、GNU Windows 或未列出的目标，避免把
+          不同 ABI 静默塞进同一平台键。每份 manifest 上限 1 MiB、每份库上限 512 MiB，最多五个目标；
+          以流式复制计算摘要，只检查复制后的文件头，不加载待发布代码。拒绝空文件、符号链接、重复目标、
+          错误架构和未知清单字段；包身份共用安装器的可移植校验，提前拒绝 CON/NUL 等保留名。
+          索引按平台排序，输入顺序不会改变输出；已有目录不覆盖。</p>
+        <p class="docs-copy">输出为 <code>candidate/kyuubiki-operator-distribution.json</code> 与各平台子目录。
+          上传后放到既有 <code>&lt;package-id&gt;/&lt;version&gt;/</code> 布局，不把构建缓存、源码、测试数据库
+          或本机路径打包进去。失败会清理本次暂存；并发使用输出锁，正常异常路径释放。
+          强杀可能留下锁或隐藏暂存，确认原打包进程已退出后才能清理。本入口不是断电恢复服务。</p>
+        <p class="docs-copy">文件头检查仅验证格式、字长、CPU 与相应共享库类型标记，不能证明导出符号、
+          依赖库、glibc/系统最低版本、代码签名或算法正确。实现依据
+          <a href="https://raw.githubusercontent.com/apple-oss-distributions/xnu/main/EXTERNAL_HEADERS/mach-o/loader.h">Apple Mach-O 定义</a>、
+          <a href="https://gabi.xinuos.com/elf/02-eheader.html">ELF 头规范</a>和
+          <a href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format">Microsoft PE 规范</a>。
+          构建声明的 Rust ABI 仍需构建证据核实，不能仅凭文件头证明 GNU/MSVC 来源。</p>
+        <h3>CI 与验收边界</h3>
+        <p class="docs-copy"><code>.github/workflows/operator-store-release-candidate.yml</code>
+          为手动触发的模板包验收流程。采用各平台原生 runner 构建，显式指定 Rust target；
+          当前不是在一台 Mac 上交叉链接所有系统。每个任务先跑打包拒绝测试，编译 release 库，
+          再通过 Installer 安装、Agent 实际执行与卸载，全部成功才生成五目标汇总索引。
+          Runner 标签依据 <a href="https://docs.github.com/en/actions/reference/runners/github-hosted-runners">GitHub 官方说明</a>，
+          不使用已退役的 macOS 14 标签。候选制品保留七天，无中心商店凭证，不自动公开发布。</p>
+        <p class="docs-copy">这一流程只为仓库内的模板包产生可复现证据；第三方包需要对应的测试输入、
+          预期输出及兼容基线。不能把模板成功当作所有算子通过，也不能把文件头模拟测试当作远端平台执行。</p>
+      </section>
+
+      <section class="docs-card docs-section" id="release-handoff">
+        <h2>发布后端原始交接要求与当前边界</h2>
+        <p class="docs-copy">以下为原始交接要求，不再表示全部未实现。
+          2026-11-11 已完成隔离后端与真实 macOS 包联调，见下方验收；正式入口及客户端投稿仍需接通。</p>
+        <ol class="docs-list">
+          <li><strong>按目标接收完整制品集：</strong>复用
+            <code>operator-package-distribution/v1</code>，每个目标分别上传 manifest 和 entrypoint，
+            保留其独立 SHA-256 与长度。服务端重新计算，不用单个 ZIP 摘要替代内部摘要；
+            若接收 ZIP，须限制展开体积、文件数和路径并拒绝链接。不能信任客户端声明的成功状态。</li>
+          <li><strong>事务式 finalize：</strong>先验证声明目标全部到齐、清单身份一致、文件摘要一致、
+            路径安全，再封存不可变版本。相同幂等键重试不得创建第二份版本；同一版本不同内容必须冲突。
+            一个平台上传失败时不能公开半个声明矩阵；允许发布单目标版本，但必须显式声明，不能自动降级。</li>
+          <li><strong>构建与兼容元数据：</strong>在商品发布外壳中提供 Rust target、源码修订、锁文件摘要、
+            工具链、构建模式、runner/CI 关联号，以及最低 OS、libc/CRT 和依赖库约束。
+            v1 平台键不足以区分 GNU/musl/MSVC，当前候选器先拒绝不支持的变体；扩展前需共同版本化契约。
+            本地文件路径不作为远端构建证据。</li>
+          <li><strong>签名和审核独立：</strong>发布服务不运行上传的库。隔离审核环境完成目标平台加载与
+            算子测试，验证状态和证据须绑定具体目标与摘要；再产生可校验签名、key id、撤回/召回状态。
+            不把作者写入 manifest 的 <code>validation_status</code> 当作服务端审核结论。</li>
+          <li><strong>最小联调交付：</strong>提供 submissions / uploads / finalize / status 的 OpenAPI
+            和测试环境，以及一个 macOS arm64 小包。覆盖少目标、错误 CPU、摘要不符、重复 finalize、
+            响应丢失后重试、拒绝审核和撤回。返回稳定错误码、请求关联号，不返回服务器目录或令牌。</li>
+        </ol>
+        <p class="docs-copy">共享登录、权益、幂等下载授权的源码进展见上面的账号与授权下载章节，Kyuubiki 不另做账号系统。
+          打包和隔离后端上传/封存已验证；独立审核签名已通过后端测试，但不等于真实算子已获审核批准。
+          真实部署授权下载、共享登录及 GUI 投稿尚待端到端验收，不应在 GUI 展示为已完成。</p>
+      </section>
+
+      <section class="docs-card docs-section" id="publishing-interop">
+        <h2>真实包联调：2026-11-11</h2>
+        <p class="docs-copy">用后端固定提交构建工具在 macOS ARM64 生成真实模板库，随后用当前
+          3.7.8 Installer 重新组织为原生分发候选。通过 SSH 交付 Linux 上的临时测试环境，
+          使用真实 Rust 商店和一次性 PostgreSQL，未读取部署密钥、替换服务或公开上架。</p>
+        <ul class="docs-list">
+          <li>后端发布集成 10 组、相关工具单元测试 57 项通过；真实包跨仓库集成 6 组通过，
+            其中一组为迁移准备。上传声明和实际响应均经新 OpenAPI 校验。</li>
+          <li>测试上传成功但响应丢失，再重启商店：仅补传缺失文件；封存重试上传数为零，
+            绑定摘要和封存回执不变。同版本改 manifest/入口文件名返回 <code>version_conflict</code>。</li>
+          <li>回取真实封存字节后，Installer 安装 → Agent 计算 → 错误摘要拒绝 → 恢复执行 → 卸载
+            1 项通过。结果仍为 <code>pending_review / awaiting_review</code>，不是已批准或已发布。</li>
+          <li>商店上限为 manifest 1 MiB、entrypoint 64 MiB、所有平台合计 256 MiB；
+            原生候选器的库上限 512 MiB 属于独立本地能力，不能视为中心上传额度。投稿前需额外预检。</li>
+          <li>后端枚举比当前五目标候选器更宽。Linux musl、Windows GNU/ARM64 尚不能据此标成客户端可安装；
+            需明确 ABI 匹配或先限制为双方已验收的目标，不得只按 OS/CPU 选取。</li>
+        </ul>
+        <p class="docs-copy">复测入口为 <code>tests/integration/store-native-publishing-live.py</code>
+          和 <code>workers/rust/crates/cli/tests/operator_release_live.rs</code> 的
+          <code>returned_store_candidate_installs_executes_and_uninstalls_on_native_agent</code>。
+          后者会执行原生代码，只能显式提供自己构建且可信的测试包。详细准备步骤及边界见
+          <code>reports/store-native-publishing-interop-20261111.md</code>。</p>
+        <p class="docs-copy">本轮不是完整对外商店验收：采用服务器回环 HTTP 与临时身份令牌，
+          未经过 HTTPS Web 网关、交互式 OIDC 登录、公开授权下载、GUI/PWDT 投稿或多平台原生执行。
+          回取暂存文件也不等于已测试公开下载；不能据此关闭这些覆盖缺口。</p>
+      </section>
+
       <section class="docs-card docs-section" id="local-evidence">
         <h2>10. 本轮开发验收记录</h2>
         <ul class="docs-list">
+          <li>2026-11-11，发布候选补充：macOS arm64 源码下的 Installer 库回归 133 项通过，
+            新增打包回归 7 项通过，真实 release 模板包的准备 → 安装 → Agent 执行/错误摘要拒绝/恢复 → 卸载
+            1 项通过。五种格式/架构的合成文件头测试不计为五平台运行验收；GitHub 矩阵本轮未触发。
+            未上传中心商店、未签名或发布，不改已安装应用和配套运行时，也未调用模型 API。</li>
           <li>2026-11-04，PWDT 精确引用选择补充：前端全量单元回归 1971/1971、
             定向 Chromium 调用链 22/22、无产物 TypeScript 检查和前端生产构建通过。
             覆盖跨源同名、多版本/包引用/目标、重复目录行、参数无效、目录不完整、适配器忽略选择、

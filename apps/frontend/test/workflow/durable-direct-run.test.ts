@@ -59,6 +59,24 @@ function fixture() {
     setReply: (value: (body: any) => any) => { reply = value; },
     setIdentity: (value: string) => { identity = value; }, revoke: () => { authorized = false; }, loseReply: () => { fail = true; } };
 }
+test("project operator task uses the durable reservation and never retries a lost reply",async()=>{
+  const f=fixture();
+  f.loseReply();
+  const task={schema_version:"kyuubiki.operator-task-ir/v1",task_id:"fixture"};
+  await assert.rejects(f.service.submit("operator_task",{mode:"execute",task_ir:task},endpoint),/Submission unconfirmed/);
+  assert.deepEqual(f.order,["save","http"]);
+  assert.equal(f.entries[0].study_kind,"operator_task");
+  assert.deepEqual(f.calls[0].body.input,{mode:"execute",task_ir:task});
+  await assert.rejects(f.service.submit("operator_task",{mode:"execute",task_ir:task},endpoint),/recovery_required/);
+  assert.equal(f.calls.length,1);
+});
+test("a project switch during discovery prevents operator dispatch",async()=>{
+  const f=fixture();let current=true;
+  const discover=f.client.fetchDirectMeshAgents;
+  f.client.fetchDirectMeshAgents=async()=>{current=false;return discover();};
+  await assert.rejects(f.service.submit("operator_task",{mode:"execute",task_ir:{schema_version:"kyuubiki.operator-task-ir/v1"}},endpoint,()=>current),/authority_changed/);
+  assert.equal(f.entries.length,0);assert.equal(f.calls.length,0);
+});
 test("default durable run saves only bounded identity metadata before dispatch and cleans after a terminal receipt", async () => {
   const f = fixture();
   const submitted = await f.service.submit("axial_bar_1d", input, endpoint);

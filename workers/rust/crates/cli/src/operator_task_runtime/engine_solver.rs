@@ -19,7 +19,10 @@ pub(super) fn try_execute(
     summary: &OperatorTaskExecutionSummary,
     task_ir: &Value,
 ) -> Result<Option<EngineSolverExecution>, OperatorTaskRuntimeError> {
-    if mode != OPERATOR_TASK_MODE_EXECUTE || summary.program_kind != "solver" {
+    if mode != OPERATOR_TASK_MODE_EXECUTE
+        || summary.program_kind != "solver"
+        || summary.abi_kind != "solver_rpc"
+    {
         return Ok(None);
     }
 

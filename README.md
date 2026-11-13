@@ -5,17 +5,17 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The current package and book baseline is **daji 3.7.7**.
-> The local macOS desktop/runtime installation is **daji 3.7.7**, verified November 4, 2026.
-> Actual installation results and their limits live in the [release snapshot](releases/snapshots/3.7.7.json).
+> The current package and book baseline is **daji 3.7.8**.
+> The local macOS desktop/runtime installation is **daji 3.7.8**, verified November 4, 2026.
+> Installation evidence and its limits live in the [current release snapshot](releases/snapshots/3.7.8.json).
 > Building or installing locally does not publish download artifacts or SDKs.
 > Historical evidence keeps its original version and scope. A version number
 > is not industrial certification; public distribution remains evidence-gated.
 
 Start with the [HTML status chapter](docs/book-ch02-version-line.html) and
 [version/evidence ledger](docs/current-line.md#version-and-evidence-ledger).
-The November 4, 2026 alignment follows version-named Git checkpoint `f28de0dd`
-(`daji 3.7.7`), with base commit `3fe22542` and the current working-tree overlay.
+The November 4, 2026 alignment follows version-named Git checkpoint `fb93e316`
+(`daji 3.7.8`), with that base commit and the version-alignment working-tree overlay.
 It is not a clean-commit artifact. Historical experiments keep their original
 scope rather than becoming new production qualification.
 
@@ -26,7 +26,7 @@ scope rather than becoming new production qualification.
 | Agent connectivity | Native TLS/token transport, Rust SDK configuration and Workbench access controls | Authenticated multi-host Mesh faults and cross-language parity |
 | Workspace store and PWDT | Project-scoped catalog UI and exact recipe source/version matching | Production account/backend integration and publishing lifecycle |
 | Model configuration | Memory-only credentials, model discovery, native gateway and reviewed plans | Full assistant surface parity; new copy is EN/ZH/JA with fallback elsewhere |
-| Packaging and documentation | Three independent shells, native runtime payload and aligned 3.7.7 metadata | Installation evidence below is local, not public release or SDK publication |
+| Packaging and documentation | Three independent shells, native runtime payload and aligned 3.7.8 metadata | Installation evidence below is local, not public release or SDK publication |
 
 The model gateway has a bounded real OpenAI smoke check; this verifies connectivity
 and the plan contract, not scientific correctness or autonomous execution. Read

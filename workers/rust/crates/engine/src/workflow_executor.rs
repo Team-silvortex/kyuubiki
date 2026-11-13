@@ -128,6 +128,7 @@ pub fn transform_operator_accepts_partial_inputs(operator_id: &str) -> bool {
 
 pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
     transform_operator_accepts_input_envelope(operator_id)
+        || transform_operator_accepts_seed_input(operator_id)
         || operator_id == "transform.merge_summary_pair"
         || operator_id == "transform.compare_summary_pair"
         || operator_id == "transform.validate_summary_tolerance"
@@ -139,6 +140,14 @@ pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
         || operator_id == "transform.compose_diagnostics_bundle"
         || operator_id == "transform.compose_diagnostics_report_payload"
         || operator_id == "transform.resolve_focus_bridge_execution"
+}
+
+pub(crate) fn transform_operator_accepts_seed_input(operator_id: &str) -> bool {
+    matches!(
+        operator_id,
+        "bridge.temperature_field_to_thermo_quad_2d"
+            | "bridge.temperature_field_to_thermo_triangle_2d"
+    )
 }
 
 pub(crate) fn transform_operator_accepts_input_envelope(operator_id: &str) -> bool {

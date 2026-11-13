@@ -324,9 +324,10 @@ fn exchange_secured(
     let parsed = parse_endpoint(endpoint)?;
     let solver = method.starts_with("solve_");
     let max_reply = match method {
-        "describe_agent" | "list_durable_agent_executions" | "cancel_durable_agent_execution" => {
-            MAX_METADATA_BYTES
-        }
+        "describe_agent"
+        | "list_durable_agent_executions"
+        | "cancel_durable_agent_execution"
+        | "manage_operator_package" => MAX_METADATA_BYTES,
         "submit_durable_agent_task" | "fetch_durable_agent_execution" => MAX_DURABLE_BYTES,
         _ => MAX_FRAME_BYTES,
     };

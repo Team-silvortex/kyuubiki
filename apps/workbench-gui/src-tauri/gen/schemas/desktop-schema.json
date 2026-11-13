@@ -207,10 +207,22 @@
           "markdownDescription": "Enables the guarded_mutation_action command."
         },
         {
+          "description": "Open only the fixed account page at an explicit validated HTTPS origin; no arbitrary redirect, credentials or shell command.",
+          "type": "string",
+          "const": "allow-open-store-account-portal",
+          "markdownDescription": "Open only the fixed account page at an explicit validated HTTPS origin; no arbitrary redirect, credentials or shell command."
+        },
+        {
           "description": "Enables the packaged_boot_ready command.",
           "type": "string",
           "const": "allow-packaged-boot-ready",
           "markdownDescription": "Enables the packaged_boot_ready command."
+        },
+        {
+          "description": "Verify installed operator bytes, manage explicit project pins and prepare TaskIR. No account access, arbitrary paths, Agent startup or execution.",
+          "type": "string",
+          "const": "allow-project-operator",
+          "markdownDescription": "Verify installed operator bytes, manage explicit project pins and prepare TaskIR. No account access, arbitrary paths, Agent startup or execution."
         },
         {
           "description": "Enables the read_runtime_log command.",
@@ -235,6 +247,18 @@
           "type": "string",
           "const": "allow-set-workbench-panel-layout",
           "markdownDescription": "Writes only validated Workbench panel dimensions, not arbitrary preferences or files."
+        },
+        {
+          "description": "Browse the account store, download bounded signed releases and explicitly install verified local operator packages without activation.",
+          "type": "string",
+          "const": "allow-store-download",
+          "markdownDescription": "Browse the account store, download bounded signed releases and explicitly install verified local operator packages without activation."
+        },
+        {
+          "description": "Manage a memory-only native OIDC session through bounded actions; never expose credentials to the page.",
+          "type": "string",
+          "const": "allow-store-identity",
+          "markdownDescription": "Manage a memory-only native OIDC session through bounded actions; never expose credentials to the page."
         },
         {
           "description": "Enables the workbench_environment command.",

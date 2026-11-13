@@ -205,11 +205,25 @@ pub fn summarize_operator_task_execution_checked(
         package_version.as_deref(),
     )?;
 
+    let packaged_solver = program_kind == "solver"
+        && abi_kind == "operator_task"
+        && package_ref.as_deref().is_some_and(|value| {
+            ["bundle://", "orchestra://"].iter().any(|prefix| {
+                value
+                    .strip_prefix(prefix)
+                    .is_some_and(|path| !path.trim().is_empty())
+            })
+        })
+        && package_version
+            .as_deref()
+            .is_some_and(|version| !version.trim().is_empty())
+        && !is_builtin_solver_id(&operator_id);
     validate_execution_abi(
         &program_kind,
         &runtime_protocol,
         &abi_kind,
         &entrypoint_kind,
+        packaged_solver,
     )?;
 
     // Built-in solver IDs have explicit RPC names; do not ignore a contradictory
@@ -217,7 +231,7 @@ pub fn summarize_operator_task_execution_checked(
     let builtin_solver_mismatch = program_kind == "solver"
         && crate::solver_execution_capability::agent_builtin_solver_method(&operator_id)
             .is_some_and(|expected| entrypoint_name != expected);
-    if (program_kind != "solver" && entrypoint_name != operator_id) || builtin_solver_mismatch {
+    if (abi_kind == "operator_task" && entrypoint_name != operator_id) || builtin_solver_mismatch {
         return Err(OperatorTaskSummaryError::new(
             OperatorTaskSummaryErrorCode::EntrypointMismatch,
             "operator task entrypoint does not match operator id",
@@ -387,13 +401,28 @@ fn canonical_number_json(number: &serde_json::Number) -> String {
     encoded
 }
 
+fn is_builtin_solver_id(operator_id: &str) -> bool {
+    let Some(name) = operator_id.strip_prefix("solve.") else {
+        return false;
+    };
+    // Reserve all native RPC solvers, not only the smaller TaskIR dispatch subset.
+    // The public Stokes operator IDs predate the RPC's explicit "plane" spelling.
+    let name = match name {
+        "stokes_flow_quad_2d" => "stokes_flow_plane_quad_2d",
+        "stokes_flow_triangle_2d" => "stokes_flow_plane_triangle_2d",
+        name => name,
+    };
+    serde_json::from_value::<crate::RpcMethod>(Value::String(format!("solve_{name}"))).is_ok()
+}
+
 fn validate_execution_abi(
     program_kind: &str,
     runtime_protocol: &str,
     abi_kind: &str,
     entrypoint_kind: &str,
+    packaged_solver: bool,
 ) -> Result<(), OperatorTaskSummaryError> {
-    let expected = if program_kind == "solver" {
+    let expected = if program_kind == "solver" && !packaged_solver {
         (
             "kyuubiki.solver-rpc/v1",
             "solver_rpc",
@@ -446,7 +475,7 @@ fn package_readiness_gate(
 }
 
 fn dispatch_route(summary: &OperatorTaskExecutionSummary, package_fetch_required: bool) -> String {
-    if summary.operator_kind == "solver" {
+    if summary.abi_kind == "solver_rpc" {
         return "solver_rpc".to_string();
     }
     if package_fetch_required {
