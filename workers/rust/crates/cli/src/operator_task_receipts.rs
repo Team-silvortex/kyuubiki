@@ -121,6 +121,11 @@ fn required_failure_action(code: &str) -> &'static str {
         "operator_package_runtime_not_attached" => "restart_agent_with_operator_package_runtime",
         "operator_package_identity_mismatch" => "repair_package_or_rebuild_task_ir",
         "operator_package_dispatch_failed" => "inspect_external_operator_failure",
+        "operator_process_timeout" => "inspect_native_operator_budget_before_explicit_rerun",
+        "operator_process_crashed" | "operator_process_protocol_failed" => {
+            "inspect_native_operator_failure_before_explicit_rerun"
+        }
+        "operator_process_cancelled" => "inspect_cancellation_before_explicit_rerun",
         "operator_task_solver_capability_invalid" => "fix_solver_task_ir_contract",
         "operator_task_solver_capability_rejected" => "select_advertised_solver_operator",
         "operator_task_solver_input_invalid" => "fix_solver_input_artifact",
@@ -140,6 +145,22 @@ fn failure_retryable(code: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::operator_task_failure_receipt;
+
+    #[test]
+    fn native_process_failures_require_inspection_never_automatic_replay() {
+        for code in [
+            "operator_process_crashed",
+            "operator_process_timeout",
+            "operator_process_protocol_failed",
+            "operator_process_cancelled",
+        ] {
+            let receipt =
+                operator_task_failure_receipt(code, "fixture", "dispatch_entrypoint", None);
+            assert_eq!(receipt["recovery"]["retryable"], false);
+            assert_eq!(receipt["recovery"]["safe_to_continue_other_tasks"], true);
+            assert_ne!(receipt["recovery"]["required_action"], "inspect_task_ir");
+        }
+    }
 
     #[test]
     fn package_transport_failure_is_retryable_without_blocking_other_tasks() {

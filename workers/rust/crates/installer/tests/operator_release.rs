@@ -5,19 +5,22 @@ use sha2::{Digest, Sha256};
 use std::{
     fs,
     path::PathBuf,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 
 struct Fixture(PathBuf);
+static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
 impl Fixture {
     fn new() -> Self {
         let path = std::env::temp_dir().join(format!(
-            "kyuubiki-release-{}-{}",
+            "kyuubiki-release-{}-{}-{}",
             std::process::id(),
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
         fs::write(path.join("manifest.json"), json!({

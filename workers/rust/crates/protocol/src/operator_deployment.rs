@@ -6,6 +6,15 @@ pub const OPERATOR_DEPLOYMENT_MAX_BYTES: u64 = 32 * 1024 * 1024;
 pub const OPERATOR_DEPLOYMENT_CHUNK_BYTES: usize = 65536;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct OperatorVariantReceipt {
+    pub schema_version: String,
+    pub platform: String,
+    pub package: ProjectOperatorPin,
+    pub size_bytes: u64,
+    pub relative_root: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct OperatorDeploymentSpec {
     pub package: ProjectOperatorPin,
     pub platform: String,
@@ -41,6 +50,8 @@ pub struct OperatorDeploymentStatus {
     pub total_bytes: u64,
     pub process_instance_id: Option<String>,
     pub deployment_allowed: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation_error: Option<String>,
 }
 impl OperatorDeploymentStatus {
     /// A ready label alone is not evidence that the installed code is loaded.
@@ -57,12 +68,24 @@ impl OperatorDeploymentStatus {
             "missing" => self.installed.is_none() && self.total_bytes == 0,
             "uploading" => self.installed.is_none() && self.total_bytes > 0,
             "installed_restart_required" => matches,
+            "activation_failed" => {
+                matches && self.active.is_none() && self.received_bytes == self.total_bytes
+            }
             "ready" => matches && self.active.as_ref() == Some(&self.package),
             "version_conflict" => self.installed.is_some() && !matches,
             _ => false,
         };
         if self.schema_version != OPERATOR_DEPLOYMENT_SCHEMA
             || !valid_state
+            || (self.state == "activation_failed") != self.activation_error.is_some()
+            || self.activation_error.as_deref().is_some_and(|code| {
+                !matches!(
+                    code,
+                    "operator_package_activation_failed"
+                        | "operator_package_integrity_failed"
+                        | "operator_package_count_mismatch"
+                )
+            })
             || self.platform.is_empty()
             || self.platform.len() > 128
             || !self

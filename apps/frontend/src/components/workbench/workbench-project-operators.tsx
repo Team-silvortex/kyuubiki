@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { requestProjectOperator, type ProjectOperatorOperation, type ProjectOperatorStatus } from "../../../../desktop-shared/src/store-download-bridge";
+import { requestProjectOperator, type OperatorVariantPlatform, type ProjectOperatorOperation, type ProjectOperatorStatus } from "../../../../desktop-shared/src/store-download-bridge";
+import { operatorVariantCopy } from "./workbench-operator-variant-copy";
 import { workbenchDurableDirectRunService as runs } from "@/lib/workbench/durable-direct-run";
 import { DurableDirectSubmissionUncertain, type DurableDirectRecoveryHandle } from "@/lib/workbench/durable-direct-recovery";
 import type { DurableDirectEnvelope } from "@/lib/api/durable-direct-client";
@@ -11,9 +12,11 @@ import { directExecutionGatewayIdentity } from "@/lib/workbench/durable-direct-r
 import { checkpointDigest } from "@/lib/workbench/checkpoint-journal";
 import { createProjectOperatorDeployment, type OperatorDeploymentStatus } from "@/lib/workbench/project-operator-deployment";
 
-export function ProjectOperatorsPanel({ language, projectId }: { language: string; projectId: string | null }) {
+export function ProjectOperatorsPanel({ language, projectId, initialPlatform }: { language: string; projectId: string | null; initialPlatform?: OperatorVariantPlatform }) {
   const c = projectOperatorCopy(language);
   const d = projectDeploymentCopy(language);
+  const v = operatorVariantCopy(language);
+  const [platform,setPlatform]=useState<OperatorVariantPlatform|undefined>(initialPlatform);
   const [remote,setRemote]=useState<OperatorDeploymentStatus|null>(null);
   const [status, setStatus] = useState<ProjectOperatorStatus | null>(null), [installed, setInstalled] = useState(""), [enabled, setEnabled] = useState("");
   const [operator, setOperator] = useState(""), [input, setInput] = useState("{}"), [config, setConfig] = useState("{}"), [endpoint, setEndpoint] = useState("");
@@ -28,6 +31,7 @@ export function ProjectOperatorsPanel({ language, projectId }: { language: strin
   async function act(operation: ProjectOperatorOperation | "run" | "pending" | "inspect" | "ack" | "inspect-package" | "deploy-package" | "abort-package") {
     if (active.current || !projectId) return;
     active.current = true; setBusy(true); setNotice("");
+    if (["run", "inspect-package", "deploy-package", "abort-package"].includes(typeof operation==="string"?operation:"")) setRemote(null);
     const ticket = ++revision.current;
     let current = () => ticket === revision.current;
     try {
@@ -41,8 +45,8 @@ export function ProjectOperatorsPanel({ language, projectId }: { language: strin
       if(operation==="run" || operation==="inspect-package" || operation==="deploy-package" || operation==="abort-package") {
         if(readFrontendRuntimeModeFromWindow()!=="direct_mesh_gui")throw new Error(c.route);
         if(!selected)throw new Error(c.changed);
-        const service=createProjectOperatorDeployment({read:async offset=>{
-          const result=await requestProjectOperator(projectId,scope,{action:"read_deployment",package:selected.package,offset});
+        const service=createProjectOperatorDeployment({platform,read:async offset=>{
+          const result=await requestProjectOperator(projectId,scope,{action:"read_deployment",package:selected.package,offset},window,platform);
           if(!result.deployment)throw new Error("deployment_source_unavailable");return result.deployment;
         }});
         const progress=(s:OperatorDeploymentStatus)=>{if(current())setRemote(s);};
@@ -60,7 +64,7 @@ export function ProjectOperatorsPanel({ language, projectId }: { language: strin
         op = { action: "prepare", package: selected.package, operator_id: operator, task_id: crypto.randomUUID(), input: JSON.parse(input), config: JSON.parse(config) };
       } else if (typeof operation === "object") op = operation;
       else return;
-      const value = await requestProjectOperator(projectId, scope, op);
+      const value = await requestProjectOperator(projectId, scope, op, window, platform);
       if (!current()) throw new Error(c.stale);
       setStatus(value);
       if (operation === "run") {
@@ -71,7 +75,7 @@ export function ProjectOperatorsPanel({ language, projectId }: { language: strin
     } catch (e) {
       if (current()) {
         if (e instanceof DurableDirectSubmissionUncertain) { setHandle(e.handle); setReceipt(null); }
-        setNotice(`${c.error} ${e instanceof Error ? e.message : "project_operator_failed"}`);
+        setNotice(e instanceof Error && e.message==="deployment_platform_mismatch" ? v.mismatch : `${c.error} ${e instanceof Error ? e.message : "project_operator_failed"}`);
       }
     } finally { active.current = false; if (ticket === revision.current) setBusy(false); }
   }
@@ -79,7 +83,11 @@ export function ProjectOperatorsPanel({ language, projectId }: { language: strin
     <h2>{c.title}</h2><p className="card-copy">{c.intro}</p><strong>{projectId ?? c.project}</strong>
     {!desktop ? <p className="card-copy">{c.desktop}</p> : null}
     <fieldset className="store-identity-fields" disabled={busy || !desktop || !projectId}>
-      <div className="button-row"><button type="button" className="ghost-button ghost-button--compact" data-project-operator-refresh onClick={() => void act({ action: "list" })}>{c.refresh}</button></div>
+      <label className="form-field"><span>{v.platform}</span><select className="text-input" data-project-operator-platform value={platform??""} onChange={e=>{
+        revision.current++;setPlatform(e.target.value as OperatorVariantPlatform || undefined);setStatus(null);setInstalled("");setEnabled("");setOperator("");setRemote(null);setNotice("");
+      }}><option value="">{v.local}</option><option value="linux-x86_64">Linux x86_64</option><option value="linux-aarch64">Linux arm64</option></select></label>
+      {platform?<p className="card-copy">{v.hint}</p>:null}
+      <div className="button-row"><button type="button" className="ghost-button ghost-button--compact" data-project-operator-refresh onClick={() => void act({ action: "list" })}>{v.refresh}</button></div>
       {status?.installed_error ? <p className="warning-copy">{c.changed} <code>{status.installed_error}</code></p> : null}
       <label className="form-field"><span>{c.choose}</span><select value={installed} data-project-operator-installed onChange={e => setInstalled(e.target.value)}><option value="">--</option>
         {status?.installed.map(p => <option key={p.package_id} value={p.package_id}>{p.package_id} · {p.package_version}</option>)}</select></label>
@@ -104,10 +112,11 @@ export function ProjectOperatorsPanel({ language, projectId }: { language: strin
           <button type="button" className="ghost-button ghost-button--compact" data-project-operator-deploy disabled={!endpoint||selected.state!=="ready"} onClick={()=>{if(window.confirm(d.confirm))void act("deploy-package");}}>{d.deploy}</button>
           <button type="button" className="ghost-button ghost-button--compact" data-project-operator-abort disabled={!endpoint} onClick={()=>{if(window.confirm(d.abortConfirm))void act("abort-package");}}>{d.abort}</button>
         </div>
-        {remote?<p className="card-copy" data-project-operator-target-state={remote.state}>{d[remote.state]} {remote.state==="uploading"?`${remote.received_bytes} / ${remote.total_bytes} B`:""}</p>:null}
+        {remote?<p className="card-copy" data-project-operator-target-state={remote.state}>{d[remote.state]} · {remote.platform} {remote.state==="uploading"?`${remote.received_bytes} / ${remote.total_bytes} B`:""}</p>:null}
+        {remote?.activation_error ? <code data-project-operator-activation-error>{remote.activation_error}</code> : null}
         <button type="button" className="ghost-button ghost-button--compact" data-project-operator-run disabled={!operator || !endpoint || selected.state !== "ready" || !!handle} onClick={() => { if (window.confirm(c.runConfirm)) void act("run"); }}>{c.run}</button>
       </> : null}
-      {status ? <details><summary>{c.root}</summary><code style={{ overflowWrap: "anywhere" }}>{status.packages_root}</code></details> : null}
+      {status ? <details><summary>{platform?v.root:c.root}</summary><code style={{ overflowWrap: "anywhere" }}>{status.packages_root}</code></details> : null}
       <details open={!!handle}><summary>{c.pending}</summary><p className="card-copy">{c.recovery}</p>
         <button type="button" className="ghost-button ghost-button--compact" onClick={() => void act("pending")}>{c.pending}</button>
         {pending.map(h => <button type="button" className="ghost-button ghost-button--compact" key={h.execution_id} onClick={() => { setHandle(h); setReceipt(null); }}>{h.endpoint} · {h.execution_id}</button>)}

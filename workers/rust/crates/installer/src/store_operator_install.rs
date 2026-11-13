@@ -20,10 +20,37 @@ pub fn install_store_operator_into(
     store: &Path,
     request: &StoreOperatorInstallRequest,
 ) -> Result<ManagedOperatorPackageReceipt, String> {
-    let invalid = || "store_package_invalid".to_string();
-    if request.schema_version != "kyuubiki.store-operator-install/v1"
-        || request.platform != current_platform_target_id()
+    if request.platform != current_platform_target_id() {
+        return Err("store_platform_mismatch".into());
+    }
+    regular(source, true)?;
+    let (snapshot, manifest) = verified_snapshot(&source.join(&request.platform), request)?;
+    let receipt = install_operator_package_into(&snapshot.0, store)?;
+    let expected = |name: &str| {
+        request
+            .files
+            .iter()
+            .find(|f| f.path == format!("{}/{name}", request.platform))
+            .unwrap()
+    };
+    if receipt.package_id != request.package_id
+        || receipt.package_version != request.package_version
+        || receipt.manifest_sha256 != expected(OPERATOR_PACKAGE_MANIFEST_FILE).sha256
+        || receipt.entrypoint_sha256 != expected(&manifest.entrypoint).sha256
+        || receipt.entrypoint_size_bytes != expected(&manifest.entrypoint).size_bytes
     {
+        return Err("store_install_receipt_mismatch".into());
+    }
+    Ok(receipt)
+}
+
+/// Verify a flat target directory without applying host-platform admission or loading code.
+pub(crate) fn verified_snapshot(
+    source: &Path,
+    request: &StoreOperatorInstallRequest,
+) -> Result<(Snapshot, OperatorPackageManifest), String> {
+    let invalid = || "store_package_invalid".to_string();
+    if request.schema_version != "kyuubiki.store-operator-install/v1" {
         return Err("store_platform_mismatch".into());
     }
     let triple = match request.platform.as_str() {
@@ -49,7 +76,6 @@ pub fn install_store_operator_into(
         return Err("store_package_layout_unsupported".into());
     }
     regular(source, true)?;
-    regular(&source.join(&request.platform), true)?;
     let snapshot = Snapshot::new()?;
     for file in &request.files {
         if file.size_bytes == 0
@@ -66,7 +92,7 @@ pub fn install_store_operator_into(
         if name == OPERATOR_PACKAGE_MANIFEST_FILE && file.size_bytes > 1024 * 1024 {
             return Err(invalid());
         }
-        let path = source.join(&file.path);
+        let path = source.join(name);
         regular(&path, false)?;
         let input = fs::File::open(path).map_err(|_| invalid())?;
         if !input.metadata().map_err(|_| invalid())?.is_file() {
@@ -117,23 +143,7 @@ pub fn install_store_operator_into(
     }
     operator_release_binary::verify(&snapshot.0.join(target.filename), target)
         .map_err(|_| "store_binary_mismatch".to_string())?;
-    let receipt = install_operator_package_into(&snapshot.0, store)?;
-    let expected = |name: &str| {
-        request
-            .files
-            .iter()
-            .find(|f| f.path == format!("{}/{name}", request.platform))
-            .unwrap()
-    };
-    if receipt.package_id != request.package_id
-        || receipt.package_version != request.package_version
-        || receipt.manifest_sha256 != expected(OPERATOR_PACKAGE_MANIFEST_FILE).sha256
-        || receipt.entrypoint_sha256 != expected(target.filename).sha256
-        || receipt.entrypoint_size_bytes != expected(target.filename).size_bytes
-    {
-        return Err("store_install_receipt_mismatch".into());
-    }
-    Ok(receipt)
+    Ok((snapshot, manifest))
 }
 fn regular(path: &Path, dir: bool) -> Result<(), String> {
     let meta = fs::symlink_metadata(path).map_err(|_| "store_source_unavailable")?;
@@ -142,7 +152,7 @@ fn regular(path: &Path, dir: bool) -> Result<(), String> {
     }
     Ok(())
 }
-struct Snapshot(PathBuf);
+pub(crate) struct Snapshot(pub(crate) PathBuf);
 static NEXT_SNAPSHOT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 impl Snapshot {
     fn new() -> Result<Self, String> {
@@ -171,4 +181,32 @@ impl Drop for Snapshot {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
     }
+}
+
+pub fn store_operator_command(args: Vec<String>, variant: bool) -> Result<String, String> {
+    let (source, root) = match args.as_slice() {
+        [source] => (PathBuf::from(source), crate::operator_package_store_root()?),
+        [source, flag, root] if flag == "--store-root" => {
+            (PathBuf::from(source), PathBuf::from(root))
+        }
+        _ => return Err("expected <files-root> [--store-root path]".into()),
+    };
+    let mut bytes = Vec::new();
+    std::io::stdin()
+        .take(16385)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "store_request_unavailable")?;
+    if bytes.len() > 16384 {
+        return Err("store_request_limit".into());
+    }
+    let request = serde_json::from_slice(&bytes).map_err(|_| "store_request_invalid")?;
+    let value = if variant {
+        serde_json::to_value(crate::stage_store_operator_variant_into(
+            &source, &root, &request,
+        )?)
+    } else {
+        serde_json::to_value(install_store_operator_into(&source, &root, &request)?)
+    }
+    .map_err(|_| "store_receipt_invalid")?;
+    serde_json::to_string(&value).map_err(|_| "store_receipt_invalid".into())
 }

@@ -15,6 +15,8 @@ mod recalibration_tests;
 mod recovery_recalibration_tests;
 mod release_readiness;
 mod self_test;
+#[cfg(test)]
+mod store_recalibration_tests;
 
 type RunnerResult<T> = Result<T, String>;
 

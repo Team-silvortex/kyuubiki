@@ -1,5 +1,5 @@
 //! Bounded, restart-resumable package ingress. Never loads executable code.
-use fs2::FileExt;
+use crate::operator_deployment_lock::DeploymentLock;
 use kyuubiki_operator_sdk::OperatorPackageManifest;
 use kyuubiki_protocol::*;
 use sha2::{Digest, Sha256};
@@ -46,11 +46,17 @@ fn read(path: &Path, max: u64) -> Result<Vec<u8>, String> {
     Ok(data)
 }
 fn manifest(spec: &OperatorDeploymentSpec) -> Result<OperatorPackageManifest, String> {
+    manifest_for(spec, &kyuubiki_operator_sdk::current_platform_target_id())
+}
+fn manifest_for(
+    spec: &OperatorDeploymentSpec,
+    platform: &str,
+) -> Result<OperatorPackageManifest, String> {
     spec.package.validate()?;
     if spec.size_bytes == 0
         || spec.size_bytes > OPERATOR_DEPLOYMENT_MAX_BYTES
         || spec.manifest_json.len() > 65536
-        || spec.platform != kyuubiki_operator_sdk::current_platform_target_id()
+        || spec.platform != platform
         || digest(spec.manifest_json.as_bytes()) != spec.package.manifest_sha256
     {
         return Err("deployment_invalid_spec".into());
@@ -130,7 +136,7 @@ pub fn operator_deployment_in(
         .truncate(false)
         .open(lock_path)
         .map_err(|_| "deployment_unavailable")?;
-    lock.try_lock_exclusive().map_err(|_| "deployment_busy")?;
+    let _lock = DeploymentLock::acquire(lock)?;
     let id = digest(&serde_json::to_vec(package).map_err(|_| "deployment_invalid_spec")?);
     let dir = uploads.join(id);
     safe(&dir, true)?;
@@ -153,6 +159,7 @@ pub fn operator_deployment_in(
         total_bytes: 0,
         process_instance_id: None,
         deployment_allowed: true,
+        activation_error: None,
     };
     if matches!(operation, OperatorDeploymentAction::Abort) {
         if dir.exists() {
@@ -297,10 +304,11 @@ pub fn operator_deployment_in(
 }
 
 /// Final remote commit rehashes the full binary; chunks never carry local paths.
-pub(crate) fn export_chunk(
+pub(crate) fn export_chunk_for(
     root: &Path,
     package: &ProjectOperatorPin,
     offset: u64,
+    platform: &str,
 ) -> Result<OperatorDeploymentChunk, String> {
     package.validate()?;
     let path = root.join("packages").join(&package.package_id);
@@ -320,11 +328,11 @@ pub(crate) fn export_chunk(
     let size_bytes = file.metadata().map_err(|_| "deployment_unavailable")?.len();
     let spec = OperatorDeploymentSpec {
         package: package.clone(),
-        platform: kyuubiki_operator_sdk::current_platform_target_id(),
+        platform: platform.into(),
         manifest_json,
         size_bytes,
     };
-    manifest(&spec)?;
+    manifest_for(&spec, platform)?;
     if offset > size_bytes {
         return Err("deployment_invalid_offset".into());
     }

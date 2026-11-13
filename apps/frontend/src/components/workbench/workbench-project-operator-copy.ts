@@ -41,6 +41,7 @@ export function projectDeploymentCopy(language: string) {
     abortConfirm: "清理目标 Agent 上这个包的未完成上传？已安装的包、其他上传和研究任务不会删除。",
     missing: "目标缺包", uploading: "上传中", installed_restart_required: "已安装，待受管重启后重新核验",
     ready: "目标已加载匹配版本，可执行",
+    activation_failed: "包已安装，但外部算子宿主加载失败。请查看 Agent 本机日志，通过 Installer 停服修复后重启核验；不要重复上传或执行。",
     version_conflict: "版本或内容冲突：保留目标原包。请通过 Installer 明确停服更换，不会自动覆盖。",
   };
   if (language.startsWith("ja")) return {
@@ -49,6 +50,7 @@ export function projectDeploymentCopy(language: string) {
     abortConfirm: "このパッケージの未完了転送だけを削除しますか？インストール済みのコード、他の転送、研究タスクは保持します。",
     missing: "パッケージなし", uploading: "転送中", installed_restart_required: "インストール済み。管理された再起動後に再検証",
     ready: "一致するバージョンを読込済み",
+    activation_failed: "インストール済みですが、外部演算子ホストの読込に失敗しました。Agent のローカルログを確認し、Installer で停止・修復・再起動後に再検証してください。再送・実行しないでください。",
     version_conflict: "バージョンまたは内容が競合しています。既存のパッケージを保持します。Installer で明示的に停止・交換してください。",
   };
   return {
@@ -57,6 +59,7 @@ export function projectDeploymentCopy(language: string) {
     abortConfirm: "Remove only this package's incomplete upload on the target Agent? Installed packages, other uploads and research tasks will be retained.",
     missing: "Package missing", uploading: "Uploading", installed_restart_required: "Installed; managed restart and verification required",
     ready: "Matching version loaded, ready to execute",
+    activation_failed: "Installed, but the external operator host failed to load. Check local Agent logs; stop and repair through Installer, restart, then verify. Do not reupload or execute.",
     version_conflict: "Version or content conflict. Existing package retained. Use Installer for an explicit stopped replacement; never overwrite automatically.",
   };
 }

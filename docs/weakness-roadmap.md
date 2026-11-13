@@ -31,59 +31,46 @@ roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
 The active profile is `daji-3-7-hardening`; package/book metadata is `3.7.8`.
-The [version ledger](current-line.md#version-and-evidence-ledger) distinguishes
-later Git/source work from the recorded installation. The November 4 local
-readback has zero structural gaps, two maturity gaps, 23 evidence-grade gaps
-and 18 P0 gaps; Daji remains blocked. These are tensor counts, not code coverage.
-Native Agent TLS/token support and Workbench model/store flows add scoped
-evidence, not automatic promotion of those gaps. Multi-host authenticated recovery,
-cross-language parity, production store integration and full assistant/translation
-parity remain open. A successful model API request is not solver qualification.
-The last retained recalibration below is October 16, 2026 for the earlier
-`daji-3-6-hardening` profile. At that review source metadata was `daji 3.6.0`
-and commit `301ba02c` was titled 3.6.4. Later scoped evidence is tracked by the
-live tensor; the table below is a dated comparison, not a current test total.
-This is retained evidence, not new installed qualification.
-The [calibration record](../reports/tensor-recalibration-20261016.md) preserves
-that provenance and the [current-line entry](current-line.md) separates source
-progress from the last installed baseline.
+The [November 13 review](../reports/tensor-recalibration-20261113.md) uses the
+working-tree overlay based on `f04ec479`, not a new installed qualification.
+The [version ledger](current-line.md#version-and-evidence-ledger) keeps the
+November 4 installation distinct. All 478 prior claims remain unchanged;
+three narrow verified claims bring the total to 481 (468 proven, 12 partial,
+one open). Broad Store and native-isolation claims remain partial.
 
-At the October 16 calibration, all 386 earlier claims were preserved. One
-verified local desktop binding brought the total to 387: 384 proven, two partial,
-one open. Hub/Installer execution and
-contract evidence no longer remains merely declared when the matching mock-IPC
-tests have actually run. Shared UI reaches its verified target; no installed
-or operational promotion follows from this correction.
-
-| Measure | Same-tree before review | October 16 calibration |
+| Measure | Same-tree before review | November 13 calibration |
 | --- | ---: | ---: |
 | Required coordinates | 77 | 77 |
-| Coordinates meeting every configured target | 57 (74.0%) | 55 (71.4%) |
+| Coordinates meeting every configured target | 54 (70.1%) | 48 (62.3%) |
 | Structural gaps | 0 | 0 |
-| Required-dimension presence gaps | 4 | 2 |
-| Below-target or scope-incomplete coordinates | 20 | 22 |
-| P0 coordinates at target | 40 / 55 | 38 / 55 |
-| P1 coordinates at target | 17 / 22 | 17 / 22 |
-| Dimension-score progress | 92.0% | 94.0% |
-| Named scenarios at target | 10 / 33 | 17 / 46 |
+| Required-dimension presence gaps | 2 | 2 |
+| Below-target or scope-incomplete coordinates | 23 | 29 |
+| P0 coordinates at target | 37 / 55 | 32 / 55 |
+| P1 coordinates at target | 17 / 22 | 16 / 22 |
+| Dimension-score progress | 94.0% | 94.0% |
+| Named scenarios at target | 16 / 46 | 20 / 64 |
 
-Thirteen new scenarios preserve seven scoped achievements and expose six open
-obligations. New gaps in native Agent security, Mesh benchmark and installed typed
-Orchestra workflows outweigh the one closed shared-UI coordinate. No feature was
-removed. The 29 open scenarios overlap the 22 coordinate gaps. Neither percentage
-is code/test coverage, supported physics or reliability; the registry remains a
-reviewed subset. Release qualification stays `blocked` and the independent
-usability release gate remains false. Thresholds and priority weights are unchanged.
+Eighteen new scenarios retain four bounded source/SSH achievements and expose
+fourteen open Store/native obligations. The six newly incomplete coordinates
+are Workbench runtime API/security, Agent deployment/Worker SDK, Installer Worker
+SDK and Operator SDK authoring/ABI acceptance. No feature was removed or old
+proof discarded. The 44 open scenarios overlap 29 coordinate gaps, including
+23 P0. Neither percentage is code coverage, supported physics or reliability;
+the registry remains a reviewed subset. Release readiness remains `blocked`;
+the external usability gate, targets and priority weights are unchanged.
 
-That retained October 16 release-weighted queue began with `sdk-headless/sdk_headless`,
-`runtime-protocol/sdk_operator`, `workbench-shell/validation`, then
-`runtime-engine-solver/validation`. The two missing required dimensions are
-protocol Worker-SDK security and Workbench/Headless execution evidence.
-PWDT is not the Headless SDK; audit their actual shared-backend contract instead
-of treating GUI automation as proof for both or deleting the mapping to turn green.
+The release-weighted queue now starts with `sdk-headless/sdk_headless`,
+`workbench-shell/validation`, `runtime-protocol/sdk_operator`,
+`runtime-agent-cli/sdk_operator`, then `runtime-engine-solver/validation`.
+The two missing required dimensions remain protocol Worker-SDK security and
+Workbench/Headless execution evidence. PWDT is not Headless: do not relabel
+GUI automation or delete requirements to turn the score green.
 
 | Workstream | Coordinates | Next acceptance boundary |
 | --- | --- | --- |
+| Real Store and installed flow | Workbench runtime API/security/validation; Installer Worker SDK | Deployed OIDC, consent/quota-safe download, real signed installation and matching GUI/WASM PWDT enable/deploy/run/recover. Local HTTPS fixtures do not close it. |
+| Native packages and isolation | Agent deployment/Worker SDK/benchmark; Operator SDK | Native TLS across hosts, current installed Unix faults, Windows process trees, real Linux ARM64 and whole-call overhead. SSH and old resident-host ABI evidence remain separate. |
+| Project package lifecycle | Installer Worker SDK; Orchestra workflow; Headless SDK | Portable bundle pins, controlled version replacement, authorized Orchestra admission and new API parity in separately distributed Rust/Python/Elixir packages. |
 | Native LAN authorization | `runtime-agent-cli/security` | Authenticate peer/controller admission and recovery, revoke authority, preserve single-Orchestra versus offline Mesh exclusivity; cluster/store labels are not credentials. |
 | Installed direct recovery | `workbench-shell/persistence_provenance`, `workbench-shell/validation` | Matching macOS shell/frontend/native journal plus real Agent, lost replies, App reopen, two-window cleanup and foreign-ledger rejection. |
 | Physical Mesh and load | `runtime-agent-cli/runtime_api`, `runtime-agent-cli/benchmark` | Real authenticated multi-host partition/rejoin, owner-pinned recovery, sustained ingress/churn, tail latency and memory/descriptor bounds. |
@@ -92,21 +79,20 @@ of treating GUI automation as proof for both or deleting the mapping to turn gre
 | SDK and protocol | `sdk-headless/sdk_headless`, `runtime-protocol/sdk_operator`, `workbench-shell/sdk_headless` | Installed Python/Elixir studies and exact protocol security/execution evidence, without conflating Worker SDK, Headless and PWDT. |
 | Data and platform closure | Installer/Orchestra persistence and deployment; desktop product surfaces | Revision-two PostgreSQL replay, consistent generation restore, compatibility-gated activation and Windows installed journeys retain their original targets. |
 
-For the current recovery mainline, prioritize native LAN authorization, installed
-macOS direct recovery, then authenticated multi-host fault/load qualification.
-This is an engineering-risk ordering, not a change to the release score weights.
-Preserve the verified local Orchestra, standalone Agent, Mesh, browser and native
-storage evidence separately. No blind replay, automatic migration, consensus or
-distributed DAG guarantee follows from discovery or a healthy peer list.
+For the active Store/native mainline, first qualify native TLS deployment and
+whole-call isolation cost on owned source services, then installed GUI/PWDT and
+published SDK deployment parity. Real account/download acceptance requires public
+CA/client/signing handoff and authorized test-account cases from the backend,
+not Agent credentials or new Store execution authority. This practical sequence
+does not alter the release weights or erase recovery/numerical/platform work.
 
 The new registry is
-`config/architecture/module-function-coverage-evidence/current-recovery-qualification-scopes.json`.
-Existing general and modal scenario registries remain in force. The JSON report
-contains `dimension_grades`, `qualification_requirements`, `qualification_gaps`
-and `release_readiness.planning_queue`; the
+`config/architecture/module-function-coverage-evidence/current-store-native-qualification-scopes.json`.
+Existing general, solver and recovery registries remain active. The JSON report
+contains dimension grades, exact-scope gaps and the full release planning queue; the
 [HTML chapter](book-ch03-architecture-boundaries.html#tensor-calibration) explains
-their limits. The dated follow-ups below keep their historical counts; they are
-not the current calibration snapshot.
+their limits. The [October 16 record](../reports/tensor-recalibration-20261016.md)
+and dated follow-ups below retain their historical counts, not current status.
 
 ### Modal Request-Reassembly Follow-Up
 

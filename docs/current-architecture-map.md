@@ -1,7 +1,7 @@
 # Current Architecture Map
 
 This is the compact navigation map for the current `daji 3.x` line, reviewed
-on November 4, 2026 against the source tree, workspace Store, native admission
+on November 13, 2026 against the source tree, workspace Store, native admission
 and recovery boundaries. It describes ownership and call paths, not installed qualification.
 Version declarations belong to the manifests and [current line](current-line.md),
 not a second release timeline in this navigation map.
@@ -21,6 +21,7 @@ flowchart LR
   SDK["Headless SDKs: Rust / Python / Elixir"]
   Control["Orchestra: scheduling and persistence"]
   Agent["Rust Agent: admission, Mesh and receipts"]
+  NativeHost["Agent-owned child: external native operators"]
   Engine["Engine: execution and operator host"]
   Solver["Solver: numerical algorithms"]
   Worker["Rust Worker / Operator SDK"]
@@ -37,7 +38,9 @@ flowchart LR
   Agent <-->|explicit offline Mesh| Agent
   Agent --> Engine
   Engine --> Solver
-  Worker -->|operator packages| Engine
+  Agent -->|supervise external calls| NativeHost
+  NativeHost --> Engine
+  Worker -->|operator packages| NativeHost
   Installer --> Lifecycle
   Lifecycle --> Control
   Lifecycle --> Agent
@@ -47,7 +50,7 @@ Arrows show interactions, not an exhaustive Cargo dependency graph. Shared
 schemas, TaskIR, digests, receipts and artifact contracts constrain these paths.
 The [module topology](../config/architecture/module-topology.json) groups source
 ownership and verification lanes; Cargo manifests define actual crate dependencies.
-There are 13 logical topology modules and 15 Rust workspace crates. These are
+There are 13 logical topology modules and 17 Rust workspace crates. These are
 different views, not missing modules or a requirement to merge executables.
 
 ## Product Shells
@@ -87,25 +90,36 @@ runtime engine. Reuse these owners rather than adding another plugin platform:
 | Search, filters and page selection | [Catalog helpers](../apps/frontend/src/lib/workbench/store-catalog.ts) | Operate on catalog data, not executable packages |
 | GUI/PWDT project reference mutations | [Command service](../apps/frontend/src/lib/workbench/store-command-service.ts) and [manifest](../apps/frontend/src/lib/workbench/store-manifest.ts) | One normalization/conflict policy; staging is not download or admission |
 | Backend/source access | [Store adapter](../apps/frontend/src/lib/workbench/store-backend-service.ts) | Runtime-backed transport, not UI-owned account or payment logic |
+| Hosted identity and download grants | [Native identity](../workers/rust/crates/desktop-runtime/src/store_identity.rs) and [downloads](../workers/rust/crates/desktop-runtime/src/store_download.rs) | Login callback, in-memory session, authorized retrieval and recovery; not Agent credentials |
+| Installation, target variants and project pins | [Installer API](../workers/rust/crates/installer/src/lib.rs), [variant staging](../workers/rust/crates/installer/src/operator_variant.rs) and [project operators](../workers/rust/crates/installer/src/project_operator.rs) | Download completion is not installation, enablement or remote readiness |
+| Remote package transfer and readiness | [Rust SDK driver](../workers/rust/crates/headless-sdk/src/operator_deployment.rs) and [Agent deployment](../workers/rust/crates/cli/src/operator_package_deployment.rs) | Explicit platform/version/digest/process fences; no implicit overwrite, restart or execution |
 | Existing service catalog and package distribution | [Asset store](../apps/web/lib/kyuubiki_web/asset_store.ex), [central store](../apps/web/lib/kyuubiki_web/central_store.ex), [package distribution](../apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex) | Existing local/managed services, not a completed hosted commerce system |
 
 The [HTML integration handoff](operator-store-integration.html) owns the current
 implementation boundary and proposed backend contract. Team Silvortex supplies
 shared identity; Kyuubiki does not build another password/payment system.
-Self-hosted sources do not require a vendor account. Hosted entitlements,
-immutable downloads, native installation receipts and publisher submission are
-still integration work, not implied by a successful catalog or browser test.
+Self-hosted sources do not require a vendor account. Native login/session,
+authorized download, installation and project/remote deployment adapters are
+implemented; their tested scopes and remaining hosted-service integration work
+belong to the HTML handoff. A browser mock is not a real account/quota test.
 Neither Store access nor a project reference grants Agent control.
+
+The user-visible sequence is catalog -> authorization -> target-platform bytes
+-> Installer verification -> explicit project pin -> target Agent deployment
+and readiness -> TaskIR execution. A completed earlier step cannot replace the
+next step's receipt, and a lost response is not permission to repeat a write.
 
 ## Runtime Data Plane
 
 | Rust crate | Responsibility |
 | --- | --- |
 | `protocol` | RPC/TaskIR contracts, digests and pure shared admission rules |
+| `agent-transport` | Shared native TLS/token transport, separate from task payloads and numerical execution |
 | `cli` | Agent process, transport, authority, Mesh, durable receipts and native command entrypoints |
 | `engine` | Reusable execution dispatch, workflow helpers and operator host |
 | `solver` | Numerical kernels, accuracy gates and numerical recovery strategies |
 | `operator-sdk` | Rust-only executable operator extension and ABI contracts |
+| `operator-thermal-q9` | Thermal Q9 operator implementation and native ABI exports, not a second engine |
 | `desktop-runtime` | Native local-service lifecycle, process ownership and runtime layout |
 | `installer` | Install/update/repair, credentials, package and deployment validation |
 | `platform` | Shared OS/platform primitives |
@@ -119,8 +133,11 @@ Neither Store access nor a project reference grants Agent control.
 
 All crate paths above are under `workers/rust/crates/`. Independent crate
 boundaries do not imply independent running processes. Engine and Solver are
-linked libraries used by the Agent; there is no need for a solver microservice
-just to preserve ownership. The same applies to shared policy helpers in Protocol.
+linked libraries used by native execution; there is no need for a solver microservice
+just to preserve ownership. External dynamic libraries have an Agent-owned
+per-call process boundary, unlike in-process built-ins. The same executable
+hosts the child; this does not add a separately installed service or crate.
+Shared policy helpers in Protocol remain libraries.
 Use [Cargo.toml](../workers/rust/Cargo.toml), not a prose count, when building.
 
 ## Execution And Recovery Path
@@ -131,7 +148,8 @@ Use [Cargo.toml](../workers/rust/Cargo.toml), not a prose count, when building.
 3. Agent validates digest, admission, capability, ownership and input contract.
 4. An admitted built-in uses its native adapter; admitted solver TaskIR dispatches
    through Engine. External packages require resolution, integrity checks and
-   an attached operator runtime. `execute` exists; it is not only a reserved mode.
+   an attached operator runtime with supervised per-call child execution.
+   `execute` exists; it is not only a reserved mode.
 5. Results and receipts retain execution identity and provenance. Recovery reads
    the exact original evidence; unknown outcomes never imply safe replay or
    migration to another peer.
@@ -145,6 +163,21 @@ completed solve or production qualification. Source anchors:
 - [TaskIR dispatch](../workers/rust/crates/cli/src/operator_task_runtime.rs)
 - [Engine solver adapter](../workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs)
 - [Runtime and recovery book](book-ch04-runtime-modes.html)
+
+## Native Operator Host Ownership
+
+| Responsibility | Source owner | Boundary |
+| --- | --- | --- |
+| Package identity and generation leases | [Runtime binding](../workers/rust/crates/cli/src/operator_package_runtime.rs) | Pins/leases, not native function pointers in the Agent |
+| Process lifecycle, budgets and IPC | [Supervisor](../workers/rust/crates/cli/src/operator_package_process.rs) | One call per child, cancellation, termination and reap; no hidden retry |
+| Child-only loading and ABI execution | [Private worker](../workers/rust/crates/cli/src/operator_package_process/worker.rs) | Private to the supervisor; no Agent listener, Store or Orchestra startup |
+| Low-level registry and ABI | [Engine host](../workers/rust/crates/engine/src/operator_sdk_host.rs) | Direct embedding stays in-process; not a security sandbox |
+| Crash/hang/parent-loss evidence | [Process tests](../workers/rust/crates/cli/tests/operator_process_isolation.rs) and [fault fixture](../workers/rust/crates/cli/tests/fixtures/operator_process_fault.rs) | Synthetic libraries only; never distributed as operator packages |
+
+This is fault containment, not a malicious-code sandbox or all-platform resource
+quota. Startup diagnostics, explicit repair, per-call failure and workflow replay
+remain separate contracts. See the [HTML isolation boundary](operator-store-integration.html#native-process-isolation)
+for limits and actual qualification rather than copying test totals into this map.
 
 ## Workflow Recovery Ownership
 
@@ -244,15 +277,19 @@ from their configured authority as needed rather than replicated in full to
 every Agent.
 
 Keep desired authority rules separate from enforced transport security. The
-native listener defaults to loopback. Explicitly allowed LAN source IPs receive
-discovery-only access unless the host also opts into trusted LAN control;
-drain/resume remain loopback-only. This is not TLS, caller identity or proof of
-one-Orchestra authentication. Protocol owns the pure policy and connection-access
-contract; Agent enforces it. Installer/runtime preflight and Orchestra/direct-Mesh
+native listener defaults to loopback. Without API mode, explicitly allowed LAN
+source IPs receive discovery-only access unless trusted LAN control is enabled;
+that legacy allowance is not authentication. Opt-in API mode requires TLS,
+server certificate verification and a connection-scoped token together, with
+no plaintext fallback. Remote package deployment requires the authenticated
+transport; drain/resume remain loopback-only. A shared token is not per-user
+authorization or proof of one-Orchestra ownership. Protocol owns pure admission,
+`agent-transport` owns secure I/O, and Agent enforces both. Installer/runtime preflight and Orchestra/direct-Mesh
 selection consume it rather than inventing independent allowlists. Restart
 validates settings before stopping services, and observed connection readiness
 does not replace lease or recovery evidence. See the
-[runtime ingress guide](book-ch04-runtime-modes.html#native-agent-ingress) and
+[runtime ingress guide](book-ch04-runtime-modes.html#native-agent-ingress),
+[API/TLS caller limits](book-ch04-runtime-modes.html#agent-api-security) and
 [Agent boundary](agent-orchestrator-boundary.md#native-execution-capacity-and-orphaned-work).
 
 ## Verification Spine
@@ -266,8 +303,9 @@ does not replace lease or recovery evidence. See the
 - [Module architecture](module-architecture.md) explains the scoring rules;
   [current line](current-line.md) and dated `reports/` own progress and experiments.
 
-The October 16 calibration remains the dated baseline. Run
-`make check-module-function-coverage-tensor` for the working-tree result rather
+The [November 13 calibration](../reports/tensor-recalibration-20261113.md)
+is the current dated baseline, including explicit Store/native isolation scopes.
+Run `make check-module-function-coverage-tensor` for the working-tree result rather
 than copying a growing sequence of historical counts into this map. A successful
 structural check does not imply release readiness. Local tests, same-host TCP,
 installed journeys, multi-host partitions and host power loss are distinct scopes.

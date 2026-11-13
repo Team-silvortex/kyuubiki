@@ -245,6 +245,66 @@
   },
   "evidence_claims": [
     {
+      "id": "native-operator-result-identity-admission",
+      "status": "partial",
+      "grade": "exercised",
+      "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["contract", "execution", "recovery", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/operator-sdk/src/lib.rs",
+        "workers/rust/crates/operator-sdk/src/json_abi.rs",
+        "workers/rust/crates/cli/tests/operator_process_isolation.rs",
+        "workers/rust/crates/cli/tests/fixtures/operator_process_fault.rs",
+        "docs/operator-sdk.md",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "registry_rejects_wrong_result_identity_for_native_and_json_handlers",
+        "json_adapter_rejects_wrong_result_identity_without_registry",
+        "json_abi_rejects_handler_result_identity_mismatch",
+        "json_abi_success_cannot_also_report_an_error",
+        "native_result_contract_rejection_preserves_task_identity_and_recovery",
+        "validate_run_result",
+        "native-result-admission"
+      ]
+    },
+    {
+      "id": "agent-native-operator-process-isolation",
+      "status": "partial",
+      "grade": "exercised",
+      "modules": ["runtime-agent-cli", "runtime-engine-solver", "sdk-operator"],
+      "paradigms": ["solver_execution", "validation", "security"],
+      "dimensions": ["execution", "recovery", "security", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_process.rs",
+        "workers/rust/crates/cli/src/operator_package_process/worker.rs",
+        "workers/rust/crates/cli/src/operator_package_runtime.rs",
+        "workers/rust/crates/cli/src/operator_task_receipts.rs",
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/tests/operator_process_isolation.rs",
+        "workers/rust/crates/cli/tests/fixtures/operator_process_fault.rs",
+        "workers/rust/crates/cli/tests/fixtures/operator_process_helper.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "native_crash_and_hang_do_not_poison_agent_or_next_execution",
+        "constructor_crash_and_hang_leave_recovery_control_available",
+        "cancellation_kills_native_call_and_releases_execution_capacity",
+        "force_stopping_parent_does_not_leave_native_call_running",
+        "parent_loss_stops_owned_native_process_group",
+        "descendants_stop_on_success_crash_timeout_and_cancellation",
+        "private_worker_rejects_shared_process_group_before_reading_input",
+        "disk_identity_change_after_probe_cannot_execute_under_old_pin",
+        "partial_frames_and_stalled_io_cannot_extend_the_deadline",
+        "native_process_failures_require_inspection_never_automatic_replay",
+        "per_call_process",
+        "parent_loss_cleanup",
+        "原生算子进程隔离",
+        "不是恶意代码安全沙箱"
+      ]
+    },
+    {
       "id": "operator-release-native-candidate",
       "status": "partial",
       "grade": "verified",

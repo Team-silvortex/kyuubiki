@@ -33,6 +33,7 @@ pub enum DownloadRequest {
     Cancel { id: String },
     Remove { id: String },
     Install { id: String },
+    StageVariant { id: String },
 }
 struct Active {
     id: String,
@@ -80,6 +81,10 @@ impl StoreDownloads {
             }
             DownloadRequest::Install { id } => {
                 self.install(identity, &id)?;
+                self.list(identity)
+            }
+            DownloadRequest::StageVariant { id } => {
+                self.stage_variant(identity, &id)?;
                 self.list(identity)
             }
             DownloadRequest::Cancel { id } => {

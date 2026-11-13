@@ -198,3 +198,56 @@ fn symlinked_record_or_partial_cannot_escape_managed_directory() {
     assert!(store.save(&receipt).is_err());
     assert_eq!(fs::read(&sentinel).unwrap(), b"do not touch");
 }
+
+#[test]
+fn linux_variant_handoff_and_receipt_cannot_be_confused_with_local_installation() {
+    for platform in ["linux-x86_64", "linux-aarch64"] {
+        let mut record = record();
+        record.state = "downloaded".into();
+        record.selection.platform = platform.into();
+        record.files[0].path = format!("{platform}/kyuubiki-operator.json");
+        let mut library = record.files[0].clone();
+        library.path = format!("{platform}/operator.so");
+        record.files.push(library);
+        assert_eq!(
+            install::handoff_for(&record, true).unwrap().platform,
+            platform
+        );
+        if platform != catalog::host_platform() {
+            assert_eq!(
+                install::handoff(&record).err(),
+                Some("store_platform_mismatch")
+            );
+        }
+        let receipt = serde_json::json!({"schema_version":"kyuubiki.operator-variant/v1","platform":platform,"size_bytes":10,
+            "relative_root":format!("variants/{platform}/packages/demo"),"package":{"package_id":"demo","package_version":"1.0.0",
+                "manifest_sha256":"c".repeat(64),"entrypoint_sha256":"c".repeat(64),"operators":[{"operator_id":"extract.demo","kind":"extract"}]}});
+        assert_eq!(
+            install::verify_variant_receipt(&record, receipt.clone()),
+            Ok(())
+        );
+        for key in ["schema_version", "platform", "relative_root"] {
+            let mut wrong = receipt.clone();
+            wrong[key] = serde_json::json!("wrong");
+            assert_eq!(
+                install::verify_variant_receipt(&record, wrong),
+                Err("invalid_install_receipt")
+            );
+        }
+        for state in ["variant_staging", "variant_staged", "variant_stage_failed"] {
+            record.installation = Some(state.into());
+            let disk = Sandbox::new();
+            let store = storage::Store::open(disk.0.clone()).unwrap();
+            store.save(&record).unwrap();
+            assert_eq!(
+                store.read(&record.id).unwrap().installation.as_deref(),
+                Some(state)
+            );
+        }
+        record.state = "prepared".into();
+        assert_eq!(
+            install::handoff_for(&record, true).err(),
+            Some("operator_download_required")
+        );
+    }
+}

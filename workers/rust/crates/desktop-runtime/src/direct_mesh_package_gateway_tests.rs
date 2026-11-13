@@ -73,6 +73,9 @@ fn package_gateway_rejects_plaintext_remote_and_extra_credentials() {
 fn package_gateway_uses_tls_and_checks_loaded_readiness_and_process_fence() {
     for case in [
         "ready",
+        "activation_failed",
+        "failure_claiming_ready",
+        "failure_raw_diagnostic",
         "wrong_process",
         "not_loaded",
         "unknown_state",
@@ -105,6 +108,18 @@ fn package_gateway_uses_tls_and_checks_loaded_readiness_and_process_fence() {
                 "platform":"macos-aarch64", "state":"ready", "installed":pin(), "active":pin(),
                 "received_bytes":0,"total_bytes":0,"process_instance_id":"process-1","deployment_allowed":true});
             match case {
+                "activation_failed" | "failure_raw_diagnostic" => {
+                    status["state"] = json!("activation_failed");
+                    status["active"] = Value::Null;
+                    status["activation_error"] = json!(if case == "activation_failed" {
+                        "operator_package_activation_failed"
+                    } else {
+                        "/private/host/path: library error"
+                    });
+                }
+                "failure_claiming_ready" => {
+                    status["activation_error"] = json!("operator_package_activation_failed")
+                }
                 "wrong_process" => status["process_instance_id"] = json!("process-2"),
                 "not_loaded" => status["active"] = Value::Null,
                 "unknown_state" => status["state"] = json!("probably_ready"),
@@ -133,9 +148,15 @@ fn package_gateway_uses_tls_and_checks_loaded_readiness_and_process_fence() {
         worker.join().unwrap();
         assert_eq!(
             response.status,
-            if case == "ready" { 200 } else { 502 },
+            if matches!(case, "ready" | "activation_failed") {
+                200
+            } else {
+                502
+            },
             "{case}"
         );
-        assert!(!String::from_utf8(response.body).unwrap().contains(token));
+        let body = String::from_utf8(response.body).unwrap();
+        assert!(!body.contains(token));
+        assert!(!body.contains("/private/host/path"));
     }
 }

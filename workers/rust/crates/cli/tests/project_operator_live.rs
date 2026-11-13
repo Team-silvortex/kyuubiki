@@ -23,6 +23,7 @@ fn installed_project_operator_executes_on_agent_and_recovers_without_replay() {
     let store = root.join("packages");
     install_operator_package_into(&template_package_root(), &store).unwrap();
     let request = |operation| ProjectOperatorRequest {
+        platform: None,
         project_id: "material-research".into(),
         scope: "a".repeat(64),
         operation,

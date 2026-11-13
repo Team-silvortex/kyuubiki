@@ -22,6 +22,8 @@ pub struct ProjectOperatorEntry {
 pub struct ProjectOperatorRequest {
     pub project_id: String,
     pub scope: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platform: Option<String>,
     pub operation: ProjectOperatorOperation,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -52,6 +54,8 @@ pub struct ProjectOperatorStatus {
     pub schema_version: String,
     pub project_id: String,
     pub scope: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platform: Option<String>,
     pub packages_root: String,
     pub installed: Vec<ProjectOperatorPin>,
     pub installed_error: Option<String>,

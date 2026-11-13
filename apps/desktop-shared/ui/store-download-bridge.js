@@ -7,6 +7,7 @@ const platforms = ["macos-aarch64", "macos-x86_64", "linux-aarch64", "linux-x86_
 const digest = (value) => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
 const segment = (value) => typeof value === "string" && /^[a-zA-Z0-9_-][a-zA-Z0-9._-]{0,199}$/.test(value)
     && !value.endsWith(".") && !/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i.test(value);
+const variantPlatform = (value) => value === "linux-x86_64" || value === "linux-aarch64";
 const bounded = (value, max) => typeof value === "string" && value.length <= max && !/[\x00-\x1f\x7f]/.test(value);
 export function publicCatalog(value) {
     if (!value || typeof value !== "object")
@@ -57,7 +58,7 @@ function validRequest(value) {
         return Object.keys(r).length === 1;
     if (r.action === "prepare")
         return Object.keys(r).length === 2 && validDownloadSelection(r.selection);
-    return ["start", "cancel", "remove", "install"].includes(r.action) && Object.keys(r).length === 2 && "id" in r && digest(r.id);
+    return ["start", "cancel", "remove", "install", "stage_variant"].includes(r.action) && Object.keys(r).length === 2 && "id" in r && digest(r.id);
 }
 function pin(value) {
     const p = value;
@@ -68,7 +69,8 @@ function pin(value) {
 }
 export { pin as validProjectOperatorPin };
 function validProjectRequest(r) {
-    if (Object.keys(r).length !== 4 || !digest(r.scope) || !bounded(r.project_id, 256) || !r.project_id || r.project_id.trim() !== r.project_id || !r.operation)
+    if (Object.keys(r).length !== (r.platform === undefined ? 4 : 5) || (r.platform !== undefined && !variantPlatform(r.platform))
+        || !digest(r.scope) || !bounded(r.project_id, 256) || !r.project_id || r.project_id.trim() !== r.project_id || !r.operation)
         return false;
     const o = r.operation;
     if (o.action === "list")
@@ -92,6 +94,7 @@ function validProjectRequest(r) {
 export function publicProjectOperators(value) {
     const s = value;
     if (!s || s.schema_version !== "kyuubiki.project-operators/v1" || !digest(s.scope) || !bounded(s.project_id, 256) || !s.project_id || !bounded(s.packages_root, 4096)
+        || (s.platform !== undefined && !variantPlatform(s.platform))
         || !Array.isArray(s.installed) || s.installed.length > 64 || s.installed.some(p => !pin(p))
         || !Array.isArray(s.enabled) || s.enabled.length > 64 || s.enabled.some(e => !e || !pin(e.package) || !["ready", "unavailable_or_changed"].includes(e.state))
         || (s.installed_error !== null && safeCode(s.installed_error) !== s.installed_error)
@@ -99,19 +102,21 @@ export function publicProjectOperators(value) {
         return null;
     const d = s.deployment;
     if (d !== undefined && (!d || !pin(d.spec?.package) || !platforms.includes(d.spec.platform) || typeof d.spec.manifest_json !== "string" || d.spec.manifest_json.length > 65536
+        || (s.platform !== undefined && d.spec.platform !== s.platform)
         || !Number.isSafeInteger(d.spec.size_bytes) || d.spec.size_bytes <= 0 || d.spec.size_bytes > 33554432 || !Number.isSafeInteger(d.offset) || d.offset < 0
         || !Array.isArray(d.data) || d.data.length > 65536 || d.offset + d.data.length > d.spec.size_bytes || d.data.some(b => !Number.isInteger(b) || b < 0 || b > 255)))
         return null;
     const copy = (p) => ({ package_id: p.package_id, package_version: p.package_version, manifest_sha256: p.manifest_sha256,
         entrypoint_sha256: p.entrypoint_sha256, operators: p.operators.map(o => ({ operator_id: o.operator_id, kind: o.kind })) });
     return { schema_version: s.schema_version, project_id: s.project_id, scope: s.scope, packages_root: s.packages_root, installed: s.installed.map(copy), installed_error: s.installed_error,
+        ...(s.platform ? { platform: s.platform } : {}),
         enabled: s.enabled.map(e => ({ package: copy(e.package), state: e.state })), task: s.task,
         ...(d ? { deployment: { spec: { package: copy(d.spec.package), platform: d.spec.platform, manifest_json: d.spec.manifest_json, size_bytes: d.spec.size_bytes }, offset: d.offset, data: [...d.data] } } : {}) };
 }
 function response(request, value) {
     if (request.action === "project") {
         const s = publicProjectOperators(value);
-        return s?.project_id === request.project_id && s.scope === request.scope ? s : null;
+        return s?.project_id === request.project_id && s.scope === request.scope && s.platform === request.platform ? s : null;
     }
     return request.action === "catalog" ? publicCatalog(value) : publicDownloadViews(value);
 }
@@ -132,7 +137,8 @@ export function publicDownloadViews(value) {
             || (v.remaining !== null && !count(v.remaining, Number.MAX_SAFE_INTEGER)) || typeof v.metered !== "boolean"
             || typeof v.unlimited !== "boolean" || (v.charged !== null && typeof v.charged !== "boolean")
             || (v.error !== null && safeCode(v.error) !== v.error)
-            || (v.installation != null && (!["installing", "installed", "install_failed"].includes(v.installation) || v.state !== "downloaded"))
+            || (v.installation != null && (!["installing", "installed", "install_failed", "variant_staging", "variant_staged", "variant_stage_failed"].includes(v.installation) || v.state !== "downloaded"))
+            || (v.installation?.startsWith("variant_") && (v.selection.kind !== "operator" || !variantPlatform(v.selection.platform)))
             || (v.directory !== null && (typeof v.directory !== "string" || v.directory.length > 4096 || /[\x00-\x1f]/.test(v.directory))))
             return null;
         try {
@@ -203,7 +209,7 @@ export function installStoreDownloadHost(frame, invoke, host = window) {
             if (disposed || generation !== epoch)
                 throw "download_page_changed";
             if (request.action === "project")
-                return invoke("project_operator", { request: { project_id: request.project_id, scope: request.scope, operation: request.operation } });
+                return invoke("project_operator", { request: { project_id: request.project_id, scope: request.scope, operation: request.operation, ...(request.platform ? { platform: request.platform } : {}) } });
             return request.action === "catalog" ? invoke("store_catalog", { request: { query: request.query, cursor: request.cursor } }) : invoke("store_download", { request });
         }).then(value => { const views = response(request, value); reply(views, views ? null : "invalid_store_response"); }, error => reply(null, safeCode(error))).finally(() => pending.delete(request.action));
     };
@@ -228,8 +234,8 @@ export async function requestStoreDownload(request, host = window, timeoutMs = 1
 export async function requestStoreCatalog(request, host = window, timeoutMs = 30000) {
     return await exchange(request, host, timeoutMs);
 }
-export async function requestProjectOperator(project_id, scope, operation, host = window) {
-    return await exchange({ action: "project", project_id, scope, operation }, host, 120000);
+export async function requestProjectOperator(project_id, scope, operation, host = window, platform) {
+    return await exchange({ action: "project", project_id, scope, operation, ...(platform ? { platform } : {}) }, host, 120000);
 }
 function exchange(request, host, timeoutMs) {
     return new Promise((resolve, reject) => {

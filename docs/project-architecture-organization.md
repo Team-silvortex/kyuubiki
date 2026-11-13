@@ -220,9 +220,29 @@ names its existing presentation, catalog, command, manifest and backend owners.
 4. Put pure command/catalog tests in the frontend workflow tests and browser
    journeys in `tests/integration`. Extend the existing GUI manifest and tensor
    evidence. Real identity/download/install journeys require separate evidence.
+5. Keep login callbacks/sessions and authorized retrieval in `desktop-runtime`,
+   installation/variant staging in `installer`, and deployment control in the
+   Headless SDK and Agent. A project pin is not a running operator. Use the
+   [current native source map](current-architecture-map.md#workspace-store-ownership)
+   instead of introducing a second Store orchestrator.
 
-The [HTML handoff](operator-store-integration.html) owns proposed backend fields
-and pending integrations; this placement guide should not repeat that API spec.
+The [HTML handoff](operator-store-integration.html) owns implemented contracts,
+qualification boundaries and pending integrations; this guide does not duplicate it.
+
+## Native Operator Isolation Placement
+
+Keep `cli/src/operator_package_process.rs` as the supervision boundary and
+`cli/src/operator_package_process/worker.rs` as its private child implementation.
+CLI startup and package bindings use the parent module; they do not import the
+child's ABI/loading internals directly. Engine stays reusable and does not own
+Agent lifecycle or Store policy. The child reuses the existing CLI executable,
+not a new top-level service, crate, or sidecar packaging contract.
+
+Use `cli/tests/operator_process_isolation.rs` for actual crash/hang/cancel and
+parent-loss checks. Compile its synthetic library from `tests/fixtures` into an
+owned temporary directory, never into distributable templates or retained
+release products. Keep deployment, activation repair and Orchestra generation
+rotation tests separate; a smaller module namespace does not merge their claims.
 
 ## Line-Count Rule
 
@@ -340,8 +360,33 @@ Repository cleanup does not uninstall desktop apps or manage installed runtime
 data. Use Installer lifecycle/storage operations for those separate locations.
 Container build contexts exclude temporary research outputs and local env files.
 
-The [November 4 organization record](../reports/architecture-disk-organization-20261104.md)
-records the latest measured cleanup and preserved work. The
+### Latest Local Maintenance: November 13, 2026
+
+The native cleanup removed 84,199 regenerable entries after the Agent tests and
+builds finished. The preview's 23.00 GiB was logical size, not recovered space.
+The same `du -x -k -d 1 .` measurement before and after removal gave:
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Repository allocated size | 46.14 GiB | 29.76 GiB |
+| Data-volume available space (`df -k .`) | 6.98 GiB | 23.96 GiB |
+
+Repository allocated size fell by 16.38 GiB. Volume availability includes
+concurrent activity outside the project and is not an isolated cleanup metric.
+The combined content digest of tracked and non-ignored untracked files matched
+across cleanup. Dependencies, release products, credentials, runtime/research
+data, existing Store/SDK/Agent work and installed service processes were kept.
+No new version, commit, installation or remote-server cleanup was performed.
+
+The accompanying organization change nests child-only operator code under its
+supervisor and updates the architecture map and Rust navigation. Local macOS
+verification passed 337 Agent unit tests, nine live operator integration cases,
+strict CLI Clippy, workspace formatting, and the focused organization,
+topology/matrix/tensor, extension, documentation and Store contract checks.
+This was not the full `architecture-check`, a whole-workspace test run or new
+Linux/Windows qualification. Tensor maturity/evidence gaps remain unchanged.
+
+The [November 4 organization record](../reports/architecture-disk-organization-20261104.md),
 [October 28 record](../reports/architecture-disk-organization-20261028.md),
 [October 23 record](../reports/architecture-disk-organization-20261023.md) and
 [October 18 record](../reports/architecture-disk-organization-20261018.md)

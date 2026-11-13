@@ -6,6 +6,9 @@ struct Deployment {
     allowed: bool,
 }
 static CONFIG: OnceLock<Deployment> = OnceLock::new();
+pub(crate) fn allows_startup_recovery() -> bool {
+    CONFIG.get().is_some_and(|c| c.allowed)
+}
 pub(crate) fn configure(config: &AgentConfig) -> Result<(), String> {
     let enabled = match std::env::var("KYUUBIKI_AGENT_PACKAGE_DEPLOYMENT").as_deref() {
         Err(std::env::VarError::NotPresent) | Ok("false") => false,
@@ -54,6 +57,11 @@ pub(crate) fn handle(request: RpcRequest) -> AgentReply {
             && status.active.as_ref() == Some(&request.package)
         {
             status.state = "ready".into();
+        } else if status.installed.as_ref() == Some(&request.package) {
+            if let Some(code) = crate::operator_package_runtime::startup_activation_error() {
+                status.state = "activation_failed".into();
+                status.activation_error = Some(code.into());
+            }
         }
         status.process_instance_id = Some(process);
         status.deployment_allowed = config.allowed;

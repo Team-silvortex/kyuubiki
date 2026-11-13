@@ -85,7 +85,14 @@ pub(crate) fn build_agent_deployment_readiness_for_config(
     config: &AgentConfig,
 ) -> AgentDeploymentReadiness {
     let descriptor = build_agent_descriptor(config);
-    build_agent_deployment_readiness(config, &descriptor)
+    let mut readiness = build_agent_deployment_readiness(config, &descriptor);
+    if let Some(code) = crate::operator_package_runtime::startup_activation_error() {
+        readiness.ready = false;
+        readiness.status = "needs_attention".into();
+        readiness.operator_package_runtime_ready = false;
+        readiness.issues.push(code.into());
+    }
+    readiness
 }
 
 fn build_runtime_authority_descriptor(
@@ -140,7 +147,9 @@ fn build_runtime_engine_descriptor(runtime_mode: &str) -> RuntimeEngineDescripto
 pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
     let descriptor = agent_descriptor();
     let runtime_snapshot = operator_package_runtime_snapshot();
-    let package_runtime = if runtime_snapshot["ready"].as_bool() == Some(true) {
+    let package_runtime = if runtime_snapshot["ready"].as_bool() == Some(true)
+        || runtime_snapshot["status"] == "activation_failed"
+    {
         runtime_snapshot
     } else {
         operator_package_runtime_snapshot_for_config(config)

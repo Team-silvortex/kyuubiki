@@ -34,6 +34,9 @@ mod integrity_contract;
 mod integrity_versions;
 mod linux_desktop_dependencies;
 mod operator_deployment;
+mod operator_deployment_lock;
+mod operator_variant;
+pub use operator_variant::stage_store_operator_variant_into;
 mod operator_package_fetch;
 mod operator_package_preflight;
 mod operator_package_store;
@@ -80,7 +83,9 @@ pub use operator_package_store::{
     uninstall_operator_package_from, verify_managed_operator_package,
 };
 pub use operator_release::{OperatorReleaseArtifact, prepare_operator_distribution};
-pub use store_operator_install::{StoreOperatorInstallRequest, install_store_operator_into};
+pub use store_operator_install::{
+    StoreOperatorInstallRequest, install_store_operator_into, store_operator_command,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DoctorCheck {

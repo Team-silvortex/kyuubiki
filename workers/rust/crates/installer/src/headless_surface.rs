@@ -49,6 +49,11 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
         crate_name: "kyuubiki-installer",
         entrypoints: vec![
             InstallerHeadlessEntrypoint {
+                id: "operator_variants",
+                role: "Stage verified Linux delivery resources without loading them on the host; project intent is platform-scoped and independent of Store accounts or Agent control.",
+                exports: &["stage_store_operator_variant_into", "project_operator_in"],
+            },
+            InstallerHeadlessEntrypoint {
                 id: "operator_release",
                 role: "Prepare bounded immutable cross-target operator candidates without executing or publishing code.",
                 exports: &["prepare_operator_distribution"],

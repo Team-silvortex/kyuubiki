@@ -429,31 +429,11 @@ fn main() {
             ),
             Err(error) => exit_on_err(Err(error)),
         },
-        "install-store-operator" => {
-            use std::io::Read;
-            let result = (|| {
-                let root = args.next().ok_or("missing store download root")?;
-                let store = parse_operator_package_store_flag(args.collect())?
-                    .map(Ok)
-                    .unwrap_or_else(kyuubiki_installer::operator_package_store_root)?;
-                let mut bytes = Vec::new();
-                std::io::stdin()
-                    .take(16385)
-                    .read_to_end(&mut bytes)
-                    .map_err(|e| e.to_string())?;
-                if bytes.len() > 16384 {
-                    return Err("store install request too large".into());
-                }
-                let request = serde_json::from_slice(&bytes)
-                    .map_err(|e| format!("invalid store install request: {e}"))?;
-                kyuubiki_installer::install_store_operator_into(
-                    &PathBuf::from(root),
-                    &store,
-                    &request,
-                )
-                .and_then(pretty_json)
-            })();
-            exit_on_err(result);
+        "install-store-operator" | "stage-store-operator-variant" => {
+            exit_on_err(kyuubiki_installer::store_operator_command(
+                args.collect(),
+                command == "stage-store-operator-variant",
+            ))
         }
         "install-operator-package" => {
             let Some(package_root) = args.next() else {

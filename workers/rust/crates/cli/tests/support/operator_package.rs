@@ -135,10 +135,47 @@ impl LiveAgent {
     pub fn start_deployment(packages_root: &Path) -> Result<Self, Box<dyn Error>> {
         Self::start_with_store(packages_root, None, true)
     }
+    pub fn start_fault_deployment(packages_root: &Path) -> Result<Self, Box<dyn Error>> {
+        Self::start_with_binary(
+            Path::new(env!("CARGO_BIN_EXE_kyuubiki-cli")),
+            packages_root,
+            None,
+            true,
+            true,
+        )
+    }
+    pub fn process_id(&self) -> u32 {
+        self.child.id()
+    }
+    pub fn start_managed_deployment(
+        packages_root: &Path,
+        agent_store: &Path,
+    ) -> Result<Self, Box<dyn Error>> {
+        let binary = kyuubiki_installer::active_agent_binary_in(
+            agent_store,
+            kyuubiki_installer::Platform::current(),
+        )?;
+        Self::start_with_binary(&binary, packages_root, None, true, false)
+    }
     fn start_with_store(
         packages_root: &Path,
         store: Option<&Path>,
         deployment: bool,
+    ) -> Result<Self, Box<dyn Error>> {
+        Self::start_with_binary(
+            Path::new(env!("CARGO_BIN_EXE_kyuubiki-cli")),
+            packages_root,
+            store,
+            deployment,
+            false,
+        )
+    }
+    fn start_with_binary(
+        binary: &Path,
+        packages_root: &Path,
+        store: Option<&Path>,
+        deployment: bool,
+        fault_limits: bool,
     ) -> Result<Self, Box<dyn Error>> {
         let port = reserve_port()?;
         let log_path =
@@ -148,11 +185,16 @@ impl LiveAgent {
             .truncate(true)
             .write(true)
             .open(&log_path)?;
-        let mut command = Command::new(env!("CARGO_BIN_EXE_kyuubiki-cli"));
+        let mut command = Command::new(binary);
         command.env(
             "KYUUBIKI_AGENT_PACKAGE_DEPLOYMENT",
             if deployment { "true" } else { "false" },
         );
+        if fault_limits {
+            command.env("KYUUBIKI_OPERATOR_PROCESS_LOAD_TIMEOUT_MS", "2000");
+            command.env("KYUUBIKI_OPERATOR_PROCESS_RUN_TIMEOUT_MS", "2000");
+            command.env("KYUUBIKI_ISOLATION_SECRET_PROBE", "must-not-be-inherited");
+        }
         if let Some(store) = store {
             command.env("KYUUBIKI_AGENT_EXECUTION_STORE", store);
         } else {

@@ -39,16 +39,20 @@ for (const width of [1440, 390]) {
     try {
       const url = new URL(workbenchUrl(runtime));
       url.searchParams.set("desktopLayout", "1");
-      let remoteState="missing",received=0;
+      let remoteState="missing",received=0,remotePlatform="macos-aarch64",loseCommitReply=true;
       const deploymentActions=[];
       await context.route("**/api/direct-mesh/operator-package",route=>{
         const {request:r,endpoints}=route.request().postDataJSON();deploymentActions.push(r.operation.action);
         if(r.operation.action==="begin")remoteState="uploading";
         if(r.operation.action==="chunk")received+=r.operation.data.length;
-        if(r.operation.action==="commit")remoteState="installed_restart_required";
+        if(r.operation.action==="commit"){
+          remoteState="installed_restart_required";
+          if(loseCommitReply){loseCommitReply=false;return route.fulfill({status:503,json:{error:"test_commit_response_lost"}});}
+        }
         return route.fulfill({json:{endpoint:endpoints[0],gateway_runtime:"rust-native",deployment:{
-          schema_version:"kyuubiki.operator-deployment/v1",package:r.package,platform:"macos-aarch64",state:remoteState,
-          installed:["ready","installed_restart_required"].includes(remoteState)?r.package:remoteState==="version_conflict"?{...r.package,package_version:"2.0.0"}:null,
+          schema_version:"kyuubiki.operator-deployment/v1",package:r.package,platform:remotePlatform,state:remoteState,
+          installed:["ready","installed_restart_required","activation_failed"].includes(remoteState)?r.package:remoteState==="version_conflict"?{...r.package,package_version:"2.0.0"}:null,
+          activation_error:remoteState==="activation_failed"?"operator_package_activation_failed":null,
           active:remoteState==="ready"?r.package:null,received_bytes:received,total_bytes:remoteState==="missing"?0:4,process_instance_id:"test-process",deployment_allowed:true,
         }}});
       });
@@ -58,7 +62,7 @@ for (const width of [1440, 390]) {
         const empty = {status:"signed_out",issuer:null,subject:null,display_name:null,expires_at:null,can_refresh:false,error:null};
         window.view = {...empty}; window.actions = []; window.next = "waiting";
         window.downloads = []; window.downloadActions = []; window.starts = 0;
-        window.enabled = [];
+        window.enabled = []; window.enabledPlatforms = {};
         addEventListener("message", event => {
           if (event.data?.type === "kyuubiki:store-download/v1") {
             if(event.data.action === "connect") {
@@ -70,11 +74,14 @@ for (const width of [1440, 390]) {
             if(request.action === "project") {
               const packagePin={package_id:"demo",package_version:"1.0.0",manifest_sha256:"a".repeat(64),entrypoint_sha256:"b".repeat(64),operators:[{operator_id:"extract.demo",kind:"extract"}]};
               const op=request.operation;
-              if(op.action==="enable")window.enabled=[{package:packagePin,state:"ready"}];
-              if(op.action==="disable")window.enabled=[];
+              const platform=request.platform||"local";
+              if(op.action==="enable")window.enabledPlatforms[platform]=[{package:packagePin,state:"ready"}];
+              if(op.action==="disable")window.enabledPlatforms[platform]=[];
+              window.enabled=window.enabledPlatforms[platform]||[];
               const views={schema_version:"kyuubiki.project-operators/v1",project_id:request.project_id,scope:request.scope,packages_root:"/test-only/operator-packages/packages",
                 installed:[packagePin],installed_error:null,enabled:window.enabled,task:op.action==="prepare"?{schema_version:"kyuubiki.operator-task-ir/v1",task_id:op.task_id}:null};
-              if(op.action==="read_deployment")views.deployment={spec:{package:packagePin,platform:"macos-aarch64",manifest_json:"{}",size_bytes:4},offset:op.offset,data:[1,2,3,4].slice(op.offset)};
+              if(request.platform)views.platform=request.platform;
+              if(op.action==="read_deployment")views.deployment={spec:{package:packagePin,platform:request.platform||"macos-aarch64",manifest_json:"{}",size_bytes:4},offset:op.offset,data:[1,2,3,4].slice(op.offset)};
               event.source.postMessage({type:"kyuubiki:store-download/v1:result",id,session:event.data.session,views,error:null},event.origin);return;
             }
             if(request.action === "catalog") {
@@ -96,6 +103,7 @@ for (const width of [1440, 390]) {
               const attempts=window.downloadActions.filter(r=>r.action==="install").length;
               window.downloads[0] = {...window.downloads[0],installation:attempts===1 ? "install_failed" : "installed"};
             }
+            if(request.action === "stage_variant") window.downloads[0]={...window.downloads[0],installation:"variant_staged"};
             event.source.postMessage({type:"kyuubiki:store-download/v1:result",id,session:event.data.session,views:window.downloads,error:null},event.origin);
             return;
           }
@@ -188,12 +196,29 @@ for (const width of [1440, 390]) {
       page.once("dialog", dialog => dialog.accept());
       await downloads.locator('[data-store-download-remove]').click();
       await downloads.locator('[data-store-download-id]').waitFor({state:"detached"});
+      // A Mac catalog can explicitly choose Linux, but never installs it into the Mac library.
+      const linuxPlatform=width===1440?"linux-x86_64":"linux-aarch64";
+      await downloads.locator('[data-store-catalog-load]').click();
+      await downloads.locator('[data-store-catalog-platform]').selectOption(linuxPlatform);
+      await downloads.locator('[data-store-catalog-select]').click();
+      assert.equal(await downloads.locator('[data-store-download-platform]').inputValue(),linuxPlatform);
+      await downloads.locator('[data-store-download-prepare]').click();
+      await downloads.locator('[data-store-download-state="prepared"]').waitFor();
+      await downloads.locator('[data-store-download-start]').click();
+      await downloads.locator('[data-store-download-state="downloaded"]').waitFor();
+      const installCount=await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="install").length);
+      page.once("dialog",dialog=>dialog.accept());await downloads.locator('[data-store-download-stage-variant]').click();
+      await downloads.locator('[data-store-installation="variant_staged"]').waitFor();
+      await downloads.locator('[data-store-download-project]').click();
+      assert.equal(await frame.locator('[data-project-operator-platform]').inputValue(),linuxPlatform);
+      assert.equal(await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="install").length),installCount);
       await frame.locator('[data-workbench-store-view-tab="account"]').click();
       await wait("signed_in");
       await frame.locator('[data-store-identity-logout]').click(); await wait("signed_out");
       assert.equal(await frame.locator('[data-store-identity]').textContent().then(text => text.includes("test-researcher")), false);
       await frame.locator('[data-workbench-store-view-tab="operators"]').click();
       const project=frame.locator('[data-project-operators]');
+      assert.equal(await project.locator('[data-project-operator-platform]').inputValue(),linuxPlatform);
       await project.locator('[data-project-operator-refresh]').click();
       await project.locator('[data-project-operator-installed] option[value="demo"]').waitFor({state:"attached"});
       await project.locator('[data-project-operator-installed]').selectOption("demo");
@@ -210,12 +235,40 @@ for (const width of [1440, 390]) {
       await frame.evaluate(()=>window.__kyuubikiPwdt.invoke("settings/patch",{frontendRuntimeMode:"direct_mesh_gui"}));
       await project.locator('[data-project-operator-endpoint]').fill("127.0.0.1:5001");
       await project.locator('[data-project-operator-inspect-target]').click();
+      await project.locator('[role="status"]').filter({hasText:"Agent platform does not match"}).waitFor();
+      assert.deepEqual(deploymentActions,["inspect"],"wrong platform causes no source reads or uploads");
+      deploymentActions.length=0;remotePlatform=linuxPlatform;
+      await project.locator('[data-project-operator-inspect-target]').click();
       await project.locator('[data-project-operator-target-state="missing"]').waitFor();
       page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-deploy]').click();
-      await project.locator('[data-project-operator-target-state="installed_restart_required"]').waitFor();
+      await project.locator('[role="status"]').filter({hasText:"test_commit_response_lost"}).waitFor();
+      assert.equal(await project.locator('[data-project-operator-target-state="ready"]').count(),0,"lost reply cannot assert readiness");
+      assert.equal(await project.locator('[data-project-operator-target-state="installed_restart_required"]').count(),0,"lost reply cannot assert installation");
       assert.deepEqual(deploymentActions,["inspect","inspect","begin","chunk","commit"]);
+      const sourceReads=await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="project"&&r.operation.action==="read_deployment").length);
+      page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-deploy]').click();
+      await project.locator('[data-project-operator-target-state="installed_restart_required"]').waitFor();
+      assert.deepEqual(deploymentActions,["inspect","inspect","begin","chunk","commit","inspect"],"resume inspects without replaying a committed upload");
+      assert.equal(await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="project"&&r.operation.action==="read_deployment").length),sourceReads);
+      remoteState="activation_failed";
+      page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-deploy]').click();
+      await project.locator('[data-project-operator-target-state="activation_failed"]').waitFor();
+      assert.match(await project.locator('[data-project-operator-target-state]').innerText(),/failed to load/);
+      assert.equal(await project.locator('[data-project-operator-activation-error]').innerText(),"operator_package_activation_failed");
+      assert.equal(deploymentActions.filter(a=>a==="begin").length,1,"failed activation never starts another upload");
+      assert.equal(await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="project"&&r.operation.action==="read_deployment").length),sourceReads);
+      const preparations=await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="project"&&r.operation.action==="prepare").length);
+      page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-run]').click();
+      await project.locator('[role="status"]').filter({hasText:"failed to load"}).waitFor();
+      assert.equal(await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="project"&&r.operation.action==="prepare").length),preparations,"execution is blocked before preparing or dispatching a task");
+      assert.equal(await project.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,"activation diagnosis fits the viewport");
       remoteState="ready";await project.locator('[data-project-operator-inspect-target]').click();
       await project.locator('[data-project-operator-target-state="ready"]').waitFor();
+      remotePlatform=linuxPlatform==="linux-x86_64"?"linux-aarch64":"linux-x86_64";
+      await project.locator('[data-project-operator-inspect-target]').click();
+      await project.locator('[role="status"]').filter({hasText:"Agent platform does not match"}).waitFor();
+      assert.equal(await project.locator('[data-project-operator-target-state]').count(),0,"failed recheck clears stale readiness");
+      remotePlatform=linuxPlatform;
       remoteState="version_conflict";
       page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-deploy]').click();
       await project.locator('[data-project-operator-target-state="version_conflict"]').waitFor();
@@ -224,7 +277,12 @@ for (const width of [1440, 390]) {
       if(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.KYUUBIKI_STORE_SCREENSHOT_DIR,`project-${width}.png`)});
       page.once("dialog",dialog=>dialog.accept());await project.locator('[data-project-operator-disable]').click();
       await page.waitForFunction(()=>window.enabled.length===0);
-      assert.equal(await page.evaluate(()=>window.starts),2,"signed-out project actions never acquire a store grant");
+      await project.locator('[data-project-operator-platform]').selectOption("");
+      assert.equal(await project.locator('[data-project-operator-target-state]').count(),0);
+      assert.equal(await project.locator('[data-project-operator-installed]').inputValue(),"");
+      assert.equal(await page.evaluate(()=>window.starts),3,"signed-out project actions never acquire a store grant");
+      const requests=await page.evaluate(()=>window.downloadActions.filter(r=>r.action==="project"));
+      assert.ok(requests.every(r=>r.platform===linuxPlatform),"project selection never silently falls back to the host platform");
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   }, { timeout: 120_000 });

@@ -1,0 +1,219 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "November 13, 2026 review of retained Store-to-Agent and native isolation evidence on the 3.7.8 working tree, not a new product execution campaign. Narrow verified source and SSH journeys coexist with the original partial integration claims. Production accounts, native TLS across hosts, installed current isolation, platform variants, publication, replacement and performance require their own named proof; historical in-process ABI or 1M solver evidence cannot substitute.",
+  "cell_requirements": [
+    { "module_id": "runtime-agent-cli", "paradigm": "validation", "dimensions": ["recovery"] }
+  ],
+  "evidence_claims": [
+    {
+      "id": "native-result-identity-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["sdk-operator", "runtime-agent-cli"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "workers/rust/crates/operator-sdk/src/lib.rs",
+        "workers/rust/crates/operator-sdk/src/json_abi.rs",
+        "workers/rust/crates/cli/tests/operator_process_isolation.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "registry_rejects_wrong_result_identity_for_native_and_json_handlers",
+        "json_adapter_rejects_wrong_result_identity_without_registry",
+        "json_abi_rejects_handler_result_identity_mismatch",
+        "json_abi_success_cannot_also_report_an_error",
+        "native_result_contract_rejection_preserves_task_identity_and_recovery",
+        "native-result-admission"
+      ]
+    },
+    {
+      "id": "native-unix-owned-process-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["validation"],
+      "dimensions": ["execution", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_process.rs",
+        "workers/rust/crates/cli/src/operator_package_process/worker.rs",
+        "workers/rust/crates/cli/tests/operator_process_isolation.rs",
+        "workers/rust/crates/cli/tests/fixtures/operator_process_helper.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "native_crash_and_hang_do_not_poison_agent_or_next_execution",
+        "constructor_crash_and_hang_leave_recovery_control_available",
+        "cancellation_kills_native_call_and_releases_execution_capacity",
+        "parent_loss_stops_owned_native_process_group",
+        "descendants_stop_on_success_crash_timeout_and_cancellation",
+        "private_worker_rejects_shared_process_group_before_reading_input",
+        "native-process-isolation"
+      ]
+    },
+    {
+      "id": "mac-linux-ssh-template-deployment-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["deployment_update"],
+      "dimensions": ["execution", "contract"],
+      "files": [
+        "workers/rust/crates/cli/tests/operator_deployment_cross_host.rs",
+        "workers/rust/crates/headless-sdk/src/operator_deployment.rs",
+        "workers/rust/crates/installer/src/operator_variant.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "staged_linux_variant_crosses_hosts_without_store_or_engine_coupling",
+        "qualification_only_accepts_explicit_loopback_tunnels",
+        "cross-host-qualification",
+        "sum=14"
+      ]
+    }
+  ],
+  "qualification_requirements": [
+    {
+      "id": "sdk-native-result-local-contract",
+      "module_id": "sdk-operator", "paradigm": "validation", "dimension": "contract",
+      "scope": "macos-arm64+linux-x86_64/source-sdk/exact-result-identity-and-success-envelope",
+      "target": "verified", "claims": ["native-result-identity-source-regression"],
+      "basis": ["docs/operator-store-integration.html", "docs/operator-sdk.md"],
+      "acceptance": "Retain the November 13 real red-to-green registry, direct JSON adapter and ABI export/decode regressions. Reject wrong, blank or padded result identities and success envelopes carrying an error; never relabel a result. This proves attribution, not numerical correctness or arbitrary direct handler calls."
+    },
+    {
+      "id": "agent-native-result-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "execution",
+      "scope": "macos-arm64+linux-x86_64/source-agent/native-result-rejection-and-healthy-next-task",
+      "target": "verified", "claims": ["native-result-identity-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Retain actual source-built Agents rejecting wrong/empty IDs and contradictory success with original task identity, non-retryable failure, child exit and a separate healthy follow-up. Earlier valid template execution alone does not verify bad-result rejection; no current installed App claim follows."
+    },
+    {
+      "id": "agent-unix-owned-process-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-agent/per-call-owned-process-group-faults",
+      "target": "verified", "claims": ["native-unix-owned-process-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Retain source-native crash, constructor hang, deadline, cancellation, parent SIGKILL and owned-descendant cleanup with healthy next tasks. The group is established before plugin loading. Escaped process groups, hostile native code, host power loss, simultaneous watchdog failure and Windows are outside this bounded verification."
+    },
+    {
+      "id": "mac-linux-ssh-variant-deployment",
+      "module_id": "runtime-agent-cli", "paradigm": "deployment_update", "dimension": "execution",
+      "scope": "macos-arm64/linux-x86_64/ssh-tunnel/trusted-template-stage-deploy-restart-execute",
+      "target": "verified", "claims": ["mac-linux-ssh-template-deployment-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Preserve the November 13 two-host Installer-managed empty-store journey: stage a real Linux template, explicit project enablement, upload via a verified SSH loopback tunnel, pending restart, explicit managed restart, digest-bound ready and sum=14, plus conflict without replacement. This predates the later isolation regressions and is not a fresh current-build rerun, native TLS, Linux ARM64, Store account or installed GUI journey."
+    },
+    {
+      "id": "workbench-real-store-account-session",
+      "module_id": "workbench-shell", "paradigm": "runtime_api", "dimension": "execution",
+      "scope": "macos/installed-workbench/deployed-oidc/register-login-callback-session-revocation",
+      "target": "qualified", "claims": ["workbench-shared-account-native-session"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Use an authorized test account and registered public client against the deployed HTTPS issuer with verified CA. Qualify browser registration handoff, callback identity, expiry, refresh, logout/revocation and stale-session rejection without exposing tokens. Isolated HTTPS fixtures and registration links do not close real account acceptance."
+    },
+    {
+      "id": "workbench-real-store-authorized-download",
+      "module_id": "workbench-shell", "paradigm": "security", "dimension": "security",
+      "scope": "macos/installed-workbench/deployed-store/entitlement-grant-download-recovery",
+      "target": "qualified", "claims": ["workbench-native-authorized-store-download"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Qualify real entitlement denial, consent, one idempotent quota grant, signed fixed-platform download, expired session, lost grant reply and App reopen using independent trust pins. Verify no duplicate quota consumption or cross-account reuse. Test-signed fixtures or staging uploads are not public authorized download proof."
+    },
+    {
+      "id": "installer-public-signed-store-install",
+      "module_id": "runtime-installer", "paradigm": "sdk_operator", "dimension": "security",
+      "scope": "current-installer/deployed-store/published-signature-download-install-receipt",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Install an actually published package with independently provisioned verification key, exact platform/digests and revocation checks. Preserve denial and interrupted install evidence without consuming another grant. Isolated local signing tests, retained old package installation and backend draft sealing cannot certify this production-source chain."
+    },
+    {
+      "id": "workbench-pwdt-store-agent-journey",
+      "module_id": "workbench-shell", "paradigm": "validation", "dimension": "execution",
+      "scope": "macos/installed-workbench/pwdt/store-enable-deploy-execute-recover",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html", "docs/tutorial-pwdt-automation.html"],
+      "acceptance": "Through the matching installed shell, frontend and runtime, perform the GUI and actual WASM PWDT project flow from exact catalog reference to platform staging, enablement, remote readiness, execution and explicit recovery. Lost replies, logout and context changes must preserve identity without blind replay. Browser bridge mocks, host Python and separate native tests do not form this whole journey."
+    },
+    {
+      "id": "agent-linux-variant-native-tls",
+      "module_id": "runtime-agent-cli", "paradigm": "deployment_update", "dimension": "execution",
+      "scope": "macos-arm64/linux-x86_64/native-tls-token/package-deployment-recovery",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html", "docs/book-ch04-runtime-modes.html"],
+      "acceptance": "Repeat actual cross-host upload, response-loss reconciliation, explicit restart and execution over native TLS with verified server identity and Agent token. Exercise credential denial/rotation and process identity replacement; do not send Store credentials to Agent. The verified SSH tunnel path and local TLS gateway tests remain separate evidence."
+    },
+    {
+      "id": "agent-linux-arm64-variant-execution",
+      "module_id": "runtime-agent-cli", "paradigm": "sdk_operator", "dimension": "abi_compatibility",
+      "scope": "linux-aarch64/current-agent/native-variant-load-execute-recover",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Build a real Linux ARM64 library and run it on a matching Agent with ABI/system-library compatibility, exact digest readiness, execution, fault rejection and healthy follow-up. ELF header fixtures and Linux x86_64 execution cannot qualify ARM64."
+    },
+    {
+      "id": "agent-windows-owned-process-isolation",
+      "module_id": "runtime-agent-cli", "paradigm": "sdk_operator", "dimension": "recovery",
+      "scope": "windows/current-agent/per-call-process-tree-crash-cancel-parent-loss",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Qualify current Windows native process-tree ownership and termination, including descendants, constructor faults, hang, cancellation and parent loss, then a healthy distinct task. Current direct-child cleanup and historical Windows in-process ABI smoke are not Job Object/tree lifecycle qualification."
+    },
+    {
+      "id": "agent-unix-installed-isolation",
+      "module_id": "runtime-agent-cli", "paradigm": "sdk_operator", "dimension": "recovery",
+      "scope": "macos+linux/installed-current-agent/isolated-package-fault-recovery",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Package and install the current per-call isolation implementation through Installer into disposable owned services, then repeat source fault/result-admission cases, authority/receipt checks and healthy tasks using matching GUI/SDK artifacts. Earlier installation and later separate source tests do not imply installed closure; avoid restarting daily services for calibration."
+    },
+    {
+      "id": "agent-isolation-whole-call-performance",
+      "module_id": "runtime-agent-cli", "paradigm": "benchmark", "dimension": "benchmark",
+      "scope": "current-agent/per-call-native-host/load-ipc-decode-cleanup-concurrent-budget",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html", "docs/operator-sdk.md"],
+      "acceptance": "Measure complete isolated-call latency including spawn, load, IPC, result validation and cleanup; record repeated p50/p95, throughput, memory/process/descriptor peaks and saturation recovery on representative small/large payloads. Test-only single cases, old resident-host ABI timing and 1M solver-node benchmarks cannot substitute."
+    },
+    {
+      "id": "installer-project-operator-controlled-replacement",
+      "module_id": "runtime-installer", "paradigm": "sdk_operator", "dimension": "recovery",
+      "scope": "project-pinned-operators/bundle-migration/explicit-version-replacement-recovery",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Carry enabled package/platform pins with a movable project bundle, preflight dependencies, explicitly replace a conflicting version through managed lifecycle and recover to a usable exact identity without overwriting active packages or accumulating backups. Conflict rejection and local-only enablement are implemented boundaries, not migration/replacement functionality."
+    },
+    {
+      "id": "headless-package-deployment-published-parity",
+      "module_id": "sdk-headless", "paradigm": "sdk_headless", "dimension": "sdk_parity",
+      "scope": "published-rust-python-elixir/agent-package-deployment/pins-and-recovery",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Expose and verify the new native workspace deployment contract in separately distributed Rust, Python and Elixir Headless packages: exact platform/process pins, bounded chunks, reply-loss inspect, conflict/activation failure and no automatic restart. Existing general language parity and the workspace Rust helper do not qualify this new API. PWDT remains a separate GUI control surface."
+    },
+    {
+      "id": "orchestra-store-project-package-supply",
+      "module_id": "orchestra-control-plane", "paradigm": "workflow_composition", "dimension": "execution",
+      "scope": "current-orchestra/project-store-pin/catalog-admission-bound-agent-execution",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-store-integration.html", "docs/operator-library-centralization.md"],
+      "acceptance": "Connect an enabled project Store pin to an independently authorized Orchestra catalog admission/readiness receipt, then dispatch to its bound Agent which pulls only the needed exact package. Preserve single-controller authority and lost-reply recovery. The old bound-Orchestra fetch test and new direct upload path do not imply their project supply-chain integration; Store remains distribution, never execution control."
+    },
+    {
+      "id": "installer-multiplatform-store-publication",
+      "module_id": "runtime-installer", "paradigm": "deployment_update", "dimension": "execution",
+      "scope": "five-target-native-candidates/deployed-store/author-upload-review-explicit-publish",
+      "target": "qualified", "claims": ["operator-release-native-candidate"],
+      "basis": ["docs/operator-store-integration.html", ".github/workflows/operator-store-release-candidate.yml"],
+      "acceptance": "Retain real target-native build/test artifacts, exact manifest/library mapping and author upload/resume/finalize followed by independent signature review and explicit publication. Run on each supported target rather than counting synthetic headers. The isolated macOS package backend sealing exercise does not close public submission, review approval or multi-platform execution."
+    },
+    {
+      "id": "sdk-current-isolated-abi-qualification",
+      "module_id": "sdk-operator", "paradigm": "sdk_operator", "dimension": "abi_compatibility",
+      "scope": "current-sdk-and-host/per-call-isolation/supported-native-abi-matrix",
+      "target": "qualified", "claims": [],
+      "basis": ["docs/operator-sdk.md", "docs/operator-store-integration.html"],
+      "acceptance": "Qualify current independently built plugin/host pairs with stable JSON C ABI, matching allocator/free behavior, valid old package compatibility, malformed results and explicit faults in the new per-call execution model. Preserve old ABI receipts at their original revisions; they cannot certify new isolation behavior across every target or malicious-code containment."
+    }
+  ]
+}

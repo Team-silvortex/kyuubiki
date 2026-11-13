@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { requestStoreCatalog, type StoreCatalogItem, type StoreCatalogPage } from "../../../../desktop-shared/src/store-download-bridge";
+import { operatorVariantCopy } from "./workbench-operator-variant-copy";
 
 export function storeInstallCopy(language: string) {
   return language.startsWith("zh") ? {
@@ -35,6 +36,8 @@ export function StoreHostedCatalog({language, issuer, disabled, onSelect}: {
 }) {
   const copy = storeInstallCopy(language);
   const [query,setQuery] = useState("");
+  const [platform,setPlatform]=useState("");
+  const variantCopy=operatorVariantCopy(language);
   const [page,setPage] = useState<StoreCatalogPage|null>(null);
   const [busy,setBusy] = useState(false), [error,setError] = useState("");
   const revision = useRef(0), pending = useRef(false);
@@ -62,10 +65,12 @@ export function StoreHostedCatalog({language, issuer, disabled, onSelect}: {
       <button className="ghost-button ghost-button--compact" data-store-catalog-load disabled={busy || disabled}>{copy.load}</button>
     </form>
     {error ? <p className="warning-copy" role="status">{error}</p> : null}
+    <label className="form-field"><span>{variantCopy.platform}</span><select className="text-input" data-store-catalog-platform value={platform} disabled={busy||disabled} onChange={e=>setPlatform(e.target.value)}>
+      <option value="">{variantCopy.local}</option><option value="linux-x86_64">Linux x86_64</option><option value="linux-aarch64">Linux arm64</option></select></label>
     {page ? <><ul className="store-hosted-catalog-list">{page.items.map(item=><li key={`${item.kind}/${item.asset_id}`}>
       <div><strong>{item.title}</strong><code>{item.kind} · {item.asset_id} · {item.latest_version}</code><p className="card-copy">{item.summary}</p></div>
       <button className="ghost-button ghost-button--compact" data-store-catalog-select disabled={busy || disabled}
-        onClick={()=>onSelect(item, item.kind==="operator" ? page.host_platform : "any")}>{copy.choose}</button>
+        onClick={()=>onSelect(item, item.kind==="operator" ? platform || page.host_platform : "any")}>{copy.choose}</button>
     </li>)}</ul>
     {!page.items.length ? <p className="card-copy">{copy.empty}</p> : null}
     <div className="button-row"><button className="ghost-button ghost-button--compact" disabled={busy || disabled} onClick={()=>void load(null)}>{copy.first}</button>

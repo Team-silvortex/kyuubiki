@@ -521,6 +521,8 @@ pub fn load_external_operator_packages_with_deferred_host(
     )
 }
 
+/// Low-level in-process embedding API: library constructors and calls execute here.
+/// Agent deployments must use their supervised child-process adapter, not this directly.
 pub fn load_external_operator_packages_with_dynamic_host(
     registry_kind: BuiltInOperatorRegistryKind,
     packages_root: impl AsRef<Path>,

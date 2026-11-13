@@ -32,6 +32,26 @@ function host() {
     removeEventListener:(k,f)=>events.get(k)?.delete(f),emit:(e,k="message")=>events.get(k)?.forEach(f=>f(e)),
     crypto:globalThis.crypto,setTimeout,clearTimeout};
 }
+test("Linux staging and project selection preserve platform and never expose store secrets",async()=>{
+  const shell=host(),calls=[],replies=[],frame={...host(),contentWindow:{postMessage:data=>replies.push(data)}};
+  let returned="linux-x86_64";
+  const status=()=>({schema_version:"kyuubiki.project-operators/v1",project_id:"p",scope:"c".repeat(64),platform:returned,
+    packages_root:"/test/variants/linux-x86_64/packages",installed:[],installed_error:null,enabled:[],task:null});
+  const stop=installStoreDownloadHost(frame,async(command,payload)=>{calls.push([command,payload]);return command==="project_operator"?status():[{...view,selection:{...selection,platform:"linux-x86_64"},state:"downloaded",installation:"variant_staged"}];},shell);
+  shell.emit({origin:"http://127.0.0.1:3000",source:frame.contentWindow,data:{type:protocol,id:"hello",action:"connect"}});
+  const session=replies.shift().session;
+  const send=(id,request)=>shell.emit({origin:"http://127.0.0.1:3000",source:frame.contentWindow,data:{type:protocol,id,session,request}});
+  send("stage",{action:"stage_variant",id:view.id});await settle();
+  assert.equal(calls[0]?.[0],"store_download");assert.equal(replies[0]?.views[0].installation,"variant_staged");
+  const request={action:"project",project_id:"p",scope:"c".repeat(64),platform:"linux-x86_64",operation:{action:"list"}};
+  send("linux",request);await settle();assert.equal(calls[1][1].request.platform,"linux-x86_64");
+  assert.equal(replies[1].views.platform,"linux-x86_64");
+  returned="linux-aarch64";send("wrong",request);await settle();assert.equal(replies[2].error,"invalid_store_response");
+  for(const platform of ["auto","../packages","macos-aarch64",""])send(`bad-${platform}`,{...request,platform});
+  await settle();assert.equal(calls.length,3);stop();
+  assert.equal(publicProjectOperators({...status(),platform:"../packages"}),null);
+  assert.equal(publicDownloadViews([{...view,state:"downloaded",installation:"variant_staged"}]),null);
+});
 test("download inputs cannot supply credentials, paths, URL or floating versions",()=>{
   assert.equal(validDownloadSelection(selection),true);
   for(const change of [{version:"latest"},{asset_id:"../demo"},{platform:"auto"},{key_sha256:""},{token:"secret"},{url:"https://evil.test"},{asset_id:"CON.json"}])

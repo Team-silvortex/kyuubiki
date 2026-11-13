@@ -3,19 +3,11 @@ use crate::operator_package_generation::{
     OwnedOperatorPackageGeneration, PreparedOperatorPackageGeneration,
     remove_owned_operator_package_generation,
 };
-use kyuubiki_engine::{
-    BuiltInOperatorRegistryKind, DynamicOperatorHostSession,
-    load_external_operator_packages_with_dynamic_host,
-};
+use crate::operator_package_process::{IsolatedOperatorHost, LoadedOperatorPackage};
 use kyuubiki_protocol::{
-    OperatorRunContext, OperatorRunRequest, OperatorTaskExecutionSummary,
-    OperatorTaskInputEnvelope, OperatorValidationStatus,
+    OperatorRunContext, OperatorRunRequest, OperatorTaskExecutionSummary, OperatorTaskInputEnvelope,
 };
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock, RwLock, Weak};
 
@@ -44,30 +36,78 @@ pub(crate) struct ExternalOperatorExecution {
     pub package_receipt: Value,
 }
 
-struct LoadedOperatorPackage {
-    project_pin: kyuubiki_protocol::ProjectOperatorPin,
-    package_id: String,
-    package_version: String,
-    sdk_api_version: String,
-    execution_abi: String,
-    runtime: String,
-    validation_status: &'static str,
-    entrypoint_sha256: String,
-    operator_kinds: BTreeMap<String, String>,
-}
-
 struct AgentOperatorPackageHost {
-    session: DynamicOperatorHostSession,
+    session: IsolatedOperatorHost,
     packages: Vec<LoadedOperatorPackage>,
     owned_generation: Option<OwnedOperatorPackageGeneration>,
 }
 
 pub(crate) fn initialize_operator_package_runtime(
     config: &AgentConfig,
+    allow_recovery: bool,
 ) -> Result<OperatorPackageRuntimeBinding, String> {
-    let (binding, host) = load_operator_package_runtime(config)?;
-    replace_runtime(binding.clone(), host);
-    Ok(binding)
+    let loaded = if allow_recovery {
+        verify_managed_startup(config).and_then(|()| load_operator_package_runtime(config))
+    } else {
+        load_operator_package_runtime(config)
+    };
+    match loaded {
+        Ok((binding, host)) => {
+            replace_runtime(binding.clone(), host, None);
+            Ok(binding)
+        }
+        Err(error) if allow_recovery => {
+            eprintln!(
+                "{}",
+                json!({"event":"operator_package_startup_failed", "code":error.code,
+                "detail":error.message, "recovery":"explicit_stopped_repair_and_restart"})
+            );
+            replace_runtime(
+                OperatorPackageRuntimeBinding::Detached,
+                None,
+                Some(error.code),
+            );
+            Ok(OperatorPackageRuntimeBinding::Detached)
+        }
+        Err(error) => Err(error.message),
+    }
+}
+
+struct PackageLoadError {
+    code: &'static str,
+    message: String,
+}
+impl From<String> for PackageLoadError {
+    fn from(message: String) -> Self {
+        Self {
+            code: "operator_package_activation_failed",
+            message,
+        }
+    }
+}
+
+fn verify_managed_startup(config: &AgentConfig) -> Result<(), PackageLoadError> {
+    let store = config
+        .operator_packages_root
+        .as_deref()
+        .and_then(|p| Path::new(p).parent())
+        .ok_or_else(|| PackageLoadError {
+            code: "operator_package_integrity_failed",
+            message: "managed package store missing".into(),
+        })?;
+    kyuubiki_installer::managed_operator_package_status_in(store)
+        .map(|_| ())
+        .map_err(|message| PackageLoadError {
+            code: "operator_package_integrity_failed",
+            message,
+        })
+}
+
+pub(crate) fn startup_activation_error() -> Option<&'static str> {
+    runtime_state()
+        .read()
+        .map(|s| s.startup_error)
+        .unwrap_or(Some("operator_package_activation_failed"))
 }
 
 pub(crate) fn activate_fetched_operator_package_runtime(
@@ -91,10 +131,10 @@ fn activate_operator_package_generation(
     required_package: Option<&OperatorTaskExecutionSummary>,
 ) -> Result<OperatorPackageRuntimeBinding, ExternalOperatorTaskError> {
     let (binding, host) =
-        load_operator_package_runtime(config).map_err(|message| ExternalOperatorTaskError {
+        load_operator_package_runtime(config).map_err(|error| ExternalOperatorTaskError {
             code: "operator_package_activation_failed",
             stage: "activate_operator_registry",
-            message,
+            message: error.message,
         })?;
     let mut host = host.ok_or_else(|| ExternalOperatorTaskError {
         code: "operator_package_runtime_not_attached",
@@ -117,7 +157,7 @@ fn activate_operator_package_generation(
     Arc::get_mut(&mut host)
         .expect("newly loaded operator package host must be uniquely owned")
         .owned_generation = Some(owned_generation);
-    replace_runtime(binding.clone(), Some(host));
+    replace_runtime(binding.clone(), Some(host), None);
     Ok(binding)
 }
 
@@ -128,7 +168,7 @@ fn load_operator_package_runtime(
         OperatorPackageRuntimeBinding,
         Option<Arc<AgentOperatorPackageHost>>,
     ),
-    String,
+    PackageLoadError,
 > {
     let Some(root) = config.operator_packages_root.as_deref() else {
         return Ok((OperatorPackageRuntimeBinding::Detached, None));
@@ -136,57 +176,24 @@ fn load_operator_package_runtime(
     let packages_root = PathBuf::from(root)
         .canonicalize()
         .map_err(|error| format!("failed to resolve operator packages root {root}: {error}"))?;
-    let session = load_external_operator_packages_with_dynamic_host(
-        BuiltInOperatorRegistryKind::Extract,
-        &packages_root,
-    )
-    .map_err(|error| format!("operator package host activation failed: {error}"))?;
-    let packages = session
-        .report()
-        .activated_packages
-        .iter()
-        .map(|plan| {
-            let operator_kinds = plan
-                .manifest
-                .operators
-                .iter()
-                .map(|operator| (operator.operator_id.clone(), operator.kind.clone()))
-                .collect();
-            Ok(LoadedOperatorPackage {
-                project_pin: kyuubiki_protocol::ProjectOperatorPin {
-                    package_id: plan.manifest.package_id.clone(),
-                    package_version: plan.manifest.package_version.clone(),
-                    manifest_sha256: sha256_file(&plan.manifest_path)?,
-                    entrypoint_sha256: sha256_file(&plan.entrypoint_path)?,
-                    operators: plan
-                        .manifest
-                        .operators
-                        .iter()
-                        .map(|o| kyuubiki_protocol::ProjectOperatorEntry {
-                            operator_id: o.operator_id.clone(),
-                            kind: o.kind.clone(),
-                        })
-                        .collect(),
-                },
-                package_id: plan.manifest.package_id.clone(),
-                package_version: plan.manifest.package_version.clone(),
-                sdk_api_version: plan.manifest.sdk_api_version.clone(),
-                execution_abi: plan.manifest.execution_abi.clone(),
-                runtime: plan.manifest.runtime.clone(),
-                validation_status: validation_status_label(plan.manifest.validation_status),
-                entrypoint_sha256: sha256_file(&plan.entrypoint_path)?,
-                operator_kinds,
-            })
-        })
-        .collect::<Result<Vec<_>, String>>()?;
+    let session = IsolatedOperatorHost::load(&packages_root).map_err(|error| {
+        format!(
+            "operator package host activation failed: {}: {}",
+            error.code, error.message
+        )
+    })?;
+    let packages = session.packages().to_vec();
     if config.operator_activated_package_count != 0
         && config.operator_activated_package_count != packages.len()
     {
-        return Err(format!(
-            "operator package count mismatch: configured {}, activated {}",
-            config.operator_activated_package_count,
-            packages.len()
-        ));
+        return Err(PackageLoadError {
+            code: "operator_package_count_mismatch",
+            message: format!(
+                "operator package count mismatch: configured {}, activated {}",
+                config.operator_activated_package_count,
+                packages.len()
+            ),
+        });
     }
 
     let attachment = OperatorPackageRuntimeAttachment {
@@ -285,6 +292,12 @@ pub(crate) fn try_execute_external_operator_task(
     let execution_mode = summary.execution_mode.as_deref();
     let supported_mode = execution_mode == Some("local_bundle")
         || (execution_mode == Some("orchestra_fetch") && orchestra_cache_status.is_some());
+    if supported_mode {
+        if let Some(code) = startup_activation_error() {
+            return Err(ExternalOperatorTaskError { code, stage: "activate_operator_registry",
+                message: "External package host failed startup. Inspect local Agent diagnostics, repair through Installer while stopped, then restart and verify.".into() });
+        }
+    }
     if !binding.is_attached() || !supported_mode {
         return Ok(None);
     }
@@ -335,14 +348,14 @@ fn execute_external_operator_task_with_host(
         input: serde_json::to_value(input).expect("operator task input envelope should serialize"),
         context: task_context(task_ir, summary),
     };
-    let result =
-        host.session
-            .run_operator(request)
-            .map_err(|message| ExternalOperatorTaskError {
-                code: "operator_package_dispatch_failed",
-                stage: "dispatch_entrypoint",
-                message,
-            })?;
+    let result = host
+        .session
+        .run_operator(request)
+        .map_err(|error| ExternalOperatorTaskError {
+            code: error.code,
+            stage: "dispatch_entrypoint",
+            message: error.message,
+        })?;
     let cache_generation = generation_execution_receipt(host);
     Ok(ExternalOperatorExecution {
         result: serde_json::to_value(result)
@@ -359,6 +372,7 @@ fn execute_external_operator_task_with_host(
             "operator_kind": summary.operator_kind,
             "entrypoint_sha256": package.entrypoint_sha256,
             "integrity_verified": true,
+            "isolation": crate::operator_package_process::snapshot(),
             "cache_status": orchestra_cache_status.unwrap_or("local_bundle"),
             "cache_generation": cache_generation,
             "origin": if execution_mode == Some("orchestra_fetch") {
@@ -524,38 +538,10 @@ fn context_string(task_ir: &Value, field: &str) -> Option<String> {
         .map(ToString::to_string)
 }
 
-fn sha256_file(path: &Path) -> Result<String, String> {
-    let mut file = File::open(path).map_err(|error| {
-        format!(
-            "failed to hash operator entrypoint {}: {error}",
-            path.display()
-        )
-    })?;
-    let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 64 * 1024];
-    loop {
-        let read = file
-            .read(&mut buffer)
-            .map_err(|error| format!("failed to hash {}: {error}", path.display()))?;
-        if read == 0 {
-            break;
-        }
-        digest.update(&buffer[..read]);
-    }
-    Ok(format!("{:x}", digest.finalize()))
-}
-
-fn validation_status_label(status: OperatorValidationStatus) -> &'static str {
-    match status {
-        OperatorValidationStatus::Verified => "verified",
-        OperatorValidationStatus::Partial => "partial",
-        OperatorValidationStatus::Unverified => "unverified",
-    }
-}
-
 struct OperatorPackageRuntimeState {
     binding: OperatorPackageRuntimeBinding,
     host: Option<Arc<AgentOperatorPackageHost>>,
+    startup_error: Option<&'static str>,
 }
 
 struct RetiredOperatorPackageGeneration {
@@ -599,6 +585,7 @@ fn runtime_state() -> &'static RwLock<OperatorPackageRuntimeState> {
         RwLock::new(OperatorPackageRuntimeState {
             binding: OperatorPackageRuntimeBinding::Detached,
             host: None,
+            startup_error: None,
         })
     })
 }
@@ -620,12 +607,14 @@ fn current_host() -> Option<ExternalOperatorRuntimeLease> {
 fn replace_runtime(
     binding: OperatorPackageRuntimeBinding,
     host: Option<Arc<AgentOperatorPackageHost>>,
+    startup_error: Option<&'static str>,
 ) {
     let previous = {
         let mut current = runtime_state()
             .write()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         current.binding = binding;
+        current.startup_error = startup_error;
         std::mem::replace(&mut current.host, host)
     };
     retire_host(previous);

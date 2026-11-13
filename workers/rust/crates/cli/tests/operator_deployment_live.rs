@@ -1,10 +1,14 @@
 mod support;
-use kyuubiki_installer::{install_operator_package_into, project_operator_in};
+use kyuubiki_headless_sdk::deploy_operator_package;
+use kyuubiki_installer::{
+    Platform, active_agent_binary_in, install_agent_update_package_into,
+    install_operator_package_into, prepare_agent_update_package, project_operator_in,
+};
 use kyuubiki_protocol::*;
 use serde_json::{Value, json};
 use std::{
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 use support::operator_package::{
@@ -22,6 +26,24 @@ fn deploy_to_empty_agent_resume_after_kill_confirm_loaded_and_reject_conflict() 
             .as_nanos()
     ));
     let _cleanup = Cleanup(root.clone());
+    let agent_package = root.join("agent-package");
+    let agent_store = root.join("agent-store");
+    let sealed = prepare_agent_update_package(
+        Path::new(env!("CARGO_BIN_EXE_kyuubiki-cli")),
+        &agent_package,
+        env!("CARGO_PKG_VERSION"),
+        Platform::current(),
+    )
+    .unwrap();
+    let activation =
+        install_agent_update_package_into(&agent_package, &agent_store, Platform::current())
+            .unwrap();
+    assert_eq!(activation.entrypoint_sha256, sealed.entrypoint_sha256);
+    assert!(
+        active_agent_binary_in(&agent_store, Platform::current())
+            .unwrap()
+            .starts_with(&agent_store)
+    );
     let source = root.join("source");
     fs::create_dir_all(&source).unwrap();
     let mut manifest: Value = serde_json::from_slice(
@@ -43,6 +65,7 @@ fn deploy_to_empty_agent_resume_after_kill_confirm_loaded_and_reject_conflict() 
     let local = root.join("local");
     install_operator_package_into(&source, &local).unwrap();
     let req = |operation| ProjectOperatorRequest {
+        platform: None,
         project_id: "research".into(),
         scope: "a".repeat(64),
         operation,
@@ -72,7 +95,7 @@ fn deploy_to_empty_agent_resume_after_kill_confirm_loaded_and_reject_conflict() 
     };
     let remote = root.join("remote/packages");
     fs::create_dir_all(&remote).unwrap();
-    let agent = LiveAgent::start_deployment(&remote).unwrap();
+    let agent = LiveAgent::start_managed_deployment(&remote, &agent_store).unwrap();
     let call = |agent: &LiveAgent,
                 pin: &ProjectOperatorPin,
                 process: Option<&str>,
@@ -122,7 +145,7 @@ fn deploy_to_empty_agent_resume_after_kill_confirm_loaded_and_reject_conflict() 
         true
     );
     drop(agent); // Real process termination, not an in-memory recreation.
-    let agent = LiveAgent::start_deployment(&remote).unwrap();
+    let agent = LiveAgent::start_managed_deployment(&remote, &agent_store).unwrap();
     assert_eq!(
         call(
             &agent,
@@ -134,39 +157,53 @@ fn deploy_to_empty_agent_resume_after_kill_confirm_loaded_and_reject_conflict() 
     );
     let resumed = call(&agent, &pin, None, OperatorDeploymentAction::Inspect);
     assert_eq!(resumed["result"]["received_bytes"], first.data.len());
-    let process = resumed["result"]["process_instance_id"]
-        .as_str()
-        .unwrap()
-        .to_owned();
-    let mut offset = first.data.len() as u64;
-    while offset < first.spec.size_bytes {
-        let part = chunk(offset);
-        let reply = call(
-            &agent,
-            &pin,
-            Some(&process),
-            OperatorDeploymentAction::Chunk {
-                offset,
-                data: part.data.clone(),
-            },
-        );
-        assert_eq!(reply["ok"], true, "{reply}");
-        offset += part.data.len() as u64;
-    }
-    let committed = call(
-        &agent,
+    let mut commits = 0;
+    let mut exchange =
+        |request: OperatorDeploymentRequest| -> Result<OperatorDeploymentStatus, String> {
+            let commit = matches!(request.operation, OperatorDeploymentAction::Commit);
+            let reply = call(
+                &agent,
+                &request.package,
+                request.expected_process_instance_id.as_deref(),
+                request.operation,
+            );
+            assert_eq!(reply["ok"], true, "{reply}");
+            if commit {
+                commits += 1;
+                // The Agent committed to disk; deliberately discard its transport response.
+                return Err("test_commit_response_lost".into());
+            }
+            serde_json::from_value(reply["result"].clone()).map_err(|e| e.to_string())
+        };
+    let mut progress = Vec::new();
+    let uncertain = deploy_operator_package(
         &pin,
-        Some(&process),
-        OperatorDeploymentAction::Commit,
+        &first.spec.platform,
+        &mut exchange,
+        |offset| Ok(chunk(offset)),
+        || true,
+        |status| progress.push(status.received_bytes),
     );
-    assert_eq!(committed["ok"], true, "{committed}");
-    assert_eq!(committed["result"]["state"], "installed_restart_required");
+    assert_eq!(uncertain.unwrap_err(), "test_commit_response_lost");
+    assert_eq!(progress[0], first.data.len() as u64);
+    assert_eq!(progress.last(), Some(&first.spec.size_bytes));
+    let committed = deploy_operator_package(
+        &pin,
+        &first.spec.platform,
+        &mut exchange,
+        |_| panic!("committed package must not be re-uploaded"),
+        || true,
+        |_| {},
+    )
+    .unwrap();
+    assert_eq!(committed.state, "installed_restart_required");
+    assert_eq!(commits, 1);
     assert_eq!(
         call(&agent, &pin, None, OperatorDeploymentAction::Inspect)["result"]["state"],
         "installed_restart_required"
     );
     drop(agent);
-    let agent = LiveAgent::start_deployment(&remote).unwrap();
+    let agent = LiveAgent::start_managed_deployment(&remote, &agent_store).unwrap();
     let ready = call(&agent, &pin, None, OperatorDeploymentAction::Inspect);
     assert_eq!(ready["result"]["state"], "ready", "{ready}");
     let task = build_project_operator_task(

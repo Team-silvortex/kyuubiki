@@ -46,14 +46,20 @@
         "schema_version": {"const": "kyuubiki.operator-deployment/v1"},
         "package": {"$ref": "project-operator-request.schema.json#/$defs/pin"},
         "platform": {"$ref": "#/$defs/platform"},
-        "state": {"enum": ["missing", "uploading", "installed_restart_required", "ready", "version_conflict"]},
+        "state": {"enum": ["missing", "uploading", "installed_restart_required", "ready", "version_conflict", "activation_failed"]},
+        "activation_error": {"enum": [null, "operator_package_activation_failed", "operator_package_integrity_failed", "operator_package_count_mismatch"]},
         "installed": {"oneOf": [{"type": "null"}, {"$ref": "project-operator-request.schema.json#/$defs/pin"}]},
         "active": {"oneOf": [{"type": "null"}, {"$ref": "project-operator-request.schema.json#/$defs/pin"}]},
         "received_bytes": {"$ref": "#/$defs/offset"}, "total_bytes": {"$ref": "#/$defs/offset"},
         "process_instance_id": {"type": ["string", "null"], "minLength": 1, "maxLength": 256},
         "deployment_allowed": {"type": "boolean"}
       },
-      "description": "RPC receipts require a non-null current process identity. Native validation also enforces received<=total; ready requires installed=active=requested pin, not just an installed receipt. Different content is a conflict even with the same version. Library-only Installer receipts may omit the process identity by returning null."
+      "allOf": [{
+        "if": {"properties": {"state": {"const": "activation_failed"}}},
+        "then": {"required": ["activation_error"], "properties": {"activation_error": {"type": "string"}, "active": {"type": "null"}, "installed": {"type": "object"}}},
+        "else": {"properties": {"activation_error": {"type": "null"}}}
+      }],
+      "description": "RPC receipts require a non-null current process identity. Native validation also enforces received<=total; ready requires installed=active=requested pin, not just an installed receipt. activation_failed requires a matching installed pin, no active pin, complete byte counts and a bounded host-level error code, never raw paths or loader diagnostics. It is terminal for upload, not permission to overwrite or execute. Deployment clients pin the platform and process throughout a transfer, bind nonzero totals to source size, require exact chunk acknowledgement offsets and complete byte counts for installed/ready states (zero/zero is allowed for an already-installed package). Commit must not return missing or uploading. A lost response requires fresh inspection, never blind replay or automatic abort. Different content is a conflict even with the same version. Library-only Installer receipts may omit the process identity by returning null."
     }
   }
 }

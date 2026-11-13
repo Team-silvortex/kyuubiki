@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { requestStoreIdentity } from "../../../../desktop-shared/src/store-identity-bridge";
-import { requestStoreDownload, validDownloadSelection, type StoreDownloadSelection, type StoreDownloadView, type StoreDownloadRequest } from "../../../../desktop-shared/src/store-download-bridge";
+import { requestStoreDownload, validDownloadSelection, type OperatorVariantPlatform, type StoreDownloadSelection, type StoreDownloadView, type StoreDownloadRequest } from "../../../../desktop-shared/src/store-download-bridge";
+import { operatorVariantCopy } from "./workbench-operator-variant-copy";
 import { downloadError, storeDownloadCopy } from "./workbench-store-download-copy";
 import { StoreHostedCatalog, storeInstallCopy } from "./workbench-store-hosted-catalog";
 import { projectOperatorCopy } from "./workbench-project-operator-copy";
@@ -12,10 +13,12 @@ const active = (state: string) => ["authorizing", "downloading", "cancelling"].i
 const initial = { kind: "operator", asset_id: "", version: "", platform: "", key_id: "", key_sha256: "" };
 const settingKey = "kyuubiki-store-public-download-settings-v1";
 
-export function StoreDownloadsPanel({ language, onAccount, onProject }: { language: string; onAccount: () => void; onProject?: () => void }) {
+export function StoreDownloadsPanel({ language, onAccount, onProject }: { language: string; onAccount: () => void; onProject?: (platform?:OperatorVariantPlatform) => void }) {
   const copy = storeDownloadCopy(language);
   const installCopy = storeInstallCopy(language);
-  const installStatus = (state?: string | null) => state === "installed" ? installCopy.installed : state === "installing" ? installCopy.pending : installCopy.failedInstall;
+  const variantCopy=operatorVariantCopy(language);
+  const installStatus = (state?: string | null) => state === "variant_staged" || state === "variant_staging" || state === "variant_stage_failed" ? variantCopy[state]
+    : state === "installed" ? installCopy.installed : state === "installing" ? installCopy.pending : installCopy.failedInstall;
   const fields = useRef<HTMLDetailsElement>(null);
   const [selection, setSelection] = useState<StoreDownloadSelection>(initial);
   const [records, setRecords] = useState<StoreDownloadView[]>([]);
@@ -123,10 +126,14 @@ export function StoreDownloadsPanel({ language, onAccount, onProject }: { langua
       {row.state === "prepared" ? <p className="card-copy">{copy.preview}</p> : <p className="card-copy">{row.charged === null ? copy.unknown : row.charged ? copy.charged : copy.notCharged}</p>}
       {active(row.state) ? <progress aria-label={copy.states[row.state]} max={row.total_bytes} value={row.received_bytes} /> : null}
       {row.error ? <p className="warning-copy" role="status">{downloadError(copy, row.error)} <code>{row.error}</code></p> : null}
-      {row.directory ? <div className="store-account-destination"><code>{row.directory}</code><p className="card-copy">{row.installation === "installed" ? installCopy.receipt : row.installation ? installCopy.pending : copy.noInstall}</p></div> : null}
+      {row.directory ? <div className="store-account-destination"><code>{row.directory}</code><p className="card-copy">{row.installation === "variant_staged" ? variantCopy.receipt : row.installation === "installed" ? installCopy.receipt : row.installation ? installStatus(row.installation) : copy.noInstall}</p></div> : null}
       {row.installation ? <p className="card-copy" role="status" data-store-installation={row.installation}>{installStatus(row.installation)}</p> : null}
       <div className="button-row">
-        {row.installation === "installed" && onProject ? <button type="button" className="ghost-button ghost-button--compact" data-store-download-project onClick={onProject}>{projectOperatorCopy(language).title}</button> : null}
+        {["installed","variant_staged"].includes(row.installation??"") && onProject ? <button type="button" className="ghost-button ghost-button--compact" data-store-download-project
+          onClick={()=>onProject(row.installation==="variant_staged"?row.selection.platform as OperatorVariantPlatform:undefined)}>{projectOperatorCopy(language).title}</button> : null}
+        {row.state === "downloaded" && row.selection.kind === "operator" && ["linux-x86_64","linux-aarch64"].includes(row.selection.platform) ?
+          <button type="button" className="ghost-button ghost-button--compact" data-store-download-stage-variant disabled={busy || running || !account}
+            onClick={()=>{if(window.confirm(variantCopy.confirm))void act({action:"stage_variant",id:row.id});}}>{variantCopy.stage}</button> : null}
         {row.state === "downloaded" && row.selection.kind === "operator" ? <button type="button" className="ghost-button ghost-button--compact" data-store-download-install disabled={busy || running || !account}
           onClick={()=>{if(window.confirm(installCopy.confirm))void act({action:"install",id:row.id});}}>{row.installation ? installCopy.retry : installCopy.install}</button> : null}
         {!active(row.state) && row.state !== "downloaded" ? <button type="button" className="ghost-button ghost-button--compact" data-store-download-start disabled={busy || running || !account}
@@ -138,6 +145,6 @@ export function StoreDownloadsPanel({ language, onAccount, onProject }: { langua
       </div>
     </article>)}</div>
     <p className="card-copy">{copy.recovery}</p><p className="card-copy">{copy.cap}</p>
-    <p className="card-copy">{installCopy.unsupported}</p>
+    <p className="card-copy">{variantCopy.unsupported}</p>
   </section>;
 }

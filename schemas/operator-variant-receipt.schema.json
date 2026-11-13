@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-variant-receipt.schema.json",
+  "title": "Kyuubiki inert Linux operator variant receipt v1",
+  "description": "Installer receipt only. No Agent readiness, execution permission or Store authorization. Native validation also binds relative_root to platform and package_id and verifies ELF architecture and exact hashes.",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "platform", "package", "size_bytes", "relative_root"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.operator-variant/v1"},
+    "platform": {"enum": ["linux-x86_64", "linux-aarch64"]},
+    "package": {"$ref": "project-operator-request.schema.json#/$defs/pin"},
+    "size_bytes": {"type": "integer", "minimum": 1, "maximum": 33554432},
+    "relative_root": {"type": "string", "maxLength": 256, "pattern": "^variants/linux-(x86_64|aarch64)/packages/[A-Za-z0-9_-][A-Za-z0-9._-]*$"}
+  }
+}

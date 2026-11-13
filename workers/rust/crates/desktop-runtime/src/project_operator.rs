@@ -4,6 +4,7 @@ pub use kyuubiki_protocol::{ProjectOperatorRequest, ProjectOperatorStatus};
 pub fn project_operator(request: ProjectOperatorRequest) -> Result<ProjectOperatorStatus, String> {
     let expected = request.project_id.clone();
     let scope = request.scope.clone();
+    let platform = request.platform.clone();
     let value = crate::native_installer::invoke(
         &crate::native_installer::binary().map_err(str::to_owned)?,
         "project-operator",
@@ -17,6 +18,7 @@ pub fn project_operator(request: ProjectOperatorRequest) -> Result<ProjectOperat
     if status.schema_version != "kyuubiki.project-operators/v1"
         || status.project_id != expected
         || status.scope != scope
+        || status.platform != platform
         || status.installed.len() > 64
         || status.enabled.len() > 64
         || status.installed.iter().any(|p| p.validate().is_err())

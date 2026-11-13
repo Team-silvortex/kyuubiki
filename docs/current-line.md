@@ -220,11 +220,14 @@ earlier report counts must not be added.
 
 ## Current Acceptance Queue
 
-The latest local tensor check covers 13 modules and 11 paradigms: zero
-structural gaps, two maturity gaps, 23 evidence-grade gaps and 18 P0 gaps.
-Its Daji status remains `blocked`; passing the structural checker is not release
-qualification. Generate the current queue instead of treating this dated
-summary as a permanent ranking:
+The [November 13 recalibration](../reports/tensor-recalibration-20261113.md)
+covers 13 modules, 11 paradigms and 77 required coordinates: zero structural
+gaps, two maturity gaps, 29 evidence-grade gaps and 23 P0 gaps. Eighteen new
+Store/native scenarios retain four bounded achievements and expose fourteen
+open obligations; 48/77 coordinates and 20/64 named scenarios meet their targets.
+This is not code coverage or a product regression. Daji readiness remains
+`blocked`; passing the structural checker is not release qualification.
+Generate the current queue instead of treating this dated summary as permanent:
 
 ```sh
 make check-module-function-coverage-tensor
@@ -233,10 +236,11 @@ make check-test-coverage-posture
 
 Read [the weakness roadmap](weakness-roadmap.md) for priorities and
 [testing and CI](testing-and-ci.md) for commands and evidence interpretation.
-Open acceptance includes external numerical correlation, installed desktop and
-SDK journeys, authenticated multi-host Mesh/load recovery, and durable/typed
-continuation under the required platform/backend policy. Local trace consistency
-does not close those coordinates.
+Open acceptance includes deployed Store account/download and installed GUI/PWDT
+journeys, current native isolation/platform/performance acceptance, separately
+published SDK deployment parity, external numerical correlation, authenticated
+multi-host Mesh and durable/typed continuation. Local trace consistency,
+SSH deployment and historical in-process ABI tests cannot close different scopes.
 
 ## History And Earlier Links
 

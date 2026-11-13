@@ -9,11 +9,21 @@ use std::path::PathBuf;
 
 impl StoreDownloads {
     pub(super) fn install(&self, identity: &StoreIdentity, id: &str) -> Result<()> {
+        self.install_selected(identity, id, false)
+    }
+    pub(super) fn stage_variant(&self, identity: &StoreIdentity, id: &str) -> Result<()> {
+        self.install_selected(identity, id, true)
+    }
+    fn install_selected(&self, identity: &StoreIdentity, id: &str, variant: bool) -> Result<()> {
         let session = identity.store_lease()?;
         let store = storage::Store::open(self.root()?)?;
         let mut record = store.read(id)?;
         owner(&record, &session)?;
-        let request = handoff(&record)?;
+        let request = if variant {
+            handoff_for(&record, true)?
+        } else {
+            handoff(&record)?
+        };
         // Recheck recall/signature and immutable bytes before every installation, without a grant POST.
         let (files, _, _, _) = transport::preflight(&session, &record.selection, true)?;
         if files != record.files {
@@ -29,15 +39,37 @@ impl StoreDownloads {
         let root = store.path(id)?.join("files");
         storage::regular(&root, true)?;
         session.check()?;
-        record.installation = Some("installing".into());
+        record.installation = Some(
+            if variant {
+                "variant_staging"
+            } else {
+                "installing"
+            }
+            .into(),
+        );
         record.error = None;
         store.save(&record)?;
-        let result = invoke_installer(&binary, &root, &request, install_root.as_deref())
-            .and_then(|value| verify_receipt(&record, value));
+        let result = if variant {
+            crate::native_installer::invoke(
+                &binary,
+                "stage-store-operator-variant",
+                Some(&root),
+                &serde_json::to_value(&request).map_err(|_| "invalid_install_request")?,
+                install_root.as_deref(),
+            )
+            .and_then(|value| verify_variant_receipt(&record, value))
+        } else {
+            invoke_installer(&binary, &root, &request, install_root.as_deref())
+                .and_then(|value| verify_receipt(&record, value))
+        };
         // A logout cannot undo an already committed local installation. Persist its outcome for
         // the original owner, but the caller must authenticate again before viewing it.
         record.installation = Some(
-            if result.is_ok() {
+            if variant && result.is_ok() {
+                "variant_staged"
+            } else if variant {
+                "variant_stage_failed"
+            } else if result.is_ok() {
                 "installed"
             } else {
                 "install_failed"
@@ -50,10 +82,19 @@ impl StoreDownloads {
     }
 }
 pub(super) fn handoff(record: &Record) -> Result<StoreOperatorInstallRequest> {
+    handoff_for(record, false)
+}
+pub(super) fn handoff_for(record: &Record, variant: bool) -> Result<StoreOperatorInstallRequest> {
     if record.state != "downloaded" || record.selection.kind != "operator" {
         return Err("operator_download_required");
     }
-    if record.selection.platform != host_platform() {
+    if (variant
+        && !matches!(
+            record.selection.platform.as_str(),
+            "linux-x86_64" | "linux-aarch64"
+        ))
+        || (!variant && record.selection.platform != host_platform())
+    {
         return Err("store_platform_mismatch");
     }
     let expected = match record.selection.platform.as_str() {
@@ -89,6 +130,31 @@ pub(super) fn handoff(record: &Record) -> Result<StoreOperatorInstallRequest> {
             })
             .collect(),
     })
+}
+pub(super) fn verify_variant_receipt(record: &Record, value: Value) -> Result<()> {
+    let receipt: kyuubiki_protocol::OperatorVariantReceipt =
+        serde_json::from_value(value).map_err(|_| "invalid_install_receipt")?;
+    let pin = &receipt.package;
+    let hash = |name: &str| {
+        record
+            .files
+            .iter()
+            .find(|f| f.path == format!("{}/{name}", record.selection.platform))
+    };
+    if receipt.schema_version != "kyuubiki.operator-variant/v1"
+        || receipt.platform != record.selection.platform
+        || pin.validate().is_err()
+        || pin.package_id != record.selection.asset_id
+        || pin.package_version != record.selection.version
+        || receipt.relative_root
+            != format!("variants/{}/packages/{}", receipt.platform, pin.package_id)
+        || hash("kyuubiki-operator.json").is_none_or(|f| f.sha256 != pin.manifest_sha256)
+        || hash("operator.so")
+            .is_none_or(|f| f.sha256 != pin.entrypoint_sha256 || f.size_bytes != receipt.size_bytes)
+    {
+        return Err("invalid_install_receipt");
+    }
+    Ok(())
 }
 pub(super) fn invoke_installer(
     binary: &Path,

@@ -8,6 +8,7 @@
   "properties": {
     "project_id": {"type": "string", "minLength": 1, "maxLength": 256},
     "scope": {"$ref": "#/$defs/digest"},
+    "platform": {"enum": [null, "linux-x86_64", "linux-aarch64"], "description": "Absent/null uses the host library. Explicit Linux selects an inert per-platform deployment cache and isolated project enablement, even on Linux. No platform fallback."},
     "operation": {"oneOf": [
       {"type": "object", "additionalProperties": false, "required": ["action"], "properties": {"action": {"const": "list"}}},
       {"type": "object", "additionalProperties": false, "required": ["action", "package"], "properties": {

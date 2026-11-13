@@ -49,7 +49,14 @@ const OPERATOR_TASK_RELIABILITY_PROFILE_SCHEMA: &str =
 
 pub(crate) fn operator_package_runtime_snapshot() -> Value {
     let binding = current_runtime_binding();
-    operator_package_runtime_snapshot_from_binding(&binding)
+    let mut snapshot = operator_package_runtime_snapshot_from_binding(&binding);
+    if let Some(code) = crate::operator_package_runtime::startup_activation_error() {
+        snapshot["ready"] = serde_json::json!(false);
+        snapshot["status"] = serde_json::json!("activation_failed");
+        snapshot["activation_error"] = serde_json::json!(code);
+        snapshot["required_action"] = serde_json::json!("explicit_stopped_repair_and_restart");
+    }
+    snapshot
 }
 
 pub(crate) fn operator_package_runtime_snapshot_for_config(config: &AgentConfig) -> Value {
@@ -59,7 +66,15 @@ pub(crate) fn operator_package_runtime_snapshot_for_config(config: &AgentConfig)
 
 pub(crate) fn operator_task_execution_reliability_snapshot() -> Value {
     let binding = current_runtime_binding();
-    operator_task_execution_reliability_snapshot_for_binding(&binding)
+    let mut snapshot = operator_task_execution_reliability_snapshot_for_binding(&binding);
+    if let Some(code) = crate::operator_package_runtime::startup_activation_error() {
+        snapshot["execution_runtime_status"] = serde_json::json!("activation_failed");
+        snapshot["blocking_reason"] = serde_json::json!(code);
+        snapshot["path_health_score"] = serde_json::json!(0);
+        snapshot["recommended_actions"] =
+            serde_json::json!(["explicit_stopped_repair_and_restart"]);
+    }
+    snapshot
 }
 
 pub(crate) fn operator_task_execution_reliability_snapshot_for_binding(
@@ -114,6 +129,7 @@ fn operator_package_runtime_snapshot_from_binding(
         "status": binding.status(),
         "expected_host": OPERATOR_PACKAGE_RUNTIME_HOST,
         "expected_sdk": OPERATOR_PACKAGE_RUNTIME_SDK,
+        "isolation": crate::operator_package_process::snapshot(),
         "attachment": operator_package_runtime_attachment(binding)
     })
 }

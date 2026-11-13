@@ -43,6 +43,12 @@ pub fn project_operator_in(
     {
         return Err("project_operator_invalid_project".into());
     }
+    let platform = request.platform.as_deref();
+    let root = match platform {
+        Some(platform) => crate::operator_variant::variant_root(root, platform)?,
+        None => root.to_path_buf(),
+    };
+    let root = root.as_path();
     let storage = Storage::open(root, &request.project_id, &request.scope)?;
     let mut project = storage.read(&request.project_id, &request.scope)?;
     let mut task = None;
@@ -53,12 +59,15 @@ pub fn project_operator_in(
             if !project.packages.contains(&package) {
                 return Err("project_operator_not_enabled".into());
             }
-            deployment = Some(crate::operator_deployment::export_chunk(
-                root, &package, offset,
+            deployment = Some(crate::operator_deployment::export_chunk_for(
+                root,
+                &package,
+                offset,
+                platform.unwrap_or(&kyuubiki_operator_sdk::current_platform_target_id()),
             )?);
         }
         ProjectOperatorOperation::Enable { package } => {
-            verify_pin(root, &package)?;
+            verify_pin(root, &package, platform)?;
             if let Some(old) = project
                 .packages
                 .iter()
@@ -107,7 +116,7 @@ pub fn project_operator_in(
             if !project.packages.contains(&package) {
                 return Err("project_operator_not_enabled".into());
             }
-            verify_pin(root, &package)?;
+            verify_pin(root, &package, platform)?;
             task = Some(build_project_operator_task(
                 &request.project_id,
                 &package,
@@ -122,13 +131,14 @@ pub fn project_operator_in(
     let inventory = if exporting {
         Ok(vec![])
     } else {
-        inventory(root)
+        inventory(root, platform)
     };
     let installed_error = inventory.as_ref().err().cloned();
     Ok(ProjectOperatorStatus {
         schema_version: SCHEMA.into(),
         project_id: request.project_id,
         scope: request.scope,
+        platform: request.platform.clone(),
         packages_root: root.join("packages").display().to_string(),
         installed: inventory.unwrap_or_default(),
         installed_error,
@@ -139,7 +149,7 @@ pub fn project_operator_in(
                 .packages
                 .into_iter()
                 .map(|package| {
-                    let state = if verify_pin(root, &package).is_ok() {
+                    let state = if verify_pin(root, &package, platform).is_ok() {
                         "ready"
                     } else {
                         "unavailable_or_changed"
@@ -210,14 +220,20 @@ pub(crate) fn pin_at(root: &Path, id: &str) -> Result<ProjectOperatorPin, String
     pin.validate()?;
     Ok(pin)
 }
-fn verify_pin(root: &Path, pin: &ProjectOperatorPin) -> Result<(), String> {
+fn pin_at_for(root: &Path, id: &str, platform: Option<&str>) -> Result<ProjectOperatorPin, String> {
+    match platform {
+        Some(platform) => crate::operator_variant::variant_pin_at(root, id, platform),
+        None => pin_at(root, id),
+    }
+}
+fn verify_pin(root: &Path, pin: &ProjectOperatorPin, platform: Option<&str>) -> Result<(), String> {
     pin.validate()?;
-    if &pin_at(root, &pin.package_id)? != pin {
+    if &pin_at_for(root, &pin.package_id, platform)? != pin {
         return Err("project_operator_selection_changed".into());
     }
     Ok(())
 }
-fn inventory(root: &Path) -> Result<Vec<ProjectOperatorPin>, String> {
+fn inventory(root: &Path, platform: Option<&str>) -> Result<Vec<ProjectOperatorPin>, String> {
     let path = root.join("packages");
     safe(&path, true)?;
     let entries = match fs::read_dir(path) {
@@ -231,12 +247,13 @@ fn inventory(root: &Path) -> Result<Vec<ProjectOperatorPin>, String> {
             return Err("project_operator_limit".into());
         }
         let entry = entry.map_err(|_| "project_operator_package_unavailable")?;
-        pins.push(pin_at(
+        pins.push(pin_at_for(
             root,
             entry
                 .file_name()
                 .to_str()
                 .ok_or("project_operator_invalid_pin")?,
+            platform,
         )?);
     }
     pins.sort_by(|a, b| a.package_id.cmp(&b.package_id));

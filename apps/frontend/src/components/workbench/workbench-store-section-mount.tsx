@@ -8,6 +8,7 @@ import { StoreAccountPanel } from "./workbench-store-account";
 import { storeAccountCopy } from "./workbench-store-account-copy";
 import { StoreDownloadsPanel } from "./workbench-store-downloads";
 import { ProjectOperatorsPanel } from "./workbench-project-operators";
+import type { OperatorVariantPlatform } from "../../../../desktop-shared/src/store-download-bridge";
 import { projectOperatorCopy } from "./workbench-project-operator-copy";
 import { storeDownloadCopy } from "./workbench-store-download-copy";
 import { selectStoreEntries, storeEntryIdentity, storeProjectEntryState } from "@/lib/workbench/store-catalog";
@@ -68,6 +69,7 @@ export function WorkbenchStoreSectionMount({
   const [expanded, setExpanded] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<AssetStoreEntry | null>(null);
   const [view, setView] = useState<StoreView>("catalog");
+  const [operatorPlatform,setOperatorPlatform]=useState<OperatorVariantPlatform>();
   const [catalogPage, setCatalogPage] = useState(0);
   const [manifestPage, setManifestPage] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -243,8 +245,8 @@ export function WorkbenchStoreSectionMount({
       </section> : null}
 
       {view === "account" ? <StoreAccountPanel language={language} onBack={() => setView("catalog")} onDownloads={() => setView("downloads")} /> : null}
-      {view === "downloads" ? <StoreDownloadsPanel language={language} onAccount={() => setView("account")} onProject={() => setView("operators")} /> : null}
-      {view === "operators" ? <ProjectOperatorsPanel key={selectedProjectId??"unselected"} language={language} projectId={selectedProjectId} /> : null}
+      {view === "downloads" ? <StoreDownloadsPanel language={language} onAccount={() => setView("account")} onProject={platform => {setOperatorPlatform(platform);setView("operators");}} /> : null}
+      {view === "operators" ? <ProjectOperatorsPanel key={`${selectedProjectId??"unselected"}:${operatorPlatform??"local"}`} language={language} projectId={selectedProjectId} initialPlatform={operatorPlatform} /> : null}
 
       {view === "detail" && selectedEntry ? <StoreEntryDetails entry={selectedEntry} language={language}
         onBack={() => setView("catalog")} onStage={() => installEntry(selectedEntry)}

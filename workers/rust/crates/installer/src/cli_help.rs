@@ -39,6 +39,7 @@ pub fn print_help() {
         "  project-operator [--store-root path]  Manage explicit project pins or prepare TaskIR from bounded stdin JSON; never execute\n",
         "  install-operator-package <package-root> [--store-root path]  Preflight and atomically install one minimal operator package\n",
         "  install-store-operator <files-root> [--store-root path]  Verify exact store files and native platform; read bounded install handoff JSON from stdin; never activate code\n",
+        "  stage-store-operator-variant <files-root> [--store-root path]  Verify Linux target files into an isolated delivery library, never load code\n",
         "  fetch-operator-package <central-url> <package-id> <version> [--store-root path]  Resolve the current-platform package from the bound Orchestra, verify it, and install it\n",
         "  uninstall-operator-package <package-id> [--store-root path]  Remove one managed operator package and prune empty storage\n",
         "  update-plan      Show the unified channel-based update target\n",

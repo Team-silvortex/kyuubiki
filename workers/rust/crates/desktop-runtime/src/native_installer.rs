@@ -45,7 +45,10 @@ pub(crate) fn invoke(
     request: &Value,
     root: Option<&Path>,
 ) -> Result<Value> {
-    if !matches!(action, "install-store-operator" | "project-operator") {
+    if !matches!(
+        action,
+        "install-store-operator" | "stage-store-operator-variant" | "project-operator"
+    ) {
         return Err("invalid_install_request");
     }
     let input = serde_json::to_vec(request).map_err(|_| "invalid_install_request")?;

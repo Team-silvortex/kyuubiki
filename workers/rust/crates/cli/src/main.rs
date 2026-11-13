@@ -35,6 +35,7 @@ mod operator_package_fetch_runtime;
 mod operator_package_generation;
 mod operator_package_generation_session;
 mod operator_package_job_runtime;
+mod operator_package_process;
 mod operator_package_retention;
 mod operator_package_runtime;
 mod operator_task_builtin;
@@ -79,6 +80,9 @@ struct RpcRequestEnvelope {
 }
 
 fn main() {
+    if operator_package_process::maybe_run() {
+        return;
+    }
     match Command::from_env() {
         Command::Worker(config) => run_worker(config),
         Command::Agent(config) => {
@@ -99,11 +103,15 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
     agent_lifecycle::configure_execution_capacity()?;
     let reply_timeout = agent_reply_writer::timeout_from_env()?;
     let shutdown = agent_shutdown::AgentShutdown::install()?;
-    let package_binding = initialize_operator_package_runtime(config)?;
+    operator_package_deployment::configure(config)?;
+    operator_package_process::configure()?;
+    let package_binding = initialize_operator_package_runtime(
+        config,
+        operator_package_deployment::allows_startup_recovery(),
+    )?;
     let mut config = config.clone();
     config.operator_activated_package_count = package_binding.activated_package_count();
     configure_operator_package_fetch_runtime(&config)?;
-    operator_package_deployment::configure(&config)?;
     agent_artifact::configure(&config);
     agent_fault_injection::configure_from_env()?;
     store_runtime_descriptor(build_agent_descriptor(&config));

@@ -80,7 +80,10 @@ where
         };
         let request = serde_json::from_slice::<OperatorRunRequest>(request_bytes)
             .map_err(|error| format!("invalid operator ABI request JSON: {error}"))?;
-        execute(request).map_err(|error| error.to_string())
+        let requested_id = request.operator_id.clone();
+        execute(request)
+            .and_then(|result| crate::validate_run_result(&requested_id, result))
+            .map_err(|error| error.to_string())
     }));
 
     let response = match outcome {
@@ -125,6 +128,9 @@ pub fn decode_operator_json_abi_response(
         ));
     }
     if status == OPERATOR_JSON_ABI_OK && response.ok {
+        if response.error.is_some() {
+            return Err("operator ABI success response also included an error".into());
+        }
         return response
             .result
             .ok_or_else(|| "operator ABI success response omitted result".to_string());
@@ -169,6 +175,45 @@ fn write_response(
 mod tests {
     use super::*;
     use kyuubiki_protocol::OperatorRunContext;
+
+    #[test]
+    fn json_abi_rejects_handler_result_identity_mismatch() {
+        for returned_id in ["", "extract.other", "extract.fixture "] {
+            let request = serde_json::to_vec(&OperatorRunRequest {
+                operator_id: "extract.fixture".into(),
+                input: serde_json::json!({}),
+                context: OperatorRunContext::default(),
+            })
+            .unwrap();
+            let mut output = OperatorJsonAbiBuffer::empty();
+            let status = unsafe {
+                execute_operator_json_abi(request.as_ptr(), request.len(), &mut output, |_| {
+                    Ok(crate::operator_summary_result(
+                        returned_id,
+                        serde_json::json!({"value":999}),
+                    ))
+                })
+            };
+            let bytes = unsafe { slice::from_raw_parts(output.ptr, output.len) }.to_vec();
+            unsafe { free_operator_json_abi_buffer(output) };
+            assert_eq!(status, OPERATOR_JSON_ABI_ERROR);
+            let error = decode_operator_json_abi_response(status, &bytes).unwrap_err();
+            assert!(error.contains("operator result identity mismatch"));
+        }
+    }
+
+    #[test]
+    fn json_abi_success_cannot_also_report_an_error() {
+        for message in ["", "calculation failed"] {
+            let bytes = serde_json::to_vec(&serde_json::json!({
+                "schema_version":OPERATOR_JSON_ABI_SCHEMA_VERSION, "ok":true,
+                "result":{"operator_id":"extract.fixture", "summary":{"value":999}, "artifacts":[]},
+                "error":message,
+            }))
+            .unwrap();
+            assert!(decode_operator_json_abi_response(OPERATOR_JSON_ABI_OK, &bytes).is_err());
+        }
+    }
 
     #[test]
     fn round_trips_request_and_response_as_owned_json_bytes() {

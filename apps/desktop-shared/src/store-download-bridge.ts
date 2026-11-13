@@ -12,10 +12,10 @@ export type StoreDownloadView = {
   id: string; issuer: string; selection: StoreDownloadSelection; state: string;
   file_count: number; total_bytes: number; received_bytes: number; metered: boolean;
   remaining: number | null; unlimited: boolean; charged: boolean | null; error: string | null; directory: string | null;
-  installation?: "installing" | "installed" | "install_failed" | null;
+  installation?: "installing" | "installed" | "install_failed" | "variant_staging" | "variant_staged" | "variant_stage_failed" | null;
 };
 export type StoreDownloadRequest = { action: "list" } | { action: "prepare"; selection: StoreDownloadSelection }
-  | { action: "start" | "cancel" | "remove" | "install"; id: string };
+  | { action: "start" | "cancel" | "remove" | "install" | "stage_variant"; id: string };
 export type StoreCatalogRequest = { action: "catalog"; query: string; cursor: string | null };
 export type StoreCatalogItem = { kind: string; asset_id: string; latest_version: string; title: string; summary: string; domain: string; languages: string[] };
 export type StoreCatalogPage = { issuer: string; host_platform: string; catalog_revision: string; items: StoreCatalogItem[]; next_cursor: string | null };
@@ -23,8 +23,10 @@ export type ProjectOperatorPin = {package_id:string;package_version:string;manif
 export type ProjectOperatorOperation = {action:"list"} | {action:"enable"|"disable";package:ProjectOperatorPin}
   | {action:"read_deployment";package:ProjectOperatorPin;offset:number}
   | {action:"prepare";package:ProjectOperatorPin;operator_id:string;task_id:string;input:Record<string,unknown>;config:Record<string,unknown>};
-export type ProjectOperatorRequest = {action:"project";project_id:string;scope:string;operation:ProjectOperatorOperation};
-export type ProjectOperatorStatus = {schema_version:"kyuubiki.project-operators/v1";project_id:string;scope:string;packages_root:string;
+export type OperatorVariantPlatform = "linux-x86_64" | "linux-aarch64";
+const variantPlatform = (value:unknown):value is OperatorVariantPlatform => value==="linux-x86_64" || value==="linux-aarch64";
+export type ProjectOperatorRequest = {action:"project";project_id:string;scope:string;platform?:OperatorVariantPlatform;operation:ProjectOperatorOperation};
+export type ProjectOperatorStatus = {schema_version:"kyuubiki.project-operators/v1";project_id:string;scope:string;platform?:OperatorVariantPlatform;packages_root:string;
   installed:ProjectOperatorPin[];installed_error:string|null;enabled:{package:ProjectOperatorPin;state:"ready"|"unavailable_or_changed"}[];task:Record<string,unknown>|null;deployment?:ProjectDeploymentChunk};
 export type ProjectDeploymentChunk={spec:{package:ProjectOperatorPin;platform:string;manifest_json:string;size_bytes:number};offset:number;data:number[]};
 type Request = StoreDownloadRequest | StoreCatalogRequest | ProjectOperatorRequest;
@@ -62,7 +64,7 @@ function validRequest(value: unknown): value is Request {
   if (r.action === "catalog") return Object.keys(r).length === 3 && bounded(r.query,200) && (r.cursor === null || (bounded(r.cursor,8192) && r.cursor.length > 0));
   if (r.action === "list") return Object.keys(r).length === 1;
   if (r.action === "prepare") return Object.keys(r).length === 2 && validDownloadSelection(r.selection);
-  return ["start", "cancel", "remove", "install"].includes(r.action) && Object.keys(r).length === 2 && "id" in r && digest(r.id);
+  return ["start", "cancel", "remove", "install", "stage_variant"].includes(r.action) && Object.keys(r).length === 2 && "id" in r && digest(r.id);
 }
 function pin(value: unknown): value is ProjectOperatorPin {
   const p=value as ProjectOperatorPin;
@@ -73,7 +75,8 @@ function pin(value: unknown): value is ProjectOperatorPin {
 }
 export { pin as validProjectOperatorPin };
 function validProjectRequest(r:ProjectOperatorRequest):boolean {
-  if (Object.keys(r).length!==4 || !digest(r.scope) || !bounded(r.project_id,256) || !r.project_id || r.project_id.trim()!==r.project_id || !r.operation) return false;
+  if (Object.keys(r).length!==(r.platform===undefined?4:5) || (r.platform!==undefined&&!variantPlatform(r.platform))
+    || !digest(r.scope) || !bounded(r.project_id,256) || !r.project_id || r.project_id.trim()!==r.project_id || !r.operation) return false;
   const o=r.operation;
   if (o.action==="list") return Object.keys(o).length===1;
   if (!pin(o.package)) return false;
@@ -86,22 +89,25 @@ function validProjectRequest(r:ProjectOperatorRequest):boolean {
 export function publicProjectOperators(value:unknown):ProjectOperatorStatus|null {
   const s=value as ProjectOperatorStatus;
   if (!s || s.schema_version!=="kyuubiki.project-operators/v1" || !digest(s.scope) || !bounded(s.project_id,256) || !s.project_id || !bounded(s.packages_root,4096)
+    || (s.platform!==undefined && !variantPlatform(s.platform))
     || !Array.isArray(s.installed) || s.installed.length>64 || s.installed.some(p=>!pin(p))
     || !Array.isArray(s.enabled) || s.enabled.length>64 || s.enabled.some(e=>!e || !pin(e.package) || !["ready","unavailable_or_changed"].includes(e.state))
     || (s.installed_error!==null && safeCode(s.installed_error)!==s.installed_error)
     || (s.task!==null && (typeof s.task!=="object" || s.task.schema_version!=="kyuubiki.operator-task-ir/v1" || JSON.stringify(s.task).length>131072))) return null;
   const d=s.deployment;
   if(d!==undefined && (!d || !pin(d.spec?.package) || !platforms.includes(d.spec.platform) || typeof d.spec.manifest_json!=="string" || d.spec.manifest_json.length>65536
+    || (s.platform!==undefined && d.spec.platform!==s.platform)
     || !Number.isSafeInteger(d.spec.size_bytes) || d.spec.size_bytes<=0 || d.spec.size_bytes>33554432 || !Number.isSafeInteger(d.offset) || d.offset<0
     || !Array.isArray(d.data) || d.data.length>65536 || d.offset+d.data.length>d.spec.size_bytes || d.data.some(b=>!Number.isInteger(b)||b<0||b>255)))return null;
   const copy=(p:ProjectOperatorPin):ProjectOperatorPin=>({package_id:p.package_id,package_version:p.package_version,manifest_sha256:p.manifest_sha256,
     entrypoint_sha256:p.entrypoint_sha256,operators:p.operators.map(o=>({operator_id:o.operator_id,kind:o.kind}))});
   return {schema_version:s.schema_version,project_id:s.project_id,scope:s.scope,packages_root:s.packages_root,installed:s.installed.map(copy),installed_error:s.installed_error,
+    ...(s.platform?{platform:s.platform}:{}),
     enabled:s.enabled.map(e=>({package:copy(e.package),state:e.state})),task:s.task,
     ...(d?{deployment:{spec:{package:copy(d.spec.package),platform:d.spec.platform,manifest_json:d.spec.manifest_json,size_bytes:d.spec.size_bytes},offset:d.offset,data:[...d.data]}}:{})};
 }
 function response(request:Request,value:unknown):Response|null {
-  if (request.action==="project") {const s=publicProjectOperators(value);return s?.project_id===request.project_id && s.scope===request.scope?s:null;}
+  if (request.action==="project") {const s=publicProjectOperators(value);return s?.project_id===request.project_id && s.scope===request.scope && s.platform===request.platform?s:null;}
   return request.action==="catalog"?publicCatalog(value):publicDownloadViews(value);
 }
 const states = new Set(["prepared", "authorizing", "downloading", "downloaded", "failed", "cancelled", "cancelling", "interrupted"]);
@@ -119,7 +125,8 @@ export function publicDownloadViews(value: unknown): StoreDownloadView[] | null 
       || (v.remaining !== null && !count(v.remaining, Number.MAX_SAFE_INTEGER)) || typeof v.metered !== "boolean"
       || typeof v.unlimited !== "boolean" || (v.charged !== null && typeof v.charged !== "boolean")
       || (v.error !== null && safeCode(v.error) !== v.error)
-      || (v.installation != null && (!["installing", "installed", "install_failed"].includes(v.installation) || v.state !== "downloaded"))
+      || (v.installation != null && (!["installing", "installed", "install_failed", "variant_staging", "variant_staged", "variant_stage_failed"].includes(v.installation) || v.state !== "downloaded"))
+      || (v.installation?.startsWith("variant_") && (v.selection.kind!=="operator" || !variantPlatform(v.selection.platform)))
       || (v.directory !== null && (typeof v.directory !== "string" || v.directory.length > 4096 || /[\x00-\x1f]/.test(v.directory)))) return null;
     try { const u = new URL(v.issuer); if (u.protocol !== "https:" || u.origin !== v.issuer) return null; } catch { return null; }
     ids.add(v.id);
@@ -166,7 +173,7 @@ export function installStoreDownloadHost(frame: HTMLIFrameElement, invoke: Invok
     pending.add(request.action);
     void Promise.resolve().then(() => {
       if (disposed || generation !== epoch) throw "download_page_changed";
-      if (request.action==="project") return invoke("project_operator",{request:{project_id:request.project_id,scope:request.scope,operation:request.operation}});
+      if (request.action==="project") return invoke("project_operator",{request:{project_id:request.project_id,scope:request.scope,operation:request.operation,...(request.platform?{platform:request.platform}:{})}});
       return request.action === "catalog" ? invoke("store_catalog", {request:{query:request.query,cursor:request.cursor}}) : invoke("store_download", { request });
     }).then(value => { const views = response(request,value); reply(views, views ? null : "invalid_store_response"); },
       error => reply(null, safeCode(error))).finally(() => pending.delete(request.action));
@@ -187,8 +194,8 @@ export async function requestStoreDownload(request: StoreDownloadRequest, host: 
 export async function requestStoreCatalog(request: StoreCatalogRequest, host: Window = window, timeoutMs = 30000): Promise<StoreCatalogPage> {
   return await exchange(request,host,timeoutMs) as StoreCatalogPage;
 }
-export async function requestProjectOperator(project_id:string,scope:string,operation:ProjectOperatorOperation,host:Window=window):Promise<ProjectOperatorStatus> {
-  return await exchange({action:"project",project_id,scope,operation},host,120000) as ProjectOperatorStatus;
+export async function requestProjectOperator(project_id:string,scope:string,operation:ProjectOperatorOperation,host:Window=window,platform?:OperatorVariantPlatform):Promise<ProjectOperatorStatus> {
+  return await exchange({action:"project",project_id,scope,operation,...(platform?{platform}:{})},host,120000) as ProjectOperatorStatus;
 }
 function exchange(request: Request, host: Window, timeoutMs: number): Promise<Response> {
   return new Promise((resolve, reject) => {

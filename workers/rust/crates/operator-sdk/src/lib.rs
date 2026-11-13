@@ -106,7 +106,8 @@ where
                 message: format!("{error}; input_shape={input_shape}"),
             }
         })?;
-        self.inner.run_typed(decoded, &request.context)
+        let result = self.inner.run_typed(decoded, &request.context)?;
+        validate_run_result(&request.operator_id, result)
     }
 }
 
@@ -180,6 +181,19 @@ impl Display for OperatorSdkError {
 
 impl std::error::Error for OperatorSdkError {}
 
+pub(crate) fn validate_run_result(
+    requested_id: &str,
+    result: OperatorRunResult,
+) -> Result<OperatorRunResult, OperatorSdkError> {
+    if result.operator_id != requested_id {
+        return Err(OperatorSdkError::Handler {
+            operator_id: requested_id.to_owned(),
+            message: "operator result identity mismatch; result was rejected, not relabeled".into(),
+        });
+    }
+    Ok(result)
+}
+
 #[derive(Default, Clone)]
 pub struct OperatorRegistry {
     handlers: BTreeMap<String, Arc<dyn OperatorHandler>>,
@@ -223,7 +237,9 @@ impl OperatorRegistry {
                 operator_id: request.operator_id.clone(),
             }
         })?;
-        handler.run(request)
+        let requested_id = request.operator_id.clone();
+        let result = handler.run(request)?;
+        validate_run_result(&requested_id, result)
     }
 
     pub fn try_transaction<E>(
@@ -252,8 +268,8 @@ impl OperatorRegistry {
 #[cfg(test)]
 mod tests {
     use super::{
-        JsonOperator, OperatorDescriptorBuilder, OperatorRegistry, OperatorSdkError,
-        operator_summary_result, partial_validation,
+        JsonOperator, OperatorDescriptorBuilder, OperatorHandler, OperatorRegistry,
+        OperatorSdkError, operator_summary_result, partial_validation,
     };
     use kyuubiki_protocol::{
         OperatorDescriptor, OperatorKind, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
@@ -267,6 +283,98 @@ mod tests {
 
     struct EchoOperator {
         descriptor: OperatorDescriptor,
+    }
+
+    struct WrongIdentity {
+        descriptor: OperatorDescriptor,
+        returned_id: &'static str,
+    }
+
+    impl OperatorHandler for WrongIdentity {
+        fn descriptor(&self) -> &OperatorDescriptor {
+            &self.descriptor
+        }
+        fn run(&self, _request: OperatorRunRequest) -> Result<OperatorRunResult, OperatorSdkError> {
+            Ok(operator_summary_result(
+                self.returned_id,
+                serde_json::json!({"value": 999}),
+            ))
+        }
+    }
+
+    impl JsonOperator for WrongIdentity {
+        type Input = serde_json::Value;
+        fn descriptor(&self) -> &OperatorDescriptor {
+            &self.descriptor
+        }
+        fn run_typed(
+            &self,
+            _input: Self::Input,
+            _context: &OperatorRunContext,
+        ) -> Result<OperatorRunResult, OperatorSdkError> {
+            Ok(operator_summary_result(
+                self.returned_id,
+                serde_json::json!({"value": 999}),
+            ))
+        }
+    }
+
+    #[test]
+    fn registry_rejects_wrong_result_identity_for_native_and_json_handlers() {
+        for returned_id in [
+            "",
+            "extract.other",
+            " transform.fixture",
+            "transform.fixture ",
+            "Transform.fixture",
+        ] {
+            for typed in [false, true] {
+                let mut registry = OperatorRegistry::new();
+                let handler = WrongIdentity {
+                    descriptor: EchoOperator::with_id("transform.fixture").descriptor,
+                    returned_id,
+                };
+                if typed {
+                    registry.register_json(handler).unwrap();
+                } else {
+                    registry.register(handler).unwrap();
+                }
+                registry.register_json(EchoOperator::new()).unwrap();
+                let request = |id: &str| OperatorRunRequest {
+                    operator_id: id.into(),
+                    input: serde_json::json!({"value":42}),
+                    context: OperatorRunContext::default(),
+                };
+                let error = registry.run(request("transform.fixture")).unwrap_err();
+                assert!(
+                    matches!(error, OperatorSdkError::Handler { ref operator_id, ref message }
+                    if operator_id == "transform.fixture" && message.contains("operator result identity mismatch"))
+                );
+                let healthy = registry.run(request("transform.echo_integer")).unwrap();
+                assert_eq!(healthy.operator_id, "transform.echo_integer");
+                assert_eq!(healthy.summary["echo"], 42);
+            }
+        }
+    }
+
+    #[test]
+    fn json_adapter_rejects_wrong_result_identity_without_registry() {
+        let adapter = super::JsonOperatorAdapter::new(WrongIdentity {
+            descriptor: EchoOperator::with_id("transform.fixture").descriptor,
+            returned_id: "extract.other",
+        });
+        let error = adapter
+            .run(OperatorRunRequest {
+                operator_id: "transform.fixture".into(),
+                input: serde_json::json!({}),
+                context: OperatorRunContext::default(),
+            })
+            .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("operator result identity mismatch")
+        );
     }
 
     impl EchoOperator {

@@ -66,17 +66,27 @@ fn execute_operator_task_ir(
         );
     }
 
+    let mut external_process_cancelled = false;
     let result = match agent_fault_injection::with_solver_control(
         &guard,
         maybe_job_id.as_deref(),
         "run_operator_task_ir",
-        || run_operator_task_ir(&request.params),
+        || {
+            let result = run_operator_task_ir(&request.params);
+            // The solver scope normalizes cancellation errors; retain the actual boundary.
+            external_process_cancelled = result
+                .as_ref()
+                .is_err_and(|e| e.code == "operator_process_cancelled");
+            result
+        },
     ) {
         Ok(result) => result,
         Err(mut error) => {
             let control = guard.solver_control();
             if control.was_interrupted() {
-                let stage = if control.last_checkpoint().is_some_and(|point| {
+                let stage = if external_process_cancelled {
+                    "execute_external_process"
+                } else if control.last_checkpoint().is_some_and(|point| {
                     point.stage == kyuubiki_solver::solver_control::SolverStage::ResultDiagnostics
                 }) {
                     "execute_diagnostics"

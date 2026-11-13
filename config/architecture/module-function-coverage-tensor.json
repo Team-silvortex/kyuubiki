@@ -8,6 +8,7 @@
     "config/architecture/module-function-coverage-evidence/current-qualification-scopes.json",
     "config/architecture/module-function-coverage-evidence/current-solver-qualification-scopes.json",
     "config/architecture/module-function-coverage-evidence/current-recovery-qualification-scopes.json",
+    "config/architecture/module-function-coverage-evidence/current-store-native-qualification-scopes.json",
     "config/architecture/module-function-coverage-evidence/core-contracts.json",
     "config/architecture/module-function-coverage-evidence/contracts-validation.json",
     "config/architecture/module-function-coverage-evidence/product-surface-contracts.json",

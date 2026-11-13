@@ -236,8 +236,22 @@ impl Record {
             || self.attempted != self.replay_until.is_some()
             || (self.grant_id.is_some() != self.outcome.is_some())
             || self.installation.as_deref().is_some_and(|v| {
-                !["installing", "installed", "install_failed"].contains(&v)
+                ![
+                    "installing",
+                    "installed",
+                    "install_failed",
+                    "variant_staging",
+                    "variant_staged",
+                    "variant_stage_failed",
+                ]
+                .contains(&v)
                     || self.state != "downloaded"
+                    || (v.starts_with("variant_")
+                        && (self.selection.kind != "operator"
+                            || !matches!(
+                                self.selection.platform.as_str(),
+                                "linux-x86_64" | "linux-aarch64"
+                            )))
             })
             || ![
                 "prepared",

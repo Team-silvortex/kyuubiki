@@ -104,6 +104,21 @@ That gives every operator the same broad lifecycle:
 4. produce typed result
 5. optionally publish chunked result details
 
+Result identity is an admission rule, not a display label. `OperatorRegistry::run`,
+`JsonOperatorAdapter::run` and the `execute_operator_json_abi` wrapper require
+`result.operator_id` to equal the requested ID exactly. Empty, different,
+case-changed or whitespace-padded IDs are rejected, never silently relabeled.
+The shared check belongs to the Operator SDK, not GUI or Agent-specific policy.
+Calling a custom handler directly outside these entrypoints bypasses this check.
+
+A successful JSON ABI response must contain a result and no non-null `error`
+field; even an empty error string is contradictory. Existing valid packages keep
+the same ABI. Native Agent rejection uses `operator_package_dispatch_failed`,
+retains the original task/operator identity and requires inspection before an
+explicit rerun. This checks attribution and response consistency, not numerical
+accuracy or rollback of side effects already performed by the operator. See the
+[native result admission evidence](operator-store-integration.html#native-result-admission).
+
 ## Operator classes
 
 ### Semantic kind versus execution ABI
@@ -393,6 +408,12 @@ accepted without reparsing the full package manifest.
 Hosts can also call the external-operator preflight path to collect accepted
 and rejected package summaries without activating dynamic code. Runtime loading
 remains fail-fast, while preflight is the user-facing explanation surface.
+Agent deployments now invoke this loader inside a supervised child for startup
+validation and each external call, rather than loading native code into the
+Agent control process. The same Agent executable hosts the child; the package
+ABI is unchanged. Do not rely on process-global plugin state surviving between
+tasks. Direct Engine embedding remains in-process. See the
+[isolation contract and tested limits](operator-store-integration.html#native-process-isolation).
 The installer exposes the same read-only path as machine-readable JSON:
 
 ```bash
@@ -477,13 +498,14 @@ cache after acquiring the fetch lock, invokes the native Installer library API
 without a subprocess, and builds each miss in an owner-marked
 `<store>/agent-runtime-generations/sessions/<session>/generations/<generation>`
 store. Existing verified packages other than the replaced package are carried
-into the candidate generation. The Agent loads and identity-checks the complete
-candidate before atomically swapping the host and runtime binding.
+into the candidate generation. The Agent probes the complete candidate in an
+isolated child and identity-checks it before atomically swapping the host binding.
 
-An in-flight task retains its old host through an `Arc` lease. The retired
-generation is deleted only after the final lease is released, so a Windows DLL is
-never removed while still loaded. Sequential same-package upgrades are therefore
-safe without an explicit uninstall. The execution receipt reports
+An in-flight task retains its generation through an `Arc` lease until its child
+is stopped and reaped. The retired generation is deleted only after the final
+lease is released, not while another call still uses its library. This design
+supports sequential same-package upgrades without explicit uninstall; current
+Windows process-tree qualification remains separate. The execution receipt reports
 `bound_orchestra_fetch` together with `fetched_and_activated` or
 `verified_cache_hit`. Preflight performs no download.
 
@@ -499,8 +521,8 @@ are `schemas/agent-operator-generation-execution.schema.json` and
 `schemas/examples.agent-operator-generation-execution.json`.
 
 For `cache_scope: none`, successful or failed dispatch now attempts an immediate
-generation switch that excludes the requested package. The old host and DLL stay
-leased until every in-flight task releases them; the response embeds
+generation switch that excludes the requested package. The old generation stays
+leased until every in-flight child call releases it; the response embeds
 `kyuubiki.agent-operator-cache-eviction/v1` with the policy, disposition,
 remaining package count, and replacement generation receipt. Successful
 responses place it under `operator_package_execution.cache_eviction`; failed

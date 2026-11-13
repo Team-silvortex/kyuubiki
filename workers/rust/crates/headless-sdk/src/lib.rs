@@ -81,6 +81,7 @@ mod model_collaboration_tests;
 mod model_provider_adapters;
 mod model_source;
 mod model_source_evidence;
+mod operator_deployment;
 mod operator_task;
 mod operator_task_provenance;
 mod operator_task_readiness;
@@ -192,7 +193,7 @@ pub use hybrid_executor::HybridHeadlessExecutor;
 pub use kyuubiki_protocol::CancelExecutionRequest;
 pub use kyuubiki_protocol::{
     OperatorDeploymentAction, OperatorDeploymentChunk, OperatorDeploymentRequest,
-    OperatorDeploymentSpec, OperatorDeploymentStatus,
+    OperatorDeploymentSpec, OperatorDeploymentStatus, OperatorVariantReceipt,
 };
 pub use kyuubiki_protocol::{
     ProjectOperatorEntry, ProjectOperatorOperation, ProjectOperatorPin, ProjectOperatorRequest,
@@ -387,6 +388,7 @@ pub use model_source::{
     HEADLESS_MODEL_SOURCE_SCHEMA_VERSION, HeadlessModelSource, HeadlessModelSourceKind,
     headless_saved_model_source,
 };
+pub use operator_deployment::deploy_operator_package;
 pub use operator_task::{
     OPERATOR_TASK_EXECUTE_ACTION, OPERATOR_TASK_PREPARE_ACTION, is_operator_task_execute_action,
     is_operator_task_prepare_action, operator_task_error_preview, prepare_operator_task_payload,

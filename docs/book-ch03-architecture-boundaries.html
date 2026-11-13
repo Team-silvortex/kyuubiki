@@ -47,8 +47,8 @@
       <section class="docs-card docs-section" id="source-ownership">
         <h2>One owner per responsibility</h2>
         <p class="docs-copy">
-          The November 4, 2026 organization review separates three views:
-          13 logical topology modules, 15 Rust workspace crates, and independently
+          The November 13, 2026 organization review separates three views:
+          13 logical topology modules, 17 Rust workspace crates, and independently
           deployed processes. They are not the same count. Engine and Solver are
           libraries used by the Agent; keeping their responsibilities separate
           does not require another service. Hub, Workbench and Installer remain
@@ -62,6 +62,10 @@
             paths, not requests to embed Orchestra in the GUI.</li>
           <li>Agent owns process, ingress and receipt boundaries; Engine owns
             execution dispatch; Solver owns numerical algorithms and acceptance.</li>
+          <li>External native operators load and execute in supervised, per-call
+            Agent child processes. The private child implementation belongs to
+            the supervisor module, not to Store or a new deployed service.
+            In-process built-ins remain a different execution boundary.</li>
           <li>TaskIR execute is implemented behind capability and package gates.
             A successful preflight is not a completed solve, and source-IP
             containment is not cryptographic peer authentication.</li>
@@ -71,6 +75,9 @@
           <li>Allowed LAN peers receive discovery access by default. Explicit
             trusted-LAN control remains distinct from authenticated identity,
             and does not enable remote drain/resume.</li>
+          <li>Opt-in native Agent API mode uses shared TLS/token transport. Store
+            sessions do not authorize Agent control, and a shared API token does
+            not replace controller ownership or per-user authorization.</li>
           <li>The current map owns navigation. Current-line notes and dated
             reports own progress; the tensor owns scoped evidence requirements.</li>
         </ul>
@@ -79,6 +86,7 @@
           <a class="docs-link" href="./project-architecture-organization.md">Source and disk ownership</a>
           <a class="docs-link" href="./runtime-doc-ownership.md">Documentation ownership</a>
           <a class="docs-link" href="./operator-store-integration.html">Store implementation and backend handoff</a>
+          <a class="docs-link" href="./operator-store-integration.html#native-process-isolation">Native operator process boundary</a>
         </div>
       </section>
 
@@ -167,11 +175,10 @@
       <section class="docs-card docs-section" id="tensor-calibration">
         <h2>Coverage tensor: evidence without overclaiming</h2>
         <p class="docs-copy">
-          The retained baseline below was recorded on October 16, 2026. Its
-          source metadata was 3.6.0 and commit subject 3.6.4; neither is a live
-          release label. Run <code>make check-module-function-coverage-tensor</code>
-          for the current working-tree result instead of treating historical
-          counts as the current queue or installed qualification.
+          The current dated review is November 13, 2026, on the 3.7.8 working
+          tree based on f04ec479. Run <code>make check-module-function-coverage-tensor</code>
+          for the live result. Recalibration and source progress do not update
+          the installed Apps or qualify an untested end-to-end journey.
         </p>
         <p class="docs-copy">
           Tensor v5 uses the daji-3-7-hardening profile. Package/book metadata
@@ -188,6 +195,32 @@
           <li>Target attainment requires covered capability, sufficient dimension grades, and all configured scenario obligations. A zero grade-step gap alone is not success.</li>
           <li>Structural success, evidence maturity, and release permission are separate. Release thresholds use exact counts rather than rounded display percentages.</li>
         </ul>
+        <h3>November 13: Store and native execution scopes</h3>
+        <p class="docs-copy">
+          All 478 earlier claims remain unchanged; three narrow verified claims
+          bring the total to 481. Eighteen new named scenarios preserve four
+          bounded achievements and expose fourteen open obligations. Coordinates
+          at target change from 54/77 (70.1%) to 48/77 (62.3%): 29 coordinate gaps,
+          including 23 P0. Structural gaps remain zero and dimension-presence gaps
+          remain two. Of 64 named scenarios, twenty meet their targets and 44 remain open.
+          These are evidence obligations, not newly discovered defects or code coverage.
+        </p>
+        <ul class="docs-list">
+          <li>Retain verified source SDK result identity, real Agent failure/healthy-next-task, Unix owned-process cleanup and the bounded Mac-to-Linux SSH template journey. Broad integration claims remain partial.</li>
+          <li>Do not infer deployed OIDC/quota/download acceptance from local HTTPS fixtures, or native TLS across hosts from an SSH tunnel. Store distribution and Agent execution authority stay separate.</li>
+          <li>Current installed isolation, Windows process trees, real Linux ARM64 execution, per-call overhead, portable project pins and controlled replacement need their own proof. Historical in-process ABI and 1M solver tests do not cover them.</li>
+          <li>Installed GUI/WASM PWDT, separately published Headless SDK deployment parity and Store-to-Orchestra project supply remain explicit open chains. Separate successful layers are not automatically an end-to-end result.</li>
+        </ul>
+        <p class="docs-copy">
+          The unchanged release queue now starts with sdk-headless/sdk_headless,
+          workbench-shell/validation, runtime-protocol/sdk_operator,
+          runtime-agent-cli/sdk_operator and runtime-engine-solver/validation.
+          Readiness stays blocked and dimension-score progress stays 94.0%;
+          that score does not include every open named scenario. See the
+          <a href="../reports/tensor-recalibration-20261113.md">November 13 review</a>
+          and <a href="weakness-roadmap.md">current roadmap</a> for acceptance
+          boundaries and practical next work. No policy weights or thresholds changed.
+        </p>
         <details>
         <summary>Historical October 16 calibration snapshot</summary>
         <h3>The recalibrated snapshot</h3>
