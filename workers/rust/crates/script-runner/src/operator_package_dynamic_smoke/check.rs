@@ -249,6 +249,26 @@ fn check_generation_execution_contract(root: &Path) -> RunnerResult<Option<Strin
         }
     }
 
+    for counter in [
+        "removed_initialization_staging_count",
+        "pending_abandoned_generation_count",
+        "removed_abandoned_generation_count",
+    ] {
+        if schema_requires(&schema, "/properties/janitor/required", counter)
+            || schema
+                .pointer(&format!("/properties/janitor/properties/{counter}/type"))
+                .and_then(Value::as_str)
+                != Some("integer")
+            || schema
+                .pointer(&format!("/properties/janitor/properties/{counter}/minimum"))
+                .and_then(Value::as_u64)
+                != Some(0)
+        {
+            return Ok(Some(format!(
+                "{GENERATION_SCHEMA_PATH}: janitor.{counter} must be an optional non-negative integer"
+            )));
+        }
+    }
     let example = read_repo_json(root, GENERATION_EXAMPLE_PATH)?;
     for (field_name, expected) in [
         ("schema_version", GENERATION_SCHEMA_VERSION),
@@ -270,6 +290,9 @@ fn check_generation_execution_contract(root: &Path) -> RunnerResult<Option<Strin
     }
     for field_name in [
         "removed_stale_session_count",
+        "removed_initialization_staging_count",
+        "pending_abandoned_generation_count",
+        "removed_abandoned_generation_count",
         "retained_active_session_count",
         "retained_invalid_session_count",
     ] {

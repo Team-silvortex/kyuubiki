@@ -301,18 +301,7 @@ pub(crate) fn finalize_orchestra_operator_package(
             )
         })?;
     store_active_fetch_config(next_agent);
-    let generation_receipt = json!({
-        "schema_version": "kyuubiki.agent-operator-generation-execution/v1",
-        "session_id": session_id,
-        "generation_id": generation_id,
-        "retention_policy": "host_lease",
-        "crash_recovery": "next_session_start",
-        "janitor": {
-            "removed_stale_session_count": janitor.removed_stale_session_count,
-            "retained_active_session_count": janitor.retained_active_session_count,
-            "retained_invalid_session_count": janitor.retained_invalid_session_count
-        }
-    });
+    let generation_receipt = generation_receipt(generation_id, session_id, janitor);
     Ok(Some(cache_eviction_receipt(
         summary,
         "evicted_after_execution",
@@ -534,6 +523,9 @@ fn generation_receipt(
         "crash_recovery": "next_session_start",
         "janitor": {
             "removed_stale_session_count": janitor.removed_stale_session_count,
+            "removed_initialization_staging_count": janitor.removed_initialization_staging_count,
+            "pending_abandoned_generation_count": janitor.pending_abandoned_generation_count,
+            "removed_abandoned_generation_count": janitor.removed_abandoned_generation_count,
             "retained_active_session_count": janitor.retained_active_session_count,
             "retained_invalid_session_count": janitor.retained_invalid_session_count
         }
@@ -641,6 +633,33 @@ fn fetch_runtime_config() -> &'static RwLock<Option<OperatorPackageFetchRuntimeC
 fn fetch_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
+}
+
+#[cfg(test)]
+mod receipt_tests {
+    use super::*;
+
+    #[test]
+    fn generation_receipt_separates_staging_and_session_cleanup_counts() {
+        let report = crate::operator_package_generation_session::GenerationJanitorReport {
+            removed_stale_session_count: 2,
+            removed_initialization_staging_count: 3,
+            retained_active_session_count: 4,
+            retained_invalid_session_count: 5,
+            pending_abandoned_generation_count: 6,
+            removed_abandoned_generation_count: 7,
+        };
+        let receipt = generation_receipt("generation".into(), "session".into(), report);
+        assert_eq!(receipt["janitor"]["removed_stale_session_count"], 2);
+        assert_eq!(
+            receipt["janitor"]["removed_initialization_staging_count"],
+            3
+        );
+        assert_eq!(receipt["janitor"]["retained_active_session_count"], 4);
+        assert_eq!(receipt["janitor"]["retained_invalid_session_count"], 5);
+        assert_eq!(receipt["janitor"]["pending_abandoned_generation_count"], 6);
+        assert_eq!(receipt["janitor"]["removed_abandoned_generation_count"], 7);
+    }
 }
 
 #[cfg(test)]

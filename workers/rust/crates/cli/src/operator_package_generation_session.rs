@@ -8,6 +8,13 @@ use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 mod coordination;
 mod initialization;
+mod lifecycle;
+mod retirement;
+use retirement::reap as try_reap_session;
+#[cfg(test)]
+mod admission_tests;
+#[cfg(test)]
+mod retirement_tests;
 use coordination::CatalogLease;
 
 const CACHE_GENERATIONS_DIRECTORY: &str = "agent-runtime-generations";
@@ -21,8 +28,11 @@ const MAX_MARKER_BYTES: u64 = 16 * 1024;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct GenerationJanitorReport {
     pub removed_stale_session_count: usize,
+    pub removed_initialization_staging_count: usize,
     pub retained_active_session_count: usize,
     pub retained_invalid_session_count: usize,
+    pub pending_abandoned_generation_count: usize,
+    pub removed_abandoned_generation_count: usize,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -42,6 +52,7 @@ pub(crate) struct OperatorPackageGenerationSession {
     marker: SessionMarker,
     lease_file: Mutex<Option<File>>,
     janitor_report: Mutex<GenerationJanitorReport>,
+    pub(crate) abandoned_generations: crate::operator_package_generation::retry::RetryQueue,
 }
 
 impl OperatorPackageGenerationSession {
@@ -93,10 +104,38 @@ impl OperatorPackageGenerationSession {
     }
 
     pub(crate) fn janitor_report(&self) -> GenerationJanitorReport {
-        *self
+        let mut report = *self
             .janitor_report
             .lock()
-            .unwrap_or_else(|error| error.into_inner())
+            .unwrap_or_else(|error| error.into_inner());
+        let (pending, removed) = self.abandoned_generations.counts();
+        report.pending_abandoned_generation_count = pending;
+        report.removed_abandoned_generation_count = removed;
+        report
+    }
+
+    pub(crate) fn retry_abandoned_generations(self: &Arc<Self>) {
+        self.abandoned_generations.retry(self);
+        self.abandoned_generations.ensure_worker(self);
+    }
+
+    pub(crate) fn with_generation_cleanup(
+        &self,
+        cleanup: impl FnOnce() -> Result<(), String>,
+    ) -> Result<(), String> {
+        let catalog = CatalogLease::acquire(&self.cache_store_root)?;
+        if canonical_directory(&self.session_root, "operator package session")? != self.session_root
+            || !session_identity_matches(&self.session_root, &self.marker)?
+        {
+            return Err(
+                "operator package session identity changed before generation cleanup".into(),
+            );
+        }
+        lifecycle::ensure_ready(&self.sessions_root, self.session_id(), &catalog)?;
+        // Keep admission and destructive cleanup in the same catalog critical section.
+        let result = cleanup();
+        drop(catalog);
+        result
     }
 
     pub(crate) fn refresh_stale_sessions(&self) -> Result<(), String> {
@@ -116,8 +155,10 @@ impl OperatorPackageGenerationSession {
             .lock()
             .unwrap_or_else(|error| error.into_inner());
         latest.removed_stale_session_count += report.removed_stale_session_count;
+        latest.removed_initialization_staging_count += report.removed_initialization_staging_count;
         *report = latest;
-        Ok(())
+        drop(report);
+        lifecycle::ensure_ready(&self.sessions_root, self.session_id(), &catalog)
     }
 }
 
@@ -134,11 +175,12 @@ impl Drop for OperatorPackageGenerationSession {
             let _ = FileExt::unlock(&lease);
             drop(lease);
         }
-        if catalog.is_ok()
+        if let Ok(catalog) = catalog
             && session_identity_matches(&self.session_root, &self.marker).unwrap_or(false)
             && directory_is_empty(&self.generations_root).unwrap_or(false)
+            && lifecycle::ensure_ready(&self.sessions_root, self.session_id(), &catalog).is_ok()
         {
-            let _ = try_reap_session(&self.session_root, &self.cache_store_root);
+            let _ = try_reap_session(&self.session_root, &self.cache_store_root, &catalog);
         }
     }
 }
@@ -195,6 +237,7 @@ fn create_session(
         marker,
         lease_file: Mutex::new(Some(lease)),
         janitor_report: Mutex::new(janitor_report),
+        abandoned_generations: Default::default(),
     })
 }
 
@@ -218,15 +261,25 @@ fn reap_stale_sessions(
     catalog: &CatalogLease,
 ) -> Result<GenerationJanitorReport, String> {
     let initialization = initialization::recover(sessions_root, cache_store_root, catalog)?;
+    let retirement = retirement::recover(
+        sessions_root,
+        cache_store_root,
+        catalog,
+        &initialization.protected,
+    )?;
     let mut entries = fs::read_dir(sessions_root)
         .map_err(|error| format!("failed to read {}: {error}", sessions_root.display()))?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;
     entries.sort_by_key(|entry| entry.file_name());
     let mut report = initialization.report;
+    report.removed_stale_session_count += retirement.report.removed_stale_session_count;
+    report.retained_active_session_count += retirement.report.retained_active_session_count;
+    report.retained_invalid_session_count += retirement.report.retained_invalid_session_count;
     for entry in entries {
         if excluded == Some(entry.path().as_path())
             || initialization.protected.contains(&entry.path())
+            || retirement.protected.contains(&entry.path())
         {
             continue;
         }
@@ -237,7 +290,7 @@ fn reap_stale_sessions(
             report.retained_invalid_session_count += 1;
             continue;
         }
-        match try_reap_session(&entry.path(), cache_store_root) {
+        match try_reap_session(&entry.path(), cache_store_root, catalog) {
             Ok(SessionReapOutcome::Removed) => report.removed_stale_session_count += 1,
             Ok(SessionReapOutcome::Active) => report.retained_active_session_count += 1,
             Err(_) => report.retained_invalid_session_count += 1,
@@ -258,7 +311,9 @@ fn count_unleased_cache_entries(sessions_root: &Path) -> Result<usize, String> {
         )
     })? {
         let entry = entry.map_err(|error| error.to_string())?;
-        if entry.file_name() != SESSIONS_DIRECTORY && entry.file_name() != initialization::DIRECTORY
+        if entry.file_name() != SESSIONS_DIRECTORY
+            && entry.file_name() != initialization::DIRECTORY
+            && entry.file_name() != retirement::DIRECTORY
         {
             count += 1;
         }
@@ -269,46 +324,6 @@ fn count_unleased_cache_entries(sessions_root: &Path) -> Result<usize, String> {
 enum SessionReapOutcome {
     Removed,
     Active,
-}
-
-fn try_reap_session(
-    session_root: &Path,
-    cache_store_root: &Path,
-) -> Result<SessionReapOutcome, String> {
-    // Every caller holds CatalogLease through lease inspection, unlock and removal.
-    let marker = read_marker(session_root)?;
-    if marker.cache_store_root != cache_store_root.display().to_string()
-        || session_root.file_name().and_then(|value| value.to_str())
-            != Some(marker.session_id.as_str())
-    {
-        return Err("operator package session marker identity mismatch".to_string());
-    }
-    let lease_path = session_root.join(SESSION_LEASE_FILE);
-    reject_symlink(&lease_path, "operator package session lease")?;
-    let lease = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(&lease_path)
-        .map_err(|error| format!("failed to open {}: {error}", lease_path.display()))?;
-    match lease.try_lock_exclusive() {
-        Ok(()) => {
-            FileExt::unlock(&lease)
-                .map_err(|error| format!("failed to unlock {}: {error}", lease_path.display()))?;
-            drop(lease);
-            fs::remove_dir_all(session_root).map_err(|error| {
-                format!(
-                    "failed to remove stale operator package session {}: {error}",
-                    session_root.display()
-                )
-            })?;
-            Ok(SessionReapOutcome::Removed)
-        }
-        Err(error) if is_lock_contention(&error) => Ok(SessionReapOutcome::Active),
-        Err(error) => Err(format!(
-            "failed to inspect operator package session lease {}: {error}",
-            lease_path.display()
-        )),
-    }
 }
 
 fn is_lock_contention(error: &std::io::Error) -> bool {
@@ -422,13 +437,15 @@ pub(crate) fn acquire_download_session_lease(generation: &Path) -> Result<File, 
     {
         return Err("download generation is outside the managed session layout".into());
     }
-    let _catalog = CatalogLease::acquire(cache)?;
+    let catalog = CatalogLease::acquire(cache)?;
     let marker = read_marker(session)?;
     if marker.cache_store_root != cache.display().to_string()
         || !session_identity_matches(session, &marker)?
     {
         return Err("download session identity mismatch".into());
     }
+    lifecycle::ensure_ready(sessions, &marker.session_id, &catalog)?;
+    crate::operator_package_generation::ensure_generation_download_ready(&generation)?;
     let lease_path = session.join(SESSION_LEASE_FILE);
     reject_symlink(&lease_path, "download session lease")?;
     let lease = OpenOptions::new()
@@ -453,6 +470,20 @@ pub(crate) fn recovery_policy() -> serde_json::Value {
         "incomplete_cleanup":"matching_intent_known_files_empty_generations_exclusive_lease",
         "invalid_initialization":"retain_and_report_without_guessing",
         "initialization_records":"agent-runtime-generations/initializations",
+        "initialization_publication":"synced_staging_hard_link_no_replace_v1",
+        "initialization_staging_cleanup":"reconstructed_identity_sha256_and_prefix_match_only",
+        "retirement_records":"agent-runtime-generations/retirements",
+        "completed_cleanup":"hard_link_identity_before_payload_then_lease_marker_directory_record",
+        "invalid_retirement":"retain_and_protect_session_without_recursive_fallback",
+        "session_admission":"no_unresolved_initialization_staging_or_retirement",
+        "normal_close":"retain_session_when_lifecycle_records_are_unresolved",
+        "generation_cleanup":"matching_session_identity_and_no_pending_records_under_catalog",
+        "generation_retirement":"sibling_identity_link_before_payload_marker_directory_record",
+        "retiring_generation_admission":"reject_new_downloader_attachment",
+        "abandoned_generation_cleanup":"session_queue_weak_worker_and_before_preparation",
+        "abandoned_cleanup_retry_ms":crate::operator_package_generation::retry::INTERVAL_MS,
+        "abandoned_cleanup_batch_limit":crate::operator_package_generation::retry::BATCH_LIMIT,
+        "abandoned_cleanup_shutdown":"release_queue_with_session_then_stale_session_recovery",
         "rescan":"startup_and_before_explicit_generation_preparation", "automatic_replay":false
     })
 }
@@ -506,6 +537,7 @@ mod tests {
             1
         );
         assert!(stale.exists());
+        FileExt::unlock(&writer).unwrap();
         drop(writer);
         replacement.refresh_stale_sessions().unwrap();
         assert!(!stale.exists());

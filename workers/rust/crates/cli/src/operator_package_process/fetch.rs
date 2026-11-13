@@ -162,12 +162,64 @@ mod tests {
         assert_eq!(fetch["session_recovery"]["catalog_wait_ms"], 2000);
         assert_eq!(fetch["session_recovery"]["automatic_replay"], false);
         assert_eq!(
+            fetch["session_recovery"]["abandoned_cleanup_retry_ms"],
+            1_000
+        );
+        assert_eq!(
+            fetch["session_recovery"]["abandoned_cleanup_batch_limit"],
+            16
+        );
+        assert_eq!(
+            fetch["session_recovery"]["abandoned_generation_cleanup"],
+            "session_queue_weak_worker_and_before_preparation"
+        );
+        assert_eq!(
             fetch["session_recovery"]["initialization"],
             "persist_intent_before_directory_creation"
         );
         assert_eq!(
             fetch["session_recovery"]["invalid_initialization"],
             "retain_and_report_without_guessing"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["initialization_publication"],
+            "synced_staging_hard_link_no_replace_v1"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["initialization_staging_cleanup"],
+            "reconstructed_identity_sha256_and_prefix_match_only"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["retirement_records"],
+            "agent-runtime-generations/retirements"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["completed_cleanup"],
+            "hard_link_identity_before_payload_then_lease_marker_directory_record"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["invalid_retirement"],
+            "retain_and_protect_session_without_recursive_fallback"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["session_admission"],
+            "no_unresolved_initialization_staging_or_retirement"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["normal_close"],
+            "retain_session_when_lifecycle_records_are_unresolved"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["generation_cleanup"],
+            "matching_session_identity_and_no_pending_records_under_catalog"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["generation_retirement"],
+            "sibling_identity_link_before_payload_marker_directory_record"
+        );
+        assert_eq!(
+            fetch["session_recovery"]["retiring_generation_admission"],
+            "reject_new_downloader_attachment"
         );
     }
 }

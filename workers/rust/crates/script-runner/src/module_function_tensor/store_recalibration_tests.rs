@@ -36,6 +36,12 @@ const RETAINED: &[&str] = &[
     "agent-large-download-restart-local-recovery",
     "agent-orphan-download-coordination-local-recovery",
     "agent-session-initialization-local-recovery",
+    "agent-initialization-staging-local-recovery",
+    "agent-initialization-io-failure-local-recovery",
+    "agent-session-retirement-local-recovery",
+    "agent-session-lifecycle-admission-local-recovery",
+    "agent-generation-partial-cleanup-local-recovery",
+    "agent-abandoned-generation-retry-local-recovery",
     "mac-linux-ssh-variant-deployment",
 ];
 
@@ -55,6 +61,63 @@ const OPEN: &[&str] = &[
     "installer-multiplatform-store-publication",
     "sdk-current-isolated-abi-qualification",
 ];
+
+#[test]
+fn abandoned_retry_proof_does_not_promote_or_replace_partial_cleanup_proof() {
+    let (_, mut tensor, _, _, shard) = current();
+    for claim in tensor["evidence_claims"].as_array_mut().unwrap() {
+        if claim["id"] == "agent-abandoned-generation-retry-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &tensor,
+            &shard,
+            "agent-abandoned-generation-retry-local-recovery"
+        )["met"],
+        false
+    );
+    for independent in [
+        "agent-generation-partial-cleanup-local-recovery",
+        "agent-session-retirement-local-recovery",
+        "agent-session-lifecycle-admission-local-recovery",
+    ] {
+        assert_eq!(
+            scope(&tensor, &shard, independent)["met"],
+            true,
+            "{independent}"
+        );
+    }
+}
+
+#[test]
+fn generation_cleanup_proof_is_independent_of_session_retirement_and_admission() {
+    let (_, mut tensor, _, _, shard) = current();
+    for claim in tensor["evidence_claims"].as_array_mut().unwrap() {
+        if claim["id"] == "agent-generation-partial-cleanup-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &tensor,
+            &shard,
+            "agent-generation-partial-cleanup-local-recovery"
+        )["met"],
+        false
+    );
+    for independent in [
+        "agent-session-retirement-local-recovery",
+        "agent-session-lifecycle-admission-local-recovery",
+    ] {
+        assert_eq!(
+            scope(&tensor, &shard, independent)["met"],
+            true,
+            "{independent}"
+        );
+    }
+}
 
 fn scope(tensor: &Value, shard: &Value, id: &str) -> Value {
     let requirement = shard["qualification_requirements"]
@@ -165,6 +228,104 @@ fn store_recalibration_cannot_borrow_historical_or_other_transport_success() {
     let mut without_isolated_calls = tensor.clone();
     let mut without_orphan_coordination = tensor.clone();
     let mut without_initialization = tensor.clone();
+    let mut without_staging = tensor.clone();
+    let mut without_io_failure = tensor.clone();
+    let mut without_retirement = tensor.clone();
+    let mut without_admission = tensor.clone();
+    for claim in without_admission["evidence_claims"].as_array_mut().unwrap() {
+        if claim["id"] == "agent-session-lifecycle-admission-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_admission,
+            &shard,
+            "agent-session-lifecycle-admission-local-recovery"
+        )["met"],
+        false,
+        "startup retirement proof cannot replace normal-close and admission protection"
+    );
+    assert_eq!(
+        scope(
+            &without_admission,
+            &shard,
+            "agent-session-retirement-local-recovery"
+        )["met"],
+        true
+    );
+    for claim in without_retirement["evidence_claims"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if claim["id"] == "agent-session-retirement-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_retirement,
+            &shard,
+            "agent-session-retirement-local-recovery"
+        )["met"],
+        false,
+        "incomplete initialization and download recovery cannot prove partial completed-session removal"
+    );
+    assert_eq!(
+        scope(
+            &without_retirement,
+            &shard,
+            "agent-initialization-io-failure-local-recovery"
+        )["met"],
+        true
+    );
+    for claim in without_io_failure["evidence_claims"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if claim["id"] == "agent-initialization-io-failure-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_io_failure,
+            &shard,
+            "agent-initialization-io-failure-local-recovery"
+        )["met"],
+        false,
+        "process termination proof cannot replace short-write and permission failure qualification"
+    );
+    assert_eq!(
+        scope(
+            &without_io_failure,
+            &shard,
+            "agent-initialization-staging-local-recovery"
+        )["met"],
+        true
+    );
+    for claim in without_staging["evidence_claims"].as_array_mut().unwrap() {
+        if claim["id"] == "agent-initialization-staging-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_staging,
+            &shard,
+            "agent-initialization-staging-local-recovery"
+        )["met"],
+        false,
+        "a committed initialization record cannot prove torn staging cleanup or no-replace publication"
+    );
+    assert_eq!(
+        scope(
+            &without_staging,
+            &shard,
+            "agent-session-initialization-local-recovery"
+        )["met"],
+        true
+    );
     for claim in without_initialization["evidence_claims"]
         .as_array_mut()
         .unwrap()

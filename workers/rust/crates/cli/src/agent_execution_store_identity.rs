@@ -2,7 +2,46 @@ use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
+use fs2::FileExt;
 use sha2::{Digest, Sha256};
+
+pub(super) struct OwnerLease {
+    file: File,
+    owner_pid: u32,
+}
+
+impl OwnerLease {
+    pub(super) fn acquire(file: File) -> Result<Self, String> {
+        file.try_lock_exclusive()
+            .map_err(|error| format!("execution store is already owned: {error}"))?;
+        Ok(Self {
+            file,
+            owner_pid: std::process::id(),
+        })
+    }
+}
+
+impl std::ops::Deref for OwnerLease {
+    type Target = File;
+    fn deref(&self) -> &File {
+        &self.file
+    }
+}
+
+impl std::ops::DerefMut for OwnerLease {
+    fn deref_mut(&mut self) -> &mut File {
+        &mut self.file
+    }
+}
+
+impl Drop for OwnerLease {
+    fn drop(&mut self) {
+        // A dup/fork descriptor can outlive close; release this owner's lock explicitly.
+        if self.owner_pid == std::process::id() {
+            let _ = FileExt::unlock(&self.file);
+        }
+    }
+}
 
 const PREFIX: &str = "kyuubiki.agent-execution-store/v1\n";
 const LIMIT: u64 = 160;

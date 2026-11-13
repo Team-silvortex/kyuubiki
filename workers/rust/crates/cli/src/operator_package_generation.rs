@@ -5,11 +5,13 @@ use kyuubiki_installer::{install_operator_package_into, managed_operator_package
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+mod cleanup;
+pub(crate) mod retry;
 
 const GENERATION_MARKER_FILE: &str = "kyuubiki-agent-generation.json";
 const GENERATION_MARKER_SCHEMA: &str = "kyuubiki.agent-operator-generation/v2";
@@ -52,6 +54,7 @@ pub(crate) fn prepare_operator_package_generation_excluding(
     active_packages_root: &Path,
     excluded_package_ids: &BTreeSet<String>,
 ) -> Result<PreparedOperatorPackageGeneration, String> {
+    session.retry_abandoned_generations();
     session.refresh_stale_sessions()?;
     let active_packages_root =
         canonical_directory(active_packages_root, "active operator packages root")?;
@@ -88,12 +91,6 @@ pub(crate) fn prepare_operator_package_generation_excluding(
         let _ = fs::remove_dir_all(&generation_root);
         return Err(error);
     }
-    if let Err(error) = fs::create_dir(generation_root.join("packages")) {
-        let _ = fs::remove_dir_all(&generation_root);
-        return Err(format!(
-            "failed to create operator package generation store layout: {error}"
-        ));
-    }
     let prepared = PreparedOperatorPackageGeneration {
         owned: OwnedOperatorPackageGeneration {
             generation_root,
@@ -103,6 +100,9 @@ pub(crate) fn prepare_operator_package_generation_excluding(
         },
         cleanup_armed: true,
     };
+    fs::create_dir(prepared.packages_root()).map_err(|error| {
+        format!("failed to create operator package generation store layout: {error}")
+    })?;
 
     for receipt in active.installed_packages {
         if excluded_package_ids.contains(&receipt.package_id) {
@@ -162,8 +162,15 @@ impl OwnedOperatorPackageGeneration {
 
 impl Drop for PreparedOperatorPackageGeneration {
     fn drop(&mut self) {
-        if self.cleanup_armed {
-            let _ = remove_owned_operator_package_generation(&self.owned);
+        if self.cleanup_armed && remove_owned_operator_package_generation(&self.owned).is_err() {
+            self.owned
+                .session
+                .abandoned_generations
+                .enqueue(&self.owned);
+            self.owned
+                .session
+                .abandoned_generations
+                .ensure_worker(&self.owned.session);
         }
     }
 }
@@ -171,51 +178,13 @@ impl Drop for PreparedOperatorPackageGeneration {
 pub(crate) fn remove_owned_operator_package_generation(
     generation: &OwnedOperatorPackageGeneration,
 ) -> Result<(), String> {
-    match generation.generation_root.symlink_metadata() {
-        Ok(metadata) if metadata.file_type().is_symlink() => {
-            return Err(format!(
-                "owned operator package generation must not be a symlink: {}",
-                generation.generation_root.display()
-            ));
-        }
-        Ok(_) => {}
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-        Err(error) => {
-            return Err(format!(
-                "failed to inspect owned operator package generation {}: {error}",
-                generation.generation_root.display()
-            ));
-        }
-    }
-    reject_symlink(
-        &generation.generation_root,
-        "owned operator package generation",
-    )?;
-    let parent = generation
-        .generation_root
-        .parent()
-        .ok_or_else(|| "owned operator package generation has no parent".to_string())?;
-    let canonical_parent = canonical_directory(parent, "operator package generations root")?;
-    if canonical_parent != generation.generations_root
-        || generation
-            .generation_root
-            .file_name()
-            .and_then(|value| value.to_str())
-            != Some(generation.marker.generation_id.as_str())
-    {
-        return Err("owned operator package generation path identity mismatch".to_string());
-    }
-    let marker = read_marker(&generation.generation_root)?;
-    if marker != generation.marker {
-        return Err("owned operator package generation marker mismatch".to_string());
-    }
-    fs::remove_dir_all(&generation.generation_root).map_err(|error| {
-        format!(
-            "failed to remove retired operator package generation {}: {error}",
-            generation.generation_root.display()
-        )
-    })?;
-    Ok(())
+    generation
+        .session
+        .with_generation_cleanup(|| cleanup::remove(generation))
+}
+
+pub(crate) fn ensure_generation_download_ready(root: &Path) -> Result<(), String> {
+    cleanup::ensure_download_ready(root)
 }
 
 fn next_generation_id() -> Result<String, String> {
@@ -241,17 +210,23 @@ fn write_marker(root: &Path, marker: &GenerationMarker) -> Result<(), String> {
         .map_err(|error| format!("failed to persist {}: {error}", path.display()))
 }
 
-fn read_marker(root: &Path) -> Result<GenerationMarker, String> {
-    let path = root.join(GENERATION_MARKER_FILE);
-    reject_symlink(&path, "operator package generation marker")?;
+fn read_marker_file(path: &Path) -> Result<GenerationMarker, String> {
+    reject_symlink(path, "operator package generation marker")?;
     let metadata = path
         .metadata()
         .map_err(|error| format!("failed to inspect {}: {error}", path.display()))?;
     if !metadata.is_file() || metadata.len() == 0 || metadata.len() > MAX_MARKER_BYTES {
         return Err("operator package generation marker has an invalid size".to_string());
     }
-    let payload =
-        fs::read(&path).map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let mut payload = Vec::new();
+    fs::File::open(path)
+        .map_err(|error| format!("failed to open {}: {error}", path.display()))?
+        .take(MAX_MARKER_BYTES + 1)
+        .read_to_end(&mut payload)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    if payload.len() as u64 > MAX_MARKER_BYTES {
+        return Err("operator package generation marker grew beyond its limit".into());
+    }
     let marker: GenerationMarker = serde_json::from_slice(&payload)
         .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
     if marker.schema_version != GENERATION_MARKER_SCHEMA {
@@ -280,6 +255,9 @@ fn reject_symlink(path: &Path, label: &str) -> Result<(), String> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod cleanup_tests;
 
 #[cfg(test)]
 mod tests {

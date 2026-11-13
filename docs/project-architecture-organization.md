@@ -262,6 +262,70 @@ the ordinary janitor as well. Test-only process barriers belong in the submodule
 tests, never production environment controls. This is not a new task journal,
 automatic replay mechanism or a claim of physical power-loss durability.
 
+The nested `initialization/staging` module publishes synced records without
+replacing an existing name. Versioned staging names bind reconstructible identity
+and expected-content SHA-256; cleanup validates both the name and actual prefix,
+and can only unlink staging. It never authorizes session removal. Keep staging
+and session cleanup counts separate, preserve conflicting/unknown files, and do
+not replace no-replace publication with an overwriting rename or a copy fallback.
+
+Keep bounded filesystem failure qualification in `initialization/io_failures`:
+test-only sync injection, owned-child file-size limits, and non-root Unix permission
+tests. Only `NotFound` establishes an absent target; other inspection failures
+must stop before intent publication. Run the ignored permission test explicitly;
+do not conflate process termination, real short writes, injected sync errors and
+physical disk failure. Tests must restore owned directory permissions and limits,
+not fill disks or change daily service configuration.
+
+`operator_package_generation_session/retirement` owns completed-session cleanup.
+Keep its records separate from incomplete initialization: hard-link the existing
+validated marker without replacement before removing payload, then unlink the
+lease, marker, empty root and finally the retirement record. Never reintroduce
+recursive removal of the session root. A pending retirement blocks new downloader
+attachment; a surviving lease still blocks reclamation. Conflicting initialization
+and retirement records must protect the session from both janitors. Keep crash,
+permission and safety qualification in the sibling `retirement_tests` modules;
+record cleanup is not task replay, a permanent backup or a physical power-loss claim.
+
+The session `lifecycle` helper shares entry checks for normal close, new generation
+preparation, downloader attachment and owned-generation cleanup under catalog coordination. Reuse staging's
+association parser instead of inventing a second filename interpretation. Reject
+unsafe/unreadable record namespaces and unresolved records for the target session;
+do not revoke an existing downloader lease or broaden a peer's record into a global
+per-session failure. Publish scan diagnostics before returning a preparation error.
+Retired-generation removal and abandoned-preparation drop must enter through
+`with_generation_cleanup`: recheck the session identity and lifecycle records,
+then retain the catalog lock through deletion. Failed cleanup keeps its owned
+generation for a later retry or stale-session recovery; do not replay execution.
+Keep these entry-point and namespace regressions in `admission_tests`, with
+generation cleanup cases in its `generation_cleanup` child module. This is not
+proof for generation-internal partial deletion, physical power loss or hostile
+filesystem races; generation cleanup has its own bounded proof below.
+
+`operator_package_generation/cleanup` owns resumable generation deletion. Under
+the existing session cleanup guard, retain the validated marker as a no-replace
+sibling hard link before deleting payload, then remove the marker, empty root
+and journal. A missing root must not skip journal validation and unlink. Retain
+runtime queue ownership on failure, and reject new downloader attachment to any
+recorded generation without blocking a healthy sibling. Do not replace this with
+whole-root recursive deletion or infer ownership from a missing marker. Keep
+error/permission/crash/safety tests in `cleanup_tests`, and runtime retry-queue
+tests in `operator_package_runtime/retirement_tests`.
+
+`operator_package_generation/retry` owns failed-preparation cleanup, not runtime
+activation. The session owns the identity-only queue; its lazy worker holds a
+weak session reference between attempts, preventing an ownership cycle. Retry
+every 1000 ms and before preparation, at most 16 entries per sweep; rotate failed
+entries and deduplicate in-flight roots. Hold no queue-state mutex during I/O,
+skip overlapping sweeps, and reuse session identity/lifecycle/catalog checks.
+Worker creation failure keeps entries for the next preparation. Pending and
+removed counts are live-session diagnostics, not persisted completion records.
+An in-progress filesystem operation can extend the session lifetime; a sleeping
+worker cannot. Closing the session releases the queue, leaving remaining data
+to the existing stale-session protocol. Do not infer ownership by scanning live
+directories or enqueue committed/active generations. This is not live orphan
+adoption, a permanent backup, or a power-loss guarantee.
+
 Use `cli/tests/operator_process_isolation.rs` for actual crash/hang/cancel and
 parent-loss checks. Compile its synthetic library from `tests/fixtures` into an
 owned temporary directory, never into distributable templates or retained

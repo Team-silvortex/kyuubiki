@@ -38,6 +38,21 @@
         "retained_invalid_session_count"
       ],
       "properties": {
+        "pending_abandoned_generation_count": {
+          "description": "Optional live-session queue size, including in-progress cleanup; not a persisted count.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "removed_abandoned_generation_count": {
+          "description": "Optional successful abandoned-generation retries in this session, separate from removed sessions.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "removed_initialization_staging_count": {
+          "description": "Optional for older v1 receipts; independent from removed sessions.",
+          "type": "integer",
+          "minimum": 0
+        },
         "removed_stale_session_count": {
           "type": "integer",
           "minimum": 0

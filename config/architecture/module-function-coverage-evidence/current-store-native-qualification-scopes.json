@@ -270,7 +270,7 @@
       "required_text": [
         "killed_initializer_recovers_each_committed_creation_boundary",
         "killed_initializer_cleanup_resumes_without_recursive_deletion",
-        "killed_before_intent_commit_retains_unproven_record_without_creating_a_session",
+        "legacy_torn_intent_remains_unproven_without_creating_a_session",
         "partial_marker_cleanup_requires_a_prior_matching_intent",
         "incomplete_initialization_requires_exact_metadata_and_no_payload",
         "incomplete_initialization_preserves_lease_holder_then_retries",
@@ -278,6 +278,193 @@
         "incomplete_initialization_preserves_symlinks_and_their_targets",
         "initialization_never_claims_an_existing_target",
         "agent-session-initialization-recovery"
+      ]
+    },
+    {
+      "id": "agent-initialization-staging-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"], "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization/staging.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization/staging/tests.rs",
+        "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
+        "schemas/agent-operator-generation-execution.schema.json",
+        "schemas/examples.agent-operator-generation-execution.json",
+        "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke/check.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "killed_staging_publication_recovers_empty_partial_synced_and_published_records",
+        "killed_staging_cleanup_leaves_published_record_recoverable",
+        "staging_recovery_requires_commitment_prefix_and_unambiguous_publication",
+        "rejected_staging_protects_a_complete_session_from_both_janitors",
+        "completed_staging_unlink_preserves_active_lease_and_final_record",
+        "publish_complete_never_replaces_existing_content",
+        "staging_and_publication_reject_symlinks_without_touching_targets",
+        "generation_receipt_separates_staging_and_session_cleanup_counts",
+        "agent-initialization-staging-recovery"
+      ]
+    },
+    {
+      "id": "agent-initialization-io-failure-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"], "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization/staging.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization/io_failures.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization/io_failures/permissions.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization/io_failures/write_limit.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "failed_target_inspection_never_creates_initialization_records",
+        "staging_sync_error_never_publishes_or_creates_a_session",
+        "real_short_write_never_publishes_and_can_be_recovered_without_replay",
+        "real_permission_failures_preserve_records_and_allow_explicit_retry",
+        "agent-initialization-io-recovery"
+      ]
+    },
+    {
+      "id": "agent-session-retirement-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"], "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/retirement.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/retirement_tests.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/retirement_tests/crash.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/retirement_tests/permissions.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/retirement_tests/safety.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "denied_payload_cleanup_preserves_identity_and_retries_without_replay",
+        "retirement_failures_at_each_boundary_resume_without_double_count_or_replay",
+        "killed_retirement_resumes_payload_and_metadata_cleanup_without_replay",
+        "retirement_record_permission_failures_preserve_proof_until_explicit_retry",
+        "retirement_rejects_unknown_contents_and_ambiguous_identity_without_fallback",
+        "retirement_keeps_live_lease_and_rejects_late_downloader_admission",
+        "retirement_publication_never_replaces_an_existing_record",
+        "concurrent_retirement_recovery_claims_cleanup_once_and_preserves_active_peer",
+        "conflicting_initialization_and_retirement_records_block_both_janitors",
+        "retirement_preserves_symlink_roots_records_and_payload_targets",
+        "retirement_unlinks_nested_payload_symlinks_without_following_them",
+        "legacy_partial_cleanup_without_a_record_remains_unproven",
+        "agent-session-retirement-recovery"
+      ]
+    },
+    {
+      "id": "agent-session-lifecycle-admission-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"], "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_generation.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/lifecycle.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization/staging.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/retirement.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/admission_tests.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/admission_tests/namespaces.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/admission_tests/generation_cleanup.rs",
+        "workers/rust/crates/cli/src/operator_package_process/fetch.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "normal_session_drop_preserves_unresolved_initialization_and_staging",
+        "unresolved_lifecycle_records_block_new_downloader_attachment",
+        "unresolved_current_session_blocks_generation_preparation_but_not_healthy_peers",
+        "blocked_session_never_creates_a_generation_and_explicit_retry_works",
+        "lifecycle_admission_never_revokes_existing_downloader_lease",
+        "matching_but_uncommitted_initialization_blocks_admission_until_owner_closes",
+        "lifecycle_record_namespace_files_block_admission_and_close_cleanup",
+        "lifecycle_record_namespace_symlinks_cannot_hide_admission_barriers",
+        "unreadable_initialization_records_retain_owner_until_explicit_retry",
+        "retired_generation_cleanup_preserves_unresolved_session_records",
+        "abandoned_generation_keeps_ambiguous_session_for_restart_cleanup",
+        "generation_cleanup_requires_unchanged_session_identity",
+        "generation_cleanup_does_not_bypass_busy_catalog",
+        "generation_cleanup_holds_catalog_until_the_operation_finishes",
+        "generation_cleanup_rejects_file_record_namespaces",
+        "generation_cleanup_rejects_symlink_record_namespaces",
+        "generation_cleanup_requires_readable_initialization_records",
+        "matching_session_identity_and_no_pending_records_under_catalog",
+        "no_unresolved_initialization_staging_or_retirement",
+        "agent-session-lifecycle-admission"
+      ]
+    },
+    {
+      "id": "agent-generation-partial-cleanup-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"], "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_generation.rs",
+        "workers/rust/crates/cli/src/operator_package_generation/cleanup.rs",
+        "workers/rust/crates/cli/src/operator_package_generation/cleanup_tests.rs",
+        "workers/rust/crates/cli/src/operator_package_generation/cleanup_tests/crash.rs",
+        "workers/rust/crates/cli/src/operator_package_generation/cleanup_tests/permissions.rs",
+        "workers/rust/crates/cli/src/operator_package_generation/cleanup_tests/safety.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+        "workers/rust/crates/cli/src/operator_package_runtime.rs",
+        "workers/rust/crates/cli/src/operator_package_runtime/retirement_tests.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "generation_cleanup_retries_each_record_payload_and_metadata_boundary",
+        "partial_generation_cleanup_preserves_identity_and_retries_after_permission_repair",
+        "generation_cleanup_metadata_permission_failures_resume_without_replay",
+        "killed_generation_cleanup_is_reclaimed_without_replay_or_live_peer_deletion",
+        "abandoned_partial_generation_is_reclaimed_after_its_session_closes",
+        "ambiguous_generation_cleanup_records_never_authorize_payload_removal",
+        "generation_cleanup_does_not_adopt_legacy_missing_identity",
+        "missing_generation_root_does_not_authorize_removing_a_foreign_record",
+        "retired_generation_blocks_late_downloader_but_not_a_healthy_sibling",
+        "generation_cleanup_rejects_symlink_identity_and_unlinks_only_nested_links",
+        "retirement_queue_keeps_owner_when_the_remaining_record_is_invalid",
+        "retirement_queue_retains_owner_after_final_record_unlink_permission_failure",
+        "sibling_identity_link_before_payload_marker_directory_record",
+        "agent-generation-partial-cleanup"
+      ]
+    },
+    {
+      "id": "agent-abandoned-generation-retry-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"], "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_generation.rs",
+        "workers/rust/crates/cli/src/operator_package_generation/retry.rs",
+        "workers/rust/crates/cli/src/operator_package_generation/retry/tests.rs",
+        "workers/rust/crates/cli/src/operator_package_generation/cleanup_tests.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+        "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
+        "workers/rust/crates/cli/src/operator_package_runtime.rs",
+        "schemas/agent-operator-generation-execution.schema.json",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "abandoned_partial_generation_is_retried_before_next_preparation",
+        "abandoned_cleanup_worker_recovers_without_new_work_and_restarts_when_needed",
+        "committed_and_successfully_removed_preparations_never_enter_retry_queue",
+        "queued_cleanup_keeps_immutable_identity_until_explicit_repair",
+        "cleanup_queue_deduplicates_and_rotates_failed_batches",
+        "cleanup_queue_admission_does_not_wait_for_another_sweep",
+        "cleanup_worker_spawn_failure_preserves_queue_for_preparation_retry",
+        "abandoned_retry_obeys_session_lifecycle_and_keeps_healthy_generation",
+        "abandoned_retry_queue_does_not_keep_a_closed_session_alive",
+        "abandoned_cleanup_retries_real_permission_failure_while_session_is_live",
+        "session_queue_weak_worker_and_before_preparation",
+        "pending_abandoned_generation_count",
+        "removed_abandoned_generation_count",
+        "agent-abandoned-generation-retry"
       ]
     },
     {
@@ -376,7 +563,55 @@
       "scope": "macos-arm64+linux-x86_64/source-session-initializer/local-filesystem/owned-child-sigkill-and-prefix-recovery",
       "target": "verified", "claims": ["agent-session-initialization-source-regression"],
       "basis": ["docs/operator-store-integration.html"],
-      "acceptance": "Kill owned native test children running production session initialization at ten committed-intent creation boundaries and two cleanup boundaries. Recover matching incomplete metadata non-recursively, retain live leases, foreign or nonempty contents and symlinks. A torn intent must create no session and remain reported; unknown old partial sessions stay untouched. Require idempotent cleanup and independent proof revocation. These test-build barriers do not qualify full Agent startup at every boundary, physical power loss, mixed binaries, network filesystems, Windows, installed GUI/SDK or adversarial concurrent filesystem mutation."
+      "acceptance": "Kill owned native test children running production session initialization at ten committed-intent creation boundaries and two cleanup boundaries. Recover matching incomplete metadata non-recursively, retain live leases, foreign or nonempty contents and symlinks. A legacy torn JSON intent without a staging commitment must remain reported; unknown old partial sessions stay untouched. Require idempotent cleanup and independent proof revocation. These test-build barriers do not qualify full Agent startup at every boundary, physical power loss, mixed binaries, network filesystems, Windows, installed GUI/SDK or adversarial concurrent filesystem mutation."
+    },
+    {
+      "id": "agent-initialization-staging-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-session-initializer/local-filesystem/content-bound-staging-no-replace-publication",
+      "target": "verified", "claims": ["agent-initialization-staging-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Kill owned test children after staging creation, partial write, file sync, no-replace publication and staging unlink. Recover only reconstructible identity/SHA-256/prefix matches with unambiguous session/final-record state; preserve collisions, corrupt bytes, foreign caches, unexpected sessions, symlinks and active leases. Keep staging and session cleanup counts distinct and idempotent; reject unsafe rename publication in a negative control. Depends on same-directory hard-link support, not authentication against local writers. Excludes power loss, all filesystem failures, concurrent hostile mutation, mixed versions, network filesystems, Windows and installed GUI/SDK acceptance."
+    },
+    {
+      "id": "agent-initialization-io-failure-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-session-initializer/local-filesystem/short-write-permissions-injected-sync-error",
+      "target": "verified", "claims": ["agent-initialization-io-failure-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Reject target inspection errors before creating an intent. Use an owned subprocess file-size limit to observe a real 96-byte partial staging file without publication or session creation. Inject sync failure only in test builds. Under non-root Unix permissions, deny inspection, publication, staging unlink, initialization commit and incomplete cleanup; preserve existing records/live peers, then restore permission and verify explicit idempotent recovery. Run the ignored permission qualification explicitly. This is not actual ENOSPC, physical sync failure, whole-Agent startup, power loss, all filesystem errors, hostile mutation, NFS, Windows or installed GUI/SDK qualification."
+    },
+    {
+      "id": "agent-session-retirement-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-session-janitor/local-filesystem/recorded-payload-and-metadata-retirement",
+      "target": "verified", "claims": ["agent-session-retirement-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Reproduce metadata loss during legacy whole-root recursive removal under real non-root permission denial. Publish an independent hard link to validated identity without replacement before payload deletion. Test injected failures and owned-child SIGKILL at six publication/payload/lease/marker/directory boundaries; require explicit idempotent cleanup, active-lease retention, no new downloader admission and one concurrent cleanup claim. Qualify real permission denial during payload deletion, record publication and final unlink. Preserve conflicting initialization, malformed/foreign records, unknown root entries and unsafe symlinks; never reclaim legacy unrecorded missing identity. Not every whole-Agent startup boundary, directory-entry power-loss durability, all I/O schedules, hostile mutation, mixed versions, network filesystems, Windows or installed GUI/SDK acceptance."
+    },
+    {
+      "id": "agent-session-lifecycle-admission-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-session-lifecycle/normal-close-generation-preparation-downloader-admission-generation-cleanup",
+      "target": "verified", "claims": ["agent-session-lifecycle-admission-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Reproduce pre-fix normal-close deletion and new preparation/downloader admission despite unresolved initialization, plus retired/prepared generation deletion despite unresolved records, changed session identity or a busy catalog. Share final/staging/retirement rules; keep identity checks and owned-generation deletion under the same catalog lock. Verify no blocked preparation, explicit retry after resolution, existing lease survival, healthy peer independence, valid-but-uncommitted initialization, abandoned-generation restart reclamation and normal-close retention. Reject file/symlink record namespaces and real non-root unreadable initialization directories. Publish diagnostics before returning a preparation error. This is cleanup admission, not generation-internal partial-deletion recovery, revocation of execution, hostile filesystem races, mixed versions, physical power loss, network filesystems, Windows or installed GUI/SDK journeys."
+    },
+    {
+      "id": "agent-generation-partial-cleanup-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-generation-cleanup/local-filesystem/identity-journal-ordered-deletion-retry",
+      "target": "verified", "claims": ["agent-generation-partial-cleanup-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Before payload deletion retain a no-replace sibling hard link to the validated generation identity under session catalog coordination. Resume errors and owned-child SIGKILL at five record/payload/marker/root boundaries; require real non-root permission failures at payload deletion, publication, root removal and final record unlink. Keep queued ownership after final unlink failure, deny late downloader attachment, preserve active peers and reject ambiguous or legacy missing identities. Missing marker is permitted only with a valid record and an empty root. Abandoned preparations recover after session closure, not through live orphan adoption. Excludes every whole-Agent boundary, live retries for dropped preparations, Windows sharing errors, hostile mutation, all I/O errors, physical power loss, network filesystems, mixed versions and installed GUI/SDK qualification."
+    },
+    {
+      "id": "agent-abandoned-generation-retry-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-abandoned-preparation/session-owned-weak-worker-bounded-retry",
+      "target": "verified", "claims": ["agent-abandoned-generation-retry-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Reproduce dropped-preparation cleanup remaining unreclaimed on the next preparation, then retain immutable identity in a session-owned queue. Reuse lifecycle/catalog checks for bounded, deduplicated, rotating batches; retry while idle and before preparation without downloading or executing work. Verify all five partial-cleanup boundaries, worker restart and spawn-failure fallback, healthy active-generation protection, ambiguous identity and lifecycle retention, real non-root permission repair, and weak-reference session release with stale-session fallback. Excludes Windows, installed GUI/SDK acceptance, arbitrary thread panic, hostile mutation, physical power loss, mixed versions, network filesystems and all I/O schedules. The retry interval does not bound filesystem operation duration."
     },
     {
       "id": "mac-linux-ssh-variant-deployment",

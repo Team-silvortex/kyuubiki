@@ -3,6 +3,43 @@
 use super::*;
 
 #[test]
+fn closing_store_releases_lease_while_a_duplicate_handle_survives() {
+    let scratch = Scratch::new();
+    let store = Store::open(&scratch.0).unwrap();
+    let duplicate = store.lock.try_clone().unwrap();
+    assert!(Store::open(&scratch.0).is_err());
+    drop(store);
+    let next = Store::open(&scratch.0)
+        .expect("a duplicate descriptor must not extend closed Store ownership");
+    assert!(Store::open(&scratch.0).is_err());
+    drop(duplicate);
+    assert!(
+        Store::open(&scratch.0).is_err(),
+        "old descriptor drop unlocked new owner"
+    );
+    drop(next);
+    assert!(Store::open(&scratch.0).is_ok());
+}
+
+#[test]
+fn failed_identity_initialization_releases_duplicate_lease_without_rewriting_bytes() {
+    let scratch = Scratch::new();
+    drop(Store::open(&scratch.0).unwrap());
+    let path = scratch.0.join("owner.lock");
+    fs::write(&path, b"truncated").unwrap();
+    let mut lease =
+        identity::OwnerLease::acquire(identity::open_lock(&scratch.0).unwrap()).unwrap();
+    let duplicate = lease.try_clone().unwrap();
+    assert!(identity::load_or_create(&mut lease, &scratch.0).is_err());
+    drop(lease);
+    let retry = identity::OwnerLease::acquire(identity::open_lock(&scratch.0).unwrap()).unwrap();
+    assert_eq!(fs::read(&path).unwrap(), b"truncated");
+    drop(duplicate);
+    assert!(identity::OwnerLease::acquire(identity::open_lock(&scratch.0).unwrap()).is_err());
+    drop(retry);
+}
+
+#[test]
 fn live_owner_corruption_blocks_operations_without_rewriting_identity() {
     let scratch = Scratch::new();
     let mut store = Store::open(&scratch.0).unwrap();

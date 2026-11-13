@@ -403,6 +403,9 @@ fn generation_execution_receipt(host: &AgentOperatorPackageHost) -> Option<Value
             "crash_recovery": "next_session_start",
             "janitor": {
                 "removed_stale_session_count": janitor.removed_stale_session_count,
+                "removed_initialization_staging_count": janitor.removed_initialization_staging_count,
+                "pending_abandoned_generation_count": janitor.pending_abandoned_generation_count,
+                "removed_abandoned_generation_count": janitor.removed_abandoned_generation_count,
                 "retained_active_session_count": janitor.retained_active_session_count,
                 "retained_invalid_session_count": janitor.retained_invalid_session_count
             }
@@ -640,8 +643,15 @@ fn reap_retired_generations() {
     let mut retired = retired_generations()
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
+    reap_retired_entries(&mut retired);
+}
+
+fn reap_retired_entries(retired: &mut Vec<RetiredOperatorPackageGeneration>) {
     retired.retain(|entry| {
         entry.host.upgrade().is_some()
             || remove_owned_operator_package_generation(&entry.generation).is_err()
     });
 }
+
+#[cfg(test)]
+mod retirement_tests;

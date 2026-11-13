@@ -2,6 +2,7 @@
 use super::*;
 use std::collections::HashSet;
 use std::io::Read;
+mod staging;
 
 pub(super) const DIRECTORY: &str = "initializations";
 const SCHEMA: &str = "kyuubiki.agent-session-initialization/v1";
@@ -17,6 +18,22 @@ struct Intent {
 pub(super) struct Recovery {
     pub report: GenerationJanitorReport,
     pub protected: HashSet<PathBuf>,
+}
+
+pub(super) fn has_pending_records(sessions: &Path, id: &str) -> Result<bool, String> {
+    let Some(directory) = lifecycle::record_directory(sessions, DIRECTORY)? else {
+        return Ok(false);
+    };
+    if !missing(&directory.join(format!("{id}.json")))? {
+        return Ok(true);
+    }
+    for entry in fs::read_dir(&directory).map_err(|error| error.to_string())? {
+        let path = entry.map_err(|error| error.to_string())?.path();
+        if staging::associated_id(&path) == Some(id) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn directory(sessions: &Path) -> Result<PathBuf, String> {
@@ -36,28 +53,20 @@ pub(super) fn begin(
     _catalog: &CatalogLease,
 ) -> Result<PathBuf, String> {
     let root = sessions.join(&marker.session_id);
-    if root.symlink_metadata().is_ok() {
+    if !missing(&root).map_err(|error| {
+        format!("cannot inspect operator session initialization target: {error}")
+    })? {
         return Err("operator session initialization target already exists".into());
     }
     let intent = Intent {
         schema_version: SCHEMA.into(),
         session: marker.clone(),
     };
-    let path = directory(sessions)?.join(format!("{}.json", marker.session_id));
     let bytes = serde_json::to_vec_pretty(&intent).map_err(|error| error.to_string())?;
     if bytes.len() as u64 > MAX_MARKER_BYTES {
         return Err("operator session initialization record exceeds its limit".into());
     }
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&path)
-        .map_err(|error| format!("cannot create session initialization record: {error}"))?;
-    #[cfg(test)]
-    partial_checkpoint("intent-partial", &root, &mut file, &bytes)?;
-    file.write_all(&bytes)
-        .and_then(|_| file.sync_all())
-        .map_err(|error| format!("cannot persist session initialization record: {error}"))?;
+    let path = staging::publish(&directory(sessions)?, marker, &bytes, &root)?;
     checkpoint("intent-synced", &root);
     Ok(path)
 }
@@ -67,9 +76,16 @@ pub(super) fn recover(
     cache: &Path,
     _catalog: &CatalogLease,
 ) -> Result<Recovery, String> {
-    let mut recovery = Recovery::default();
-    for entry in fs::read_dir(directory(sessions)?).map_err(|error| error.to_string())? {
-        let entry = entry.map_err(|error| error.to_string())?;
+    let entries = fs::read_dir(directory(sessions)?)
+        .map_err(|error| error.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+    let mut recovery = staging::recover(&entries, sessions, cache);
+    let blocked_staging = recovery.protected.clone();
+    for entry in entries {
+        if staging::is_staging(&entry.path()) {
+            continue;
+        }
         if let Some(id) = entry
             .file_name()
             .to_str()
@@ -77,6 +93,11 @@ pub(super) fn recover(
             && valid_session_id(id)
         {
             recovery.protected.insert(sessions.join(id));
+            // Conflicting lifecycle records cannot authorize either cleanup path.
+            if retirement::has_record(sessions, id).unwrap_or(true) {
+                recovery.report.retained_invalid_session_count += 1;
+                continue;
+            }
         }
         let parsed = read_intent(&entry.path(), cache);
         let Ok(intent) = parsed else {
@@ -84,6 +105,9 @@ pub(super) fn recover(
             continue;
         };
         let root = sessions.join(&intent.session.session_id);
+        if blocked_staging.contains(&root) {
+            continue;
+        }
         // Never let the ordinary recursive janitor bypass a rejected initialization record.
         recovery.protected.insert(root.clone());
         match reap_incomplete(&root, &intent.session) {
@@ -227,7 +251,10 @@ fn reap_incomplete(root: &Path, expected: &SessionMarker) -> Result<SessionReapO
 // Failure barriers are absent from production builds.
 pub(super) fn checkpoint(_stage: &str, _root: &Path) {
     #[cfg(test)]
-    tests::checkpoint(_stage, _root);
+    {
+        io_failures::checkpoint(_stage);
+        tests::checkpoint(_stage, _root);
+    }
 }
 
 #[cfg(test)]
@@ -247,5 +274,7 @@ pub(super) fn partial_checkpoint(
     Ok(())
 }
 
+#[cfg(test)]
+mod io_failures;
 #[cfg(test)]
 mod tests;

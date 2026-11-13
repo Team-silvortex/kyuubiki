@@ -558,3 +558,400 @@ power loss, adversarial concurrent filesystem mutation, network filesystems,
 mixed-version Agents, Windows and installed GUI/SDK acceptance remain unqualified.
 This does not establish directory-entry durability under hardware failure.
 No App installation, daily service restart, commit/push or paid API was performed.
+
+## Initialization Staging Publication Follow-Up
+
+New initialization records no longer write directly to their final JSON name.
+They use a versioned staging name containing canonical session identity and the
+SHA-256 of the complete expected record. The record is reconstructible from that
+identity and the current canonical cache path. File sync precedes same-directory
+hard-link publication, which cannot replace an existing name; the staging name is
+then unlinked before session creation. No overwrite/copy fallback is introduced.
+
+Recovery requires both the expected name commitment and a bounded byte-prefix
+match. Before publication, neither the final record nor the session may exist.
+After publication, both staging and final bytes must be complete and identical.
+Only the staging name is removed; session deletion remains the responsibility of
+the separate intent/lease janitor. Rejected staging protects its associated
+session from both janitors. Foreign-cache commitments, corrupt prefixes, trailing
+bytes, oversized files, unexpected sessions, final conflicts and symlinks remain
+reported rather than deleted. Old torn JSON records without commitments are still
+unproven; the earlier scope was clarified to preserve that legacy boundary.
+
+Owned test children were killed after staging creation, partial write, sync,
+publication and staging unlink. The recovery assertions retain no-replay,
+idempotence and active-lease protection. A controlled negative experiment replaced
+hard-link publication with ordinary rename: the existing-content preservation
+test failed. The no-replace implementation was restored and the full suite rerun.
+The commitment is not a signature or authentication against hostile local writers.
+
+The new `removed_initialization_staging_count` is separate from removed sessions,
+accumulates across explicit rescans and appears in execution/cache lifecycle
+receipts. A regression caught the field initially reaching only one receipt
+builder; the duplicate builder was removed in favor of the shared function.
+The strict JSON schema and example now include the nonnegative field, optional
+for older v1 receipts. Native contract checks enforce that optionality. This is
+not a promise that old strict validators accept every new field.
+
+Parallel failure testing also exposed a separate execution-store ownership issue.
+A duplicated descriptor could retain its OS lock after the logical Store closed.
+A deterministic pre-fix test reproduced immediate reopen failure while the
+duplicate remained alive. An owning-process RAII lease now explicitly unlocks on
+normal closure and initialization failure, without changing identity bytes or
+unlocking the next owner. The initial parallel failure is consistent with a
+temporary fork/exec descriptor copy, but that exact scheduling interleaving was
+not traced. Raw lease fixtures now explicitly release logical ownership before
+asserting immediate cleanup; active protection assertions remain unchanged.
+
+Final Mac ARM64 and physical Linux x86_64 runs each passed 382 Agent unit tests
+plus the 11 download/contention/real-template integration entries. One ignored
+entry is the child-process harness, driven by its parent regressions. Repeated
+Mac parallel unit runs also passed. Mac passed all 419 native-tool tests, strict
+CLI test-target lint, the updated package lifecycle contract, book/inventory and
+Store checks, formatting and the source/document size audit. Both hosts had no
+remaining initialization-test directories; daily service identities were unchanged.
+
+The tensor adds `agent-initialization-staging-source-regression` and its separate
+verified local-recovery obligation: 492 claims / 479 proven, 27 / 71 named
+scenarios met, 44 open. Coordinates remain 48 / 77 met, with 29 evidence gaps and
+23 P0 gaps. Revoking staging proof does not revoke the separate committed-intent
+recovery proof. The incidental Store lease fix is not whole-store qualification.
+
+This requires local filesystem hard-link support and qualifies process failures,
+not directory-entry durability after power loss. Unsupported filesystems fail
+explicitly. Network filesystems, Windows, mixed versions, hostile concurrent
+filesystem mutation, all I/O failures and installed GUI/SDK remain outside this
+claim. No installed App/runtime, daily service restart, commit/push or paid API
+was performed.
+
+## Initialization I/O Failure Follow-Up
+
+The target existence probe previously used `symlink_metadata().is_ok()`, treating
+inspection failures as absence. A pre-fix regression replaced the sessions parent
+with a regular file and demonstrated that initialization still created an intent.
+Only `NotFound` now permits creation; permission and other inspection errors return
+before staging or intent creation. Existing-target preservation remains unchanged.
+
+The new test-only `initialization/io_failures` module separates three mechanisms:
+
+- An owned subprocess sets a 96-byte file-size limit and ignores its own SIGXFSZ.
+  The production writer produces a real partial staging file, but no final record
+  or session. The subprocess restores its limit; replacement initialization
+  verifies and removes the prefix without replay or damage to a live peer.
+- A thread-local test hook returns an error at the staging file-sync boundary.
+  Publication remains blocked, and a later healthy open recovers the staging file.
+  This is an injected sync error, not a real storage-controller or kernel failure.
+- An explicitly invoked non-root Unix test removes permissions only from owned
+  fixture directories. It covers target inspection, hard-link publication,
+  staging unlink, final intent removal and incomplete-session cleanup. Failed
+  cleanup retains records and does not increment successful removal counts.
+  Restoring permissions permits explicit retry; rescanning is idempotent and
+  active peer metadata remains unchanged. Root execution is rejected, not passed.
+
+Mac ARM64 and physical Linux x86_64 each passed 385 Agent unit tests, the separate
+permission qualification, and all 11 related download/contention/template
+integration entries. The unit suite has three ignored entries: two subprocess
+harnesses driven by parent tests and the separately executed permission test.
+Mac also passed 419 native-tool tests, strict CLI test-target lint, lifecycle and
+Store contracts, book/inventory, formatting and the organization/line-count audit.
+No initialization fixture directories remained on either host; the daily Linux
+service process identities were unchanged.
+
+The tensor registers `agent-initialization-io-failure-source-regression` and its
+separate local-recovery obligation. Revoking this proof reopens this obligation
+without revoking process-termination/staging evidence. Current totals are 493
+claims / 480 proven, 28 / 72 named scenarios met, 44 open. Coordinates remain
+48 / 77 met with 29 evidence gaps and 23 P0 coordinate gaps; release remains blocked.
+
+This is source-level local-filesystem qualification, not actual disk exhaustion,
+physical sync failure, complete Agent startup under every error, all filesystem
+errors, power loss, hostile concurrent mutation, network filesystems, Windows or
+installed GUI/SDK acceptance. `retained_invalid_session_count` also includes
+temporarily unverifiable or unremovable records, not just corruption. Ordinary
+completed-session recursive cleanup under partial deletion errors is not closed
+by this initialization-only proof. No App/runtime update, daily service restart,
+commit/push or paid model API was performed.
+
+## Completed Session Retirement Recovery
+
+A pre-fix Mac permission regression reproduced the remaining full-session cleanup
+problem: whole-root `remove_dir_all` deleted the session marker before failing on
+an undeletable payload. A subsequent scan could no longer prove the leftover's
+identity. This was observed using an owned temporary directory under a non-root
+account, not simulated by manually deleting the marker.
+
+The new `operator_package_generation_session/retirement` module keeps an independent
+identity link in `agent-runtime-generations/retirements/<session-id>.json` before
+payload deletion. Publication uses a no-replace hard link to the validated existing
+marker, so it cannot leave a newly half-written record. Both catalog coordination
+and an exclusive session lease precede publication. The lease remains held while
+payload entries are removed; only then are the lease, marker, empty session root
+and finally retirement record unlinked. The record is temporary recovery metadata,
+not a retained backup or a new task journal.
+
+Recovery accepts matching identity and legal partial-cleanup states, retains live
+lease holders and rejects new downloader attachment to a recorded retirement.
+Unknown root contents, foreign/malformed records, conflicting identity and unsafe
+symlinks remain reported. A missing marker or lease with payload still present is
+not a valid cleanup state. Root/generations symlinks are rejected; nested payload
+links are unlinked without touching their external targets. Conflicting creation
+and retirement records protect the session from both janitors. Legacy partial
+deletions without a record are not retroactively claimed. Removal is counted only
+after the final record unlink succeeds; this is not a durable global counter.
+
+Tests inject errors and SIGKILL owned native test children at six boundaries:
+record publication, first payload-entry removal, full payload removal, lease
+unlink, marker unlink and empty-root removal. The first-entry barrier confirms
+that one payload has actually disappeared while another remains. Real non-root
+permission tests cover partial payload removal, record publication and final
+record unlink. They verify explicit retry, no replay, preserved active peers and
+idempotent rescans. Six concurrent openers claim one recorded cleanup exactly once.
+The fault controls and subprocess barriers exist only in test builds.
+
+Mac ARM64 and physical Linux x86_64 each passed 395 Agent unit tests, three explicit
+permission qualifications (including the prior initialization regression), and
+all 11 related download/contention/template integrations. Six unit entries are
+ignored by default: three child harnesses driven by their parent tests and three
+permission qualifications run explicitly. Mac also passed 419 native-tool tests,
+strict CLI test-target lint, lifecycle/Store contracts, documentation checks,
+formatting and the source/document size audit. No retirement fixture directories
+remained, and the daily Linux service process identities were unchanged.
+
+The tensor adds `agent-session-retirement-source-regression` and its independent
+local-recovery obligation: 494 claims / 481 proven, 29 / 73 named scenarios met,
+44 open. Removing this proof reopens completed-session cleanup qualification
+without revoking initialization-I/O proof. Coordinates remain 48 / 77 met with
+29 evidence gaps and 23 P0 coordinate gaps; release status remains blocked.
+
+This qualifies source-level cleanup on local Mac/Linux filesystems, not every
+whole-Agent startup boundary, all I/O errors/interleavings, actual disk exhaustion,
+directory-entry durability after power loss, hostile local mutation, mixed
+versions, network filesystems, Windows or installed GUI/SDK acceptance. Hard-link
+support is required; the identity link is not authentication. Filesystem removal
+duration is not bounded by the catalog-lock acquisition timeout. No App/runtime
+update, daily service restart, commit/push or paid API was performed.
+
+## Session Lifecycle Entry Consistency
+
+Controlled fixtures introduced unresolved initialization records into an otherwise
+valid live session. Three pre-fix regressions failed: normal session drop deleted
+the protected root, downloader admission accepted a new lease, and generation
+preparation continued despite the current session's unresolved record. Startup
+scan protection alone therefore did not cover these other session entrypoints.
+
+The shared `lifecycle` check now guards normal close, downloader attachment and
+generation preparation under catalog coordination. It rejects final initialization
+records, associated v1 staging records and retirement records for the current
+session. Staging association reuses the recovery parser rather than a second name
+interpretation. The helper validates record namespaces as real directories; a file,
+symlink or an unreadable initialization namespace is not evidence of absence.
+Preparation publishes the scan counters before returning a refusal, and does not
+create a generation directory. Read-only `session_recovery` exposes the admission
+and normal-close policies.
+
+Tests verify all three entrypoints, actual generation preparation, explicit retry
+after resolving the fixture's record, healthy peer independence and preservation
+of already held downloader leases. Valid-but-uncommitted initialization also blocks
+new work; after its owner closes, the existing recovery protocol can safely finish
+the known incomplete session. This does not revoke existing execution or introduce
+automatic replay. Normal close retains ambiguous sessions for a later scan rather
+than publishing retirement and deleting them behind the scanner's protection.
+Namespace substitution tests preserve outside symlink targets, and a non-root
+permission test separately denies enumeration while allowing directory lookup.
+
+Mac ARM64 and physical Linux x86_64 each passed 403 Agent unit tests, four explicit
+permission qualifications and all 11 related download/contention/template
+integrations. Seven default-ignored entries are three subprocess harnesses driven
+by their parent tests and four explicitly executed permission qualifications.
+Mac passed 419 native-tool tests, strict CLI test-target lint, lifecycle/Store
+contracts, book/inventory, formatting and source/document organization checks.
+No admission fixture directories remained; daily Linux service identities did
+not change.
+
+The tensor adds `agent-session-lifecycle-admission-source-regression` and an
+independent qualification scope: 495 claims / 482 proven, 30 / 74 named scenarios
+met, 44 open. Revoking this proof reopens entry consistency without revoking the
+separate completed-session retirement proof. Coordinates remain 48 / 77 met with
+29 evidence gaps and 23 P0 coordinate gaps; release status remains blocked.
+
+This is current source-level Mac/Linux local-filesystem qualification. It does
+not cover every generation-internal cleanup path, hostile concurrent filesystem
+mutation, mixed binaries, physical power loss, network filesystems, Windows or
+installed GUI/SDK acceptance. A broken shared record namespace can block the cache
+as a whole; healthy-peer isolation here concerns per-session records, not unreadable
+global metadata. No App/runtime update, daily service restart, commit/push or paid
+model API was performed.
+
+## Owned-Generation Cleanup Admission
+
+Four executed pre-fix regressions demonstrated another lifecycle bypass: retired
+generation deletion and abandoned-preparation drop ignored unresolved per-session
+initialization records, while explicit deletion also accepted a changed session
+identity and bypassed a held catalog lock. Protecting startup scans and new
+preparation alone did not protect these destructive entrypoints.
+
+Owned-generation removal now enters through the session's
+`with_generation_cleanup` guard. It validates the current real session directory,
+compares the persisted identity, checks final/staging/retirement records, and
+retains catalog coordination through the removal operation. Errors preserve the
+generation; explicit cleanup retry works after resolution. A dropped preparation
+with unresolved records leaves its payload for later stale-session reclamation,
+not task replay. Healthy peer sessions still clean their own generations.
+The read-only `session_recovery.generation_cleanup` policy describes this boundary.
+
+Eight new tests cover those four regressions, lock lifetime/release after failure,
+file and symlink namespace substitution, and actual non-root directory permission
+denial. Mac ARM64 and physical Linux x86_64 each passed 410 Agent unit tests,
+five explicitly run permission tests and 12 download/cancellation/template
+integration tests. Eight default-ignored unit entries comprise three child
+harnesses already driven by parent tests and the five permission qualifications.
+Mac also passed 419 native-tool tests, strict CLI test-target lint, lifecycle
+contracts, documentation checks, formatting and the source/document size audit.
+No admission fixture directories remained; daily Linux services kept their
+original process identities.
+
+The existing `agent-session-lifecycle-admission-source-regression` claim and its
+named scope now require this additional deletion-entry evidence rather than
+adding a new completed coordinate. The tensor still reports 29 evidence-grade
+gaps, 23 P0 coordinate gaps and blocked release readiness. Source tests and the
+actual installed GUI/SDK acceptance remain separate.
+
+Remaining audit candidates include missing lifecycle-record directories being
+treated as absent records, and differences between downloader admission and
+retirement validation for malformed owner/lease metadata. These are code-review
+findings for a subsequent controlled regression, not newly qualified behavior.
+Generation-internal partial recursive deletion, power-loss durability, hostile
+concurrent mutation, mixed versions, network filesystems and Windows remain
+outside this cleanup-admission proof. No App/runtime update, daily service
+restart, commit/push or paid model API was performed in this round.
+
+## Generation Partial-Cleanup Recovery
+
+A real non-root permission failure reproduced the missing recovery identity in
+generation cleanup on both Mac and Linux. The previous whole-root recursive
+removal had no independent record surviving its internal marker. In these
+executed pre-fix trials the internal marker still existed: the failed assertion
+was absence of the independent record, not an observed early marker deletion.
+The subsequent boundary tests exercise the later marker/root removal windows
+explicitly rather than assuming a particular filesystem traversal order.
+
+Generation removal now retains the existing session identity/lifecycle/catalog
+guard, publishes a no-replace sibling hard link to the validated marker, removes
+payload entries, then removes the internal marker, empty root and sibling record
+in that order. The record is metadata, not a copy of the package payload, and is
+removed immediately on completion. Unsupported hard links fail before payload
+deletion. Record reads are bounded, and both persisted identities are compared
+against the immutable owned identity, not merely against each other.
+
+Retry can finish an empty root whose internal marker was already removed, or
+unlink the final record after the root is gone. An absent root does not bypass
+record validation. Runtime retirement retains its owner on failure, including
+failure to unlink that final record. Conflicting, malformed, oversized and linked
+identity records remain protected; legacy missing identity is not guessed.
+Any retirement record blocks a new downloader for that generation under catalog
+coordination, while a healthy sibling generation remains usable.
+
+Five boundaries are tested with both injected errors and SIGKILL of an owned
+test subprocess: record publication, first payload removal, all payload removal,
+internal marker removal and root removal. Stale-session recovery reclaims the
+terminated child's residual generation exactly once, preserves a live peer and
+does not replay work. Separate ordinary-user permission tests deny payload
+deletion, record publication, root deletion and final record deletion; explicit
+repair/retry and retirement-queue ownership are verified. Abandoned preparations
+whose drop cleanup fails are reclaimed after their session closes, not by a new
+live-session orphan queue.
+
+Mac ARM64 and physical Linux x86_64 each passed 419 Agent unit tests, eight
+explicit permission tests and 12 related download/cancellation/template
+integration tests. The 12 default-ignored unit entries comprise those eight
+permission tests and four subprocess entrypoints exercised by their parent
+tests. Mac also passed 420 native-tool tests, strict CLI test-target lint,
+dynamic-package contract self-tests, book/inventory validation, formatting and
+the source/document size audit. No generation-cleanup/queue fixture directories
+remained; daily Linux services kept their original process identities.
+
+The independent `agent-generation-partial-cleanup-source-regression` claim and
+local-recovery scope bring the tensor to 496 claims / 483 proven and 31 / 75
+named scenarios met, with 44 open. Removing this proof reopens generation cleanup
+qualification without revoking the separate session-retirement or admission
+proof. Coordinate coverage remains 48 / 77, with 29 evidence gaps and 23 P0 gaps;
+release readiness remains blocked rather than promoting an entire recovery
+coordinate from this narrow result.
+
+This qualifies current source-level local Mac/Linux cleanup, not every installed
+Agent/GUI/SDK path, all I/O failures or interleavings, actual disk exhaustion,
+physical power-loss durability, hostile local mutation, mixed binaries, network
+filesystems or Windows sharing errors. The identity record is not authentication;
+filesystem deletion duration is not bounded by the catalog-lock wait budget.
+The earlier lifecycle namespace and downloader metadata audit candidates remain
+open. No App/runtime update, daily service restart, commit/push or paid model API
+was performed.
+
+## Abandoned Preparation Live Retry
+
+An executed pre-fix regression left a partially removed preparation in the same
+live session, cleared the injected failure and prepared another generation.
+The old payload still existed at the record-publication boundary: dropping the
+preparation lost the only retry owner, and new preparation only scanned stale
+sessions. This round closes that specific gap without adopting unknown live
+directories or changing runtime host ownership.
+
+Failed preparation drop now records immutable generation paths and identity in
+a session-owned retry queue. The queue has no strong reference back to its
+session; a lazy worker holds only a weak reference while waiting. It retries at
+1000 ms intervals, at most 16 entries per sweep, and exits when empty or when the
+session is gone. New preparation also retries and can restart a failed worker
+launch. Creating the packages directory now occurs after the prepared ownership
+guard exists, so a failure there uses the same cleanup/queue path rather than
+an unchecked recursive fallback. Failure while initially writing the identity
+marker remains outside this new queue's admission boundary.
+
+Failed entries rotate behind later arrivals, and queued/in-flight roots are
+deduplicated. A separate nonblocking sweep guard prevents overlapping retries;
+the queue-state mutex is released before filesystem operations. Each batch
+reuses the existing session identity, unresolved-record and catalog checks once,
+then the same generation cleanup protocol. Identity conflicts stay queued until
+explicitly repaired. Committed or successfully removed generations are never
+enqueued by preparation drop, and healthy active generations remain untouched.
+Neither automatic task replay nor automatic package download is introduced.
+
+The weak worker cannot pin an idle session, although an in-progress batch can
+temporarily extend its lifetime. Session closure releases the queue and leaves
+remaining files for stale-session recovery. Tests wait for actual reclamation,
+not merely Weak expiration: the final reference can expire before the destructor
+releases its file lease. This avoids misclassifying a correct concurrent retain
+as a recovery failure.
+
+The read-only recovery policy publishes retry interval, batch limit and closure
+fallback. Both fetch and execution receipts publish optional nonnegative
+`pending_abandoned_generation_count` and `removed_abandoned_generation_count`;
+pending includes in-progress entries, while removed counts successful retries
+within this session only. They are not durable global totals. The existing v1
+schema and example retain compatibility with older receipts that lack them.
+
+New tests cover all five partial-cleanup boundaries before the next preparation,
+idle background recovery and worker restart, worker-spawn failure fallback,
+deduplication and failure rotation, concurrent sweep admission, immutable identity
+and lifecycle refusal, active-generation preservation, weak session release and
+real non-root permission repair without closing the session or submitting work.
+Mac ARM64 and physical Linux x86_64 each passed 428 Agent unit tests, nine explicit
+permission tests and 12 related download/cancellation/template integrations.
+The 13 default-ignored entries are those nine permission tests and four child
+harnesses driven by parent tests. Mac also passed 421 native-tool tests, strict
+CLI lint, formatting, dynamic package contract self-tests, documentation checks
+and the source/document size audit. No retry/cleanup/queue fixture directories
+remained, and daily Linux service process identities stayed unchanged.
+
+The independent `agent-abandoned-generation-retry-source-regression` claim adds
+one named local-recovery scope. The tensor now has 497 claims / 484 proven,
+32 / 76 named scenarios met and 44 open. A negative-control test revokes this
+proof without revoking partial-generation cleanup, session retirement or lifecycle
+admission. Coordinate coverage remains 48 / 77, with 29 evidence gaps, 23 P0 gaps
+and blocked release readiness.
+
+This is current source-level Mac/Linux local-filesystem acceptance. It does not
+qualify installed GUI/SDK journeys, Windows, physical power loss, arbitrary worker
+panic, hostile local mutation, every filesystem error/interleaving, mixed binaries
+or network filesystems. The interval and batch size do not bound filesystem I/O
+duration. No App/runtime update, daily service restart, commit/push or paid model
+API was performed.

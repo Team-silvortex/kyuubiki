@@ -81,11 +81,11 @@ fn killed_initializer_recovers_each_committed_creation_boundary() {
     }
 }
 
-#[cfg(unix)]
 #[test]
-fn killed_before_intent_commit_retains_unproven_record_without_creating_a_session() {
-    let fixture = Fixture::new("partial-intent");
-    let stale = kill_at_checkpoint(&fixture, "intent-partial");
+fn legacy_torn_intent_remains_unproven_without_creating_a_session() {
+    let fixture = Fixture::new("legacy-partial-intent");
+    let stale = fixture.incomplete();
+    fs::remove_dir_all(&stale).unwrap();
     assert!(!stale.exists());
     let record = fs::read_dir(fixture.intents())
         .unwrap()
@@ -93,7 +93,9 @@ fn killed_before_intent_commit_retains_unproven_record_without_creating_a_sessio
         .unwrap()
         .unwrap()
         .path();
-    let original = fs::read(&record).unwrap();
+    let complete = fs::read(&record).unwrap();
+    let original = complete[..complete.len() / 2].to_vec();
+    fs::write(&record, &original).unwrap();
     assert!(!original.is_empty());
     let session = OperatorPackageGenerationSession::open(&fixture.cache).unwrap();
     assert_eq!(session.janitor_report().retained_invalid_session_count, 1);
@@ -204,6 +206,7 @@ fn incomplete_initialization_preserves_lease_holder_then_retries() {
     assert!(stale.exists());
     assert_eq!(session.janitor_report().retained_active_session_count, 1);
     assert_eq!(session.janitor_report().retained_invalid_session_count, 0);
+    FileExt::unlock(&lease).unwrap();
     drop(lease);
     session.refresh_stale_sessions().unwrap();
     assert!(!stale.exists());
@@ -295,14 +298,14 @@ fn initialization_never_claims_an_existing_target() {
     assert!(stale.exists());
 }
 
-struct Fixture {
-    root: PathBuf,
-    cache: PathBuf,
-    sessions: PathBuf,
+pub(super) struct Fixture {
+    pub(super) root: PathBuf,
+    pub(super) cache: PathBuf,
+    pub(super) sessions: PathBuf,
 }
 
 impl Fixture {
-    fn new(label: &str) -> Self {
+    pub(super) fn new(label: &str) -> Self {
         let root = std::env::temp_dir().join(format!(
             "kyuubiki-init-recovery-{label}-{}",
             next_session_id().unwrap()
@@ -317,11 +320,11 @@ impl Fixture {
         }
     }
 
-    fn intents(&self) -> PathBuf {
+    pub(super) fn intents(&self) -> PathBuf {
         self.sessions.parent().unwrap().join(DIRECTORY)
     }
 
-    fn incomplete(&self) -> PathBuf {
+    pub(super) fn incomplete(&self) -> PathBuf {
         let catalog = CatalogLease::acquire(&self.cache).unwrap();
         let marker = SessionMarker {
             schema_version: SESSION_MARKER_SCHEMA.into(),
@@ -360,7 +363,7 @@ impl Drop for OwnedChild {
 }
 
 #[cfg(unix)]
-fn kill_at_checkpoint(fixture: &Fixture, stage: &str) -> PathBuf {
+pub(super) fn kill_at_checkpoint(fixture: &Fixture, stage: &str) -> PathBuf {
     use std::os::unix::process::ExitStatusExt;
     let ready = fixture.root.join("ready");
     let mut child = OwnedChild(

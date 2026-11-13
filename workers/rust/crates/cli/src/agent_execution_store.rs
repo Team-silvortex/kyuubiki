@@ -1,8 +1,7 @@
 use std::collections::HashSet;
-use std::fs::{self, File};
+use std::fs;
 use std::path::{Path, PathBuf};
 
-use fs2::FileExt;
 use kyuubiki_protocol::{
     DURABLE_AGENT_EXECUTION_SCHEMA, DurableAgentTask, RpcResponse, validate_durable_execution_id,
     validate_rpc_response_envelope,
@@ -117,7 +116,7 @@ impl From<&str> for AdmissionFailure {
 pub(crate) struct Store {
     root: PathBuf,
     store_id: String,
-    lock: File,
+    lock: identity::OwnerLease,
     active: HashSet<String>,
     known_admissions: HashSet<String>,
     inventory: inventory::Inventory,
@@ -130,9 +129,7 @@ pub(crate) struct Store {
 impl Store {
     pub fn open(root: &Path) -> Result<Self, String> {
         io::prepare_root(root)?;
-        let mut lock = identity::open_lock(root)?;
-        lock.try_lock_exclusive()
-            .map_err(|e| format!("execution store is already owned: {e}"))?;
+        let mut lock = identity::OwnerLease::acquire(identity::open_lock(root)?)?;
         let store_id = identity::load_or_create(&mut lock, root)?;
         let mut store = Self {
             root: root.to_path_buf(),

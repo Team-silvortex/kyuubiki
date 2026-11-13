@@ -733,10 +733,135 @@ cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --te
             清理计数包括已确认但尚未创建目录的遗留初始化记录。</li>
         </ul>
         <p class="docs-copy">源码回归以独立原生测试子进程执行真实会话初始化，在记录同步、目录创建、标记及租约半写、
-          初始化提交等十个阶段强制终止；另外验证清理中途再次终止，以及初始化记录半写时的保留行为。
+          初始化提交等十个阶段强制终止；另外验证清理中途再次终止，以及旧格式半写记录的保留行为。
           故障注入入口仅存在于测试构建，不是生产 Agent 的环境变量开关。该证据不等于整机断电、网络文件系统、
           混合版本、Windows 或已安装 GUI/SDK 验收。</p>
         <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation_session::initialization::tests</code></pre>
+        <h3 id="agent-initialization-staging-recovery">初始化记录的完整发布与暂存回收</h3>
+        <p class="docs-copy">新记录先写入同目录的版本化暂存文件，完成文件同步后再以不覆盖已有路径的硬链接方式发布正式记录。
+          暂存名绑定规范会话 ID 和完整预期内容的 SHA-256；恢复时由当前缓存路径与身份重建预期内容，
+          同时核对文件名摘要和实际内容前缀，不仅按后缀删除。</p>
+        <ul class="docs-list">
+          <li>尚未发布时，只有对应会话和正式记录都不存在，才可清理匹配的空文件、半写或完整暂存文件。</li>
+          <li>已经发布但暂存名尚未删除时，要求暂存内容和正式记录都完整匹配；仅移除暂存名，
+            正式记录与活跃会话仍由原有身份和租约机制保护。</li>
+          <li>摘要错误、错缓存、额外内容、超限文件、符号链接、意外会话及正式记录冲突均保留。
+            被拒绝的暂存记录还会阻止其他清理路径绕过检查删除关联会话。</li>
+          <li><code>removed_initialization_staging_count</code> 独立统计暂存回收，不混入旧会话清理数量；
+            发布和回收策略由 <code>session_recovery</code> 只读公开。</li>
+        </ul>
+        <p class="docs-copy">测试在暂存创建、半写、同步、正式发布和暂存清理后强制终止专属子进程，
+          确认重启能完成清理、不重复计数、不覆盖已有文件。完整发布依赖同目录硬链接支持，失败会明确报错，
+          不退回可能覆盖旧文件的发布方式。摘要不是签名或对本机恶意写入者的认证；旧式无法确认的半写 JSON 仍保留。
+          该范围限同版本、本机文件系统和进程故障，不证明硬件断电、网络文件系统或 Windows 验收。</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation_session::initialization</code></pre>
+        <h3 id="agent-initialization-io-recovery">初始化文件错误与显式恢复</h3>
+        <p class="docs-copy">目标会话路径只有在明确不存在时才进入初始化。权限不足、父路径不是目录等检查错误会直接返回，
+          不再当作“尚未创建”而写入初始化记录。暂存写入或同步失败时，不发布正式记录、不创建会话；
+          保留可验证残留，供下一次启动或显式准备时恢复，不自动重放任务。</p>
+        <ul class="docs-list">
+          <li>Mac ARM64 与 Linux x86_64 的专属测试子进程通过文件大小限制，真实留下 96 字节短写暂存文件，
+            确认没有正式发布，并可清理重试。限制只作用于测试子进程，不填满开发机或服务器磁盘。</li>
+          <li>以普通用户撤销专属测试目录权限，覆盖路径检查、硬链接发布、暂存名删除、初始化提交和未完成会话清理失败。
+            清理不能完成时保留记录，不计为成功；恢复权限后再次显式扫描可完成回收，活跃相邻会话不受影响。</li>
+          <li>文件同步失败使用仅在测试构建存在的注入点，不能当作真实硬件同步故障。
+            权限验收必须显式运行，管理员身份会拒绝验收，不能以绕过权限的成功冒充覆盖。</li>
+        </ul>
+        <p class="docs-copy"><code>retained_invalid_session_count</code> 也包含无法验证或暂时无法清理的记录，
+          不代表这些记录必然损坏。本轮仅证明上述错误边界；不证明实际磁盘耗尽、整机断电、所有文件系统故障、
+          恶意并发修改、网络文件系统、Windows 或已安装 GUI/SDK 链路。</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation_session::initialization::io_failures
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli real_permission_failures_preserve_records_and_allow_explicit_retry -- --ignored --test-threads=1</code></pre>
+        <h3 id="agent-session-retirement-recovery">完整旧会话清理中断恢复</h3>
+        <p class="docs-copy">完整旧会话不再对整个目录直接递归删除。清理前必须持有目录协调锁、取得独占会话租约，
+          并将已验证的身份标记硬链接到 <code>agent-runtime-generations/retirements/&lt;session-id&gt;.json</code>。
+          该记录不覆盖已有文件，也不复制一份可能半写的 JSON；它随最后一次清理完成而删除，不是长期备份。</p>
+        <ul class="docs-list">
+          <li>顺序固定为：登记清理、逐项删除代次负载、删除租约、删除身份标记、删除空会话目录、最后删除清理记录。
+            负载删除失败时身份仍在；最后几个步骤失败或进程被终止时，独立记录仍能证明归属。</li>
+          <li>下一次启动或显式准备扫描可继续清理，不重放任务。清理记录也删除成功后才计入
+            <code>removed_stale_session_count</code>；部分完成或暂时无权限不会伪装成成功。</li>
+          <li>仍有租约持有者时保留并延后处理。已登记清理的会话拒绝新下载者附着，避免重新启用正待删除的负载。</li>
+          <li>错误身份、未知根目录内容、冲突记录和身份文件符号链接均保留。负载仍在但身份或租约丢失时拒绝猜测；
+            无清理记录的旧式残留不自动补认。初始化与清理记录冲突时，两条清理路径都保留现场。</li>
+          <li>根目录或代次根的符号链接不进入清理；合法负载目录内部的符号链接只删除链接本身，不跟随到外部目标。</li>
+        </ul>
+        <p class="docs-copy">测试在登记、首个负载删除、全部负载删除、租约删除、标记删除和空目录删除后，
+          分别注入返回错误及强制终止专属测试子进程；另以普通用户测试真实权限拒绝、显式重试、活跃会话保护与并发单次计数。
+          这里执行真实清理代码，但不是每个位置都在已安装 Agent 中验收。记录不是对恶意本机写入者的认证，
+          也不证明断电持久性、网络文件系统、混合版本或 Windows。文件系统清理耗时不包含在目录锁等待上限内。</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation_session::retirement_tests
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli denied_payload_cleanup_preserves_identity_and_retries_without_replay -- --ignored --test-threads=1
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli retirement_record_permission_failures_preserve_proof_until_explicit_retry -- --ignored --test-threads=1</code></pre>
+        <h3 id="agent-session-lifecycle-admission">清理保护与新任务准入的一致性</h3>
+        <p class="docs-copy">正常会话退出、新下载者附着、新代次准备与旧代次删除共用生命周期检查，不能只在启动扫描中保留异常记录，
+          却从其他入口继续使用或删除同一会话。检查在目录协调锁内进行；仅确认内容有效也不等于初始化已提交。</p>
+        <ul class="docs-list">
+          <li>当前会话仍有初始化记录、可关联的 v1 暂存记录或清理记录时，拒绝新代次准备与新下载附着；
+            正常退出保留现场，不绕过恢复扫描的保护。有效但尚未提交的初始化记录也不能放行。</li>
+          <li>新代次准备会先更新扫描统计，再返回当前会话的拒绝原因；不会因此创建代次目录。
+            解除相应阻塞后，调用方可以显式重试，不自动重放研究任务。</li>
+          <li>已有下载租约不被撤销，也不杀死持有者；仍需等它释放后才能回收。
+            单个会话的异常记录不阻止其他健康会话准备新代次。</li>
+          <li>旧代次删除和放弃准备后的自动清理还必须复核当前会话身份，并将目录锁持续持有到删除结束。
+            锁忙、身份变化或记录未解决时不删除内容；健康会话仍可独立清理。解决阻塞后可重试清理，
+            已放弃的代次也可在会话退出后由恢复扫描回收，不重放算子任务。</li>
+          <li>记录目录必须是真实目录，不能用普通文件或符号链接代替；无法读取初始化目录、无法排除暂存记录时明确拒绝。
+            整个共享记录目录损坏或不可读时不能保证其他会话继续工作，不能把这个全局问题当成“没有记录”。</li>
+        </ul>
+        <p class="docs-copy">只读 <code>session_recovery</code> 中的 <code>session_admission</code>、
+          <code>normal_close</code> 与 <code>generation_cleanup</code> 公开这些边界。源码测试覆盖关闭、下载附着、实际代次创建与删除、显式恢复、存续租约以及真实权限拒绝。
+          这是当前本地生命周期入口的检查，不是阻止已有计算继续执行；代次内部部分删除的有限恢复验收见下一节，
+          也不证明恶意并发文件修改、混合版本、断电、网络文件系统、Windows 或已安装 GUI/SDK 全链路。</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation_session::admission_tests
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli unreadable_initialization_records_retain_owner_until_explicit_retry -- --ignored --test-threads=1
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli generation_cleanup_requires_readable_initialization_records -- --ignored --test-threads=1</code></pre>
+        <h3 id="agent-generation-partial-cleanup">代次目录部分删除后的恢复</h3>
+        <p class="docs-copy">代次清理不再对整个根目录直接递归删除。通过会话身份和生命周期复核后，
+          先将已验证标记硬链接到同级 <code>.kyuubiki-retired-&lt;generation-id&gt;.json</code>，
+          再删除负载，最后删除内部标记、空根目录和同级记录。该记录不复制算子负载，完成后立即删除，
+          不是永久备份；不能创建硬链接时，不进入负载删除。</p>
+        <ul class="docs-list">
+          <li>负载删到一半失败时，身份仍保留；已有运行时退役队列保留所有权，后续重试只清理剩余内容，不重放任务。</li>
+          <li>内部标记已删但根目录尚在时，只有匹配记录且根目录为空才能续清。
+            根目录已删也必须验证并删除最后一条记录，不能直接报告成功并丢弃重试句柄。</li>
+          <li>记录存在即拒绝新下载者附着到该代次，包括损坏记录；同一会话中的健康代次不受此限制。
+            冲突身份、异常链接及没有记录的旧缺标记目录不被猜测性接管。</li>
+          <li>专属测试进程在五个清理边界被强制终止后，由持有独占会话租约的旧会话扫描回收残留，
+            不删除仍有活跃租约的会话。放弃准备后的清理失败现在由下一节的会话队列接续；
+            队列随会话关闭后，剩余目录仍由旧会话扫描回收，不扫描接管活跃会话中的未知目录。</li>
+        </ul>
+        <p class="docs-copy">只读 <code>session_recovery.generation_retirement</code> 和
+          <code>retiring_generation_admission</code> 公布上述规则。验收包含普通用户真实权限拒绝、
+          部分负载删除、记录发布、根目录删除、最后记录删除，以及重试队列保留所有权。
+          这是 Mac/Linux 本地文件系统源码验收，不是所有已安装 Agent 路径、Windows 文件共享错误、
+          物理断电持久性、网络文件系统、混合版本或恶意并发写入的证明。清理耗时不受目录锁等待预算约束。</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation::cleanup_tests
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation::cleanup_tests -- --ignored --skip generation_cleanup_crash_child --test-threads=1
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli retirement_queue_retains_owner_after_final_record_unlink_permission_failure -- --ignored --test-threads=1</code></pre>
+        <h3 id="agent-abandoned-generation-retry">放弃准备后的在线清理重试</h3>
+        <p class="docs-copy">准备对象释放时若清理失败，不再丢掉代次身份。会话保存待清理目录与不可变身份，
+          后台工作线程每 1000 ms 尝试一次，每批最多 16 个；下一次代次准备也会尝试清理。
+          这里自动重试的是文件清理，不是下载、算子执行或研究任务。</p>
+        <ul class="docs-list">
+          <li>失败条目排到队尾，不挤掉新条目；同一目录去重，并发重试不重复执行同一批。
+            队列锁不跨文件 I/O 持有，每批共用现有会话身份、生命周期与目录协调锁检查。
+            1000 ms 是重试间隔，不是文件删除完成时限。</li>
+          <li>没有新的研究请求，修复权限或恢复原身份后也能继续回收。线程创建失败时保留队列，
+            下一次准备仍可清理或重启工作线程；队列为空时线程退出。</li>
+          <li>只接收真正放弃且清理失败的准备对象，不把已提交或活跃代次加入队列。
+            未解决会话记录、身份变化或权限错误仍保留现场，不因为后台运行就绕过保护。</li>
+          <li>队列不强引用所属会话，工作线程等待时也只持有弱引用。正在执行的清理可暂时延长会话寿命，
+            等待中的线程不会。会话结束后，残留交回已有旧会话恢复协议。</li>
+          <li><code>session_recovery</code> 公开重试间隔、批次上限与退出策略；代次回执中的
+            <code>pending_abandoned_generation_count</code> 包含正在处理的条目，
+            <code>removed_abandoned_generation_count</code> 统计本会话重试成功数，均不冒充持久化历史。</li>
+        </ul>
+        <p class="docs-copy">源码验收覆盖五个部分删除边界、空闲后台恢复、工作线程再次启动、创建失败兜底、
+          去重与失败批次轮转、生命周期拒绝、活跃代次保护、会话释放和普通用户真实权限拒绝。
+          这不是 Windows、已安装 GUI/SDK 全链路、物理断电、任意线程恐慌或所有文件系统错误的完整证明。</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation::retry
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli abandoned_cleanup_retries_real_permission_failure_while_session_is_live -- --ignored --test-threads=1</code></pre>
         <h3 id="agent-tls-control-latency">TLS 短帧控制链路延迟</h3>
         <p class="docs-copy">2026-11-13：大量取消请求暴露了 Linux 冷连接延迟。独立三轮、每轮 32 次测试保持相同的
           TLS 1.3、完整握手、token 认证和分拆长度头/正文；只在双端握手前启用 <code>TCP_NODELAY</code>。
