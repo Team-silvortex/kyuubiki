@@ -52,6 +52,7 @@ pub(crate) fn prepare_operator_package_generation_excluding(
     active_packages_root: &Path,
     excluded_package_ids: &BTreeSet<String>,
 ) -> Result<PreparedOperatorPackageGeneration, String> {
+    session.refresh_stale_sessions()?;
     let active_packages_root =
         canonical_directory(active_packages_root, "active operator packages root")?;
     if active_packages_root

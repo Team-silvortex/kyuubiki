@@ -147,7 +147,7 @@ impl Fixture {
     }
 }
 
-fn helper_connection(listener: &TcpListener) -> TcpStream {
+fn helper_connection(listener: &TcpListener) -> (TcpStream, u32) {
     let start = Instant::now();
     let mut stream = loop {
         match listener.accept() {
@@ -162,22 +162,45 @@ fn helper_connection(listener: &TcpListener) -> TcpStream {
             Err(e) => panic!("helper connection failed: {e}"),
         }
     };
+    // macOS inherits the listener's nonblocking mode; a timeout alone does not undo it.
+    stream.set_nonblocking(false).unwrap();
     stream
         .set_read_timeout(Some(Duration::from_millis(1500)))
         .unwrap();
     let mut pid = [0; 4];
     stream.read_exact(&mut pid).unwrap();
-    assert_ne!(u32::from_be_bytes(pid), std::process::id());
-    stream
+    let pid = u32::from_be_bytes(pid);
+    assert_ne!(pid, std::process::id());
+    (stream, pid)
 }
 
-fn assert_helper_stopped(mut stream: TcpStream) {
+fn assert_helper_stopped((mut stream, pid): (TcpStream, u32), scenario: &str) {
     // EOF proves its owned connection closed even if init has not yet reaped a zombie.
     assert_eq!(
-        stream
-            .read(&mut [0])
-            .expect("native descendant remained alive"),
+        stream.read(&mut [0]).unwrap_or_else(|error| {
+            panic!("native descendant connection still open: scenario={scenario}, pid={pid}, process_group={}, alive={}, error={error}",
+                unsafe {libc::getpgid(pid as i32)}, unsafe {libc::kill(pid as i32, 0)} == 0)
+        }),
         0
+    );
+}
+
+#[test]
+fn accepted_helper_connection_restores_blocking_mode_for_cleanup_deadline() {
+    use std::io::Write;
+    use std::os::fd::AsRawFd;
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let mut peer = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+    // Synthetic PID for wire framing only; this test never queries or signals it.
+    peer.write_all(&1_u32.to_be_bytes()).unwrap();
+    let (stream, _) = helper_connection(&listener);
+    let flags = unsafe { libc::fcntl(stream.as_raw_fd(), libc::F_GETFL) };
+    assert!(flags >= 0);
+    assert_eq!(
+        flags & libc::O_NONBLOCK,
+        0,
+        "cleanup reads must honor their existing timeout"
     );
 }
 
@@ -224,7 +247,7 @@ fn parent_loss_stops_owned_native_process_group() {
         );
         assert!(work.join().unwrap().is_err());
         assert_gone(pid);
-        assert_helper_stopped(stream);
+        assert_helper_stopped(stream, "parent-loss-tree");
     });
 }
 
@@ -258,7 +281,7 @@ fn descendants_stop_on_success_crash_timeout_and_cancellation() {
                 assert_eq!(result["ok"], true, "{result}");
             }
             assert_gone(f.wait_pid(id));
-            assert_helper_stopped(stream);
+            assert_helper_stopped(stream, id);
         });
         assert_eq!(f.run(&agent, &format!("after-{id}"), "healthy")["ok"], true);
     }

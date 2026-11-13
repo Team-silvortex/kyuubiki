@@ -42,6 +42,9 @@ impl Connection {
         mut tls: rustls::Connection,
         timeout: Duration,
     ) -> io::Result<Self> {
+        // Auth and RPC send a short length prefix before the body. Do not let
+        // Nagle delay the body while the peer is waiting for a complete frame.
+        socket.set_nodelay(true)?;
         let mut connection = Self::from(socket);
         let deadline = Instant::now()
             .checked_add(timeout)

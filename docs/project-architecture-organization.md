@@ -238,6 +238,30 @@ child's ABI/loading internals directly. Engine stays reusable and does not own
 Agent lifecycle or Store policy. The child reuses the existing CLI executable,
 not a new top-level service, crate, or sidecar packaging contract.
 
+`cli/src/operator_package_process/fetch.rs` reuses that supervisor for Installer
+downloads. It must not load plugin code, activate generations or pass download
+credentials to native execution workers. The parent retains generation ownership
+and waits for termination before cleanup; Installer remains the authority for
+download and package validation. Do not replace blocking HTTP with detached
+threads that can outlive cancellation or publish packages after task termination.
+
+`operator_package_generation_session` owns cache session coordination. Agents and
+downloaders hold independent shared leases; cleanup requires an exclusive lease
+and a stable cache-level catalog lock. Serialize creation, attachment and removal,
+not the HTTP transfer itself. Retain busy sessions and rescan before explicit
+generation preparation; do not add a background replay worker or PID-based kill.
+Keep the reusable catalog lock file in place so concurrent openers cannot split
+ownership across different lock inodes.
+
+Its `initialization` submodule records creation intent before creating a session
+directory. Keep partial-initialization recovery separate from ordinary stale
+session removal: match the intent, inspect only known metadata and empty generation
+directories, require an available lease, and never recursively delete uncertain
+contents. A malformed intent protects its syntactically associated session from
+the ordinary janitor as well. Test-only process barriers belong in the submodule's
+tests, never production environment controls. This is not a new task journal,
+automatic replay mechanism or a claim of physical power-loss durability.
+
 Use `cli/tests/operator_process_isolation.rs` for actual crash/hang/cancel and
 parent-loss checks. Compile its synthetic library from `tests/fixtures` into an
 owned temporary directory, never into distributable templates or retained

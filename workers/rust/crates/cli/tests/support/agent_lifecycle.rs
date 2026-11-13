@@ -469,14 +469,12 @@ impl LiveAgent {
                 )
                 .into());
             }
-            if TcpStream::connect(("127.0.0.1", self.port)).is_ok() {
-                if let Ok(reply) = self.request("owned-readiness", "describe_agent", json!({})) {
-                    if reply["ok"] == true
-                        && reply["result"]["deployment_readiness"]["agent_id"] == self.agent_id
-                    {
-                        return Ok(());
-                    }
-                }
+            if TcpStream::connect(("127.0.0.1", self.port)).is_ok()
+                && let Ok(reply) = self.request("owned-readiness", "describe_agent", json!({}))
+                && reply["ok"] == true
+                && reply["result"]["deployment_readiness"]["agent_id"] == self.agent_id
+            {
+                return Ok(());
             }
             thread::sleep(Duration::from_millis(25));
         }

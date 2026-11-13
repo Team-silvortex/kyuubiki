@@ -438,12 +438,13 @@ node --test tests/integration/workbench-ui-store-workspace.test.mjs</code></pre>
             重复句柄回归先复现失败再通过，两项锁回归在 Mac / Linux 均通过；两平台的 Installer 全套各 176 项通过。</li>
         </ol>
         <p class="docs-copy">测试入口是原生 Rust 的 <code>operator_deployment_cross_host</code>，默认忽略，必须显式选择 deploy / verify。
-          只接受非零端口的环回数字地址，不接受远程明文地址；部署阶段要求空的自有测试 Agent。
+          默认 SSH 模式只接受非零端口的环回数字地址，不接受远程明文地址；部署阶段要求空的自有测试 Agent。
           测试不会自动重启远程服务，也不创建 SSH 连接；隧道和两阶段之间的受管重启由操作者负责。
           收尾停止测试 Agent、撤销单个端口转发，并删除本轮临时安装、包库和拷贝；保留源码及可复用编译缓存。</p>
         <pre class="docs-code"><code># Prepare an owned, empty Installer-managed Linux Agent and an SSH loopback tunnel.
 # Build the trusted operator-crate-template on that Linux host; copy its library locally.
 export KYUUBIKI_CROSS_HOST_ENDPOINT=127.0.0.1:44892
+export KYUUBIKI_CROSS_HOST_TRANSPORT=ssh-loopback
 export KYUUBIKI_CROSS_HOST_PLATFORM=linux-x86_64
 export KYUUBIKI_CROSS_HOST_LIBRARY=tmp/cross-host/operator.so
 KYUUBIKI_CROSS_HOST_PHASE=deploy cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_deployment_cross_host -- --ignored --nocapture
@@ -452,6 +453,51 @@ KYUUBIKI_CROSS_HOST_PHASE=verify cargo test --locked --manifest-path workers/rus
         <p class="docs-copy">保留边界：此验收从已知可信模板和原生安装交接契约开始，未经过真实中心账号、额度扣减、已上架签名包下载。
           跨主机使用 SSH 加密隧道，不是原生 TLS 的跨主机验收；Linux arm64、musl、最低 glibc 版本和第三方运行库兼容性仍未实测。
           未运行全仓库测试、未调用付费模型 API，不能据此宣称任意算子数值正确或任意时间断电安全。张量保持 partial / exercised。</p>
+        <h3 id="native-tls-cross-host-qualification">原生 TLS 跨主机补测：2026-11-13</h3>
+        <p class="docs-copy">在 <code>43020db6</code> 基础上的同一份 Rust 源码，完成 Mac ARM64 控制端到物理 Linux x86_64 Agent 的两阶段实测。
+          提交标签为 3.8.0，实际 Cargo 包元数据仍为 3.7.8；本轮没有擅自更改版本或替换日常安装。
+          Linux 重新构建可信模板动态库，并通过 Installer 安装当前测试 Agent。部署和执行直接走非环回地址上的原生 TLS 与独立 Agent token，
+          SSH 只用于准备文件、显式轮换 / 停止测试实例，不承载这次 Agent RPC。</p>
+        <ul class="docs-list">
+          <li>核验真实连接回执中的加密、认证、非环回来源及 <code>tls_api_token</code> 控制模式；
+            错误 token、错误服务器名称、不受信证书和明文连接均不能访问控制接口。缺少任意 TLS 配置即拒绝，不自动降级。</li>
+          <li>Mac 暂存并启用 Linux 变体，上传完整动态库；客户端故意丢弃一次已经收到的成功提交回执，
+            显式重试只查询已安装状态，不重新读取、上传或提交，提交次数为一次。这模拟调用方丢失回执，不等同于线上报文中途断网。</li>
+          <li>显式终止并重启自有测试 Agent、轮换一次性 token；旧 token 被拒绝，新进程身份不同。
+            使用旧进程身份提交返回 <code>deployment_agent_changed</code>，重新查询则得到同一包摘要的 <code>ready</code>。</li>
+          <li>通过项目准备的 TaskIR 执行真实外部算子，确认动态库摘要和 <code>sum=14</code>；
+            再请求冲突版本时不读取新来源、不覆盖已安装包。商店会话不进入 Agent，执行引擎不新增商店依赖。</li>
+        </ul>
+        <p class="docs-copy">可复用宿主入口 <code>operator_deployment_tls_host</code> 默认忽略，只接受明确的自有全新绝对目录、
+          本机绑定 IP 和被允许的控制端 IP。它在独占的 0700 目录内生成临时证书及 0600 的一次性凭证，通过 Installer 安装并核验二进制，
+          就绪后最多存活 600 秒。正常结束或测试断言失败时回收自有 Agent 和目录，不接管既有服务；
+          宿主自身被 SIGKILL 或主机断电不在该清理保证内。</p>
+        <ol class="docs-list">
+          <li>Linux 设置 <code>KYUUBIKI_TLS_HOST_ROOT</code>（尚不存在的测试目录）、<code>KYUUBIKI_TLS_HOST_BIND</code>、
+            <code>KYUUBIKI_TLS_HOST_PEER</code>，运行下面的宿主入口；先构建仓库可信模板，避免浪费限时实例的存活预算。</li>
+          <li>经已验证主机密钥的 SSH 读取该目录的 <code>ready.json</code>，取回可信模板库、公开 <code>ca.pem</code> 和
+            两个一次性 token 文件到控制端私有目录，保留文件权限；绝不复制服务器 <code>key.pem</code>。</li>
+          <li>控制端设置 <code>KYUUBIKI_CROSS_HOST_TRANSPORT=native-tls</code>、就绪回执中的
+            <code>KYUUBIKI_CROSS_HOST_ENDPOINT</code>、<code>KYUUBIKI_CROSS_HOST_PLATFORM=linux-x86_64</code>、
+            <code>KYUUBIKI_CROSS_HOST_LIBRARY</code>、<code>KYUUBIKI_CROSS_HOST_CA_FILE</code>、
+            <code>KYUUBIKI_CROSS_HOST_SERVER_NAME=kyuubiki-native-test.invalid</code>、
+            <code>KYUUBIKI_CROSS_HOST_TOKEN_FILE</code>（token.before）和全新的 <code>KYUUBIKI_CROSS_HOST_STATE_FILE</code>。
+            最后一个文件保存包摘要和旧进程身份，不保存 token。运行 deploy 阶段。</li>
+          <li>在宿主自有目录创建 <code>rotate</code> 标记，等 <code>ready.json</code> 的 phase 变为 rotated；
+            将 token 文件切到 token.after，另设置 <code>KYUUBIKI_CROSS_HOST_OLD_TOKEN_FILE</code> 指向 token.before，运行 verify 阶段。</li>
+          <li>创建宿主目录的 <code>stop</code> 标记，等待测试结束和清理完成，再删除控制端的本轮私有文件。
+            即使客户端失败也应执行停止步骤，不保留凭证、安装副本或包库快照。rotate / stop 只是私有测试控制文件，不是 Agent API。</li>
+        </ol>
+        <pre class="docs-code"><code># Linux: with the three explicit KYUUBIKI_TLS_HOST_* values above.
+cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_deployment_tls_host serve_owned_installer_managed_tls_deployment_fixture -- --ignored --nocapture
+# Mac: with the explicit native TLS configuration above.
+KYUUBIKI_CROSS_HOST_PHASE=deploy cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_deployment_cross_host staged_linux_variant_crosses_hosts_without_store_or_engine_coupling -- --ignored --nocapture
+# After explicit rotation and the token-file change:
+KYUUBIKI_CROSS_HOST_PHASE=verify cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_deployment_cross_host staged_linux_variant_crosses_hosts_without_store_or_engine_coupling -- --ignored --nocapture</code></pre>
+        <p class="docs-copy">本轮 deploy、verify 和自有宿主验收各通过一次，临时安装、凭证、测试进程已清除，日常服务保持原进程。
+          张量为 <code>agent-linux-variant-native-tls</code> 登记独立 <code>verified</code> 证据，<code>qualified</code> 目标仍开放：
+          真实网络中断、多轮重复及部署信任链生命周期还需补测。此结果不替代真实商店账号 / 签名下载、安装版 GUI/PWDT、
+          Linux ARM64、Windows、安装后故障隔离或整次调用性能验收；不证明恶意代码沙箱和断电安全。</p>
         <h3 id="activation-recovery">加载失败诊断与显式恢复：2026-11-13</h3>
         <p class="docs-copy">新增的 <code>activation_failed</code> 是宿主级故障，不是上传未完成，也不说明只有当前包有问题。
           回执必须满足 installed 与请求固定身份一致、active 为空、字节计数完整；<code>activation_error</code> 仅允许
@@ -525,6 +571,184 @@ node --test tests/integration/workbench-ui-store-workspace.test.mjs</code></pre>
           未重打 APP 或更新日常服务，也未做大规模性能验收；张量只登记该隔离范围的 exercised 证据，不升级成完整安全认证。</p>
         <pre class="docs-code"><code>cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_process_isolation -- --ignored --nocapture
 cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_package_orchestra_fetch_live --test project_operator_live -- --ignored --nocapture</code></pre>
+        <h3 id="native-isolation-whole-call-benchmark">原生隔离整次调用基准：2026-11-13</h3>
+        <p class="docs-copy">新增原生 Rust 基准，在物理 Linux x86_64 上通过 Installer 安装自有优化版 Agent，
+          测量新建 RPC、进程启动、动态库加载、IPC、结果身份校验及进程回收，而不是只计插件函数的运行时间。
+          使用可信统计模板，3 / 8192 个数值两档输入、1 / 4 路并发，每组 3 轮、每轮 24 次；每个构建共 288 次计时调用。
+          任一调用失败就停止，不丢弃失败样本；预热、TaskIR 准备和初次安装启动不计入调用延迟。</p>
+        <p class="docs-copy">同机对照定位到固定 5 ms IPC 轮询开销。现在短等待的前 20 ms 使用 1 ms 间隔，持续无进展则退回 5 ms，
+          并受总截止时间限制；有进展只重置空闲等待间隔，不延长总超时。取消、独立进程、包身份复核及终止回收不变，
+          不使用忙轮询，也不把动态库重新放回 Agent 主进程。</p>
+        <table class="docs-table"><thead><tr><th>输入 / 并发</th><th>整次调用 p50：优化前 → 后</th><th>吞吐：优化前 → 后</th></tr></thead><tbody>
+          <tr><td>3 数值 / 单路</td><td>11.06 → 6.21 ms</td><td>90 → 155 次/秒</td></tr>
+          <tr><td>3 数值 / 四路</td><td>11.03 → 6.05 ms</td><td>337 → 640 次/秒</td></tr>
+          <tr><td>8192 数值 / 单路</td><td>13.26 → 9.90 ms</td><td>67 → 101 次/秒</td></tr>
+          <tr><td>8192 数值 / 四路</td><td>13.04 → 8.99 ms</td><td>268 → 434 次/秒</td></tr>
+        </tbody></table>
+        <p class="docs-copy">表格为各组三轮统计的中位值。CPU 粗粒度计量未见增加，不据此宣称确定的 CPU 节约。
+          三轮受控挂起压满四个槽位，额外任务明确拒绝且不执行；显式取消后健康任务成功。
+          每轮结束确认无原生子进程遗留，Agent 文件描述符回落到 4。资源按 5 ms 间隔采样，
+          部分短命子进程的描述符不可读取已明确记录，不能把观察峰值当作硬上限。</p>
+        <p class="docs-copy">先单独构建可信模板的 release 动态库，设置 <code>KYUUBIKI_ISOLATION_BENCH_LIBRARY</code>、
+          全新的 <code>KYUUBIKI_ISOLATION_BENCH_REPORT</code>，可选设置 <code>KYUUBIKI_BENCH_SOURCE_REVISION</code>，再运行：</p>
+        <pre class="docs-code"><code>cargo test --release --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_isolation_benchmark installed_native_isolation_whole_call_and_saturation_benchmark -- --ignored --nocapture</code></pre>
+        <p class="docs-copy">它只启动自有环回实例，正常退出或断言失败时清理安装和包库，不更新日常服务。
+          这是约 32 KiB 内联输入以内的短程 Linux 基准，不代表 FEM 求解吞吐、持续过载、硬资源配额、Mac/Windows 性能或 TLS 网络开销。
+          张量仅登记 <code>verified</code>，整次调用性能的 <code>qualified</code> 目标仍开放。
+          机器、二进制摘要、p95、计量边界及剩余项目见<a href="../reports/native-operator-isolation-benchmark-20261113.md">完整基准记录</a>。</p>
+        <h3 id="native-isolation-continuous-recovery">连续调用与混合故障恢复：2026-11-13</h3>
+        <p class="docs-copy">随后将同一临时安装的 Linux Agent 连续运行六个 10 秒窗口，保持四路调用，交替使用 3 / 8192 个数值输入。
+          第一轮真实复现：客户端收到成功结果后立即提交下一项，服务端仍在完成回复记账，偶发返回 <code>agent_at_capacity</code>。
+          修复保留“执行与回复结束才释放名额”的边界，只在满额时条件等待最多 5 ms 的预算；释放名额时唤醒，仍满额则明确拒绝。
+          不扩大并发、不提前释放慢客户端的名额、不自动重跑任务。操作系统调度延迟超过预算仍可能被拒绝，不承诺绝不满额。</p>
+        <p class="docs-copy">只读 <code>execution_admission.capacity_handoff_wait_ms</code> 与
+          <code>capacity_handoff_policy</code> 暴露该策略。唤醒后重新检查 drain / shutdown；多名等待者不能超卖同一名额，
+          重复唤醒不重置截止时间。相关测试使用锁内同步点，不以“睡一会儿”代替已经进入等待的证据。</p>
+        <p class="docs-copy">两轮修复后连续验证分别完成 29184 / 27680 次计时调用，均无失败或重试。
+          最终一轮空闲 RSS 为 8548 → 11512 KiB，最后三个检查点相同；所有窗口结束均为一个 Agent、4 个文件描述符、零活动执行。
+          每轮另用单独的故障库运行八轮：崩溃、非法指针、入口/释放死锁、错误结果身份、矛盾成功响应、四槽取消与容量拒绝。
+          每次完整验证为 88 次预期失败、40 次正常结果、32 次未准入请求，另有 4 次预热；历史失败列表稳定限制为 16 项。</p>
+        <p class="docs-copy">设置可信 <code>KYUUBIKI_ISOLATION_BENCH_LIBRARY</code> 与全新的
+          <code>KYUUBIKI_ISOLATION_SOAK_REPORT</code>，使用独立命令运行，不与短程基准并发：</p>
+        <pre class="docs-code"><code>cargo test --release --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_isolation_benchmark installed_native_isolation_continuous_load_and_mixed_fault_recovery -- --ignored --nocapture</code></pre>
+        <p class="docs-copy">这是环回 TCP、固定并发和有限输入的分钟级验证；资源采样不是硬限制，32 MiB 空闲内存增长门槛只是回归保护。
+          不包含小时/天级浸泡、大制品、网络断连、凭证生命周期、恶意代码隔离或匹配 GUI 的安装闭环。
+          <code>agent-unix-installed-isolation</code> 仅获得 Linux 范围的 verified 证据，qualified 目标仍开放；
+          不把这一结果计作 Mac / Windows 安装验收，也不调用中心商店或付费模型。</p>
+        <h3 id="agent-bounded-pending-cancellation">待执行取消记录的容量与恢复边界</h3>
+        <p class="docs-copy">旧 <code>cancel_job</code> 没有匹配活动任务时，会登记一次性的任务取消意图。
+          此前不同任务 ID 可无限累积；现在每个 Agent 进程最多保留 1024 条，每个 ID 为 1–256 UTF-8 字节且不含控制字符，
+          不裁剪空白或改写大小写。容量与策略由 <code>describe_agent → solver_control.pending_job_cancellations</code>
+          只读公开，只报告数量，不列出这些待执行任务的身份。</p>
+        <ul class="docs-list">
+          <li>满额的新 ID 返回 <code>pending_cancellation_capacity_exceeded</code>，不登记、不淘汰已有记录，也不执行任务包清理。
+            已登记 ID 的重复请求仍成功；匹配活动任务的取消不受待执行记录容量限制。</li>
+          <li>登记与准入消费共用同一把锁；并发请求不能突破容量，同一意图只由首个匹配的执行准入消费。
+            因 <code>agent_at_capacity</code> 或 <code>agent_draining</code> 拒绝的执行不会消费它。</li>
+          <li>取消登记成功不等于执行已经终止。后续包清理失败仍单独报告，不撤销已经登记的取消。
+            已知活动执行应优先使用携带进程、请求和代次身份的 <code>cancel_execution</code>，
+            该接口不创建待执行记录，也不清理同任务其他执行的包。</li>
+          <li>记录不自动过期，不偷偷丢弃；仍只存于进程内，重启即丢失，不能当作断电安全的取消凭证。
+            满额时新的预取消请求可能继续被拒绝，客户端须明确处理，不能盲目重试执行或重启以清空记录。</li>
+        </ul>
+        <p class="docs-copy">以下独立测试创建自有 TLS/token Agent，填满容量后验证超额拒绝、活动/精确取消、
+          满载和排空拒绝不消费、逐条消费与健康后续任务，并确认重启不保留记录。它不使用日常凭证或重启日常服务：</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test agent_pending_cancel_live -- --include-ignored --nocapture</code></pre>
+        <p class="docs-copy">2026-11-13：Mac ARM64 与物理 Linux x86_64 各通过 351 项 Agent 单元及 11 项相关集成测试
+          （包含重复编译的共享就绪保护测试）。两端均明确执行了上述默认忽略的 TLS 用例：保留并消费 1024 条记录、拒绝 32 个新 ID。
+          包清理顺序由单元测试验证，本轮 TLS 用例没有建立真实 job-scoped 包绑定，不能算作真实包保留验收。
+          张量仅登记源码 Agent 的局部 verified 证据，不提升安装版、持久化或整条商店链路的资格。</p>
+        <h3 id="agent-package-cleanup-contention">取消回执不等待包生命周期锁</h3>
+        <p class="docs-copy">下载算子包、切换代次或执行 <code>cache_scope=none</code> 的临时算子可能持有包生命周期锁。
+          旧路径先登记取消，再等待这把锁清理缓存，导致取消回执也被阻塞。现在清理入口只尝试获取锁，不排队，
+          不改变下载/执行之间原有的互斥保护。策略由
+          <code>describe_agent → operator_package_runtime.job_release_policy</code> 只读公开。</p>
+        <ul class="docs-list">
+          <li><code>cancel_job</code> 登记成功后仍返回成功，但锁忙时嵌套清理回执为 <code>status=deferred</code>、
+            <code>operator_package_job_release_busy</code>。明确标记未执行清理，既不撤销取消，也不宣称执行终止。</li>
+          <li>直接调用 <code>release_operator_package_job</code> 时，锁忙返回同一错误，不更改包绑定和代次。
+            先观察原执行结果；需要清理时，只对同一 job 重试此清理接口，不重发取消，不重跑算子任务。没有后台清理队列或自动重试。</li>
+          <li>锁中毒时清理返回 <code>operator_package_job_release_unavailable</code>，需显式停机检查及重启，
+            不绕过锁继续删除。其他阶段的清理失败不冒充“完全未做过清理”。</li>
+          <li>此保证仅针对获取生命周期锁，不是整个下载或文件系统操作的时间上限。
+            下载中的执行仍占用执行槽，直到实际退出；取消回执不能用来提前释放容量。</li>
+        </ul>
+        <p class="docs-copy">以下测试启动临时环回 Agent 和受控下载端，保持下载未返回，先验证取消回执、直接清理拒绝、
+          无效 ID 拒绝、描述接口及容量保护，再取消下载并验证清理重试和同 job 的正常力学计算。
+          不需要动态库、不读取日常凭证；此用例不是 TLS、真实包保留或安装版 GUI 验收。</p>
+        <pre class="docs-code"><code>cargo test --release --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_package_cancel_contention -- --nocapture</code></pre>
+        <p class="docs-copy">2026-11-13：该用例在修复前复现等待，修复后在 Mac ARM64 和物理 Linux x86_64 上通过。
+          两端各通过 355 项 Agent 单元、13 项相关集成测试（含共享就绪测试及原有真实模板包链路）。
+          张量只新增此局部恢复证据，不替代真实包争用保留、安装版或跨主机验收。</p>
+        <h3 id="agent-supervised-package-fetch">下载取消与总时限</h3>
+        <p class="docs-copy">Agent 不再在执行线程内直接等待同步 HTTP 下载，而是通过现有监管器启动一次性的 Installer 下载子进程。
+          下载、校验与安装逻辑仍属于 Installer；只有下载成功且通过检查，Agent 才激活新包代次。
+          下载子进程不加载算子动态库，也不启动 Agent、Orchestra 或商店服务。</p>
+        <ul class="docs-list">
+          <li>等待包生命周期锁时轮询取消并使用同一个总预算；锁中毒拒绝获取，不默默继续。
+            DNS、连接、响应头和正文等待发生在下载子进程中，父进程可以终止它，无需等待 HTTP 自行超时。</li>
+          <li><code>KYUUBIKI_OPERATOR_PACKAGE_FETCH_TIMEOUT_MS</code> 默认 120000，允许 100–3600000 毫秒。
+            这是等锁和下载的总预算，不再只依赖各 HTTP 请求自己的 120 秒限制。过期返回
+            <code>operator_package_fetch_timeout</code>，不自动重试；取消保留 <code>cancelled</code> 和实际失败阶段。</li>
+          <li>先终止并回收子进程，再删除未发布代次及其临时目录，然后交付终止结果。
+            不遗留后台下载线程，不激活半包，也不通过提前释放执行槽假装恢复成功。</li>
+          <li>绑定 Orchestra 的 token 只经私有 IPC 传给下载进程，不写入命令行、环境变量或磁盘配置。
+            下载代理路由环境仅允许传给下载进程，算子执行进程仍不继承这些设置；IPC 序列化缓冲和下载请求对象中的 token 在正常释放时清零。</li>
+          <li>只读策略位于 <code>describe_agent → operator_package_runtime.isolation.package_fetch</code>。
+            原有 Installer 直接调用入口不变；这一取消保证属于 Agent 的受监管下载路径。</li>
+        </ul>
+        <p class="docs-copy">受控测试覆盖响应头卡住、正文只到一部分、无取消时总预算耗尽：在服务器尚未放行时收到失败终态，
+          同时确认下载连接已关闭、模拟未完成文件及代次清空、没有自动重试，随后同 job 的正常力学任务成功。
+          等锁取消、时限及中毒拒绝另有单元测试。此组证据不替代下述真实大包测试，也不等同于 HTTPS 故障、
+          下载中父进程断电、安装版 GUI 或 Windows 验收；父进程中的代次复制和文件系统清理也没有新增硬实时上限。</p>
+        <h3 id="agent-large-download-restart">大包流式下载与重启清理</h3>
+        <p class="docs-copy">动态库不再整包读入内存：Installer 使用 64 KiB 的复制缓冲写入未发布临时目录，
+          同时计算 SHA-256。写入量不得超过目录声明的长度；只有正文完整、长度和摘要全部匹配且文件同步成功，
+          才进入原有安装验证。元数据仍单独限长，动态库上限仍为 512 MiB。此处不是整个进程的内存上限。</p>
+        <ul class="docs-list">
+          <li>取消或网络截断：返回下载阶段失败，删除真实部分文件，不发布包、不自动重试；Agent 控制接口仍可用。</li>
+          <li>强制终止 Agent：下载子进程通过父进程存活管道退出。旧会话可能留下部分文件；下次启动时由现有
+            会话租约和身份标记清理器回收，不能按 PID 猜测或清扫不属于自己的目录。</li>
+          <li>启动不重放旧下载；只有显式提交新任务才重新拉取。大小和摘要验证仍不可跳过，也不会复用半包。</li>
+          <li>临时目录名包含进程内原子序号，避免并发下载取得相同时间戳而相互冲突；目录仍以独占创建方式建立，不复用已有目录。</li>
+        </ul>
+        <p class="docs-copy">独立源码测试使用声明 64 MiB 的 HTTP 文件，确认已实际接收并写入 16 MiB 后再取消、
+          断连或 SIGKILL 测试 Agent；核对下载进程退出、重启前后的文件状态，以及重新拉取真实模板并计算 sum=14。
+          另有完整 64 MiB 文件安装与摘要复核对照；该大文件是合成测试数据，不执行其内容。
+          测试由原生算子包动态验收入口纳入，在 Unix 上运行，不连接真实账号或重启日常服务。</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --test operator_download_recovery -- --ignored --nocapture</code></pre>
+        <p class="docs-copy">这些用例验证进程级故障，而非物理断电。暂停下载者和多 Agent 同时恢复的后续验收见下节；
+          断电时文件系统持久性、HTTPS 握手故障、Windows 和已安装 GUI/SDK 链路仍需单独验证。</p>
+        <h3 id="agent-orphan-download-coordination">暂停下载者与并发清理</h3>
+        <p class="docs-copy">Agent 与下载子进程分别持有同一会话的共享文件租约。父进程退出不代表子进程已经退出；
+          只有取得独占会话租约，清理器才可回收旧目录。仍持有租约的目录保留，不按 PID 猜测进程所有权，也不杀死其他 Agent。</p>
+        <ul class="docs-list">
+          <li>会话创建、下载者加入和旧会话清理使用缓存根下的 <code>agent-runtime-generations.lock</code> 协调。
+            等锁最多 2000 毫秒；忙碌时明确失败，不自动重放任务。该期限不是目录扫描或磁盘 I/O 的硬实时上限。</li>
+          <li>协调文件是可复用的管理元数据，不是下载残留，运行中不得删除再创建。HTTP 传输不持有目录协调锁，
+            因而暂停下载者不会阻止其他 Agent 创建会话或处理独立任务。</li>
+          <li>启动时清理一次，在下一次显式准备新代次前再次扫描。先前保留的孤儿下载者退出后可被回收，
+            无需再强制重启；活跃同伴仍受租约保护。清理计数累计，活跃及无效目录数反映最近扫描。</li>
+          <li>只读策略位于 <code>describe_agent → operator_package_runtime.isolation.package_fetch.session_recovery</code>，
+            包含租约类型、锁文件、等待上限和重新扫描时机。</li>
+        </ul>
+        <p class="docs-copy">受控 Unix 测试在实际写入 16 MiB 后暂停下载者，终止旧 Agent，启动替代 Agent 与同伴，
+          验证部分文件仍保留；恢复下载者使其按父进程失联规则退出后，显式任务触发安全清理并执行真实模板。
+          测试专属进程组锚点防止 Unix 自动恢复暂停的孤儿进程组，从而保持竞争窗口；不增加生产运行时依赖。
+          另有四个独立 Agent 同时启动和执行的测试，确认同一旧会话只计一次清理、四个新会话互不误删。</p>
+        <p class="docs-copy">这是相同源码版本、本机文件系统上的受控恢复证据，不等同于所有调度交错、混合版本并行访问、
+          网络文件系统锁语义、创建标记中途断电或 Windows 验收。</p>
+        <h3 id="agent-session-initialization-recovery">会话初始化中断恢复</h3>
+        <p class="docs-copy">创建会话目录前，Agent 先在 <code>agent-runtime-generations/initializations</code>
+          写入并同步初始化记录，记录绑定缓存路径、会话身份和预期标记。会话标记、租约及空代次目录建立完成后移除记录，
+          才向执行层交付会话；不增加后台服务或任务重放。</p>
+        <ul class="docs-list">
+          <li>启动和显式准备新代次时，先恢复尚未完成的初始化。必须持有目录协调锁；已有租约还必须能够独占取得，
+            活跃进程持有租约时保留并延后处理。</li>
+          <li>仅接受匹配记录的完整元数据或其合法写入前缀，以及空的代次目录。使用逐文件删除和空目录删除，
+            不对未完成初始化目录递归清扫。陌生文件、非空代次、错配标记、超限文件和符号链接均保留并报告。</li>
+          <li>初始化记录本身尚未写完时，不会创建对应会话目录。无法确认身份的记录仍保留，不凭目录名猜测；
+            不因此阻止新的独立会话。旧版本无初始化记录的损坏目录仍保持保守处理。</li>
+          <li>新策略在 <code>session_recovery</code> 中只读可见，包含初始化顺序、记录目录、清理条件和无效记录处理方式。
+            清理计数包括已确认但尚未创建目录的遗留初始化记录。</li>
+        </ul>
+        <p class="docs-copy">源码回归以独立原生测试子进程执行真实会话初始化，在记录同步、目录创建、标记及租约半写、
+          初始化提交等十个阶段强制终止；另外验证清理中途再次终止，以及初始化记录半写时的保留行为。
+          故障注入入口仅存在于测试构建，不是生产 Agent 的环境变量开关。该证据不等于整机断电、网络文件系统、
+          混合版本、Windows 或已安装 GUI/SDK 验收。</p>
+        <pre class="docs-code"><code>cargo test --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-cli --bin kyuubiki-cli operator_package_generation_session::initialization::tests</code></pre>
+        <h3 id="agent-tls-control-latency">TLS 短帧控制链路延迟</h3>
+        <p class="docs-copy">2026-11-13：大量取消请求暴露了 Linux 冷连接延迟。独立三轮、每轮 32 次测试保持相同的
+          TLS 1.3、完整握手、token 认证和分拆长度头/正文；只在双端握手前启用 <code>TCP_NODELAY</code>。
+          不关闭认证、不启用会话恢复、不合并或省略请求，也不把仅进入 TLS 缓冲区视为回复已交付。</p>
+        <p class="docs-copy">同一 Linux release 环境的完整冷连接往返 p50 从 123.99–124.86 ms 降到 1.45–1.47 ms，
+          p95 从 125.92–125.95 ms 降到 1.60–1.68 ms。真实 Agent 的 1024 条取消链路测试从 350.00 秒降到 1.39 秒，
+          原断言和调用次数不变；Mac 与 Linux 的认证拒绝、精确取消和恢复回归仍全部通过。</p>
+        <pre class="docs-code"><code>cargo test --release --locked --offline --manifest-path workers/rust/Cargo.toml -p kyuubiki-agent-transport cold_tls_auth_and_split_frame_latency -- --ignored --nocapture</code></pre>
+        <p class="docs-copy">这里验证的是环回冷连接与短帧路径，不是 FEM 求解加速、远程网络延迟、大数据吞吐或完整隔离算子性能。
+          低延迟发送可能增加小包数量；批量传输与真实跨主机网络需另测。明文连接的既有行为不改，
+          TLS 发送策略设置失败会返回错误，不降级到明文。
+          详见<a href="../reports/native-operator-isolation-benchmark-20261113.md#cold-tls-control-frame-latency">分段数据与复现实验</a>。</p>
         <h3 id="native-result-admission">原生结果身份与成功响应校验</h3>
         <p class="docs-copy">2026-11-13：真实 Agent 复现了请求 <code>extract.template_summary</code>，
           动态库却返回 <code>extract.other</code>，仍被发布为成功的缺口；同时存在 <code>ok: true</code>、

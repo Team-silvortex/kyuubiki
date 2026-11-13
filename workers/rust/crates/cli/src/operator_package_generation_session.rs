@@ -6,6 +6,9 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
+mod coordination;
+mod initialization;
+use coordination::CatalogLease;
 
 const CACHE_GENERATIONS_DIRECTORY: &str = "agent-runtime-generations";
 const SESSIONS_DIRECTORY: &str = "sessions";
@@ -32,39 +35,51 @@ struct SessionMarker {
 
 #[derive(Debug)]
 pub(crate) struct OperatorPackageGenerationSession {
+    cache_store_root: PathBuf,
     session_root: PathBuf,
     sessions_root: PathBuf,
     generations_root: PathBuf,
     marker: SessionMarker,
     lease_file: Mutex<Option<File>>,
-    janitor_report: GenerationJanitorReport,
+    janitor_report: Mutex<GenerationJanitorReport>,
 }
 
 impl OperatorPackageGenerationSession {
     pub(crate) fn open(cache_store_root: &Path) -> Result<Arc<Self>, String> {
         let cache_store_root = canonical_directory(cache_store_root, "operator package cache")?;
+        let catalog = CatalogLease::acquire(&cache_store_root)?;
         let sessions_root = prepare_sessions_root(&cache_store_root)?;
-        let mut janitor_report = reap_stale_sessions(&sessions_root, &cache_store_root)?;
+        let mut janitor_report =
+            reap_stale_sessions(&sessions_root, &cache_store_root, None, &catalog)?;
         janitor_report.retained_invalid_session_count +=
             count_unleased_cache_entries(&sessions_root)?;
         let session_id = next_session_id()?;
         let session_root = sessions_root.join(&session_id);
+        let marker = SessionMarker {
+            schema_version: SESSION_MARKER_SCHEMA.to_string(),
+            session_id,
+            owner_pid: std::process::id(),
+            cache_store_root: cache_store_root.display().to_string(),
+        };
+        let intent = initialization::begin(&sessions_root, &marker, &catalog)?;
         fs::create_dir(&session_root).map_err(|error| {
             format!(
                 "failed to create operator package session {}: {error}",
                 session_root.display()
             )
         })?;
+        initialization::checkpoint("directory-created", &session_root);
 
         let result = create_session(
-            cache_store_root,
-            sessions_root,
+            cache_store_root.clone(),
+            sessions_root.clone(),
             session_root.clone(),
-            session_id,
+            marker,
             janitor_report,
+            &intent,
         );
         if result.is_err() {
-            let _ = fs::remove_dir_all(session_root);
+            let _ = initialization::recover(&sessions_root, &cache_store_root, &catalog);
         }
         result.map(Arc::new)
     }
@@ -78,12 +93,38 @@ impl OperatorPackageGenerationSession {
     }
 
     pub(crate) fn janitor_report(&self) -> GenerationJanitorReport {
-        self.janitor_report
+        *self
+            .janitor_report
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+    }
+
+    pub(crate) fn refresh_stale_sessions(&self) -> Result<(), String> {
+        let catalog = CatalogLease::acquire(&self.cache_store_root)?;
+        if !session_identity_matches(&self.session_root, &self.marker)? {
+            return Err("operator package session identity changed before preparation".into());
+        }
+        let mut latest = reap_stale_sessions(
+            &self.sessions_root,
+            &self.cache_store_root,
+            Some(&self.session_root),
+            &catalog,
+        )?;
+        latest.retained_invalid_session_count += count_unleased_cache_entries(&self.sessions_root)?;
+        let mut report = self
+            .janitor_report
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        latest.removed_stale_session_count += report.removed_stale_session_count;
+        *report = latest;
+        Ok(())
     }
 }
 
 impl Drop for OperatorPackageGenerationSession {
     fn drop(&mut self) {
+        // Keep catalog ownership through unlock and removal, including on Windows.
+        let catalog = CatalogLease::acquire(&self.cache_store_root);
         let lease = self
             .lease_file
             .get_mut()
@@ -93,14 +134,11 @@ impl Drop for OperatorPackageGenerationSession {
             let _ = FileExt::unlock(&lease);
             drop(lease);
         }
-        if session_identity_matches(&self.session_root, &self.marker).unwrap_or(false)
+        if catalog.is_ok()
+            && session_identity_matches(&self.session_root, &self.marker).unwrap_or(false)
             && directory_is_empty(&self.generations_root).unwrap_or(false)
         {
-            let _ = fs::remove_dir_all(&self.session_root);
-            let _ = prune_empty_directory(&self.sessions_root);
-            if let Some(parent) = self.sessions_root.parent() {
-                let _ = prune_empty_directory(parent);
-            }
+            let _ = try_reap_session(&self.session_root, &self.cache_store_root);
         }
     }
 }
@@ -109,16 +147,12 @@ fn create_session(
     cache_store_root: PathBuf,
     sessions_root: PathBuf,
     session_root: PathBuf,
-    session_id: String,
+    marker: SessionMarker,
     janitor_report: GenerationJanitorReport,
+    intent: &Path,
 ) -> Result<OperatorPackageGenerationSession, String> {
-    let marker = SessionMarker {
-        schema_version: SESSION_MARKER_SCHEMA.to_string(),
-        session_id,
-        owner_pid: std::process::id(),
-        cache_store_root: cache_store_root.display().to_string(),
-    };
     write_marker(&session_root, &marker)?;
+    initialization::checkpoint("marker-synced", &session_root);
     let lease_path = session_root.join(SESSION_LEASE_FILE);
     let mut lease = OpenOptions::new()
         .create_new(true)
@@ -126,12 +160,20 @@ fn create_session(
         .write(true)
         .open(&lease_path)
         .map_err(|error| format!("failed to create {}: {error}", lease_path.display()))?;
+    initialization::checkpoint("lease-created", &session_root);
+    #[cfg(test)]
+    initialization::partial_checkpoint(
+        "lease-partial",
+        &session_root,
+        &mut lease,
+        format!("session_id={}\n", marker.session_id).as_bytes(),
+    )?;
     writeln!(lease, "session_id={}", marker.session_id)
         .and_then(|_| lease.sync_all())
         .map_err(|error| format!("failed to persist {}: {error}", lease_path.display()))?;
-    lease
-        .try_lock_exclusive()
+    FileExt::try_lock_shared(&lease)
         .map_err(|error| format!("failed to lock {}: {error}", lease_path.display()))?;
+    initialization::checkpoint("lease-locked", &session_root);
 
     let generations_root = session_root.join(SESSION_GENERATIONS_DIRECTORY);
     fs::create_dir(&generations_root).map_err(|error| {
@@ -141,13 +183,18 @@ fn create_session(
         )
     })?;
     let generations_root = canonical_directory(&generations_root, "session generations root")?;
+    initialization::checkpoint("generations-created", &session_root);
+    fs::remove_file(intent)
+        .map_err(|error| format!("failed to commit operator session initialization: {error}"))?;
+    initialization::checkpoint("initialization-committed", &session_root);
     Ok(OperatorPackageGenerationSession {
+        cache_store_root,
         session_root,
         sessions_root,
         generations_root,
         marker,
         lease_file: Mutex::new(Some(lease)),
-        janitor_report,
+        janitor_report: Mutex::new(janitor_report),
     })
 }
 
@@ -167,14 +214,22 @@ fn prepare_sessions_root(cache_store_root: &Path) -> Result<PathBuf, String> {
 fn reap_stale_sessions(
     sessions_root: &Path,
     cache_store_root: &Path,
+    excluded: Option<&Path>,
+    catalog: &CatalogLease,
 ) -> Result<GenerationJanitorReport, String> {
+    let initialization = initialization::recover(sessions_root, cache_store_root, catalog)?;
     let mut entries = fs::read_dir(sessions_root)
         .map_err(|error| format!("failed to read {}: {error}", sessions_root.display()))?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;
     entries.sort_by_key(|entry| entry.file_name());
-    let mut report = GenerationJanitorReport::default();
+    let mut report = initialization.report;
     for entry in entries {
+        if excluded == Some(entry.path().as_path())
+            || initialization.protected.contains(&entry.path())
+        {
+            continue;
+        }
         let file_type = entry
             .file_type()
             .map_err(|error| format!("failed to inspect {}: {error}", entry.path().display()))?;
@@ -203,7 +258,8 @@ fn count_unleased_cache_entries(sessions_root: &Path) -> Result<usize, String> {
         )
     })? {
         let entry = entry.map_err(|error| error.to_string())?;
-        if entry.file_name() != SESSIONS_DIRECTORY {
+        if entry.file_name() != SESSIONS_DIRECTORY && entry.file_name() != initialization::DIRECTORY
+        {
             count += 1;
         }
     }
@@ -219,6 +275,7 @@ fn try_reap_session(
     session_root: &Path,
     cache_store_root: &Path,
 ) -> Result<SessionReapOutcome, String> {
+    // Every caller holds CatalogLease through lease inspection, unlock and removal.
     let marker = read_marker(session_root)?;
     if marker.cache_store_root != cache_store_root.display().to_string()
         || session_root.file_name().and_then(|value| value.to_str())
@@ -274,6 +331,9 @@ fn write_marker(root: &Path, marker: &SessionMarker) -> Result<(), String> {
         .write(true)
         .open(&path)
         .map_err(|error| format!("failed to create {}: {error}", path.display()))?;
+    initialization::checkpoint("marker-created", root);
+    #[cfg(test)]
+    initialization::partial_checkpoint("marker-partial", root, &mut file, &payload)?;
     file.write_all(&payload)
         .and_then(|_| file.sync_all())
         .map_err(|error| format!("failed to persist {}: {error}", path.display()))
@@ -345,12 +405,56 @@ fn directory_is_empty(path: &Path) -> Result<bool, String> {
         .is_none())
 }
 
-fn prune_empty_directory(path: &Path) -> Result<(), String> {
-    if directory_is_empty(path)? {
-        fs::remove_dir(path)
-            .map_err(|error| format!("failed to remove {}: {error}", path.display()))?;
+pub(crate) fn acquire_download_session_lease(generation: &Path) -> Result<File, String> {
+    let generation = canonical_directory(generation, "download generation")?;
+    let generations = generation
+        .parent()
+        .ok_or("download has no generations directory")?;
+    let session = generations.parent().ok_or("download has no session")?;
+    let sessions = session.parent().ok_or("download has no session catalog")?;
+    let container = sessions
+        .parent()
+        .ok_or("download has no generation catalog")?;
+    let cache = container.parent().ok_or("download has no cache root")?;
+    if generations.file_name() != Some(SESSION_GENERATIONS_DIRECTORY.as_ref())
+        || sessions.file_name() != Some(SESSIONS_DIRECTORY.as_ref())
+        || container.file_name() != Some(CACHE_GENERATIONS_DIRECTORY.as_ref())
+    {
+        return Err("download generation is outside the managed session layout".into());
     }
-    Ok(())
+    let _catalog = CatalogLease::acquire(cache)?;
+    let marker = read_marker(session)?;
+    if marker.cache_store_root != cache.display().to_string()
+        || !session_identity_matches(session, &marker)?
+    {
+        return Err("download session identity mismatch".into());
+    }
+    let lease_path = session.join(SESSION_LEASE_FILE);
+    reject_symlink(&lease_path, "download session lease")?;
+    let lease = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&lease_path)
+        .map_err(|error| format!("cannot open download session lease: {error}"))?;
+    FileExt::try_lock_shared(&lease)
+        .map_err(|error| format!("download session lease unavailable: {error}"))?;
+    if !generation.is_dir() {
+        return Err("download generation was removed before admission".into());
+    }
+    Ok(lease)
+}
+
+pub(crate) fn recovery_policy() -> serde_json::Value {
+    serde_json::json!({
+        "session_lease":"shared_agent_and_downloader", "cleanup_requires":"exclusive_session_lease",
+        "catalog_lock_file":coordination::LOCK_FILE, "catalog_wait_ms":coordination::WAIT_MS,
+        "catalog_lock_retention":"stable_reusable_file", "busy_session":"retain_without_pid_kill",
+        "initialization":"persist_intent_before_directory_creation",
+        "incomplete_cleanup":"matching_intent_known_files_empty_generations_exclusive_lease",
+        "invalid_initialization":"retain_and_report_without_guessing",
+        "initialization_records":"agent-runtime-generations/initializations",
+        "rescan":"startup_and_before_explicit_generation_preparation", "automatic_replay":false
+    })
 }
 
 #[cfg(test)]
@@ -384,6 +488,88 @@ mod tests {
         drop(second);
         drop(first);
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn downloader_lease_outlives_parent_and_is_reaped_on_later_preparation() {
+        let root = temporary_root("downloader-lease");
+        fs::create_dir_all(root.join("packages")).unwrap();
+        let parent = OperatorPackageGenerationSession::open(&root).unwrap();
+        let stale = parent.session_root.clone();
+        let generation = parent.generations_root.join("downloading");
+        fs::create_dir(&generation).unwrap();
+        let writer = acquire_download_session_lease(&generation).unwrap();
+        drop(parent);
+        let replacement = OperatorPackageGenerationSession::open(&root).unwrap();
+        assert_eq!(
+            replacement.janitor_report().retained_active_session_count,
+            1
+        );
+        assert!(stale.exists());
+        drop(writer);
+        replacement.refresh_stale_sessions().unwrap();
+        assert!(!stale.exists());
+        assert_eq!(replacement.janitor_report().removed_stale_session_count, 1);
+        replacement.refresh_stale_sessions().unwrap();
+        assert_eq!(replacement.janitor_report().removed_stale_session_count, 1);
+        assert!(acquire_download_session_lease(&generation).is_err());
+        assert!(
+            !stale.exists(),
+            "stale child admission must not recreate deleted directories"
+        );
+        drop(replacement);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn concurrent_session_start_and_drop_preserve_active_peers_and_claim_cleanup_once() {
+        let root = temporary_root("concurrent-sessions");
+        fs::create_dir_all(root.join("packages")).unwrap();
+        let active = OperatorPackageGenerationSession::open(&root).unwrap();
+        let stale = create_stale_fixture(&active.sessions_root, &active.cache_store_root);
+        let start = std::sync::Barrier::new(8);
+        let peers: Vec<_> = std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..8)
+                .map(|_| {
+                    scope.spawn(|| {
+                        start.wait();
+                        OperatorPackageGenerationSession::open(&root)
+                    })
+                })
+                .collect();
+            workers
+                .into_iter()
+                .map(|worker| worker.join().unwrap().unwrap())
+                .collect()
+        });
+        assert!(!stale.exists());
+        assert!(active.session_root.exists());
+        assert!(peers.iter().all(|peer| peer.session_root.exists()));
+        assert_eq!(
+            peers
+                .iter()
+                .map(|peer| peer.janitor_report().removed_stale_session_count)
+                .sum::<usize>(),
+            1
+        );
+        assert!(
+            peers
+                .iter()
+                .all(|peer| peer.janitor_report().retained_invalid_session_count == 0)
+        );
+        std::thread::scope(|scope| {
+            for peer in peers {
+                scope.spawn(move || drop(peer));
+            }
+            for _ in 0..8 {
+                scope.spawn(|| drop(OperatorPackageGenerationSession::open(&root).unwrap()));
+            }
+        });
+        assert!(active.session_root.exists());
+        assert_eq!(fs::read_dir(&active.sessions_root).unwrap().count(), 1);
+        drop(active);
+        assert!(root.join(coordination::LOCK_FILE).is_file());
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

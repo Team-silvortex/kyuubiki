@@ -226,6 +226,8 @@ pub fn run_operator_package_dynamic_smoke(
             "operator_package_live",
             "--test",
             "operator_package_orchestra_fetch_live",
+            "--test",
+            "operator_download_recovery",
             "--",
             "--ignored",
             "--nocapture",
@@ -234,7 +236,7 @@ pub fn run_operator_package_dynamic_smoke(
     )?;
     stages.push(stage_record(
         "agent_dynamic_host_dispatch",
-        "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, safe version rotation, crash-restart stale-session cleanup, tamper rejection, and recovery.",
+        "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, version rotation, stale-session cleanup, tamper rejection, and Unix large-download interruption/restart recovery.",
         rust_cwd.clone(),
         [
             "cargo",
@@ -245,6 +247,8 @@ pub fn run_operator_package_dynamic_smoke(
             "operator_package_live",
             "--test",
             "operator_package_orchestra_fetch_live",
+            "--test",
+            "operator_download_recovery",
             "--",
             "--ignored",
             "--nocapture",

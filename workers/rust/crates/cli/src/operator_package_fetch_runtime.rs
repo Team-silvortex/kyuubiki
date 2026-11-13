@@ -13,12 +13,12 @@ use crate::operator_package_runtime::{
     current_operator_package_generation_id, current_runtime_binding,
     prepared_operator_package_runtime_for_task,
 };
-use kyuubiki_installer::fetch_operator_package_into;
 use kyuubiki_protocol::OperatorTaskExecutionSummary;
 use serde_json::{Value, json};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, RwLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, RwLock, TryLockError};
+use std::time::{Duration, Instant};
 
 #[derive(Clone)]
 struct OperatorPackageFetchRuntimeConfig {
@@ -98,9 +98,8 @@ pub(crate) fn prepare_orchestra_operator_package(
             }));
         }
     }
-    let generation_guard = fetch_lock()
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let fetch_deadline = crate::operator_package_process::fetch_deadline();
+    let generation_guard = acquire_fetch_lock(fetch_lock(), fetch_deadline)?;
 
     if let Some((binding, runtime_lease)) = prepared_operator_package_runtime_for_task(summary) {
         register_package(summary.cache_scope.as_deref(), job_id, &summary.operator_id)
@@ -141,20 +140,23 @@ pub(crate) fn prepare_orchestra_operator_package(
             format!("failed to prepare isolated operator package generation: {error}"),
         )
     })?;
-    fetch_operator_package_into(
+    crate::operator_package_process::fetch_package(
         &config.central_url,
         &summary.operator_id,
         package_version,
         generation.store_root(),
         config.bearer_token.as_deref(),
+        fetch_deadline,
     )
     .map_err(|error| {
         fetch_error(
-            "operator_package_fetch_failed",
+            error.code,
             "fetch_package",
-            format!("bound Orchestra package fetch failed: {error}"),
+            format!("bound Orchestra package fetch failed: {}", error.message),
         )
     })?;
+
+    check_fetch_progress(fetch_deadline, "fetch_package")?;
 
     let mut next_agent = config.agent.clone();
     next_agent.operator_packages_root = Some(
@@ -322,9 +324,8 @@ pub(crate) fn finalize_orchestra_operator_package(
 pub(crate) fn release_orchestra_operator_job(
     job_id: &str,
 ) -> Result<Value, ExternalOperatorTaskError> {
-    let _generation_guard = fetch_lock()
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    // Recovery RPCs must not queue behind network fetches or disposable executions.
+    let _generation_guard = try_job_release_lock(job_id, fetch_lock())?;
     let plan = plan_job_release(job_id).map_err(retention_registration_error)?;
     if !plan.was_bound {
         return Ok(job_release_receipt(
@@ -409,6 +410,78 @@ pub(crate) fn validate_operator_package_job_id(
     job_id: &str,
 ) -> Result<(), ExternalOperatorTaskError> {
     validate_registration(Some("job"), Some(job_id)).map_err(retention_registration_error)
+}
+
+fn try_job_release_lock<'a>(
+    job_id: &str,
+    lock: &'a Mutex<()>,
+) -> Result<MutexGuard<'a, ()>, ExternalOperatorTaskError> {
+    validate_operator_package_job_id(job_id)?;
+    lock.try_lock().map_err(|error| match error {
+        TryLockError::WouldBlock => fetch_error(
+            "operator_package_job_release_busy",
+            "acquire_package_lifecycle",
+            "package lifecycle is busy; no cleanup performed; retry release_operator_package_job after it becomes idle, not task execution or cancellation",
+        ),
+        TryLockError::Poisoned(_) => fetch_error(
+            "operator_package_job_release_unavailable",
+            "acquire_package_lifecycle",
+            "package lifecycle lock is poisoned; no cleanup performed; explicitly stop, inspect and restart the Agent before retrying cleanup",
+        ),
+    })
+}
+
+fn check_fetch_progress(
+    deadline: Instant,
+    stage: &'static str,
+) -> Result<(), ExternalOperatorTaskError> {
+    kyuubiki_solver::solver_control::check_cancellation()
+        .map_err(|message| fetch_error("operator_package_fetch_cancelled", stage, message))?;
+    if Instant::now() >= deadline {
+        return Err(fetch_error(
+            "operator_package_fetch_timeout",
+            stage,
+            "package acquisition exceeded the download budget; no retry",
+        ));
+    }
+    Ok(())
+}
+
+fn acquire_fetch_lock(
+    lock: &Mutex<()>,
+    deadline: Instant,
+) -> Result<MutexGuard<'_, ()>, ExternalOperatorTaskError> {
+    loop {
+        check_fetch_progress(deadline, "acquire_package_lifecycle")?;
+        match lock.try_lock() {
+            Ok(guard) => {
+                check_fetch_progress(deadline, "acquire_package_lifecycle")?;
+                return Ok(guard);
+            }
+            Err(TryLockError::WouldBlock) => std::thread::sleep(
+                Duration::from_millis(5).min(deadline.saturating_duration_since(Instant::now())),
+            ),
+            Err(TryLockError::Poisoned(_)) => {
+                return Err(fetch_error(
+                    "operator_package_lifecycle_unavailable",
+                    "acquire_package_lifecycle",
+                    "package lifecycle lock is poisoned; inspect and restart before fetching",
+                ));
+            }
+        }
+    }
+}
+
+pub(crate) fn job_release_policy() -> Value {
+    json!({
+        "on_lifecycle_contention": "reject_without_waiting_or_mutation",
+        "on_poisoned_lock": "reject_without_mutation",
+        "cancel_registration_independent": true,
+        "automatic_cleanup_retry": false,
+        "retry_method": "release_operator_package_job",
+        "automatic_replay_authorized": false,
+        "scope": "lifecycle_lock_admission_only"
+    })
 }
 
 fn cache_eviction_receipt(
@@ -568,4 +641,95 @@ fn fetch_runtime_config() -> &'static RwLock<Option<OperatorPackageFetchRuntimeC
 fn fetch_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
+}
+
+#[cfg(test)]
+mod release_lock_tests {
+    use super::*;
+
+    #[test]
+    fn busy_job_release_never_waits_and_can_retry_after_owner_finishes() {
+        let lock = Mutex::new(());
+        let owner = lock.lock().unwrap();
+        let error = try_job_release_lock("job", &lock).unwrap_err();
+        assert_eq!(error.code, "operator_package_job_release_busy");
+        assert_eq!(error.stage, "acquire_package_lifecycle");
+        assert!(lock.try_lock().is_err());
+        drop(owner);
+        let release = try_job_release_lock("job", &lock).unwrap();
+        assert!(
+            lock.try_lock().is_err(),
+            "successful cleanup must retain exclusion"
+        );
+        drop(release);
+        assert!(lock.try_lock().is_ok());
+    }
+
+    #[test]
+    fn invalid_job_release_is_rejected_even_when_lifecycle_is_busy() {
+        let lock = Mutex::new(());
+        let _owner = lock.lock().unwrap();
+        for job in ["", "bad\njob", &"x".repeat(257)] {
+            assert_eq!(
+                try_job_release_lock(job, &lock).unwrap_err().code,
+                "operator_package_job_id_invalid"
+            );
+        }
+    }
+
+    #[test]
+    fn poisoned_lifecycle_does_not_authorize_package_cleanup() {
+        let lock = Mutex::new(());
+        let panic = std::panic::catch_unwind(|| {
+            let _owner = lock.lock().unwrap();
+            panic!("injected package lifecycle panic");
+        });
+        assert!(panic.is_err());
+        let error = try_job_release_lock("job", &lock).unwrap_err();
+        assert_eq!(error.code, "operator_package_job_release_unavailable");
+        assert_eq!(error.stage, "acquire_package_lifecycle");
+        assert_eq!(
+            acquire_fetch_lock(&lock, Instant::now() + Duration::from_secs(1))
+                .unwrap_err()
+                .code,
+            "operator_package_lifecycle_unavailable"
+        );
+        assert!(
+            lock.is_poisoned(),
+            "recovery must not silently reset the lock"
+        );
+    }
+
+    #[test]
+    fn waiting_fetch_observes_cancellation_without_unlocking_the_owner() {
+        use kyuubiki_solver::solver_control::{SolverControl, with_solver_control};
+        let lock = Mutex::new(());
+        let owner = lock.lock().unwrap();
+        let control = SolverControl::default();
+        let result: Result<(), String> = with_solver_control(&control, || {
+            control.request_cancel();
+            let error =
+                acquire_fetch_lock(&lock, Instant::now() + Duration::from_secs(1)).unwrap_err();
+            assert_eq!(error.code, "operator_package_fetch_cancelled");
+            assert_eq!(error.stage, "acquire_package_lifecycle");
+            assert!(lock.try_lock().is_err());
+            Err(error.message)
+        });
+        assert!(result.is_err());
+        assert!(control.was_interrupted());
+        drop(owner);
+        assert!(acquire_fetch_lock(&lock, Instant::now() + Duration::from_secs(1)).is_ok());
+    }
+
+    #[test]
+    fn waiting_fetch_has_a_total_budget_without_a_late_lock_acquisition() {
+        let lock = Mutex::new(());
+        let owner = lock.lock().unwrap();
+        let error =
+            acquire_fetch_lock(&lock, Instant::now() + Duration::from_millis(10)).unwrap_err();
+        assert_eq!(error.code, "operator_package_fetch_timeout");
+        assert!(lock.try_lock().is_err());
+        drop(owner);
+        assert!(lock.try_lock().is_ok());
+    }
 }

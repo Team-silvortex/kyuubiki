@@ -54,7 +54,7 @@ fn rejects_digest_mismatch_without_leaving_an_installed_package() {
         fetch_operator_package_into(&central_url, PACKAGE_ID, PACKAGE_VERSION, &store, None)
             .expect_err("digest mismatch must fail");
 
-    assert!(error.contains("entrypoint digest mismatch"));
+    assert!(error.contains("entrypoint digest mismatch"), "{error}");
     assert!(!store.join("packages").join(PACKAGE_ID).exists());
     assert_eq!(server.join().expect("fixture server").len(), 3);
 }

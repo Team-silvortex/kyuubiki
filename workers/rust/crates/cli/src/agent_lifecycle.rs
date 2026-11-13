@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use kyuubiki_protocol::{
     AGENT_DRAIN_CONTROLLER_ID_MAX_BYTES, AGENT_DRAIN_REASON_MAX_BYTES, AGENT_LIFECYCLE_SCHEMA,
@@ -26,6 +26,7 @@ struct LifecycleState {
     next_drain_generation: u64,
     active_execution_count: usize,
     max_active_executions: Option<usize>,
+    slot_released: Arc<Condvar>,
     drain: Option<DrainLease>,
     last_resumed: Option<(u64, String)>,
     shutdown_requested: bool,
@@ -38,6 +39,7 @@ impl Default for LifecycleState {
             next_drain_generation: 0,
             active_execution_count: 0,
             max_active_executions: None,
+            slot_released: Arc::new(Condvar::new()),
             drain: None,
             last_resumed: None,
             shutdown_requested: false,
@@ -76,6 +78,7 @@ impl ExecutionGuard {
 }
 
 const CAPACITY_ENV: &str = "KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS";
+const ADMISSION_HANDOFF_WAIT: Duration = Duration::from_millis(5);
 
 pub(crate) fn configure_execution_capacity() -> Result<(), String> {
     let limit = match std::env::var(CAPACITY_ENV) {
@@ -115,6 +118,8 @@ pub(crate) fn execution_admission_snapshot() -> serde_json::Value {
         "rejection_code":"agent_at_capacity",
         "rejection_boundary":"before_execution",
         "release_boundary":"execution_and_response_finished",
+        "capacity_handoff_wait_ms":ADMISSION_HANDOFF_WAIT.as_millis(),
+        "capacity_handoff_policy":"bounded_wait_no_execution_retry",
         "cancellation":"cooperative_boundary_not_thread_preemption"
     })
 }
@@ -223,6 +228,7 @@ fn begin_shutdown_in(state: &Arc<Mutex<LifecycleState>>) -> Result<(), String> {
         .lock()
         .map_err(|_| "agent lifecycle state is unavailable")?;
     lifecycle.shutdown_requested = true;
+    lifecycle.slot_released.notify_all();
     if lifecycle.drain.is_none() {
         let generation = lifecycle
             .next_drain_generation
@@ -243,37 +249,72 @@ fn acquire_execution_slot(
     state: &Arc<Mutex<LifecycleState>>,
     request_id: &str,
 ) -> Result<Arc<ExecutionLease>, ExecutionAdmissionError> {
+    acquire_execution_slot_before(state, request_id, Instant::now() + ADMISSION_HANDOFF_WAIT)
+}
+
+fn acquire_execution_slot_before(
+    state: &Arc<Mutex<LifecycleState>>,
+    request_id: &str,
+    deadline: Instant,
+) -> Result<Arc<ExecutionLease>, ExecutionAdmissionError> {
+    acquire_execution_slot_waiting(state, request_id, deadline, || {})
+}
+
+fn acquire_execution_slot_waiting(
+    state: &Arc<Mutex<LifecycleState>>,
+    request_id: &str,
+    deadline: Instant,
+    mut before_wait: impl FnMut(),
+) -> Result<Arc<ExecutionLease>, ExecutionAdmissionError> {
     let mut lifecycle = state.lock().map_err(|_| ExecutionAdmissionError {
         request_id: request_id.to_string(),
         reason_code: "agent_lifecycle_unavailable".to_string(),
         message: "agent lifecycle state is unavailable".to_string(),
     })?;
-    if lifecycle.shutdown_requested {
-        return Err(ExecutionAdmissionError {
-            request_id: request_id.to_string(),
-            reason_code: "agent_draining".into(),
-            message: "agent process is shutting down and cannot accept new execution".into(),
-        });
-    }
-    if let Some(drain) = lifecycle.drain.as_ref() {
-        return Err(ExecutionAdmissionError {
-            request_id: request_id.to_string(),
-            reason_code: "agent_draining".to_string(),
-            message: format!(
-                "agent drain generation {} is not accepting new execution",
-                drain.generation
-            ),
-        });
-    }
-    if lifecycle
-        .max_active_executions
-        .is_some_and(|limit| lifecycle.active_execution_count >= limit)
-    {
-        return Err(ExecutionAdmissionError {
-            request_id: request_id.to_owned(),
-            reason_code: "agent_at_capacity".into(),
-            message: "Agent execution capacity is full; request was not admitted".into(),
-        });
+    loop {
+        if lifecycle.shutdown_requested {
+            return Err(ExecutionAdmissionError {
+                request_id: request_id.to_string(),
+                reason_code: "agent_draining".into(),
+                message: "agent process is shutting down and cannot accept new execution".into(),
+            });
+        }
+        if let Some(drain) = lifecycle.drain.as_ref() {
+            return Err(ExecutionAdmissionError {
+                request_id: request_id.to_string(),
+                reason_code: "agent_draining".to_string(),
+                message: format!(
+                    "agent drain generation {} is not accepting new execution",
+                    drain.generation
+                ),
+            });
+        }
+        if lifecycle
+            .max_active_executions
+            .is_none_or(|limit| lifecycle.active_execution_count < limit)
+        {
+            break;
+        }
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(ExecutionAdmissionError {
+                request_id: request_id.to_owned(),
+                reason_code: "agent_at_capacity".into(),
+                message: "Agent execution capacity is full; request was not admitted".into(),
+            });
+        }
+        // A peer can receive the final frame before its writer drops the delivery lease.
+        // Wait only for this short handoff; never release a still-owned slot or retry work.
+        let released = Arc::clone(&lifecycle.slot_released);
+        before_wait();
+        lifecycle = released
+            .wait_timeout(lifecycle, remaining)
+            .map_err(|_| ExecutionAdmissionError {
+                request_id: request_id.to_owned(),
+                reason_code: "agent_lifecycle_unavailable".into(),
+                message: "Agent lifecycle is unavailable".into(),
+            })?
+            .0;
     }
     lifecycle.active_execution_count =
         lifecycle
@@ -338,6 +379,7 @@ fn begin_drain_in(
         reason,
         started_unix_ms: unix_now_ms(),
     });
+    lifecycle.slot_released.notify_all();
     Ok(snapshot_locked(&lifecycle))
 }
 
@@ -501,9 +543,14 @@ impl Drop for ExecutionLease {
     fn drop(&mut self) {
         if let Ok(mut state) = self.state.lock() {
             state.active_execution_count = state.active_execution_count.saturating_sub(1);
+            state.slot_released.notify_one();
         }
     }
 }
+
+#[cfg(test)]
+#[path = "tests/agent_capacity_handoff.rs"]
+mod capacity_handoff_tests;
 
 #[cfg(test)]
 mod tests {

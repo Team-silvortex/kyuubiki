@@ -66,7 +66,7 @@ fn execute_operator_task_ir(
         );
     }
 
-    let mut external_process_cancelled = false;
+    let mut external_cancel_stage = None;
     let result = match agent_fault_injection::with_solver_control(
         &guard,
         maybe_job_id.as_deref(),
@@ -74,9 +74,17 @@ fn execute_operator_task_ir(
         || {
             let result = run_operator_task_ir(&request.params);
             // The solver scope normalizes cancellation errors; retain the actual boundary.
-            external_process_cancelled = result
-                .as_ref()
-                .is_err_and(|e| e.code == "operator_process_cancelled");
+            external_cancel_stage = result.as_ref().err().and_then(|e| match e.code {
+                "operator_process_cancelled" => Some("execute_external_process"),
+                "operator_package_fetch_cancelled" => Some(
+                    if e.details["failure_stage"] == "acquire_package_lifecycle" {
+                        "acquire_package_lifecycle"
+                    } else {
+                        "fetch_package"
+                    },
+                ),
+                _ => None,
+            });
             result
         },
     ) {
@@ -84,8 +92,8 @@ fn execute_operator_task_ir(
         Err(mut error) => {
             let control = guard.solver_control();
             if control.was_interrupted() {
-                let stage = if external_process_cancelled {
-                    "execute_external_process"
+                let stage = if let Some(stage) = external_cancel_stage {
+                    stage
                 } else if control.last_checkpoint().is_some_and(|point| {
                     point.stage == kyuubiki_solver::solver_control::SolverStage::ResultDiagnostics
                 }) {

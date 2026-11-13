@@ -1,6 +1,8 @@
 //! Per-call process fault containment, not a security sandbox for malicious code.
+mod fetch;
 mod worker;
 use self::worker as wire;
+pub(crate) use fetch::{fetch_deadline, fetch_package};
 use kyuubiki_protocol::{OperatorRunRequest, OperatorRunResult};
 use std::{
     io::{self, Read, Write},
@@ -31,12 +33,14 @@ impl ProcessError {
 struct Policy {
     load_ms: u64,
     run_ms: u64,
+    fetch_ms: u64,
 }
 impl Default for Policy {
     fn default() -> Self {
         Self {
             load_ms: 10_000,
             run_ms: 300_000,
+            fetch_ms: 120_000,
         }
     }
 }
@@ -65,6 +69,7 @@ pub(crate) fn configure() -> Result<(), String> {
         .set(Policy {
             load_ms: read("KYUUBIKI_OPERATOR_PROCESS_LOAD_TIMEOUT_MS", 10_000)?,
             run_ms: read("KYUUBIKI_OPERATOR_PROCESS_RUN_TIMEOUT_MS", 300_000)?,
+            fetch_ms: read("KYUUBIKI_OPERATOR_PACKAGE_FETCH_TIMEOUT_MS", 120_000)?,
         })
         .map_err(|_| "native operator process policy already configured".into())
 }
@@ -75,6 +80,11 @@ pub(crate) fn snapshot() -> serde_json::Value {
         "run_timeout_ms":p.run_ms,"max_frame_bytes":wire::MAX_FRAME_BYTES,
         "automatic_retry":false,"environment":"minimal_allowlist", "security_sandbox":false,
         "parent_loss":"stdin_eof_exit",
+        "package_fetch": {"mode":"supervised_installer_process", "timeout_ms":p.fetch_ms,
+            "budget_scope":"lifecycle_wait_and_download", "automatic_retry":false,
+            "temporary_storage":"unpublished_generation", "token_delivery":"private_ipc",
+            "loads_operator_code":false,
+            "session_recovery":crate::operator_package_generation_session::recovery_policy()},
         "parent_loss_cleanup":if cfg!(unix) {"owned_process_group"} else {"direct_child_only"},
         "descendant_cleanup":if cfg!(unix) {"process_group"} else {"direct_child_only"}})
 }
@@ -139,8 +149,17 @@ impl Drop for ChildGuard {
 
 fn invoke(request: Request, timeout_ms: u64) -> Result<Reply, ProcessError> {
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+    invoke_until(request, deadline, None)
+}
+
+fn invoke_until(
+    request: Request,
+    deadline: Instant,
+    temporary: Option<&Path>,
+) -> Result<Reply, ProcessError> {
     check(deadline)?;
-    let bytes = wire::encode(&request).map_err(ProcessError::protocol)?;
+    let bytes = zeroize::Zeroizing::new(wire::encode(&request).map_err(ProcessError::protocol)?);
+    drop(request);
     check(deadline)?;
     let listener = TcpListener::bind(("127.0.0.1", 0)).map_err(ProcessError::protocol)?;
     listener
@@ -165,6 +184,9 @@ fn invoke(request: Request, timeout_ms: u64) -> Result<Reply, ProcessError> {
         if let Some(value) = std::env::var_os(key) {
             command.env(key, value);
         }
+    }
+    if let Some(root) = temporary {
+        fetch::configure_download_environment(&mut command, root);
     }
     #[cfg(unix)]
     {
@@ -202,16 +224,15 @@ fn invoke(request: Request, timeout_ms: u64) -> Result<Reply, ProcessError> {
 fn exchange(
     listener: TcpListener,
     nonce: [u8; 32],
-    bytes: Vec<u8>,
+    bytes: zeroize::Zeroizing<Vec<u8>>,
     deadline: Instant,
 ) -> Result<Reply, ProcessError> {
+    let waiting_since = Instant::now();
     let mut stream = loop {
         check(deadline)?;
         match listener.accept() {
             Ok((stream, _)) => break stream,
-            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(5))
-            }
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => pause(waiting_since, deadline),
             Err(e) => return Err(ProcessError::protocol(e)),
         }
     };
@@ -240,6 +261,7 @@ fn exchange(
                 FailureKind::Activation => "operator_package_activation_failed",
                 FailureKind::Identity => "operator_package_identity_mismatch",
                 FailureKind::Execution => "operator_package_dispatch_failed",
+                FailureKind::Fetch => "operator_package_fetch_failed",
             },
             message,
         }),
@@ -263,11 +285,30 @@ fn check(deadline: Instant) -> Result<(), ProcessError> {
     Ok(())
 }
 
+fn poll_delay(idle: Duration, remaining: Duration) -> Duration {
+    // Low latency for a newly spawned worker, without rapid polling on a hung plugin.
+    Duration::from_millis(if idle < Duration::from_millis(20) {
+        1
+    } else {
+        5
+    })
+    .min(remaining)
+}
+
+fn pause(waiting_since: Instant, deadline: Instant) {
+    let now = Instant::now();
+    std::thread::sleep(poll_delay(
+        now.saturating_duration_since(waiting_since),
+        deadline.saturating_duration_since(now),
+    ));
+}
+
 fn transfer(
     mut bytes: &mut [u8],
     deadline: Instant,
     mut operation: impl FnMut(&mut [u8]) -> io::Result<usize>,
 ) -> Result<(), ProcessError> {
+    let mut waiting_since = Instant::now();
     while !bytes.is_empty() {
         check(deadline)?;
         match operation(bytes) {
@@ -277,11 +318,12 @@ fn transfer(
                     message: "Native operator process closed before completing its response".into(),
                 });
             }
-            Ok(n) => bytes = &mut bytes[n..],
-            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
-            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(5))
+            Ok(n) => {
+                bytes = &mut bytes[n..];
+                waiting_since = Instant::now();
             }
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => pause(waiting_since, deadline),
             Err(_) => {
                 return Err(ProcessError {
                     code: "operator_process_crashed",
@@ -296,15 +338,17 @@ fn read(stream: &mut TcpStream, bytes: &mut [u8], deadline: Instant) -> Result<(
     transfer(bytes, deadline, |bytes| stream.read(bytes))
 }
 fn write(stream: &mut TcpStream, mut bytes: &[u8], deadline: Instant) -> Result<(), ProcessError> {
+    let mut waiting_since = Instant::now();
     while !bytes.is_empty() {
         check(deadline)?;
         match stream.write(bytes) {
             Ok(0) => return Err(ProcessError::protocol("native IPC write closed")),
-            Ok(n) => bytes = &bytes[n..],
-            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
-            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
-                std::thread::sleep(Duration::from_millis(5))
+            Ok(n) => {
+                bytes = &bytes[n..];
+                waiting_since = Instant::now();
             }
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => pause(waiting_since, deadline),
             Err(e) => return Err(ProcessError::protocol(e)),
         }
     }
@@ -314,6 +358,29 @@ fn write(stream: &mut TcpStream, mut bytes: &[u8], deadline: Instant) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn short_ipc_waits_are_responsive_without_spinning_on_long_stalls() {
+        for idle_ms in [0, 1, 19] {
+            assert_eq!(
+                poll_delay(Duration::from_millis(idle_ms), Duration::from_secs(1)),
+                Duration::from_millis(1)
+            );
+        }
+        for idle_ms in [20, 100, 30_000] {
+            assert_eq!(
+                poll_delay(Duration::from_millis(idle_ms), Duration::from_secs(1)),
+                Duration::from_millis(5)
+            );
+        }
+        assert_eq!(
+            poll_delay(Duration::ZERO, Duration::from_micros(50)),
+            Duration::from_micros(50)
+        );
+        assert_eq!(
+            poll_delay(Duration::from_secs(1), Duration::ZERO),
+            Duration::ZERO
+        );
+    }
     #[test]
     fn process_bounds_never_silently_disable_deadlines() {
         for value in ["", "0", "99", "3600001", "-1", "invalid"] {

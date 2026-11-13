@@ -170,6 +170,9 @@ completed solve or production qualification. Source anchors:
 | --- | --- | --- |
 | Package identity and generation leases | [Runtime binding](../workers/rust/crates/cli/src/operator_package_runtime.rs) | Pins/leases, not native function pointers in the Agent |
 | Process lifecycle, budgets and IPC | [Supervisor](../workers/rust/crates/cli/src/operator_package_process.rs) | One call per child, cancellation, termination and reap; no hidden retry |
+| Cancellable package acquisition | [Download adapter](../workers/rust/crates/cli/src/operator_package_process/fetch.rs) | Reuses Installer in a supervised child; unpublished-generation storage, no plugin loading or new service |
+| Package cache recovery coordination | [Session leases](../workers/rust/crates/cli/src/operator_package_generation_session.rs) | Agent/downloader shared leases; bounded catalog coordination; cleanup never guesses ownership from PID |
+| Session initialization recovery | [Creation intent](../workers/rust/crates/cli/src/operator_package_generation_session/initialization.rs) | Persist intent before creating directories; exact metadata-prefix and lease checks; non-recursive cleanup of proven incomplete sessions |
 | Child-only loading and ABI execution | [Private worker](../workers/rust/crates/cli/src/operator_package_process/worker.rs) | Private to the supervisor; no Agent listener, Store or Orchestra startup |
 | Low-level registry and ABI | [Engine host](../workers/rust/crates/engine/src/operator_sdk_host.rs) | Direct embedding stays in-process; not a security sandbox |
 | Crash/hang/parent-loss evidence | [Process tests](../workers/rust/crates/cli/tests/operator_process_isolation.rs) and [fault fixture](../workers/rust/crates/cli/tests/fixtures/operator_process_fault.rs) | Synthetic libraries only; never distributed as operator packages |

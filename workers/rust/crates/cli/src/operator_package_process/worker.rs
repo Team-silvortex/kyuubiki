@@ -34,6 +34,7 @@ pub(crate) struct LoadedOperatorPackage {
 
 #[derive(Serialize, Deserialize)]
 pub(super) enum Request {
+    Fetch(super::fetch::FetchRequest),
     Probe {
         root: PathBuf,
     },
@@ -46,6 +47,7 @@ pub(super) enum Request {
 
 #[derive(Serialize, Deserialize)]
 pub(super) enum Reply {
+    Fetched,
     Probed(Vec<LoadedOperatorPackage>),
     Executed(OperatorRunResult),
     Failed { kind: FailureKind, message: String },
@@ -53,6 +55,7 @@ pub(super) enum Reply {
 
 #[derive(Serialize, Deserialize)]
 pub(super) enum FailureKind {
+    Fetch,
     Activation,
     Identity,
     Execution,
@@ -131,7 +134,7 @@ fn serve() -> Result<(), String> {
     stream.write_all(&nonce).map_err(|e| e.to_string())?;
     let mut header = [0; 4];
     stream.read_exact(&mut header).map_err(|e| e.to_string())?;
-    let mut bytes = vec![0; frame_length(header)?];
+    let mut bytes = zeroize::Zeroizing::new(vec![0; frame_length(header)?]);
     stream.read_exact(&mut bytes).map_err(|e| e.to_string())?;
     let request = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     drop(bytes);
@@ -147,8 +150,14 @@ fn serve() -> Result<(), String> {
 }
 
 fn execute(request: Request) -> Result<Reply, (FailureKind, String)> {
+    // Download credentials must never enter a process that loads operator code.
+    let request = match request {
+        Request::Fetch(request) => return super::fetch::execute(request),
+        other => other,
+    };
     let root = match &request {
         Request::Probe { root } | Request::Run { root, .. } => root,
+        Request::Fetch(_) => unreachable!("download handled before loading libraries"),
     };
     let session = load_external_operator_packages_with_dynamic_host(
         BuiltInOperatorRegistryKind::Extract,
@@ -199,6 +208,7 @@ fn execute(request: Request) -> Result<Reply, (FailureKind, String)> {
         .collect::<Result<Vec<_>, String>>()
         .map_err(|e| (FailureKind::Activation, e))?;
     let reply = match request {
+        Request::Fetch(_) => unreachable!("download handled before loading libraries"),
         Request::Probe { .. } => Reply::Probed(packages),
         Request::Run {
             expected, request, ..

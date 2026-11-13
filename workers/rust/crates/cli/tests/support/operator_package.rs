@@ -123,6 +123,7 @@ pub struct LiveAgent {
     child: Child,
     log_path: PathBuf,
     port: u16,
+    agent_id: String,
 }
 
 impl LiveAgent {
@@ -177,7 +178,9 @@ impl LiveAgent {
         deployment: bool,
         fault_limits: bool,
     ) -> Result<Self, Box<dyn Error>> {
+        let _startup = startup_guard();
         let port = reserve_port()?;
+        let agent_id = owned_agent_id();
         let log_path =
             std::env::temp_dir().join(format!("kyuubiki-operator-package-live-{port}.log"));
         let log = OpenOptions::new()
@@ -208,7 +211,7 @@ impl LiveAgent {
                 "--port",
                 &port.to_string(),
                 "--agent-id",
-                "operator-package-live-agent",
+                &agent_id,
                 "--operator-package-host-id",
                 "operator-package-live-host",
                 "--operator-packages-root",
@@ -223,6 +226,7 @@ impl LiveAgent {
             child,
             log_path,
             port,
+            agent_id,
         };
         agent.wait_until_ready(Duration::from_secs(30))?;
         Ok(agent)
@@ -242,7 +246,62 @@ impl LiveAgent {
         token: &str,
         max_active_executions: usize,
     ) -> Result<Self, Box<dyn Error>> {
-        let port = reserve_port()?;
+        Self::start_orchestrated_with_fetch_timeout(
+            packages_root,
+            orchestrator_url,
+            token,
+            max_active_executions,
+            120_000,
+        )
+    }
+
+    pub fn start_orchestrated_with_fetch_timeout(
+        packages_root: &Path,
+        orchestrator_url: &str,
+        token: &str,
+        max_active_executions: usize,
+        fetch_timeout_ms: u64,
+    ) -> Result<Self, Box<dyn Error>> {
+        Self::start_orchestrated_options(
+            packages_root,
+            orchestrator_url,
+            token,
+            max_active_executions,
+            fetch_timeout_ms,
+            None,
+        )
+    }
+
+    pub fn start_orchestrated_reserved(
+        packages_root: &Path,
+        orchestrator_url: &str,
+        token: &str,
+        reservation: TcpListener,
+    ) -> Result<Self, Box<dyn Error>> {
+        Self::start_orchestrated_options(
+            packages_root,
+            orchestrator_url,
+            token,
+            1,
+            120_000,
+            Some(reservation),
+        )
+    }
+
+    fn start_orchestrated_options(
+        packages_root: &Path,
+        orchestrator_url: &str,
+        token: &str,
+        max_active_executions: usize,
+        fetch_timeout_ms: u64,
+        reservation: Option<TcpListener>,
+    ) -> Result<Self, Box<dyn Error>> {
+        let _startup = reservation.is_none().then(startup_guard);
+        let port = match &reservation {
+            Some(listener) => listener.local_addr()?.port(),
+            None => reserve_port()?,
+        };
+        let agent_id = owned_agent_id();
         let log_path =
             std::env::temp_dir().join(format!("kyuubiki-operator-fetch-live-{port}.log"));
         let log = OpenOptions::new()
@@ -250,6 +309,7 @@ impl LiveAgent {
             .truncate(true)
             .write(true)
             .open(&log_path)?;
+        drop(reservation);
         let child = Command::new(env!("CARGO_BIN_EXE_kyuubiki-cli"))
             .args([
                 "agent",
@@ -258,7 +318,7 @@ impl LiveAgent {
                 "--port",
                 &port.to_string(),
                 "--agent-id",
-                "operator-fetch-live-agent",
+                &agent_id,
                 "--orchestrator-url",
                 orchestrator_url,
                 "--operator-package-host-id",
@@ -270,6 +330,10 @@ impl LiveAgent {
             ])
             .env("KYUUBIKI_CLUSTER_API_TOKEN", token)
             .env(
+                "KYUUBIKI_OPERATOR_PACKAGE_FETCH_TIMEOUT_MS",
+                fetch_timeout_ms.to_string(),
+            )
+            .env(
                 "KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS",
                 max_active_executions.to_string(),
             )
@@ -280,6 +344,7 @@ impl LiveAgent {
             child,
             log_path,
             port,
+            agent_id,
         };
         agent.wait_until_ready(Duration::from_secs(30))?;
         Ok(agent)
@@ -288,15 +353,21 @@ impl LiveAgent {
     fn wait_until_ready(&mut self, timeout: Duration) -> Result<(), Box<dyn Error>> {
         let started = Instant::now();
         while started.elapsed() < timeout {
-            if TcpStream::connect(("127.0.0.1", self.port)).is_ok() {
-                return Ok(());
-            }
             if let Some(status) = self.child.try_wait()? {
                 return Err(format!(
                     "agent exited with {status}; log:\n{}",
                     fs::read_to_string(&self.log_path).unwrap_or_default()
                 )
                 .into());
+            }
+            if let Ok(reply) = self.request("owned-package-readiness", "describe_agent", json!({}))
+            {
+                if reply["ok"] == true
+                    && reply["result"]["deployment_readiness"]["agent_id"] == self.agent_id
+                {
+                    return Ok(());
+                }
+                return Err("Agent readiness replied with a different owned identity".into());
             }
             thread::sleep(Duration::from_millis(50));
         }
@@ -406,6 +477,21 @@ pub fn refresh_task_digest(task: &mut Value) {
 fn reserve_port() -> Result<u16, Box<dyn Error>> {
     let listener = TcpListener::bind(("127.0.0.1", 0))?;
     Ok(listener.local_addr()?.port())
+}
+
+fn owned_agent_id() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    format!(
+        "operator-package-live-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    )
+}
+
+fn startup_guard() -> std::sync::MutexGuard<'static, ()> {
+    static STARTUP: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    STARTUP.lock().unwrap_or_else(|error| error.into_inner())
 }
 
 fn read_json_frame(stream: &mut TcpStream) -> Result<Value, Box<dyn Error>> {

@@ -24,6 +24,38 @@ fn api_tokens_are_validated_and_debug_redacted() {
 }
 
 #[test]
+fn tls_handshake_enables_low_latency_on_both_endpoints() {
+    let (certificate, key) = fixture();
+    let server = ServerSecurity::from_pem(&certificate, &key, TOKEN.into()).unwrap();
+    let client = ClientSecurity::from_pem(&certificate, "localhost", TOKEN.into()).unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    thread::scope(|scope| {
+        let worker = scope.spawn(|| {
+            let (socket, _) = listener.accept().unwrap();
+            socket.set_nodelay(false).unwrap();
+            let observer = socket.try_clone().unwrap();
+            let stream = server.accept(socket, Duration::from_secs(2)).unwrap();
+            assert!(stream.authenticated());
+            assert!(
+                observer.nodelay().unwrap(),
+                "server must not delay small TLS frames"
+            );
+        });
+        let socket = TcpStream::connect(address).unwrap();
+        socket.set_nodelay(false).unwrap();
+        let observer = socket.try_clone().unwrap();
+        let stream = client.connect(socket, Duration::from_secs(2)).unwrap();
+        assert!(stream.authenticated());
+        assert!(
+            observer.nodelay().unwrap(),
+            "client must not delay small TLS frames"
+        );
+        worker.join().unwrap();
+    });
+}
+
+#[test]
 fn secure_session_authenticates_before_application_bytes() {
     let (certificate, key) = fixture();
     let server = ServerSecurity::from_pem(&certificate, &key, TOKEN.to_owned()).unwrap();

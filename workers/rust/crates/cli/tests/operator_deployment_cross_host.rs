@@ -1,4 +1,6 @@
 //! Manual two-phase qualification. The operator owns the remote fixture's managed restart.
+#[path = "support/operator_cross_host_transport.rs"]
+mod transport;
 use kyuubiki_headless_sdk::deploy_operator_package;
 use kyuubiki_installer::{project_operator_in, stage_store_operator_variant_into};
 use kyuubiki_protocol::*;
@@ -6,57 +8,14 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
-    io::{Read, Write},
-    net::{SocketAddr, TcpStream},
+    io::Write,
+    net::SocketAddr,
     path::PathBuf,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 fn loopback_endpoint(value: &str) -> Result<SocketAddr, String> {
-    let address: SocketAddr = value
-        .parse()
-        .map_err(|_| "explicit_loopback_tunnel_required")?;
-    if !address.ip().is_loopback() || address.port() == 0 {
-        return Err("explicit_loopback_tunnel_required".into());
-    }
-    Ok(address)
-}
-
-fn rpc(endpoint: SocketAddr, method: &str, params: Value) -> Result<Value, String> {
-    let io = |e: std::io::Error| e.to_string();
-    let mut stream = TcpStream::connect_timeout(&endpoint, Duration::from_secs(5)).map_err(io)?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(30)))
-        .map_err(io)?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(30)))
-        .map_err(io)?;
-    let bytes = serde_json::to_vec(
-        &json!({"rpc_version":1,"id":"cross-host-probe","method":method,"params":params}),
-    )
-    .unwrap();
-    stream
-        .write_all(&(bytes.len() as u32).to_be_bytes())
-        .map_err(io)?;
-    stream.write_all(&bytes).map_err(io)?;
-    for _ in 0..32 {
-        let mut size = [0; 4];
-        stream.read_exact(&mut size).map_err(io)?;
-        let len = u32::from_be_bytes(size) as usize;
-        if len == 0 || len > 16 * 1024 * 1024 {
-            return Err("invalid_rpc_frame".into());
-        }
-        let mut bytes = vec![0; len];
-        stream.read_exact(&mut bytes).map_err(io)?;
-        let value: Value = serde_json::from_slice(&bytes).map_err(|_| "invalid_rpc_json")?;
-        if value.get("ok").is_some() {
-            if value["id"] != "cross-host-probe" || value["ok"] != true {
-                return Err(format!("RPC rejected: {}", value["error"]["code"]));
-            }
-            return Ok(value["result"].clone());
-        }
-    }
-    Err("rpc_event_limit".into())
+    transport::endpoint(value, "ssh-loopback")
 }
 
 struct Fixture(PathBuf);
@@ -96,15 +55,65 @@ fn qualification_only_accepts_explicit_loopback_tunnels() {
 }
 
 #[test]
-#[ignore = "requires an owned Installer-managed Linux Agent over an SSH loopback tunnel and trusted template .so"]
+#[ignore = "requires owned Installer-managed Linux Agent, explicit SSH loopback or native TLS, and trusted template .so"]
 fn staged_linux_variant_crosses_hosts_without_store_or_engine_coupling() {
     let phase = std::env::var("KYUUBIKI_CROSS_HOST_PHASE")
         .expect("deploy or verify after explicit managed restart");
     assert!(matches!(phase.as_str(), "deploy" | "verify"));
-    let endpoint = loopback_endpoint(
-        &std::env::var("KYUUBIKI_CROSS_HOST_ENDPOINT").expect("owned SSH loopback endpoint"),
-    )
-    .unwrap();
+    let client = transport::Transport::from_env().unwrap();
+    let tls = client.security.is_some();
+    let state = tls.then(|| {
+        PathBuf::from(
+            std::env::var("KYUUBIKI_CROSS_HOST_STATE_FILE").expect("owned phase receipt path"),
+        )
+    });
+    let descriptor = client.request("describe_agent", json!({})).unwrap();
+    if tls {
+        assert!(
+            !client.endpoint.ip().is_loopback(),
+            "cross-host TLS proof requires a real network endpoint"
+        );
+        let access = &descriptor["connection_access"];
+        assert_eq!(access["authenticated"], true);
+        assert_eq!(access["encrypted"], true);
+        assert_eq!(access["peer_scope"], "non_loopback");
+        assert_eq!(access["control_mode"], "tls_api_token");
+        let pem = transport::read_material(
+            &PathBuf::from(std::env::var("KYUUBIKI_CROSS_HOST_CA_FILE").unwrap()),
+            false,
+        )
+        .unwrap();
+        let token = transport::read_material(
+            &PathBuf::from(std::env::var("KYUUBIKI_CROSS_HOST_TOKEN_FILE").unwrap()),
+            true,
+        )
+        .unwrap();
+        let server_name = std::env::var("KYUUBIKI_CROSS_HOST_SERVER_NAME").unwrap();
+        client.assert_denials(&pem, &server_name, &token);
+        if phase == "verify" {
+            let old_token = transport::read_material(
+                &PathBuf::from(
+                    std::env::var("KYUUBIKI_CROSS_HOST_OLD_TOKEN_FILE")
+                        .expect("previous test token"),
+                ),
+                true,
+            )
+            .unwrap();
+            let old = transport::Transport::configured(
+                &client.endpoint.to_string(),
+                "native-tls",
+                Some(&pem),
+                Some(&server_name),
+                Some(old_token),
+            )
+            .unwrap();
+            assert_eq!(
+                old.request("describe_agent", json!({})).unwrap_err(),
+                "cross_host_authentication_failed",
+                "rotated token must be rejected during authentication"
+            );
+        }
+    }
     let platform =
         std::env::var("KYUUBIKI_CROSS_HOST_PLATFORM").unwrap_or_else(|_| "linux-x86_64".into());
     assert!(matches!(
@@ -167,13 +176,22 @@ fn staged_linux_variant_crosses_hosts_without_store_or_engine_coupling() {
         package: pin.clone(),
     })
     .unwrap();
+    let mut lose_commit_reply = tls && phase == "deploy";
+    let mut commits = 0;
     let mut exchange = |request: OperatorDeploymentRequest| {
-        serde_json::from_value::<OperatorDeploymentStatus>(rpc(
-            endpoint,
+        let commit = matches!(request.operation, OperatorDeploymentAction::Commit);
+        let reply = client.request(
             "manage_operator_package",
             serde_json::to_value(request).unwrap(),
-        )?)
-        .map_err(|e| e.to_string())
+        )?;
+        if commit {
+            commits += 1;
+            if lose_commit_reply {
+                lose_commit_reply = false;
+                return Err("test_commit_response_lost".into());
+            }
+        }
+        serde_json::from_value::<OperatorDeploymentStatus>(reply).map_err(|e| e.to_string())
     };
     let inspected = exchange(OperatorDeploymentRequest {
         package: pin.clone(),
@@ -203,9 +221,12 @@ fn staged_linux_variant_crosses_hosts_without_store_or_engine_coupling() {
             },
             || true,
             |_| {},
-        )
-        .unwrap();
-        assert_eq!(result.state, "installed_restart_required");
+        );
+        if tls {
+            assert_eq!(result.unwrap_err(), "test_commit_response_lost");
+        } else {
+            assert_eq!(result.unwrap().state, "installed_restart_required");
+        }
         assert!(reads > 0);
         let repeated = deploy_operator_package(
             pin,
@@ -217,11 +238,51 @@ fn staged_linux_variant_crosses_hosts_without_store_or_engine_coupling() {
         )
         .unwrap();
         assert_eq!(repeated.state, "installed_restart_required");
+        assert_eq!(commits, 1);
+        if let Some(path) = &state {
+            let mut receipt = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(path)
+                .unwrap();
+            receipt
+                .write_all(
+                    &serde_json::to_vec(
+                        &json!({"package":pin,"process_instance_id":inspected.process_instance_id}),
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+            receipt.sync_all().unwrap();
+        }
     } else {
         assert_eq!(
             inspected.state, "ready",
             "the operator must explicitly restart the managed fixture before verification"
         );
+        if let Some(path) = &state {
+            let previous: Value =
+                serde_json::from_str(&transport::read_material(path, false).unwrap()).unwrap();
+            assert_eq!(previous["package"], serde_json::to_value(pin).unwrap());
+            assert_ne!(
+                previous["process_instance_id"].as_str(),
+                inspected.process_instance_id.as_deref()
+            );
+            let rejected = client
+                .request(
+                    "manage_operator_package",
+                    serde_json::to_value(OperatorDeploymentRequest {
+                        package: pin.clone(),
+                        expected_process_instance_id: Some(
+                            previous["process_instance_id"].as_str().unwrap().into(),
+                        ),
+                        operation: OperatorDeploymentAction::Commit,
+                    })
+                    .unwrap(),
+                )
+                .unwrap_err();
+            assert!(rejected.contains("deployment_agent_changed"));
+        }
         let prepared = project(ProjectOperatorOperation::Prepare {
             package: pin.clone(),
             operator_id: "extract.template_summary".into(),
@@ -230,12 +291,12 @@ fn staged_linux_variant_crosses_hosts_without_store_or_engine_coupling() {
             config: json!({}),
         })
         .unwrap();
-        let result = rpc(
-            endpoint,
-            "run_operator_task_ir",
-            json!({"mode":"execute","task_ir":prepared.task.unwrap()}),
-        )
-        .unwrap();
+        let result = client
+            .request(
+                "run_operator_task_ir",
+                json!({"mode":"execute","task_ir":prepared.task.unwrap()}),
+            )
+            .unwrap();
         assert_eq!(
             result["execution_runtime_status"],
             "external_operator_package_executed"
@@ -260,11 +321,12 @@ fn staged_linux_variant_crosses_hosts_without_store_or_engine_coupling() {
         assert_eq!(result.installed.as_ref(), Some(pin));
     }
     println!(
-        "cross-host qualification: controller={}-{}, target={}, phase={}, package={}, passed=true",
+        "cross-host qualification: controller={}-{}, target={}, phase={}, package={}, transport={}, passed=true",
         std::env::consts::OS,
         std::env::consts::ARCH,
         platform,
         phase,
-        pin.package_id
+        pin.package_id,
+        if tls { "native-tls" } else { "ssh-loopback" }
     );
 }

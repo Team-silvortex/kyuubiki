@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "November 13, 2026 review of retained Store-to-Agent and native isolation evidence on the 3.7.8 working tree, not a new product execution campaign. Narrow verified source and SSH journeys coexist with the original partial integration claims. Production accounts, native TLS across hosts, installed current isolation, platform variants, publication, replacement and performance require their own named proof; historical in-process ABI or 1M solver evidence cannot substitute.",
+  "summary": "November 13, 2026 review of retained Store-to-Agent and native isolation evidence, followed by bounded native TLS deployment, Linux whole-call performance and installed short-soak/fault recovery runs based on 43020db6 (commit label 3.8.0; compiled package metadata 3.7.8). Narrow verified source, SSH, native TLS, performance and Linux installed-recovery evidence coexists with the original partial integration claims. Qualification remains open beyond the trusted-template and test-fault campaigns. Production accounts, matching GUI/SDK installed journeys, other platform variants, publication and replacement require their own named proof; historical in-process ABI or 1M solver evidence cannot substitute.",
   "cell_requirements": [
     { "module_id": "runtime-agent-cli", "paradigm": "validation", "dimensions": ["recovery"] }
   ],
@@ -68,6 +68,241 @@
         "cross-host-qualification",
         "sum=14"
       ]
+    },
+    {
+      "id": "mac-linux-native-tls-template-deployment-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["deployment_update"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/tests/operator_deployment_cross_host.rs",
+        "workers/rust/crates/cli/tests/operator_deployment_tls_host.rs",
+        "workers/rust/crates/cli/tests/support/operator_cross_host_transport.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "staged_linux_variant_crosses_hosts_without_store_or_engine_coupling",
+        "serve_owned_installer_managed_tls_deployment_fixture",
+        "remote_qualification_requires_explicit_complete_tls_without_plaintext_fallback",
+        "test_commit_response_lost",
+        "deployment_agent_changed",
+        "KYUUBIKI_CROSS_HOST_OLD_TOKEN_FILE",
+        "native-tls-cross-host-qualification"
+      ]
+    },
+    {
+      "id": "linux-native-isolation-whole-call-benchmark",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark", "contract"],
+      "files": [
+        "workers/rust/crates/cli/tests/operator_isolation_benchmark.rs",
+        "workers/rust/crates/cli/tests/support/operator_benchmark_fixture.rs",
+        "workers/rust/crates/cli/tests/support/operator_benchmark_metrics.rs",
+        "workers/rust/crates/cli/tests/support/operator_benchmark_resources.rs",
+        "workers/rust/crates/cli/src/operator_package_process.rs",
+        "reports/native-operator-isolation-benchmark-20261113.md",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "installed_native_isolation_whole_call_and_saturation_benchmark",
+        "prepare_agent_update_package",
+        "percentiles_use_nearest_rank_and_throughput_uses_parallel_wall_time",
+        "directory_iterator_errors_are_not_counted_as_file_descriptors",
+        "short_ipc_waits_are_responsive_without_spinning_on_long_stalls",
+        "native-isolation-whole-call-benchmark"
+      ]
+    },
+    {
+      "id": "linux-native-tls-cold-frame-latency",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark", "contract"],
+      "files": [
+        "workers/rust/crates/agent-transport/src/stream.rs",
+        "workers/rust/crates/agent-transport/src/tests.rs",
+        "workers/rust/crates/agent-transport/src/latency_tests.rs",
+        "workers/rust/crates/cli/tests/agent_pending_cancel_live.rs",
+        "reports/native-operator-isolation-benchmark-20261113.md",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "tls_handshake_enables_low_latency_on_both_endpoints",
+        "cold_tls_auth_and_split_frame_latency",
+        "latency_percentiles_use_nearest_rank",
+        "tls_pending_cancellation_capacity_preserves_active_recovery_and_one_shot_intents",
+        "agent-tls-control-latency"
+      ]
+    },
+    {
+      "id": "agent-bounded-pending-cancellation-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_execution_control.rs",
+        "workers/rust/crates/cli/src/operator_package_job_runtime.rs",
+        "workers/rust/crates/cli/src/tests/agent_pending_cancellation.rs",
+        "workers/rust/crates/cli/tests/agent_pending_cancel_live.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "pending_cancellation_capacity_rejects_new_ids_without_eviction",
+        "concurrent_pending_cancellation_cannot_overbook_remaining_capacity",
+        "simultaneous_admission_consumes_a_pending_intent_only_once",
+        "rejected_cancellation_never_claims_success_or_releases_job_packages",
+        "accepted_cancellation_preserves_a_separate_cache_cleanup_failure",
+        "tls_pending_cancellation_capacity_preserves_active_recovery_and_one_shot_intents",
+        "agent-bounded-pending-cancellation"
+      ]
+    },
+    {
+      "id": "agent-package-cleanup-contention-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
+        "workers/rust/crates/cli/src/operator_package_job_runtime.rs",
+        "workers/rust/crates/cli/src/operator_task_runtime.rs",
+        "workers/rust/crates/cli/tests/operator_package_cancel_contention.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "busy_job_release_never_waits_and_can_retry_after_owner_finishes",
+        "invalid_job_release_is_rejected_even_when_lifecycle_is_busy",
+        "poisoned_lifecycle_does_not_authorize_package_cleanup",
+        "busy_cleanup_receipt_authorizes_only_explicit_cleanup_retry",
+        "cancellation_and_release_do_not_wait_for_a_stalled_package_fetch",
+        "agent-package-cleanup-contention"
+      ]
+    },
+    {
+      "id": "agent-supervised-package-fetch-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
+        "workers/rust/crates/cli/src/operator_package_process.rs",
+        "workers/rust/crates/cli/src/operator_package_process/fetch.rs",
+        "workers/rust/crates/cli/src/operator_package_process/worker.rs",
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/tests/operator_package_cancel_contention.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "waiting_fetch_observes_cancellation_without_unlocking_the_owner",
+        "waiting_fetch_has_a_total_budget_without_a_late_lock_acquisition",
+        "fetch_failure_mapping_preserves_cancellation_and_deadline_identity",
+        "downloader_defaults_expose_total_budget_and_no_activation",
+        "cancellation_stops_a_partial_download_body_without_leaking_generation",
+        "download_deadline_stops_a_partial_body_without_cancellation_or_replay",
+        "agent-supervised-package-fetch"
+      ]
+    },
+    {
+      "id": "agent-large-download-restart-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/installer/src/operator_package_fetch.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+        "workers/rust/crates/cli/src/operator_package_process/worker.rs",
+        "workers/rust/crates/cli/tests/operator_download_recovery.rs",
+        "workers/rust/crates/cli/tests/support/operator_download_fixture.rs",
+        "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "streamed_entrypoint_requires_exact_length_and_digest",
+        "streamed_entrypoint_rejects_disk_failure",
+        "concurrent_downloads_with_identical_clock_values_have_distinct_staging",
+        "killed_agent_download_is_reaped_on_restart_without_replay",
+        "cancelled_large_download_removes_real_partial_file",
+        "truncated_large_download_cannot_publish_and_can_be_explicitly_retried",
+        "complete_large_artifact_is_verified_before_installation",
+        "agent-large-download-restart"
+      ]
+    },
+    {
+      "id": "agent-orphan-download-coordination-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"], "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/coordination.rs",
+        "workers/rust/crates/cli/src/operator_package_generation.rs",
+        "workers/rust/crates/cli/src/operator_package_process/fetch.rs",
+        "workers/rust/crates/cli/tests/operator_download_recovery.rs",
+        "workers/rust/crates/cli/tests/support/operator_package.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "catalog_wait_is_bounded_and_never_replaces_the_lock_file",
+        "downloader_lease_outlives_parent_and_is_reaped_on_later_preparation",
+        "concurrent_session_start_and_drop_preserve_active_peers_and_claim_cleanup_once",
+        "restart_preserves_suspended_downloader_then_reaps_it_before_explicit_fetch",
+        "concurrent_agents_claim_stale_cleanup_once_and_execute_independently",
+        "agent-orphan-download-coordination"
+      ]
+    },
+    {
+      "id": "agent-session-initialization-source-regression",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"], "paradigms": ["validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session/initialization/tests.rs",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "killed_initializer_recovers_each_committed_creation_boundary",
+        "killed_initializer_cleanup_resumes_without_recursive_deletion",
+        "killed_before_intent_commit_retains_unproven_record_without_creating_a_session",
+        "partial_marker_cleanup_requires_a_prior_matching_intent",
+        "incomplete_initialization_requires_exact_metadata_and_no_payload",
+        "incomplete_initialization_preserves_lease_holder_then_retries",
+        "initialization_intent_rejects_foreign_identity_and_path_traversal",
+        "incomplete_initialization_preserves_symlinks_and_their_targets",
+        "initialization_never_claims_an_existing_target",
+        "agent-session-initialization-recovery"
+      ]
+    },
+    {
+      "id": "linux-installed-native-soak-recovery",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["sdk_operator"],
+      "dimensions": ["recovery"],
+      "files": [
+        "workers/rust/crates/cli/tests/operator_isolation_benchmark.rs",
+        "workers/rust/crates/cli/tests/support/operator_isolation_soak.rs",
+        "workers/rust/crates/cli/tests/support/operator_benchmark_fixture.rs",
+        "workers/rust/crates/cli/src/agent_lifecycle.rs",
+        "workers/rust/crates/cli/src/tests/agent_capacity_handoff.rs",
+        "reports/native-operator-isolation-benchmark-20261113.md",
+        "docs/operator-store-integration.html"
+      ],
+      "required_text": [
+        "installed_native_isolation_continuous_load_and_mixed_fault_recovery",
+        "soak_accounting_rejects_leaked_slots_missing_failures_and_unbounded_history",
+        "capacity_handoff_waits_for_the_last_delivery_owner_without_replaying_work",
+        "notifications_do_not_extend_the_capacity_handoff_deadline",
+        "competing_handoff_waiters_cannot_overcommit_one_released_slot",
+        "native-isolation-continuous-recovery"
+      ]
     }
   ],
   "qualification_requirements": [
@@ -94,6 +329,54 @@
       "target": "verified", "claims": ["native-unix-owned-process-source-regression"],
       "basis": ["docs/operator-store-integration.html"],
       "acceptance": "Retain source-native crash, constructor hang, deadline, cancellation, parent SIGKILL and owned-descendant cleanup with healthy next tasks. The group is established before plugin loading. Escaped process groups, hostile native code, host power loss, simultaneous watchdog failure and Windows are outside this bounded verification."
+    },
+    {
+      "id": "agent-bounded-pending-cancellation-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-agent/local-tls/bounded-legacy-pending-cancel",
+      "target": "verified", "claims": ["agent-bounded-pending-cancellation-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Retain bounded 1024-entry/256-byte pending cancellation, duplicate idempotency, no eviction, atomic one-shot consumption and active/exact cancellation at capacity. Source Agents use local TLS to reject excess IDs, preserve intents across rejected execution admission, consume all retained IDs and run healthy follow-ups. Unit tests prove registration rejection skips package cleanup and cleanup failure does not undo accepted cancellation. Restart explicitly loses these process-local intents; this does not verify durable cancellation, installed GUI/SDK, hostile-client availability, or retention of real job-scoped packages over TLS."
+    },
+    {
+      "id": "agent-package-cleanup-contention-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-agent/loopback/stalled-fetch-cleanup-lock-admission",
+      "target": "verified", "claims": ["agent-package-cleanup-contention-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Keep cancellation registration independent of package lifecycle lock admission. A stalled HTTP resolution must not delay cancellation acknowledgment; explicit cleanup returns a typed busy error without mutation, capacity stays occupied until execution exits, then cleanup-only retry and a healthy same-job solve succeed. Unit tests reject poisoned locks and invalid identities. This is not a total fetch/filesystem deadline, actual bound-package retention, TLS contention, installed GUI/SDK, power-loss or Windows qualification."
+    },
+    {
+      "id": "agent-supervised-package-fetch-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-agent/loopback/supervised-download-cancel-and-deadline",
+      "target": "verified", "claims": ["agent-supervised-package-fetch-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Terminate and reap a stalled download before terminal failure; verify socket closure, unpublished-generation cleanup including an injected incomplete file, no automatic retry and healthy same-job execution. Exercise header stalls, partial resolution bodies and total timeout without cancellation; unit-test cancellable/bounded lifecycle waiting. This does not qualify HTTPS faults, large real artifact writes, parent loss during download, power loss, installed GUI/SDK, Windows or a hard filesystem deadline."
+    },
+    {
+      "id": "agent-large-download-restart-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-agent/loopback/64mib-download-16mib-prefix-cancel-truncate-sigkill-restart",
+      "target": "verified", "claims": ["agent-large-download-restart-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Observe real 16 MiB partial files from a declared 64 MiB entrypoint before cancellation, HTTP truncation and owned-Agent SIGKILL. Require downloader exit, no publication/replay, startup stale-session removal, and explicit re-fetch/execute of a real template. Separately verify a complete 64 MiB synthetic artifact through Installer without executing it. This does not qualify physical power loss, all orphan/restart races, parallel janitors, HTTPS faults, Windows, installed GUI/SDK or whole-process memory bounds."
+    },
+    {
+      "id": "agent-orphan-download-coordination-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-agent/local-filesystem/suspended-orphan-and-concurrent-session-cleanup",
+      "target": "verified", "claims": ["agent-orphan-download-coordination-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Hold a real downloader stopped across owned-Agent SIGKILL and replacement startup; retain its partial file while the independent child lease survives. After child exit, explicit generation preparation reaps the deferred session and executes a real template without harming live peers. Four independently started Agents must claim one stale cleanup exactly once and execute separately. Bound catalog lock waiting, retain the stable lock inode and prevent late child admission from recreating deleted sessions. Not all schedules, mixed binaries, NFS, Windows, power loss or installed GUI/SDK qualification."
+    },
+    {
+      "id": "agent-session-initialization-local-recovery",
+      "module_id": "runtime-agent-cli", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos-arm64+linux-x86_64/source-session-initializer/local-filesystem/owned-child-sigkill-and-prefix-recovery",
+      "target": "verified", "claims": ["agent-session-initialization-source-regression"],
+      "basis": ["docs/operator-store-integration.html"],
+      "acceptance": "Kill owned native test children running production session initialization at ten committed-intent creation boundaries and two cleanup boundaries. Recover matching incomplete metadata non-recursively, retain live leases, foreign or nonempty contents and symlinks. A torn intent must create no session and remain reported; unknown old partial sessions stay untouched. Require idempotent cleanup and independent proof revocation. These test-build barriers do not qualify full Agent startup at every boundary, physical power loss, mixed binaries, network filesystems, Windows, installed GUI/SDK or adversarial concurrent filesystem mutation."
     },
     {
       "id": "mac-linux-ssh-variant-deployment",
@@ -139,7 +422,7 @@
       "id": "agent-linux-variant-native-tls",
       "module_id": "runtime-agent-cli", "paradigm": "deployment_update", "dimension": "execution",
       "scope": "macos-arm64/linux-x86_64/native-tls-token/package-deployment-recovery",
-      "target": "qualified", "claims": [],
+      "target": "qualified", "claims": ["mac-linux-native-tls-template-deployment-regression"],
       "basis": ["docs/operator-store-integration.html", "docs/book-ch04-runtime-modes.html"],
       "acceptance": "Repeat actual cross-host upload, response-loss reconciliation, explicit restart and execution over native TLS with verified server identity and Agent token. Exercise credential denial/rotation and process identity replacement; do not send Store credentials to Agent. The verified SSH tunnel path and local TLS gateway tests remain separate evidence."
     },
@@ -163,7 +446,7 @@
       "id": "agent-unix-installed-isolation",
       "module_id": "runtime-agent-cli", "paradigm": "sdk_operator", "dimension": "recovery",
       "scope": "macos+linux/installed-current-agent/isolated-package-fault-recovery",
-      "target": "qualified", "claims": [],
+      "target": "qualified", "claims": ["linux-installed-native-soak-recovery"],
       "basis": ["docs/operator-store-integration.html"],
       "acceptance": "Package and install the current per-call isolation implementation through Installer into disposable owned services, then repeat source fault/result-admission cases, authority/receipt checks and healthy tasks using matching GUI/SDK artifacts. Earlier installation and later separate source tests do not imply installed closure; avoid restarting daily services for calibration."
     },
@@ -171,7 +454,7 @@
       "id": "agent-isolation-whole-call-performance",
       "module_id": "runtime-agent-cli", "paradigm": "benchmark", "dimension": "benchmark",
       "scope": "current-agent/per-call-native-host/load-ipc-decode-cleanup-concurrent-budget",
-      "target": "qualified", "claims": [],
+      "target": "qualified", "claims": ["linux-native-isolation-whole-call-benchmark"],
       "basis": ["docs/operator-store-integration.html", "docs/operator-sdk.md"],
       "acceptance": "Measure complete isolated-call latency including spawn, load, IPC, result validation and cleanup; record repeated p50/p95, throughput, memory/process/descriptor peaks and saturation recovery on representative small/large payloads. Test-only single cases, old resident-host ABI timing and 1M solver-node benchmarks cannot substitute."
     },

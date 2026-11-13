@@ -5,4 +5,6 @@ pub use security::{ApiToken, ClientSecurity, ServerSecurity};
 pub use stream::{Connection, SocketIo};
 
 #[cfg(test)]
+mod latency_tests;
+#[cfg(test)]
 mod tests;

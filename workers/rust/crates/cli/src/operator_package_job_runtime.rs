@@ -3,6 +3,7 @@ use kyuubiki_protocol::{
 };
 use serde_json::{Value, json};
 
+use crate::agent_execution_control::CancelRegistrationError;
 use crate::agent_state::register_cancel;
 use crate::operator_package_fetch_runtime::{
     release_orchestra_operator_job, validate_operator_package_job_id,
@@ -31,17 +32,37 @@ pub(crate) fn handle_cancel_job(request: RpcRequest) -> AgentReply {
     if let Err(error) = validate_operator_package_job_id(&params.job_id) {
         return release_error(request_id, &params.job_id, false, error);
     }
-    if let Err(message) = register_cancel(params.job_id.clone()) {
-        return AgentReply::Stream(
-            Vec::new(),
-            RpcResponse::error(request_id, "execution_control_unavailable", message),
-        );
-    }
-    cancellation_receipt(
+    registered_cancellation_reply(
         request_id,
         &params.job_id,
-        release_orchestra_operator_job(&params.job_id),
+        register_cancel(params.job_id.clone()),
+        || release_orchestra_operator_job(&params.job_id),
     )
+}
+
+fn registered_cancellation_reply(
+    request_id: String,
+    job_id: &str,
+    registration: Result<(), CancelRegistrationError>,
+    cleanup: impl FnOnce() -> Result<Value, ExternalOperatorTaskError>,
+) -> AgentReply {
+    if let Err(error) = registration {
+        return AgentReply::Stream(
+            Vec::new(),
+            RpcResponse::error_with_details(
+                request_id,
+                error.code(),
+                error.message(),
+                json!({
+                    "failure_stage":"register_cancellation", "job_id":job_id,
+                    "cancel_registered":false, "pending_cancellation_created":false,
+                    "execution_terminal_confirmed":false, "operator_package_cleanup_performed":false,
+                    "automatic_replay_authorized":false
+                }),
+            ),
+        );
+    }
+    cancellation_receipt(request_id, job_id, cleanup())
 }
 
 fn cancellation_receipt(
@@ -49,13 +70,7 @@ fn cancellation_receipt(
     job_id: &str,
     cleanup: Result<Value, ExternalOperatorTaskError>,
 ) -> AgentReply {
-    let release = cleanup.unwrap_or_else(|error| {
-        json!({
-            "schema_version": "kyuubiki.agent-operator-job-cache-release-failure/v1",
-            "status": "failed", "failure_stage": error.stage,
-            "job_id": job_id, "error_code": error.code, "message": error.message,
-        })
-    });
+    let release = cleanup.unwrap_or_else(|error| release_failure_details(job_id, true, &error));
     success(
         request_id,
         json!({
@@ -84,20 +99,40 @@ fn release_error(
     cancel_registered: bool,
     error: ExternalOperatorTaskError,
 ) -> AgentReply {
+    let details = release_failure_details(job_id, cancel_registered, &error);
     AgentReply::Stream(
         Vec::new(),
-        RpcResponse::error_with_details(
-            request_id,
-            error.code,
-            error.message,
-            json!({
-                "schema_version": "kyuubiki.agent-operator-job-cache-release-failure/v1",
-                "failure_stage": error.stage,
-                "job_id": job_id,
-                "cancel_registered": cancel_registered
-            }),
-        ),
+        RpcResponse::error_with_details(request_id, error.code, error.message, details),
     )
+}
+
+fn release_failure_details(
+    job_id: &str,
+    cancel_registered: bool,
+    error: &ExternalOperatorTaskError,
+) -> Value {
+    let mut details = json!({
+        "schema_version": "kyuubiki.agent-operator-job-cache-release-failure/v1",
+        "status": "failed", "failure_stage": error.stage,
+        "job_id": job_id, "error_code": error.code, "message": error.message,
+        "cancel_registered": cancel_registered,
+        "execution_terminal_confirmed": false, "automatic_replay_authorized": false
+    });
+    // Only admission rejection proves that cleanup never started.
+    if matches!(
+        error.code,
+        "operator_package_job_release_busy" | "operator_package_job_release_unavailable"
+    ) {
+        details["operator_package_cleanup_performed"] = json!(false);
+        if error.code == "operator_package_job_release_busy" {
+            details["status"] = json!("deferred");
+            details["retry_method"] = json!("release_operator_package_job");
+            details["required_action"] = json!("retry_cleanup_after_package_lifecycle_idle");
+        } else {
+            details["required_action"] = json!("explicit_stopped_inspection_and_restart");
+        }
+    }
+    details
 }
 
 #[cfg(test)]
@@ -105,6 +140,37 @@ mod tests {
     use super::*;
     use crate::agent_state::take_cancelled;
     use kyuubiki_protocol::RpcMethod;
+
+    #[test]
+    fn rejected_cancellation_never_claims_success_or_releases_job_packages() {
+        for error in [
+            CancelRegistrationError::PendingCapacity,
+            CancelRegistrationError::Unavailable,
+            CancelRegistrationError::InvalidJobId,
+        ] {
+            let AgentReply::Stream(frames, response) = registered_cancellation_reply(
+                "rejected-cancel".into(),
+                "preserved-job",
+                Err(error),
+                || panic!("rejected cancellation must not run cleanup"),
+            );
+            assert!(frames.is_empty());
+            assert!(!response.ok);
+            assert!(response.result.is_none());
+            let rejection = response.error.unwrap();
+            assert_eq!(rejection.code, error.code());
+            let details = rejection.details.unwrap();
+            for field in [
+                "cancel_registered",
+                "pending_cancellation_created",
+                "execution_terminal_confirmed",
+                "operator_package_cleanup_performed",
+                "automatic_replay_authorized",
+            ] {
+                assert_eq!(details[field], false, "{field}");
+            }
+        }
+    }
 
     #[test]
     fn accepted_cancellation_preserves_a_separate_cache_cleanup_failure() {
@@ -115,15 +181,17 @@ mod tests {
             Some(job_id.into()),
         )
         .unwrap();
-        register_cancel(job_id.into()).unwrap();
-        let AgentReply::Stream(_, response) = cancellation_receipt(
+        let AgentReply::Stream(_, response) = registered_cancellation_reply(
             "cancel-cache-cleanup".into(),
             job_id,
-            Err(ExternalOperatorTaskError {
-                code: "operator_package_activation_failed",
-                stage: "activate_operator_registry",
-                message: "injected cleanup failure".into(),
-            }),
+            register_cancel(job_id.into()),
+            || {
+                Err(ExternalOperatorTaskError {
+                    code: "operator_package_activation_failed",
+                    stage: "activate_operator_registry",
+                    message: "injected cleanup failure".into(),
+                })
+            },
         );
         assert!(response.ok);
         assert!(response.error.is_none());
@@ -164,6 +232,37 @@ mod tests {
         assert_eq!(result["cancel_registered"], true);
         assert_eq!(result["execution_terminal_confirmed"], false);
         assert_eq!(result["operator_package_job_release"], cleanup);
+    }
+
+    #[test]
+    fn busy_cleanup_receipt_authorizes_only_explicit_cleanup_retry() {
+        for (code, status, retry) in [
+            ("operator_package_job_release_busy", "deferred", true),
+            ("operator_package_job_release_unavailable", "failed", false),
+            ("operator_package_activation_failed", "failed", false),
+        ] {
+            let error = ExternalOperatorTaskError {
+                code,
+                stage: "injected",
+                message: "injected release failure".into(),
+            };
+            let AgentReply::Stream(_, reply) =
+                cancellation_receipt("cancel-busy".into(), "job", Err(error));
+            assert!(reply.ok);
+            let result = reply.result.unwrap();
+            assert_eq!(result["cancel_registered"], true);
+            let failure = &result["operator_package_job_release"];
+            assert_eq!(failure["status"], status);
+            assert_eq!(failure["cancel_registered"], true);
+            assert_eq!(failure["execution_terminal_confirmed"], false);
+            assert_eq!(failure["automatic_replay_authorized"], false);
+            assert_eq!(failure["retry_method"].is_string(), retry);
+            if code == "operator_package_activation_failed" {
+                assert!(failure.get("operator_package_cleanup_performed").is_none());
+            } else {
+                assert_eq!(failure["operator_package_cleanup_performed"], false);
+            }
+        }
     }
 
     #[test]

@@ -1,8 +1,37 @@
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 
+use kyuubiki_protocol::AGENT_EXECUTION_JOB_ID_MAX_BYTES;
 use kyuubiki_solver::solver_control::SolverControl;
 use serde_json::{Value, json};
+
+const MAX_PENDING_JOB_CANCELLATIONS: usize = 1024;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CancelRegistrationError {
+    Unavailable,
+    InvalidJobId,
+    PendingCapacity,
+}
+
+impl CancelRegistrationError {
+    pub(crate) fn code(self) -> &'static str {
+        match self {
+            Self::Unavailable => "execution_control_unavailable",
+            Self::InvalidJobId => "operator_package_job_id_invalid",
+            Self::PendingCapacity => "pending_cancellation_capacity_exceeded",
+        }
+    }
+    pub(crate) fn message(self) -> &'static str {
+        match self {
+            Self::Unavailable => "execution control registry is unavailable",
+            Self::InvalidJobId => "job_id must use 1-256 bytes without control characters",
+            Self::PendingCapacity => {
+                "pending job cancellation capacity is full; no cancellation was registered and no existing intent was evicted"
+            }
+        }
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct ExecutionControl {
@@ -15,7 +44,7 @@ pub(crate) struct ExecutionControl {
 #[derive(Default)]
 struct Registry {
     active: Vec<Weak<ExecutionControl>>,
-    pending_jobs: HashSet<String>,
+    pending_jobs: HashSet<Box<str>>,
 }
 
 fn registry() -> &'static Mutex<Registry> {
@@ -28,7 +57,16 @@ pub(crate) fn begin(
     generation: u64,
     job_id: Option<String>,
 ) -> Result<Arc<ExecutionControl>, String> {
-    let mut state = registry()
+    begin_in(registry(), request_id, generation, job_id)
+}
+
+fn begin_in(
+    registry: &Mutex<Registry>,
+    request_id: String,
+    generation: u64,
+    job_id: Option<String>,
+) -> Result<Arc<ExecutionControl>, String> {
+    let mut state = registry
         .lock()
         .map_err(|_| "execution control registry is unavailable")?;
     state.active.retain(|entry| entry.strong_count() > 0);
@@ -41,7 +79,7 @@ pub(crate) fn begin(
     if control
         .job_id
         .as_ref()
-        .is_some_and(|job| state.pending_jobs.remove(job))
+        .is_some_and(|job| state.pending_jobs.remove(job.as_str()))
     {
         control.solver.request_cancel();
     }
@@ -49,11 +87,24 @@ pub(crate) fn begin(
     Ok(control)
 }
 
-pub(crate) fn register_cancel(job_id: String) -> Result<(), String> {
+pub(crate) fn register_cancel(job_id: String) -> Result<(), CancelRegistrationError> {
+    register_cancel_in(registry(), job_id)
+}
+
+fn register_cancel_in(
+    registry: &Mutex<Registry>,
+    job_id: String,
+) -> Result<(), CancelRegistrationError> {
+    if job_id.is_empty()
+        || job_id.len() > AGENT_EXECUTION_JOB_ID_MAX_BYTES
+        || job_id.chars().any(char::is_control)
     {
-        let mut state = registry()
+        return Err(CancelRegistrationError::InvalidJobId);
+    }
+    {
+        let mut state = registry
             .lock()
-            .map_err(|_| "execution control registry is unavailable".to_string())?;
+            .map_err(|_| CancelRegistrationError::Unavailable)?;
         let mut found = false;
         state.active.retain(|entry| {
             let Some(active) = entry.upgrade() else {
@@ -66,12 +117,20 @@ pub(crate) fn register_cancel(job_id: String) -> Result<(), String> {
             true
         });
         // Preserve the existing one-shot cancellation-before-admission contract.
-        if !found {
-            state.pending_jobs.insert(job_id);
+        if !found && !state.pending_jobs.contains(job_id.as_str()) {
+            if state.pending_jobs.len() >= MAX_PENDING_JOB_CANCELLATIONS {
+                return Err(CancelRegistrationError::PendingCapacity);
+            }
+            // Discard spare String capacity; retained identities have a bounded byte length.
+            state.pending_jobs.insert(job_id.into_boxed_str());
         }
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/agent_pending_cancellation.rs"]
+mod pending_tests;
 
 #[cfg(test)]
 pub(crate) fn take_cancelled(job_id: &str) -> bool {
@@ -127,13 +186,29 @@ pub(crate) fn checkpoint_json(control: &SolverControl) -> Value {
 }
 
 pub(crate) fn snapshot() -> Value {
-    match registry().lock() {
+    snapshot_in(registry())
+}
+
+fn snapshot_in(registry: &Mutex<Registry>) -> Value {
+    match registry.lock() {
         Ok(state) => json!({
             "schema_version":"kyuubiki.agent-solver-control/v1",
             "available":true,
             "mode":"cooperative_safe_points",
             "scope":"same_thread_builtin_numerical_safe_points",
             "thread_preemption":false,
+            "pending_job_cancellations":{
+                "count":state.pending_jobs.len(),
+                "max_count":MAX_PENDING_JOB_CANCELLATIONS,
+                "max_job_id_bytes":AGENT_EXECUTION_JOB_ID_MAX_BYTES,
+                "on_capacity":"reject_new_pending_without_eviction",
+                "duplicate":"idempotent_while_pending",
+                "active_cancellation":"allowed_at_pending_capacity",
+                "consume":"first_matching_admission",
+                "storage":"process_local_memory",
+                "automatic_expiry":false,
+                "survives_process_restart":false
+            },
             "active":state.active.iter().filter_map(Weak::upgrade).map(|active| json!({
                 "request_id":active.request_id, "generation":active.generation,
                 "job_id":active.job_id,

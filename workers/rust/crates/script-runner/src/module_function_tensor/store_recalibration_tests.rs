@@ -30,6 +30,12 @@ const RETAINED: &[&str] = &[
     "sdk-native-result-local-contract",
     "agent-native-result-local-recovery",
     "agent-unix-owned-process-local-recovery",
+    "agent-bounded-pending-cancellation-local-recovery",
+    "agent-package-cleanup-contention-local-recovery",
+    "agent-supervised-package-fetch-local-recovery",
+    "agent-large-download-restart-local-recovery",
+    "agent-orphan-download-coordination-local-recovery",
+    "agent-session-initialization-local-recovery",
     "mac-linux-ssh-variant-deployment",
 ];
 
@@ -86,7 +92,17 @@ fn store_recalibration_records_bounded_proof_without_promoting_whole_journeys() 
     for id in OPEN {
         let evidence = scope(&tensor, &shard, id);
         assert_eq!(evidence["met"], false, "{id}");
-        assert_eq!(evidence["achieved_grade"], "unassessed", "{id}");
+        let grade = if matches!(
+            *id,
+            "agent-linux-variant-native-tls"
+                | "agent-isolation-whole-call-performance"
+                | "agent-unix-installed-isolation"
+        ) {
+            "verified"
+        } else {
+            "unassessed"
+        };
+        assert_eq!(evidence["achieved_grade"], grade, "{id}");
     }
     for id in [
         "native-operator-result-identity-admission",
@@ -120,6 +136,154 @@ fn store_recalibration_cannot_borrow_historical_or_other_transport_success() {
     for id in OPEN {
         assert_eq!(scope(&tensor, &shard, id)["met"], false, "{id}");
     }
+    let mut without_cleanup_contention = tensor.clone();
+    for claim in without_cleanup_contention["evidence_claims"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if claim["id"] == "agent-package-cleanup-contention-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_cleanup_contention,
+            &shard,
+            "agent-package-cleanup-contention-local-recovery"
+        )["met"],
+        false,
+        "TLS and pending cancellation evidence cannot replace stalled package cleanup proof"
+    );
+    assert_eq!(
+        scope(
+            &without_cleanup_contention,
+            &shard,
+            "agent-bounded-pending-cancellation-local-recovery"
+        )["met"],
+        true
+    );
+    let mut without_isolated_calls = tensor.clone();
+    let mut without_orphan_coordination = tensor.clone();
+    let mut without_initialization = tensor.clone();
+    for claim in without_initialization["evidence_claims"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if claim["id"] == "agent-session-initialization-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_initialization,
+            &shard,
+            "agent-session-initialization-local-recovery"
+        )["met"],
+        false,
+        "completed-session orphan recovery cannot prove partial initialization cleanup"
+    );
+    assert_eq!(
+        scope(
+            &without_initialization,
+            &shard,
+            "agent-orphan-download-coordination-local-recovery"
+        )["met"],
+        true
+    );
+    for claim in without_orphan_coordination["evidence_claims"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if claim["id"] == "agent-orphan-download-coordination-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_orphan_coordination,
+            &shard,
+            "agent-orphan-download-coordination-local-recovery"
+        )["met"],
+        false,
+        "waiting for child exit before restart cannot prove suspended-orphan protection"
+    );
+    assert_eq!(
+        scope(
+            &without_orphan_coordination,
+            &shard,
+            "agent-large-download-restart-local-recovery"
+        )["met"],
+        true
+    );
+    let mut without_large_download = tensor.clone();
+    for claim in without_large_download["evidence_claims"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if claim["id"] == "agent-large-download-restart-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_large_download,
+            &shard,
+            "agent-large-download-restart-local-recovery"
+        )["met"],
+        false,
+        "partial metadata and injected files cannot prove real artifact restart recovery"
+    );
+    assert_eq!(
+        scope(
+            &without_large_download,
+            &shard,
+            "agent-supervised-package-fetch-local-recovery"
+        )["met"],
+        true
+    );
+    let mut without_supervised_fetch = tensor.clone();
+    for claim in without_supervised_fetch["evidence_claims"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if claim["id"] == "agent-supervised-package-fetch-source-regression" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_supervised_fetch,
+            &shard,
+            "agent-supervised-package-fetch-local-recovery"
+        )["met"],
+        false,
+        "prompt cancellation acknowledgment alone cannot prove that download stopped"
+    );
+    assert_eq!(
+        scope(
+            &without_supervised_fetch,
+            &shard,
+            "agent-package-cleanup-contention-local-recovery"
+        )["met"],
+        true
+    );
+    for claim in without_isolated_calls["evidence_claims"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if claim["id"] == "linux-native-isolation-whole-call-benchmark" {
+            claim["status"] = json!("partial");
+        }
+    }
+    assert_eq!(
+        scope(
+            &without_isolated_calls,
+            &shard,
+            "agent-isolation-whole-call-performance"
+        )["achieved_grade"],
+        "unassessed",
+        "cold TLS frames cannot substitute for whole native isolated-call performance"
+    );
     // Revoking the retained source test must reopen its own named obligation.
     for claim in tensor["evidence_claims"].as_array_mut().unwrap() {
         if scoped_claims.contains(&claim["id"]) {
@@ -129,6 +293,21 @@ fn store_recalibration_cannot_borrow_historical_or_other_transport_success() {
     for id in RETAINED {
         assert_eq!(scope(&tensor, &shard, id)["met"], false, "{id}");
     }
+    assert_eq!(
+        scope(&tensor, &shard, "agent-linux-variant-native-tls")["achieved_grade"],
+        "unassessed",
+        "TLS deployment cannot borrow verified SSH or local gateway evidence"
+    );
+    assert_eq!(
+        scope(&tensor, &shard, "agent-isolation-whole-call-performance")["achieved_grade"],
+        "unassessed",
+        "whole-call isolation cannot borrow old resident-host or solver-node timing"
+    );
+    assert_eq!(
+        scope(&tensor, &shard, "agent-unix-installed-isolation")["achieved_grade"],
+        "unassessed",
+        "installed recovery cannot borrow source tests or successful deployment"
+    );
 }
 
 #[test]

@@ -130,6 +130,7 @@ fn operator_package_runtime_snapshot_from_binding(
         "expected_host": OPERATOR_PACKAGE_RUNTIME_HOST,
         "expected_sdk": OPERATOR_PACKAGE_RUNTIME_SDK,
         "isolation": crate::operator_package_process::snapshot(),
+        "job_release_policy": crate::operator_package_fetch_runtime::job_release_policy(),
         "attachment": operator_package_runtime_attachment(binding)
     })
 }
