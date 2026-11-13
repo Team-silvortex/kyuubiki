@@ -52,8 +52,19 @@
 }
 
 .workbench-panel-navigation [data-workbench-store-navigation] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   position: static;
   box-shadow: none;
+}
+
+.workbench-panel-navigation [data-workbench-store-workspace-action="expand"] {
+  grid-column: 1 / -1;
+}
+
+.store-marketplace-dialog .workbench-panel-navigation [data-workbench-store-navigation] {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
 .workbench-shell[data-workbench-stack-panels="true"] .workspace-sidebar,

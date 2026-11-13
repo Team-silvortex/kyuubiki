@@ -45,6 +45,8 @@ defmodule KyuubikiWeb.MixProject do
   defp deps do
     [
       {:jason, "~> 1.4"},
+      # Keep dynamic JSON paths and splice lists out of unbounded query caches.
+      {:ecto, "~> 3.14.3"},
       {:ecto_sql, "~> 3.13"},
       {:ecto_sqlite3, "~> 0.17"},
       # Native statement cleanup must not block a scheduler behind a busy writer.

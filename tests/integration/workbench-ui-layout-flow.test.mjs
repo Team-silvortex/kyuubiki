@@ -78,6 +78,15 @@ test("Workbench keeps overview routes shallow and isolates inspector actions", a
     await store.locator('[data-workbench-store-entry-id]').first().waitFor({ state: "visible" });
     assert.ok(Number(await store.getAttribute("data-workbench-store-visible-count")) <= 6);
     assert.ok(await store.locator('[data-workbench-store-entry-id]').count() <= 6);
+    const navigation = await store.locator('[data-workbench-panel-navigation]').evaluate((element) => ({
+      height: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      panelHeight: element.parentElement.clientHeight,
+    }));
+    assert.ok(navigation.height <= navigation.panelHeight / 3,
+      `Store navigation must leave the main height for content: ${JSON.stringify(navigation)}`);
+    assert.ok(navigation.scrollHeight <= navigation.height + 1,
+      "Store navigation must not need a separate vertical scroll at the desktop qualification size");
     const depth = await store.locator('[data-workbench-panel-content]').evaluate((element) => element.scrollHeight / element.clientHeight);
     assert.ok(depth <= 3, `Store task depth should stay bounded, received ${depth.toFixed(2)}`);
     const firstPageIds = await store.locator('[data-workbench-store-entry-id]').evaluateAll(

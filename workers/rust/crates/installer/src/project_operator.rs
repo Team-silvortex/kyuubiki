@@ -14,6 +14,9 @@ use std::{
 const SCHEMA: &str = "kyuubiki.project-operators/v1";
 const LIMIT: u64 = 1024 * 1024;
 
+#[cfg(test)]
+mod lock_tests;
+
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Project {
@@ -262,6 +265,13 @@ struct Storage {
     root: PathBuf,
     path: PathBuf,
     _lock: File,
+}
+impl Drop for Storage {
+    fn drop(&mut self) {
+        // A concurrent spawn may inherit this file description until exec.
+        // Closing only our handle can leave the completed operation locked.
+        let _ = FileExt::unlock(&self._lock);
+    }
 }
 impl Storage {
     fn open(root: &Path, project: &str, scope: &str) -> Result<Self, String> {
