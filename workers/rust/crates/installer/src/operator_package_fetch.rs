@@ -117,9 +117,7 @@ pub fn fetch_operator_package_into(
         &central_url,
         bearer_token,
         &resolution.entrypoint,
-        &temporary
-            .root
-            .join(expand_platform_library_template(&manifest.entrypoint)),
+        &temporary.entrypoint,
     )?;
     install_operator_package_into(&temporary.root, store_root)
 }
@@ -400,26 +398,32 @@ fn sha256(bytes: &[u8]) -> String {
 
 struct DownloadedPackage {
     root: PathBuf,
+    entrypoint: PathBuf,
 }
 
 impl DownloadedPackage {
     fn prepare(manifest: &OperatorPackageManifest, manifest_bytes: &[u8]) -> Result<Self, String> {
+        Self::prepare_under(&std::env::temp_dir(), manifest, manifest_bytes)
+    }
+
+    fn prepare_under(
+        temporary_root: &Path,
+        manifest: &OperatorPackageManifest,
+        manifest_bytes: &[u8],
+    ) -> Result<Self, String> {
+        // Validate the wire path before Windows verbatim roots normalize its separators.
+        let relative_entrypoint = expand_platform_library_template(&manifest.entrypoint);
+        validate_relative_path(Path::new(&relative_entrypoint), "operator entrypoint")?;
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|error| format!("system clock error: {error}"))?
             .as_nanos();
-        let root = std::env::temp_dir().join(download_staging_name(nonce));
+        let root = temporary_root.join(download_staging_name(nonce));
+        let entrypoint = root.join(relative_entrypoint);
         fs::create_dir(&root)
             .map_err(|error| format!("failed to create operator download staging: {error}"))?;
         let result = (|| {
             write_new(&root.join(OPERATOR_PACKAGE_MANIFEST_FILE), manifest_bytes)?;
-            let entrypoint = root.join(expand_platform_library_template(&manifest.entrypoint));
-            validate_relative_path(
-                entrypoint
-                    .strip_prefix(&root)
-                    .map_err(|_| "operator entrypoint escaped download staging".to_string())?,
-                "operator entrypoint",
-            )?;
             fs::create_dir_all(
                 entrypoint
                     .parent()
@@ -431,7 +435,7 @@ impl DownloadedPackage {
             let _ = fs::remove_dir_all(&root);
             return Err(error);
         }
-        Ok(Self { root })
+        Ok(Self { root, entrypoint })
     }
 }
 
@@ -444,6 +448,27 @@ fn download_staging_name(nonce: u128) -> String {
         std::process::id()
     )
 }
+
+impl Drop for DownloadedPackage {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.root);
+    }
+}
+
+fn write_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let mut file = OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(path)
+        .map_err(|error| format!("failed to create {}: {error}", path.display()))?;
+    file.write_all(bytes)
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
+    file.sync_all()
+        .map_err(|error| format!("failed to sync {}: {error}", path.display()))
+}
+
+#[cfg(test)]
+mod path_tests;
 
 #[cfg(test)]
 mod streaming_tests {
@@ -514,22 +539,4 @@ mod streaming_tests {
         .unwrap_err();
         assert!(error.contains("failed to write"));
     }
-}
-
-impl Drop for DownloadedPackage {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.root);
-    }
-}
-
-fn write_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    let mut file = OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(path)
-        .map_err(|error| format!("failed to create {}: {error}", path.display()))?;
-    file.write_all(bytes)
-        .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
-    file.sync_all()
-        .map_err(|error| format!("failed to sync {}: {error}", path.display()))
 }
